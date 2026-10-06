@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "anchor": "jp-15.7.1",
+  "source_export_sha256": "38c3bbb8d2cf2101793c9462617d4293e19fc99588b6655fd40299fd61a0ef56",
+  "libnative_sha256": "333d2974ab2ff881fd70087fd62dea7d12d82addbc55cab2f2a675ad67e3a7e2",
+  "datalocal_sha256": {
+    "list": "1cce55c9c9b8aaf454128d8448101fe1ed9f99931d646fa389fed5c934246a27",
+    "pack": "884d6910dc8e963768bb8ec60b0cd54c122e75cbf75c51dd44df69e7f960b3b8"
+  },
+  "unit_catalog": {
+    "unitbuy_rows": 882,
+    "picturebook_rows": 882,
+    "picturebook_displayed_rows": 835,
+    "picturebook_hidden_rows": 47,
+    "highest_row_id": 881,
+    "highest_unitbuy_game_version": 150700,
+    "hidden_ids": [53,139,155,182,285,320,339,353,432,433,465,492,497,498,499,500,673,729,732,734,739,740,741,742,743,744,745,755,761,764,770,775,782,788,800,802,812,816,818,821,825,838,839,855,860,875,876]
+  },
+  "materials": {
+    "matatabi_rows": 29,
+    "gatya_ids": [30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,160,161,164,167,168,169,170,171,179,180,181,182,183,184]
+  },
+  "native_xrefs": {
+    "SAVE_DATA": ["0x71c984","0x74b13c","0x8b43d0","0x8b9fdc","0x8c5334"],
+    "SAVE_DATA4": ["0x7edd54","0x8ba0b0","0x8c1d30"],
+    "SAVE_DATA8": ["0x748e00","0x74ad74","0x74af48"],
+    "BACKUP_SAVE_DATA": ["0x70c9c0","0x737e88"],
+    "catfoodAmount": ["0x73e5c4"],
+    "rareTicketAmount": ["0x73e61c"],
+    "platinumTicketAmount": ["0x73e66c"],
+    "legendTicketAmount": ["0x73e6c8"],
+    "potential_exchange_np": ["0x819630","0x8196e4"],
+    "potential_exchange_np_set": ["0x81aba4","0x81ac3c"],
+    "setNekokan(%d,%f)": ["0x7619d0"],
+    "setItem(%d, %d)": ["0x7693c0"],
+    "getSavedRegister": ["0xad5ae8"],
+    "getSavedFloatRegister": ["0xad4bf8"],
+    "BcResLeadership": ["0x94257c"],
+    "Matatabi.tsv": ["0x9bbea0"]
+  },
+  "caps": {
+    "xp": {
+      "value": 99999999,
+      "status": "exact-native-confirmed",
+      "clamp_site": "0x4d7060-0x4d7080",
+      "evidence": "compare against 99999998 then set 99999999"
+    },
+    "new_catfruit": {
+      "value": 998,
+      "status": "candidate-native-constant-needs-field-binding"
+    },
+    "general_item_like": {
+      "value": 9999,
+      "status": "candidate-native-constant-needs-field-binding"
+    }
+  }
+}
