@@ -1,6 +1,6 @@
 # Offline Local Profile Bootstrap — Current Priority
 
-Status: active investigation / implementation target as of 2026-10-07.
+Status: bootstrap runtime accepted; original-game rewrite mapped; install-r persistence proof pending as of 2026-10-07.
 
 ## Why this now comes before Rare Gacha runtime proof
 
@@ -145,3 +145,31 @@ This phase is considered successful only when one device run proves:
 
 After that, Rare Gacha work can resume from a stable, already-equipped local
 profile.
+
+## Runtime proof status — 2026-10-07
+
+The first guarded device mutation established more than static parser safety:
+
+- the exact 497,580-byte MAX candidate was accepted by the unchanged original
+  JP 15.7.1 scene;
+- the original UI opened normally;
+- after a normal process restart, the original UI opened normally again and the
+  user confirmed the MAX profile remained present;
+- the original game normalized SAVE_DATA to 507,174 bytes;
+- that normalized SAVE_DATA has a valid JP salted-MD5, losslessly round-trips
+  through the pinned research parser, and passes the independent full-semantic
+  Kneekura verifier;
+- the 9,594-byte growth is completely accounted for by generated cat-new flags,
+  mission tables, UI/event bookkeeping and a 16-byte forward-compatible tail
+  extension.
+
+The prior rollback at this point was a verifier false positive caused by an
+obsolete exact-size assumption. It was not an H01/data-read failure.
+
+The corrected bootstrap accepts the known 507,174-byte normalized profile,
+records its layout/verification level in the result JSON, and retains automatic
+rollback for actual integrity or semantic failures.
+
+The next device gate is therefore the same-signature six-split
+`install-multiple -r` persistence proof, not further SAVE_DATA reverse
+engineering.
