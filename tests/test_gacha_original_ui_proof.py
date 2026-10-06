@@ -94,6 +94,8 @@ class GachaOriginalUiProofTests(unittest.TestCase):
             ROOT / "tools/base_mod/build_owned_gacha_ui_proof.py"
         ).read_text(encoding="utf-8")
         self.assertIn("EXPECTED_NEW_SET_ID = 1089", source)
+        self.assertIn("EXPECTED_PROOF_UNITS = [37, 30, 34]", source)
+        self.assertIn("EXPECTED_CLONE_OPTION_SET = 49", source)
         self.assertIn('"original_gacha_scene_code_modified": False', source)
         self.assertIn('"original_capsule_result_code_modified": False', source)
         self.assertIn('"visibility_schedule_defined": False', source)
