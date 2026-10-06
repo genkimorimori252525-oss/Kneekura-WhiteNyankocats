@@ -163,6 +163,7 @@ def verify_max_save(data: bytes, owned_export: Path) -> dict[str, Any]:
         ("np", MAX_VALUES["np"]),
         ("leadership", MAX_VALUES["leadership"]),
         ("hundred_million_ticket", MAX_VALUES["hundred_million_ticket"]),
+        ("engineers", MAX_VALUES["engineers"]),
     ):
         if scalar_values[key] != expected:
             failures.append(f"{key}={scalar_values[key]} != {expected}")
@@ -181,6 +182,14 @@ def verify_max_save(data: bytes, owned_export: Path) -> dict[str, Any]:
             failures.append(f"{key} contains values other than {expected}")
     if any(value != MAX_VALUES["labyrinth_medals"] for value in labyrinth_medals):
         failures.append("labyrinth_medals not fully maxed")
+
+    if talent_count != TALENT_ORB_COUNT:
+        failures.append(f"talent_orb_count={talent_count} != {TALENT_ORB_COUNT}")
+    elif any(
+        orb_id != index or value != TALENT_ORB_VALUE
+        for index, (orb_id, value) in enumerate(talent_orbs)
+    ):
+        failures.append("talent_orbs do not contain all exact IDs at max count")
 
     if tutorial["tutorial_state"] < 1:
         failures.append("tutorial_state < 1")
@@ -204,6 +213,10 @@ def verify_max_save(data: bytes, owned_export: Path) -> dict[str, Any]:
         "scalar_values": scalar_values,
         "array_lengths": {key: len(value) for key, value in arrays.items()},
         "labyrinth_medals_length": len(labyrinth_medals),
+        "talent_orbs": {
+            "count": talent_count,
+            "value_each_expected": TALENT_ORB_VALUE,
+        },
         "tutorial": tutorial,
         "failures": failures,
         "passed": not failures,
