@@ -69,7 +69,10 @@ def _find_executable(name: str, explicit: str | None = None) -> str:
 
 def _find_d8(explicit: str | None = None) -> str:
     if explicit:
-        return _find_executable(explicit)
+        path = Path(explicit)
+        if not path.is_file():
+            raise FileNotFoundError(path)
+        return str(path)
 
     for candidate in ("d8", "d8.bat"):
         found = shutil.which(candidate)
