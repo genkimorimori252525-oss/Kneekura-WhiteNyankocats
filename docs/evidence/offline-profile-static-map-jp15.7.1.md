@@ -118,6 +118,21 @@ At 0x4d7060-0x4d7080 the binary constructs:
 Therefore XP = 99,999,999 is promoted from community hypothesis to
 **exact-native-confirmed cap**.
 
+## Cat Food 45,000 remains a community/editor policy candidate
+
+A full exact-binary AArch64 disassembly scan was additionally checked for the
+simple immediate value 45,000 (`0xAFC8`). No direct `mov/cmp #0xAFC8` style
+clamp was found in the executable text.
+
+This **does not prove** that 45,000 is not enforced elsewhere: a cap can be
+loaded from data, computed indirectly or be purely server/account policy.
+It does prove that we should not promote BCSFE's 45,000 default to an
+exact-native local storage cap merely because the editor uses that value.
+
+By contrast the binary contains numerous explicit 299 / 998 / 9,999 immediates,
+and XP's 99,999,999 clamp has already been tied to an exact code path. Those
+still require per-resource binding before use, except for XP.
+
 ## Other maximum constants
 
 The exact native binary also contains repeated game-code clamps/constants for:
