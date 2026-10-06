@@ -42,6 +42,9 @@ _BASE_SUFFIXES = (
 )
 
 LAUNCHER_CLASS = "jp.co.ponos.battlecats.MyActivity"
+NATIVE_ENTRY = "lib/arm64-v8a/libnative-lib.so"
+SHIM_ENTRY = "lib/arm64-v8a/libkneekura.so"
+DEX_PACKAGE_SUFFIXES = ("", ".NotificationChannel.")
 
 
 def _is_signature_entry(name: str) -> bool:
@@ -136,29 +139,67 @@ def _patch_manifest(
     return patched
 
 
-def _patch_base_dex(entries: dict[str, bytes], package_name: str) -> tuple[str, bytes]:
-    candidates: list[tuple[str, bytes, int]] = []
+def _patch_base_dex(
+    entries: dict[str, bytes],
+    package_name: str,
+) -> dict[str, bytes]:
+    patched_entries = dict(entries)
+    total_by_source = {
+        ORIGINAL_PACKAGE + suffix: 0
+        for suffix in DEX_PACKAGE_SUFFIXES
+    }
+
     for name, payload in entries.items():
         if not name.startswith("classes") or not name.endswith(".dex"):
             continue
-        try:
-            patched, count = patch_exact_dex_string(
-                payload,
-                ORIGINAL_PACKAGE,
-                package_name,
+        current = payload
+        changed = False
+        for suffix in DEX_PACKAGE_SUFFIXES:
+            source = ORIGINAL_PACKAGE + suffix
+            replacement = package_name + suffix
+            current, count = patch_exact_dex_string(
+                current,
+                source,
+                replacement,
             )
-        except ValueError:
-            continue
-        if count:
-            candidates.append((name, patched, count))
+            total_by_source[source] += count
+            changed = changed or count > 0
+        if changed:
+            patched_entries[name] = current
 
-    total = sum(item[2] for item in candidates)
-    if total != 1:
+    wrong = {
+        source: count
+        for source, count in total_by_source.items()
+        if count != 1
+    }
+    if wrong:
         raise ValueError(
-            f"JP 15.7.1 anchor expects exactly one plain package DEX string, got {total}"
+            "JP 15.7.1 DEX package-string anchor mismatch: "
+            + ", ".join(f"{key}={value}" for key, value in wrong.items())
         )
-    name, patched, _ = candidates[0]
-    return name, patched
+    return {
+        name: payload
+        for name, payload in patched_entries.items()
+        if payload != entries[name]
+    }
+
+
+def _patch_exact_bytes(
+    payload: bytes,
+    source: bytes,
+    replacement: bytes,
+    *,
+    expected_count: int,
+    label: str,
+) -> bytes:
+    if len(source) != len(replacement):
+        raise ValueError(f"{label}: replacement length changed")
+    count = payload.count(source)
+    if count != expected_count:
+        raise ValueError(
+            f"{label}: expected {expected_count} exact byte occurrence(s), got {count}"
+        )
+    return payload.replace(source, replacement)
 
 
 def patch_split_set(
@@ -205,10 +246,33 @@ def patch_split_set(
                     if info.filename.startswith("classes")
                     and info.filename.endswith(".dex")
                 }
-                dex_name, dex_payload = _patch_base_dex(
-                    dex_entries, package_name
+                replacements.update(
+                    _patch_base_dex(dex_entries, package_name)
                 )
-                replacements[dex_name] = dex_payload
+
+                resources = archive.read("resources.arsc")
+                replacements["resources.arsc"] = _patch_exact_bytes(
+                    resources,
+                    ORIGINAL_PACKAGE.encode("utf-8"),
+                    package_name.encode("utf-8"),
+                    expected_count=1,
+                    label="base resources.arsc package",
+                )
+
+            if split_name == "split_config.arm64_v8a.apk":
+                if SHIM_ENTRY not in archive.namelist():
+                    raise ValueError(
+                        "package flavor patch expects the inert Kneekura shim "
+                        "to be injected first"
+                    )
+                native = archive.read(NATIVE_ENTRY)
+                replacements[NATIVE_ENTRY] = _patch_exact_bytes(
+                    native,
+                    ORIGINAL_PACKAGE.encode("utf-8"),
+                    package_name.encode("utf-8"),
+                    expected_count=1,
+                    label="libnative dotted package",
+                )
 
         before = payload_fingerprint(source)
         _rewrite_apk(source, target, replacements)
