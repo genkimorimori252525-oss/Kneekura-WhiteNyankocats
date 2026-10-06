@@ -8,11 +8,16 @@ written.
 
 ## Frida Gadget compatibility
 
-`trace_service_bridge.js` currently relies on the Java bridge being available as the global `Java` object. That is the pre-Frida-17 runtime model.
+`trace_service_bridge.js` is the readable source and uses the pre-Frida-17 global `Java` bridge model.
 
-For this Phase-C raw-script path, use **Frida Gadget 16.7.19 AArch64** (`frida-gadget-16.7.19-android-arm64.so.xz`). Do not use Frida 17.x with this unbundled script. Frida 17 removed the built-in language bridges; supporting it requires importing `frida-java-bridge` and bundling the agent with `frida-compile` first.
+The patch-kit CI also produces `trace_service_bridge.bundle.js`, which prepends an explicit `frida-java-bridge` import and compiles it with `frida-compile`. Use that bundled agent with current Frida 17.x Gadget.
 
-This is a research-only compatibility pin, not a product runtime dependency. A future Frida-17 path should ship a precompiled/bundled research agent instead of silently accepting an incompatible Gadget.
+Compatibility:
+
+- Frida 17.x: use `trace_service_bridge.bundle.js`.
+- Frida 16.7.19: the raw `trace_service_bridge.js` is also valid because the Java bridge is built into the runtime.
+
+The bridge bundle is research-only and must never ship in Personal MAX or Practice Clean.
 
 ## trace_service_bridge.js
 
