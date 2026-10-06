@@ -62,9 +62,32 @@ jobs:
           grep -F "kneekura_shim_abi_version" /tmp/kneekura-symbols.txt
           grep -F "kneekura_feature_mask" /tmp/kneekura-symbols.txt
           grep -F "kneekura_target_native_sha256" /tmp/kneekura-symbols.txt
+          grep -F "kneekura_sidecar_save_atomic" /tmp/kneekura-symbols.txt
+          grep -F "kneekura_clock_observe_epoch_day" /tmp/kneekura-symbols.txt
+
+      - name: Test portable Clock/Sidecar/Profile core
+        shell: bash
+        run: |
+          set -euo pipefail
+          cc -std=c11 -Wall -Wextra -Werror \
+            -Inative/kneekura-shim/include \
+            native/kneekura-shim/src/kneekura_shim.c \
+            native/kneekura-shim/src/kneekura_state.c \
+            native/kneekura-shim/tests/kneekura_state_test.c \
+            -o /tmp/kneekura-state-inert
+          /tmp/kneekura-state-inert
+
+          cc -std=c11 -Wall -Wextra -Werror \
+            -DKNEEKURA_DEFAULT_FEATURE_MASK=1ull \
+            -Inative/kneekura-shim/include \
+            native/kneekura-shim/src/kneekura_shim.c \
+            native/kneekura-shim/src/kneekura_state.c \
+            native/kneekura-shim/tests/kneekura_state_test.c \
+            -o /tmp/kneekura-state-enabled
+          /tmp/kneekura-state-enabled
 
       - name: Test native dependency injection helper
-        run: python -m unittest tests.test_native_shim_inject tests.test_native_shim_source -v
+        run: python -m unittest tests.test_native_shim_inject tests.test_native_shim_source tests.test_native_sidecar_contract -v
 
       - uses: actions/upload-artifact@v4
         with:
