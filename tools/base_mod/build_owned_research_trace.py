@@ -15,9 +15,9 @@ from tools.base_mod.extract_owned_splits import (
     EXPECTED_EXPORT_SHA256,
     extract_owned_splits,
 )
-from tools.base_mod.inject_shim import inject_split_set
+from tools.base_mod.inject_shim import patch_split_set as inject_kneekura_shim
 from tools.base_mod.inject_research_gadget import inject_research_split_set
-from tools.base_mod.package_flavor import apply_flavor, FLAVOR_PACKAGES, LAUNCHER_CLASS
+from tools.base_mod.package_flavor import patch_split_set as apply_package_flavor, FLAVOR_PACKAGES, LAUNCHER_CLASS
 from tools.base_mod.repack import baseline_resign
 from tools.base_mod.verify_research_trace import verify_research_trace_set
 
@@ -61,7 +61,7 @@ def build_owned_research_trace(
         shutil.rmtree(signed)
 
     source_ledger = extract_owned_splits(export_zip, original)
-    bootstrap_ledger = inject_split_set(
+    bootstrap_ledger = inject_kneekura_shim(
         original,
         bootstrap,
         kneekura_shim,
@@ -72,10 +72,10 @@ def build_owned_research_trace(
         gadget_path=frida_gadget,
         trace_script_path=trace_script,
     )
-    flavor_ledger = apply_flavor(
+    flavor_ledger = apply_package_flavor(
         traced,
+        flavored,
         flavor=RESEARCH_FLAVOR,
-        output_dir=flavored,
     )
     signing_ledger = baseline_resign(
         flavored,
