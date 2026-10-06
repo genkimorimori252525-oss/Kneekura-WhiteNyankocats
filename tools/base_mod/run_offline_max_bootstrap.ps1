@@ -76,9 +76,9 @@ function Push-Checked {
 }
 
 function Restore-Baseline {
-    param([string]$AdbPath, [string]$DeviceId, [string]$RemoteRoot, [string]$Backup, [string]$VerifyDir)
+    param([string]$AdbPath, [string]$DeviceId, [string]$PackageName, [string]$RemoteRoot, [string]$Backup, [string]$VerifyDir)
     Write-Host "Rolling back the exact pre-apply SAVE_DATA..." -ForegroundColor Yellow
-    & $AdbPath -s $DeviceId shell am force-stop jp.kn.trace.battlecats 2>$null | Out-Null
+    & $AdbPath -s $DeviceId shell am force-stop $PackageName 2>$null | Out-Null
     $rollbackTemp = "$RemoteRoot/SAVE_DATA.kneekura-rollback"
     Push-Checked -AdbPath $AdbPath -DeviceId $DeviceId -Local $Backup -Remote $rollbackTemp
     & $AdbPath -s $DeviceId shell "mv '$rollbackTemp' '$RemoteRoot/SAVE_DATA'" 2>$null | Out-Null
@@ -173,7 +173,7 @@ $installedVerify = Join-Path $root "installed-candidate-verify"
 Pull-Checked -AdbPath $adbPath -DeviceId $deviceId -Remote $remoteSave -Local $installedVerify
 $installedSha = Get-Sha256 -Path $installedVerify
 if ($installedSha -ne $ExpectedCandidateSha256) {
-    Restore-Baseline -AdbPath $adbPath -DeviceId $deviceId -RemoteRoot $remoteRoot -Backup $rollbackCopy -VerifyDir $root
+    Restore-Baseline -AdbPath $adbPath -DeviceId $deviceId -PackageName $Package -RemoteRoot $remoteRoot -Backup $rollbackCopy -VerifyDir $root
     throw "Installed SAVE_DATA hash mismatch; rollback completed"
 }
 
@@ -182,7 +182,7 @@ Write-Host "[6/7] Launching original Battle Cats scene with the candidate..."
 Start-Sleep -Seconds 8
 $firstOk = (Read-Host "Did the original Battle Cats UI open normally without a save/data-read error? [y/n]").Trim().ToLowerInvariant()
 if ($firstOk -notin @("y", "yes")) {
-    Restore-Baseline -AdbPath $adbPath -DeviceId $deviceId -RemoteRoot $remoteRoot -Backup $rollbackCopy -VerifyDir $root
+    Restore-Baseline -AdbPath $adbPath -DeviceId $deviceId -PackageName $Package -RemoteRoot $remoteRoot -Backup $rollbackCopy -VerifyDir $root
     Write-Host "Candidate rejected by manual UI check; rollback completed."
     exit 3
 }
@@ -194,7 +194,7 @@ Start-Sleep -Seconds 2
 Start-Sleep -Seconds 8
 $secondOk = (Read-Host "After the restart, did the original UI still open normally with the MAX profile intact? [y/n]").Trim().ToLowerInvariant()
 if ($secondOk -notin @("y", "yes")) {
-    Restore-Baseline -AdbPath $adbPath -DeviceId $deviceId -RemoteRoot $remoteRoot -Backup $rollbackCopy -VerifyDir $root
+    Restore-Baseline -AdbPath $adbPath -DeviceId $deviceId -PackageName $Package -RemoteRoot $remoteRoot -Backup $rollbackCopy -VerifyDir $root
     Write-Host "Restart verification failed; rollback completed."
     exit 4
 }
