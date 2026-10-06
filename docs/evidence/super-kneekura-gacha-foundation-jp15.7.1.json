@@ -58,7 +58,23 @@
     "r1_max_units": 174,
     "r2_nonempty_sets": 0,
     "r3_nonempty_sets": 0,
-    "option_rows_excluding_header": 1089
+    "option_rows_excluding_header": 1089,
+    "r1_unique_unit_count": 495,
+    "r1_unique_by_rarity": {
+      "rare": 69,
+      "super_rare": 88,
+      "uber_rare": 320,
+      "legend_rare": 18
+    },
+    "rare_through_legend_not_in_local_r1_count": 169,
+    "rare_through_legend_not_in_local_r1_by_rarity": {
+      "rare": 125,
+      "super_rare": 17,
+      "uber_rare": 24,
+      "legend_rare": 3
+    },
+    "explicit_test_unit_673_present_in_r1_union": false,
+    "compatibility_interpretation": "Presence in a local original R1 set is strong evidence that the original Rare Gacha data loader accepts that unit id. It is not yet proof of successful acquisition/duplicate save semantics for every unit."
   },
   "event_gacha_setting": [
     {
@@ -86,5 +102,13 @@
     "exact_standard_rare_capsule_rate_vector": "not yet proven",
     "reason": "InstallPack-local GatyaDataSet/Option/EventGatya files prove pool sets, rarity tiers, UI/options and chance-animation metadata, but do not themselves prove the live banner rarity probability vector.",
     "next_evidence": "Capture one exact original JP 15.7.1 Rare Capsule banner/event configuration or runtime draw decision in Phase C before freezing Super Kneekura rates."
+  },
+  "super_kneekura_pool_gate": {
+    "phase_c_seed_pool": "Start from the exact 495-unit local R1 union, then further restrict to units whose acquisition/duplicate behavior is observed safe.",
+    "explicit_exclusions": [
+      673
+    ],
+    "expansion_rule": "Only add the remaining 169 Rare-through-Legend ids after exact historical/server R-set evidence or direct original acquisition-path proof.",
+    "normal_special_policy": "Keep Normal/Special/story-only units outside v1 until their nonstandard acquisition semantics are proven."
   }
 }
