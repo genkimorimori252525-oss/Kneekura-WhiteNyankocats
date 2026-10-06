@@ -34,7 +34,9 @@ from tools.base_mod.inject_java_http_bridge import (
     build_bridge_dex,
     inject_bridge_split_set,
 )
-from tools.base_mod.patch_installpack_data import patch_split_set as patch_datalocal
+from tools.base_mod.patch_installpack_downloadlocal import (
+    patch_split_set as patch_downloadlocal_overlay,
+)
 from tools.base_mod.repack import baseline_resign
 from tools.base_mod.super_gacha_data_prototype import (
     OPTION,
@@ -88,7 +90,7 @@ def build_owned_gacha_ui_proof(
 
     original = work / "original-splits"
     prototype_plain = work / "prototype-plain"
-    datalocal = work / "datalocal-splits"
+    overlay = work / "downloadlocal-overlay-splits"
     bootstrap = work / "bootstrap-splits"
     flavored = work / "flavored-splits"
     bridged = work / "bridged-splits"
@@ -136,16 +138,18 @@ def build_owned_gacha_ui_proof(
         name: (prototype_plain / name).read_bytes()
         for name in (R1, R2, R3, OPTION)
     }
-    datalocal_ledger = patch_datalocal(
+    overlay_ledger = patch_downloadlocal_overlay(
         original,
-        datalocal,
+        overlay,
         replacements,
     )
-    if datalocal_ledger.get("changed_datalocal_entries") != sorted(replacements):
-        raise ValueError("DataLocal proof mutation surface drift")
+    if overlay_ledger.get("added_downloadlocal_entries") != sorted(replacements):
+        raise ValueError("DownloadLocal proof overlay surface drift")
+    if overlay_ledger.get("datalocal_preserved_byte_identical") is not True:
+        raise ValueError("DataLocal preservation gate failed")
 
     bootstrap_ledger = inject_kneekura_shim(
-        datalocal,
+        overlay,
         bootstrap,
         shim,
     )
@@ -191,7 +195,7 @@ def build_owned_gacha_ui_proof(
         signed,
         flavor=flavor,
         replay_enabled=enable_backup_offline_replay,
-        allow_datalocal_patch=True,
+        allow_downloadlocal_patch=True,
     )
     data_proof = verify_gacha_ui_data_proof(
         original,
@@ -217,7 +221,8 @@ def build_owned_gacha_ui_proof(
         "visibility_schedule_defined": False,
         "original_gacha_scene_code_modified": False,
         "original_capsule_result_code_modified": False,
-        "changed_datalocal_entries": sorted(replacements),
+        "downloadlocal_overlay_entries": sorted(replacements),
+        "datalocal_byte_identical": data_proof["datalocal_byte_identical"],
         "data_rows_verified_append_only": data_proof["original_rows_preserved"],
         "option_metadata_cloned": data_proof["option_metadata_cloned"],
         "frida_absent": static_parity["frida_absent"],
@@ -236,7 +241,7 @@ def build_owned_gacha_ui_proof(
     ledgers = {
         "source-split-ledger.json": source_ledger,
         "super-kneekura-prototype-ledger.json": prototype_ledger,
-        "datalocal-patch-ledger.json": datalocal_ledger,
+        "downloadlocal-overlay-ledger.json": overlay_ledger,
         "bootstrap-patch-ledger.json": bootstrap_ledger,
         "package-patch-ledger.json": flavor_ledger,
         "http-bridge-build-ledger.json": bridge_build,
@@ -263,8 +268,11 @@ Cloned visible option set: {prototype_ledger["clone_option_set"]}
 
 Preservation contract:
 - original gacha/capsule/result scene code is not replaced;
-- only four original-format Rare Gacha DataLocal entries are changed;
-- all existing rows remain intact and set 1089 is appended;
+- built-in DataLocal.list/DataLocal.pack remain byte-identical;
+- only four original-format Rare Gacha override files are appended to the
+  existing DownloadLocal overlay pack;
+- all existing DataLocal rows remain intact and set 1089 exists only in the
+  overlay copy;
 - BannerON is 1 by cloning an existing BannerON row;
 - no rarity-rate vector or server visibility schedule is invented;
 - Frida is absent;
