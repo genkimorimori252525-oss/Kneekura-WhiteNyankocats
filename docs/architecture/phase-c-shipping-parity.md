@@ -95,18 +95,27 @@ It performs:
 5. build exact set-1089 research gacha proof;
 6. install the isolated research proof;
 7. verify process liveness, Frida absence and fatal absence;
-8. ask one manual original Rare Gacha UI question.
+8. classify the exact 35-lane / 615.69 MiB original server-asset bootstrap;
+9. if required, let the unchanged original Battle Cats downloader complete that
+   one-time bootstrap in the isolated research package;
+10. only after the normal UI is reachable, ask one manual original Rare Gacha
+    visibility question.
+
+The runner no longer uninstalls the research package between retries, so the
+original downloader cache can survive same-signature `-r` upgrades.
 
 The manual check does **not** ask the owner to draw. It only determines whether
 the unchanged original schedule already exposes the appended set.
 
-If an additional/duplicate banner is visible, the original schedule already
-selects the appended data and Phase C can close.
+A result obtained before the Rare Gacha UI is reached is classified as a
+**server-asset download gate**, not a schedule failure.
 
-If no additional banner is visible, static/data proof still passes; the result
-is evidence that the next narrow implementation must be a local
-**gacha-visibility schedule provider**. It is not a reason to replace the
-original gacha scene.
+If the Rare Gacha UI is reached and an additional/duplicate banner is visible,
+the original schedule already selects the appended data and Phase C can close.
+
+Only if the Rare Gacha UI is reached and no additional banner is visible does
+the result justify a narrow local **gacha-visibility schedule provider**. It is
+not a reason to replace the original gacha scene.
 
 ## Completion rule
 
@@ -121,3 +130,15 @@ Phase C closes only when all of the following coexist:
 
 This keeps the distinction clear between a proven static data extension and a
 proven original-scene visibility decision.
+
+
+## Research-only storage redirect
+
+To cross the fresh-package 615.69 MiB bootstrap without root, the isolated
+research gacha proof can override `getFilesDir()` to return its app-specific
+external files directory. The original downloader and original UI remain
+unchanged.
+
+This redirect is build-time opt-in and is enabled only for the research gacha
+proof. Personal/Practice feature-OFF shipping profiles preserve the platform's
+normal internal `getFilesDir()` behavior.
