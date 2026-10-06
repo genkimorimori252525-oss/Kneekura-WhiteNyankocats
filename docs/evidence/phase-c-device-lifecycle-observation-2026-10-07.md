@@ -1,6 +1,6 @@
 # Phase C device lifecycle observation — 2026-10-07
 
-Status: **device trace succeeded; selective-local-response target not yet promoted**
+Status: **device trace succeeded; first local-response candidate selected, online payload still intentionally uncaptured**
 
 Target:
 - JP 15.7.1
@@ -10,72 +10,163 @@ Target:
 - no HTTP body capture
 - response header values redacted
 
-## Normal-connectivity summary
+## Normal-connectivity capture
 
 30-second startup capture:
 - trace ready: true
 - event count: 20
 - request returns: 2
 - response lifecycles: 2
-- method calls:
-  - `isNetworkAvailable`: 1
-  - `newHttpRequest`: 2
-  - `newResponse`: 1
-  - `onResponseCodeHeaders`: 1
-  - `onResponseFinish`: 1
-  - `onResponseData`: 0
 
-Observed response topology:
-- request 1: `newResponse`
-- request 2: `onResponseCodeHeaders -> onResponseFinish`
+### Request 1 — backup service root
 
-## Airplane-mode summary
+Observed request:
+- method: `GET`
+- URL family: `https://nyanko-backups.ponosgames.com/`
+- query: redacted
+- timeout: `10.0`
+- request header-map size: `0`
+- body: `null`
+- string-array length: `0`
+- boolean flags: `false, false`
+- returned request id: `1`
+
+Observed response ingress:
+- `newResponse`
+- request id: `1`
+- status: `200`
+- response URL family: backup service root
+- response header block: redacted, length `427`
+- ByteBuffer: remaining `0`, capacity `40`
+- final boolean argument: `false`
+
+No `onResponseCodeHeaders`, `onResponseData`, or `onResponseFinish`
+was observed for this request in the capture window.
+
+### Network gate
+
+Immediately after request 1:
+- `isNetworkAvailable() -> true`
+
+### Request 2 — event sale data
+
+Observed request:
+- method: `GET`
+- URL family/path:
+  `https://nyanko-events.ponosgames.com/battlecats_production/sale.tsv`
+- query: redacted
+- timeout: `10.0`
+- request header-map size: `0`
+- body: `null`
+- string-array length: `0`
+- boolean flags: `true, false`
+- returned request id: `2`
+
+Observed response ingress:
+- `onResponseCodeHeaders`
+  - request id: `2`
+  - status: `401`
+  - response header block: redacted, length `503`
+- `onResponseFinish`
+  - request id: `2`
+  - boolean argument: `false`
+
+No `onResponseData` was observed for request 2.
+
+## Airplane-mode capture
 
 30-second startup capture:
 - trace ready: true
 - event count: 14
 - request returns: 1
 - response lifecycles: 1
-- method calls:
-  - `isNetworkAvailable`: 1
-  - `newHttpRequest`: 1
-  - `newResponse`: 1
-  - `onResponseCodeHeaders`: 0
-  - `onResponseFinish`: 0
-  - `onResponseData`: 0
 
-Observed response topology:
-- request 1: `newResponse`
+### Request 1 — same backup service request family
 
-## Confirmed facts
+The request signature matches normal-connectivity request 1:
+- method: `GET`
+- URL family: `https://nyanko-backups.ponosgames.com/`
+- query: redacted
+- timeout: `10.0`
+- request header-map size: `0`
+- body: `null`
+- string-array length: `0`
+- boolean flags: `false, false`
+- returned request id: `1`
+
+### Network gate
+
+- `isNetworkAvailable() -> false`
+
+The event-sale request was not issued after this false result.
+
+### Offline response ingress
+
+Request 1 completed through `newResponse`:
+- request id: `1`
+- status: `0`
+- response URL family: backup service root
+- response header block: redacted, length `2`
+- body buffer: `null`
+- final boolean argument: `true`
+
+## Confirmed runtime contract
 
 1. `MyActivity.newHttpRequest` is a live request boundary on the owner device.
-2. Its return value is an integer request identifier used by the response ingress.
-3. Normal startup produced two requests, while airplane startup produced one.
-4. At least two response ingress patterns are real:
-   - `newResponse`-only
-   - `onResponseCodeHeaders -> onResponseFinish`
-5. The second normal-connectivity request is absent from the airplane-mode capture, so request issuance is not a simple unconditional send-and-fail model.
-6. No `onResponseData` call occurred in these startup captures.
-7. The observed order is the contract; no guessed textbook callback order should replace it.
+2. Its returned `int` is the response correlation id.
+3. The exact backup-service request family is present in both normal and
+   airplane captures with the same non-sensitive request signature.
+4. The backup request uses the one-shot `newResponse` ingress in both
+   success and offline failure cases.
+5. Network state is checked after the backup request.
+6. The event-sale request is gated by network availability in this startup path.
+7. The event-sale request uses the streamed callback family
+   `onResponseCodeHeaders -> onResponseFinish` for the observed 401 path.
+8. No `onResponseData` was observed in either capture.
+9. The observed callback order is the contract; guessed callback order must not
+   replace device evidence.
 
-## Not yet promoted
+## First local-response candidate
 
-Do **not** implement a local responder yet from counts alone.
+The backup-service root request is the preferred first experimental target.
 
-Still required from the sanitized raw traces:
-- request URL family/path (query already redacted)
-- HTTP status code for each response ingress
-- `onResponseFinish` boolean
-- relevant non-sensitive request flags
-- confirmation that normal/airplane request 1 are the same request family
+Why:
+- it is observed in both normal and offline conditions;
+- its request signature is stable across both captures;
+- it uses a single `newResponse` ingress instead of the streamed callback path;
+- its offline fallback has no response body;
+- the event-sale request is currently unsuitable because only a 401 streamed
+  path has been observed in the isolated research package.
 
-Only after those fields are correlated should one request family be selected for the first local-response experiment.
+The online backup response body remains intentionally uncaptured. Therefore the
+first local-response experiment must **not invent a 200 payload**.
+
+## Next gate before behavioral promotion
+
+A research-only local provider may first replay only the *observed offline
+failure semantics* for the exact backup-service request family, behind a feature
+flag and only after the following are proven:
+
+- exact request-id allocation behavior around `mNextRequestHandle`;
+- whether a local-complete request must participate in `mRequestHandles`;
+- the exact meaning/classification of the redacted two-character offline header
+  block without recording header values;
+- callback scheduling context matching the original GL-thread/error path.
+
+Static evidence already shows:
+- `mNextRequestHandle` is an instance integer field;
+- `mRequestHandles` is an instance `java.util.Map`;
+- original `newHttpRequest` increments the next handle, stores the request,
+  starts the request thread, and returns the handle.
+
+Do not promote a product hook until the research replay preserves those
+lifecycle semantics.
 
 ## Promotion rule
 
-The first experiment must remain selective:
-- recognized exact request family -> local response
+The first experiment remains selective:
+- exact recognized backup request -> research-local replay only
 - unknown request -> exact original `newHttpRequest`
 - feature OFF -> exact original path
-- original native `onResponse*` methods remain response ingress
+- original native response methods remain response ingress
+- Personal MAX and Practice Clean remain free of Frida instrumentation
