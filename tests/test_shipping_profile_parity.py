@@ -47,6 +47,15 @@ class ShippingProfileParityTests(unittest.TestCase):
         self.assertIn("gacha_proof_set_id = 1089", source)
         self.assertIn("gacha_proof_units = @(37, 30, 34)", source)
         self.assertIn("schedule_provider_required", source)
+        self.assertIn("analyze_server_download_gate", source)
+        self.assertIn("research_external_files_dir", source)
+        self.assertIn("server_asset_download_gate", source)
+        self.assertIn("original_download_completed", source)
+        self.assertIn("additional game-data download screen", source)
+        self.assertNotIn(
+            "adb -s $Device uninstall jp.kn.trace.battlecats",
+            source,
+        )
         self.assertIn("Did the normal Battle Cats Rare Gacha screen open", source)
 
 
