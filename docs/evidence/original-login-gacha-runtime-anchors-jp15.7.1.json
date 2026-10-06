@@ -1,0 +1,223 @@
+{
+  "schema_version": 1,
+  "anchor": {
+    "game_version": "15.7.1",
+    "version_code": 1507010,
+    "architecture": "arm64-v8a",
+    "native_sha256": "333d2974ab2ff881fd70087fd62dea7d12d82addbc55cab2f2a675ad67e3a7e2",
+    "native_build_id": "8cb3815648eb9642da10bfb039d71bff7a3519bd"
+  },
+  "login_runtime_strings": [
+    {
+      "name": "DailyLoginEventData.csv",
+      "string_vaddr": "0x1a2698",
+      "xrefs": [
+        [
+          "0x9c3424",
+          "0x9c3428"
+        ]
+      ],
+      "role": "daily login event/reward loader"
+    },
+    {
+      "name": "DailyLoginEventGrade.json",
+      "string_vaddr": "0x18f84a",
+      "xrefs": [
+        [
+          "0x5f70c4",
+          "0x5f70c8"
+        ]
+      ],
+      "role": "daily login grade/condition loader"
+    },
+    {
+      "name": "StampData.csv",
+      "string_vaddr": "0x1aec53",
+      "xrefs": [
+        [
+          "0x9c5758",
+          "0x9c575c"
+        ]
+      ],
+      "role": "ordinary 31-slot stamp loader"
+    },
+    {
+      "name": "DailyLoginEventText_%03d_%@.tsv",
+      "string_vaddr": "0x196788",
+      "xrefs": [
+        [
+          "0x5442cc",
+          "0x5442d0"
+        ]
+      ],
+      "role": "localized daily-login event text"
+    },
+    {
+      "name": "loginbg_%03d.png",
+      "string_vaddr": "0x1ad6cd",
+      "xrefs": [
+        [
+          "0x548190",
+          "0x548194"
+        ]
+      ],
+      "role": "login background image formatter"
+    },
+    {
+      "name": "loginbg.imgcut",
+      "string_vaddr": "0x1a5303",
+      "xrefs": [
+        [
+          "0x5481f0",
+          "0x5481f4"
+        ]
+      ],
+      "role": "login background cut definition"
+    },
+    {
+      "name": "comeback_push_01",
+      "string_vaddr": "0x18f9af",
+      "xrefs": [
+        [
+          "0x73a9cc",
+          "0x73a9d0"
+        ]
+      ],
+      "role": "comeback login UI/animation resource"
+    },
+    {
+      "name": "comeback_stamp_push%02d",
+      "string_vaddr": "0x197b2c",
+      "xrefs": [
+        [
+          "0x73aec8",
+          "0x73aecc"
+        ]
+      ],
+      "role": "numbered comeback stamp push resource"
+    },
+    {
+      "name": "DailyLogin",
+      "string_vaddr": "0x19b671",
+      "xrefs": [
+        [
+          "0x94cfe4",
+          "0x94cfe8"
+        ]
+      ],
+      "role": "daily-login literal"
+    },
+    {
+      "name": "BcLogDailyLogin",
+      "string_vaddr": "0x1a25b7",
+      "xrefs": [
+        [
+          "0x9450bc",
+          "0x9450c0"
+        ]
+      ],
+      "role": "daily-login logging/event literal"
+    }
+  ],
+  "login_update_rtti": [
+    "24DailyLoginTextureContext",
+    "NSt6__ndk110__function6__funcIZN13MyApplication16DailyLoginUpdateEvE3$_0NS_9allocatorIS3_EEFvP9NewDialog20NewDialogChangeStateiEEE",
+    "ZN13MyApplication16DailyLoginUpdateEvE3$_0",
+    "NSt6__ndk110__function6__funcIZN13MyApplication16DailyLoginUpdateEvE3$_1NS_9allocatorIS3_EEFvP9NewDialogP9aGraphicsEEE",
+    "ZN13MyApplication16DailyLoginUpdateEvE3$_1"
+  ],
+  "comeback_resource_region": {
+    "observed_prologue": "0x73a934",
+    "exact_resource_xrefs": [
+      {
+        "resource": "comeback_push_01",
+        "adrp": "0x73a9cc",
+        "add": "0x73a9d0"
+      },
+      {
+        "resource": "comeback_stamp_push%02d",
+        "adrp": "0x73aec8",
+        "add": "0x73aecc"
+      }
+    ],
+    "interpretation": "The region has a normal function prologue and consumes multiple comeback resources. RTTI/type-name strings elsewhere in the same binary name lambdas inside MyApplication::DailyLoginUpdate. This is a strong scene/update research anchor, but no product hook is declared yet."
+  },
+  "gacha_loader_strings": [
+    {
+      "name": "EventGatya_Setting.csv",
+      "string_vaddr": "0x1ac5c7",
+      "xrefs": [
+        [
+          "0x57bd80",
+          "0x57bd84"
+        ]
+      ]
+    },
+    {
+      "name": "GatyaData_Option_ChanceAnimation.tsv",
+      "string_vaddr": "0x1935f5",
+      "xrefs": [
+        [
+          "0x5ec5c0",
+          "0x5ec5c4"
+        ]
+      ]
+    },
+    {
+      "name": "GatyaDataSet%@1.csv",
+      "string_vaddr": "0x19469b",
+      "xrefs": [
+        [
+          "0x5ed6bc",
+          "0x5ed6c0"
+        ]
+      ]
+    },
+    {
+      "name": "GatyaDataSet%@2.csv",
+      "string_vaddr": "0x1a136b",
+      "xrefs": [
+        [
+          "0x5ed8a8",
+          "0x5ed8ac"
+        ]
+      ]
+    },
+    {
+      "name": "GatyaDataSet%@3.csv",
+      "string_vaddr": "0x1ac70d",
+      "xrefs": [
+        [
+          "0x5ed9ac",
+          "0x5ed9b0"
+        ]
+      ]
+    },
+    {
+      "name": "GatyaData_Option_Set%s.tsv",
+      "string_vaddr": "0x19b1e3",
+      "xrefs": [
+        [
+          "0x5edab4",
+          "0x5edab8"
+        ]
+      ]
+    }
+  ],
+  "gacha_dataset_loader_region": {
+    "observed_prologue": "0x5ed65c",
+    "ordered_string_xrefs": [
+      "0x5ed6bc GatyaDataSet%@1.csv",
+      "0x5ed8a8 GatyaDataSet%@2.csv",
+      "0x5ed9ac GatyaDataSet%@3.csv",
+      "0x5edab4 GatyaData_Option_Set%s.tsv"
+    ],
+    "interpretation": "The exact JP binary reads the three dataset lanes and option table in one loader region, matching Battle Cats Complete's independently reconstructed load_gatya_data_set_csv control flow."
+  },
+  "preservation_decisions": [
+    "No login scene or gacha scene replacement is justified.",
+    "Login template 949 remains a semantic provider choice only until selection/claim/grant flow is observed.",
+    "Super Kneekura Gacha remains data-first: prove a tiny original-format set through the original scene before expanding the pool.",
+    "All runtime addresses are valid only for the pinned JP 15.7.1 native SHA/build ID."
+  ]
+}
