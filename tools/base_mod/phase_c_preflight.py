@@ -247,6 +247,8 @@ def audit(root: Path) -> dict:
         "docs/architecture/phase-c-static-http-bridge.md",
         "docs/architecture/phase-c-research-preflight.md",
         "docs/architecture/phase-c-gacha-original-ui-proof.md",
+        "docs/architecture/phase-c-shipping-boundary.md",
+        "tools/base_mod/verify_shipping_boundary.py",
         "docs/architecture/phase-c-shipping-parity.md",
         "docs/evidence/phase-c-gacha-ui-proof-jp15.7.1.json",
     ]
@@ -305,6 +307,13 @@ def audit(root: Path) -> dict:
             "frida_allowed": False,
             "research_classes5_allowed": False,
             "final_runner": "tools/base_mod/run_phase_c_final_smoke.ps1",
+        },
+        "shipping_boundary": {
+            "personal_package": "jp.kn.white.battlecats",
+            "practice_package": "jp.kn.clean.battlecats",
+            "research_package": "jp.kn.trace.battlecats",
+            "product_frida_allowed": False,
+            "research_log_in_product_dex": False,
         },
         "original_ui_gacha_proof": {
             "target_set_id": 1089,
