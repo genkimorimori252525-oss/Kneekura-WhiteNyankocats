@@ -36,7 +36,7 @@ public final class BattleCatsImporter {
     private static final Pattern EOC_STAGE = Pattern.compile("^stage(\\d{2})\\.csv$", Pattern.CASE_INSENSITIVE);
     private static final Pattern ITF_STAGE = Pattern.compile("^stageW(\\d{2})_(\\d{2})\\.csv$", Pattern.CASE_INSENSITIVE);
     private static final Pattern COTC_STAGE = Pattern.compile("^stageSpace(\\d{2})_(\\d{2})\\.csv$", Pattern.CASE_INSENSITIVE);
-    private static final Pattern GENERIC_STAGE = Pattern.compile("^stage([A-Za-z]+)(\\d{3})_(\\d{2})\\.csv$", Pattern.CASE_INSENSITIVE);
+    private static final Pattern Z_STAGE = Pattern.compile("^stageZ(\\d{2,3})_(\\d{2})\\.csv$", Pattern.CASE_INSENSITIVE);\n    private static final Pattern GENERIC_STAGE = Pattern.compile("^stage([A-Za-z]+)(\\d{3})_(\\d{2})\\.csv$", Pattern.CASE_INSENSITIVE);
 
     private BattleCatsImporter() {
     }
