@@ -19,16 +19,41 @@ ORIGINAL_LAUNCHER = ORIGINAL_PACKAGE + ".MyActivity"
 EXPECTED_NEW_HTTP_INSNS_SHA256 = (
     "14f896e5b42b8e5b8ab50f756bdc79ad44614325eb153ab99ffcdafb98c70a80"
 )
+EXPECTED_REQUEST_CTOR_INSNS_SHA256 = (
+    "55a6e302ccfda0ba24184d8e34345559927b30cb46c0d7235e087b45256ecfb8"
+)
+EXPECTED_OFFLINE_FALLBACK_INSNS_SHA256 = (
+    "b03f69b5a8187bee470b7fdbcee8416e3a01b667f080f37a2042786e3efd1abe"
+)
 
 
-def _new_http_method(dex: bytes, descriptor: str) -> dict:
+def _exact_method(
+    dex: bytes,
+    descriptor: str,
+    name: str,
+    parameters: list[str],
+    return_type: str,
+) -> dict:
     rows = [
         row
         for row in defined_methods(dex, descriptor)
-        if row["name"] == "newHttpRequest"
-        and row["proto"]["return"] == "I"
-        and row["proto"]["parameters"]
-        == [
+        if row["name"] == name
+        and row["proto"]["return"] == return_type
+        and row["proto"]["parameters"] == parameters
+    ]
+    if len(rows) != 1:
+        raise ValueError(
+            f"expected exactly one {descriptor}->{name}, got {len(rows)}"
+        )
+    return rows[0]
+
+
+def _new_http_method(dex: bytes, descriptor: str) -> dict:
+    return _exact_method(
+        dex,
+        descriptor,
+        "newHttpRequest",
+        [
             "Ljava/lang/String;",
             "Ljava/lang/String;",
             "F",
@@ -37,13 +62,9 @@ def _new_http_method(dex: bytes, descriptor: str) -> dict:
             "[Ljava/lang/String;",
             "Z",
             "Z",
-        ]
-    ]
-    if len(rows) != 1:
-        raise ValueError(
-            f"expected exactly one newHttpRequest on {descriptor}, got {len(rows)}"
-        )
-    return rows[0]
+        ],
+        "I",
+    )
 
 
 def verify_static_http_bridge(
@@ -121,6 +142,37 @@ def verify_static_http_bridge(
         if original_method.get("insns_sha256") != EXPECTED_NEW_HTTP_INSNS_SHA256:
             raise ValueError("original newHttpRequest instruction hash drift")
 
+        request_ctor = _exact_method(
+            original_classes4,
+            "La32;",
+            "<init>",
+            [
+                "I",
+                "Ljava/lang/String;",
+                "Ljava/net/URL;",
+                "F",
+                "Ljava/util/HashMap;",
+                "Ljava/nio/ByteBuffer;",
+                "[Ljava/lang/String;",
+            ],
+            "V",
+        )
+        if request_ctor.get("insns_sha256") != EXPECTED_REQUEST_CTOR_INSNS_SHA256:
+            raise ValueError("a32 request constructor instruction hash drift")
+
+        offline_fallback = _exact_method(
+            original_classes4,
+            "Lz22;",
+            "a",
+            [],
+            "V",
+        )
+        if (
+            offline_fallback.get("insns_sha256")
+            != EXPECTED_OFFLINE_FALLBACK_INSNS_SHA256
+        ):
+            raise ValueError("Lz22.a offline fallback instruction hash drift")
+
     with zipfile.ZipFile(modified_dir / "base.apk", "r") as final_base:
         manifest_values = string_values(final_base.read("AndroidManifest.xml"))
         if package_name not in manifest_values:
@@ -197,6 +249,8 @@ def verify_static_http_bridge(
         "launcher": bridge_launcher,
         "replay_enabled": replay_enabled,
         "original_new_http_code_preserved": True,
+        "request_constructor_anchor_preserved": True,
+        "offline_fallback_anchor_preserved": True,
         "original_scene_activity_subclassed": True,
         "unknown_request_super_fallthrough": True,
         "shim_dependency_present": True,
