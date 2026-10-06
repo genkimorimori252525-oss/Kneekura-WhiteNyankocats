@@ -4,6 +4,7 @@ project(kneekura_shim C)
 add_library(kneekura SHARED
     src/kneekura_shim.c
     src/kneekura_state.c
+    src/kneekura_provider.c
 )
 
 target_include_directories(kneekura
