@@ -158,13 +158,14 @@ def baseline_resign(
 
     split_dir = split_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
+    sources = _required_splits(split_dir)
+
     keystore = keystore.resolve()
     if not keystore.is_file():
         raise FileNotFoundError(keystore)
 
     zipalign_bin = find_android_tool("zipalign", zipalign)
     apksigner_bin = find_android_tool("apksigner", apksigner)
-    sources = _required_splits(split_dir)
 
     ledger_splits: list[dict] = []
     signer_digests: set[str] = set()
