@@ -135,6 +135,7 @@ jobs:
           mkdir -p build/patch-kit/bridge/java/stub/jp/co/ponos/battlecats
 
           cp -a tools/base_mod/*.py build/patch-kit/tools/base_mod/
+          cp tools/base_mod/run_static_http_smoke.ps1 build/patch-kit/tools/base_mod/
           cp tools/battlecats_pack.py build/patch-kit/tools/
           cp tools/battlecats_source.py build/patch-kit/tools/
           cp tools/analyze_gacha_foundation.py build/patch-kit/tools/
@@ -222,6 +223,9 @@ jobs:
               --alias kneekura \
               --storepass YOUR_PASSWORD \
               --output research-out
+
+          One-command final owner-device smoke (Windows PowerShell):
+            powershell -ExecutionPolicy Bypass -File tools/base_mod/run_static_http_smoke.ps1
 
           Frida-free static HTTP bridge proof:
             python -m tools.base_mod.build_owned_static_http_bridge               /path/to/nyanko_battlecats_2026-10-06.zip               --flavor research               --shim libkneekura.so               --keystore private/kneekura.p12               --alias kneekura               --storepass YOUR_PASSWORD               --enable-backup-offline-replay               --output static-http-out
