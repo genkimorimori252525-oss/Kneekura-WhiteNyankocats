@@ -20,6 +20,9 @@ on:
       - "docs/architecture/phase-c-gacha-original-ui-proof.md"
       - "docs/architecture/phase-c-shipping-boundary.md"
       - "docs/architecture/phase-c-shipping-parity.md"
+      - "docs/architecture/offline-local-profile-bootstrap.md"
+      - "docs/evidence/offline-profile-*"
+      - "docs/research/offline-profile-community-prior-art.md"
       - "docs/references/native-service-map-jp15.7.1.*"
       - "docs/references/hook-candidate-matrix-jp15.7.1.*"
       - "docs/evidence/myactivity-service-methods-jp15.7.1.json"
@@ -297,6 +300,9 @@ jobs:
             powershell -ExecutionPolicy Bypass -File .\tools\base_mod\run_offline_profile_probe.ps1
 
           Offline MAX one-time bootstrap (research package only):
+            - final candidate includes 835 eligible cats at first form, all
+              configured MAX resources, all 310 exact JP 15.7.1 Talent Orb types
+              at 998 each, and the exact engineer maximum of 5.
             1. Disable Wi-Fi and mobile data on the Android device.
             2. Run:
                powershell -ExecutionPolicy Bypass -File .\tools\base_mod\run_offline_max_bootstrap.ps1
