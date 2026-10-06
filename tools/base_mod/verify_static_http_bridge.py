@@ -74,6 +74,7 @@ def verify_static_http_bridge(
     flavor: str,
     replay_enabled: bool,
     allow_datalocal_patch: bool = False,
+    allow_downloadlocal_patch: bool = False,
 ) -> dict:
     package_name = FLAVOR_PACKAGES.get(flavor)
     if package_name is None:
@@ -126,12 +127,24 @@ def verify_static_http_bridge(
                 raise ValueError(
                     f"bridge arm64 added surface drifted: {diff['added']}"
                 )
-        elif name == "split_InstallPack.apk" and allow_datalocal_patch:
-            expected_changed = {
-                "AndroidManifest.xml",
-                "assets/DataLocal.list",
-                "assets/DataLocal.pack",
-            }
+        elif name == "split_InstallPack.apk" and (
+            allow_datalocal_patch or allow_downloadlocal_patch
+        ):
+            if allow_datalocal_patch and allow_downloadlocal_patch:
+                raise ValueError(
+                    "DataLocal and DownloadLocal patch modes are mutually exclusive"
+                )
+            expected_changed = {"AndroidManifest.xml"}
+            if allow_datalocal_patch:
+                expected_changed.update({
+                    "assets/DataLocal.list",
+                    "assets/DataLocal.pack",
+                })
+            if allow_downloadlocal_patch:
+                expected_changed.update({
+                    "assets/DownloadLocal.list",
+                    "assets/DownloadLocal.pack",
+                })
             if set(diff["changed"]) != expected_changed or diff["added"]:
                 raise ValueError(
                     f"{name}: static data-proof surface drifted; diff={diff}"
@@ -267,6 +280,7 @@ def verify_static_http_bridge(
         "shim_dependency_present": True,
         "frida_absent": True,
         "datalocal_patch_allowed": allow_datalocal_patch,
+        "downloadlocal_patch_allowed": allow_downloadlocal_patch,
         "split_diffs": reports,
     }
 
@@ -278,6 +292,7 @@ def main() -> int:
     parser.add_argument("--flavor", required=True, choices=sorted(FLAVOR_PACKAGES))
     parser.add_argument("--replay-enabled", action="store_true")
     parser.add_argument("--allow-datalocal-patch", action="store_true")
+    parser.add_argument("--allow-downloadlocal-patch", action="store_true")
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
 
@@ -287,6 +302,7 @@ def main() -> int:
         flavor=args.flavor,
         replay_enabled=args.replay_enabled,
         allow_datalocal_patch=args.allow_datalocal_patch,
+        allow_downloadlocal_patch=args.allow_downloadlocal_patch,
     )
     rendered = json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
     if args.output:
