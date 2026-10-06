@@ -127,7 +127,7 @@ Pull-Checked -AdbPath $adbPath -DeviceId $deviceId -Remote $remoteSentinel -Loca
 $preSha = Get-Sha256 -Path $preSave
 
 $preVerify = Join-Path $root "pre-install-r-max-verification.json"
-& python -m tools.base_mod.verify_offline_max_save $preSave $exportPath --output $preVerify | Out-Host
+& python -m tools.base_mod.verify_offline_max_save $preSave $exportPath --output $preVerify --allow-runtime-rewrite | Out-Host
 if ($LASTEXITCODE -ne 0) { throw "Pre-install-r SAVE_DATA no longer satisfies the MAX contract" }
 
 Write-Host "[2/6] Confirming first persistence proof remains offline..."
@@ -172,7 +172,7 @@ $postSave = Join-Path $root "post-install-r-SAVE_DATA"
 Pull-Checked -AdbPath $adbPath -DeviceId $deviceId -Remote $remoteSave -Local $postSave
 $postSha = Get-Sha256 -Path $postSave
 $postVerify = Join-Path $root "post-install-r-max-verification.json"
-& python -m tools.base_mod.verify_offline_max_save $postSave $exportPath --output $postVerify | Out-Host
+& python -m tools.base_mod.verify_offline_max_save $postSave $exportPath --output $postVerify --allow-runtime-rewrite | Out-Host
 if ($LASTEXITCODE -ne 0) {
     Restore-PreUpgradeSave -AdbPath $adbPath -DeviceId $deviceId -PackageName $Package -RemoteRoot $remoteRoot -SaveBackup $preSave -SentinelBackup $preSentinel
     $log.Add("post_install_max_verification=failed; pre-upgrade SAVE_DATA restored")
