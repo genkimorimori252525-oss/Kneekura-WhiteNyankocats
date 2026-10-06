@@ -235,6 +235,7 @@ jobs:
           cp docs/evidence/phase-c-server-download-gate-jp15.7.1.* build/patch-kit/docs/evidence/
           cp docs/evidence/phase-c-h01-integrity-gate-jp15.7.1.* build/patch-kit/docs/evidence/
           cp docs/evidence/offline-profile-save-roundtrip-jp15.7.1.* build/patch-kit/docs/evidence/
+          cp docs/evidence/offline-profile-runtime-rewrite-jp15.7.1.* build/patch-kit/docs/evidence/
           cp docs/evidence/offline-profile-unit-selection-jp15.7.1.json build/patch-kit/docs/evidence/
           cp docs/evidence/offline-profile-device-baseline-probe-jp15.7.1.json build/patch-kit/docs/evidence/
           cp docs/evidence/offline-profile-static-map-jp15.7.1.* build/patch-kit/docs/evidence/
@@ -313,6 +314,12 @@ jobs:
 
           Offline MAX rollback:
             powershell -ExecutionPolicy Bypass -File .\tools\base_mod\run_offline_max_rollback.ps1
+
+          Original-game SAVE_DATA normalization:
+            - the 497,580-byte candidate is accepted by the original game;
+            - a normal restart rewrites it to a valid 507,174-byte form;
+            - this 9,594-byte growth is mapped and fully verified, not treated
+              as corruption.
 
           Offline MAX install-r persistence gate:
             after the one-time bootstrap passes, keep network disabled and run:
