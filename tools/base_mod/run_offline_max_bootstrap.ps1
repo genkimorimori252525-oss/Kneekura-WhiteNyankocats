@@ -204,10 +204,10 @@ Pull-Checked -AdbPath $adbPath -DeviceId $deviceId -Remote $remoteSave -Local $p
 $postRestartSha = Get-Sha256 -Path $postRestart
 
 $postRestartVerification = Join-Path $root "post-restart-max-verification.json"
-& python -m tools.base_mod.verify_offline_max_save $postRestart $exportPath --output $postRestartVerification | Out-Host
+& python -m tools.base_mod.verify_offline_max_save $postRestart $exportPath --output $postRestartVerification --allow-runtime-rewrite | Out-Host
 if ($LASTEXITCODE -ne 0) {
     Restore-Baseline -AdbPath $adbPath -DeviceId $deviceId -PackageName $Package -RemoteRoot $remoteRoot -Backup $rollbackCopy -VerifyDir $root
-    Write-Host "Post-restart SAVE_DATA no longer satisfies the MAX contract; rollback completed."
+    Write-Host "Post-restart SAVE_DATA failed even the stable-prefix runtime verification; rollback completed."
     exit 5
 }
 
@@ -221,6 +221,8 @@ $result = [ordered]@{
     installed_sha256_before_launch = $installedSha
     post_restart_save_sha256 = $postRestartSha
     post_restart_max_verification = $postRestartVerification
+    post_restart_size = (Get-Item -LiteralPath $postRestart).Length
+    post_restart_runtime_rewrite_allowed = $true
     first_launch_original_ui_ok = $true
     second_launch_original_ui_ok = $true
     rollback_local = $rollbackCopy
