@@ -23,6 +23,9 @@ int main(void) {
                     == 777,
             "gacha pass-through off");
     require(kneekura_provider_stage_cat_food(12, 0) == 0, "reward disabled");
+    require(
+            kneekura_provider_login_template_id(1234u) == 1234u,
+            "login template pass-through off");
 
     KneekuraSidecarState state;
     require(
@@ -36,6 +39,11 @@ int main(void) {
             "login provider disabled");
 #else
     require(kneekura_provider_event_visible(0, 1) == 1u, "local event visible");
+    require(
+            kneekura_provider_login_template_id(1234u)
+                    == KNEEKURA_COMEBACK_TEMPLATE_ID,
+            "exact comeback template selected");
+    require(KNEEKURA_COMEBACK_CYCLE_LENGTH == 7u, "exact seven-day cycle");
     require(kneekura_provider_event_visible(1, 0) == 1u, "original event visible");
     require(
             kneekura_provider_gacha_cost(KNEEKURA_GACHA_KIND_SUPER, 1, 777)
