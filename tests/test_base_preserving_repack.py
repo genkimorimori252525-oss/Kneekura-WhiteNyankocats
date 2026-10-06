@@ -34,6 +34,9 @@ class BasePreservingRepackTests(unittest.TestCase):
             a = root / "a.apk"
             b = root / "b.apk"
             _write_apk(a, "same")
+            with zipfile.ZipFile(a, "a") as archive:
+                archive.writestr("stamp-cert-sha256", b"old-source-stamp")
+                archive.writestr("pinlist.meta", b"old-pin-layout")
             with zipfile.ZipFile(b, "w", compression=zipfile.ZIP_STORED) as archive:
                 archive.writestr("assets/payload.txt", b"payload:same")
                 archive.writestr("AndroidManifest.xml", b"synthetic-manifest-same")
