@@ -107,9 +107,9 @@ def _profile_offset(offset: int, profile: str) -> int:
     if profile == "runtime-rewrite":
         if offset >= TALENT_ORB_COUNT_OFFSET:
             mapped += RUNTIME_SHIFT_LATE_RESOURCES
-        elif offset >= ARRAYS_I32["lucky_tickets"][0]:
+        elif offset >= ARRAYS_I32["lucky_tickets"][2]:
             mapped += RUNTIME_SHIFT_MID_RESOURCES
-        elif offset >= ARRAYS_I32["base_materials"][0]:
+        elif offset >= ARRAYS_I32["base_materials"][2]:
             mapped += RUNTIME_SHIFT_BASE_MATERIALS
     elif profile != "candidate":
         raise ValueError(f"unknown SAVE_DATA profile: {profile}")
