@@ -84,5 +84,16 @@
     "talent_orb_types": 310,
     "talent_orbs_each": 998
   },
-  "conclusion": "The 497,580-byte bootstrap candidate is accepted by the original game. The 507,174-byte save is a valid original-game normalization/expansion, not corruption."
+  "conclusion": "The 497,580-byte bootstrap candidate is accepted by the original game. The 507,174-byte save is a valid original-game normalization/expansion, not corruption.",
+  "independent_runtime_verifier": {
+    "implementation": "tools/base_mod/verify_offline_max_save.py",
+    "verification_level": "full-semantic",
+    "layout_profile": "runtime-rewrite",
+    "passed": true,
+    "eligible_owned": 835,
+    "eligible_gatya_seen": 835,
+    "eligible_first_form": 835,
+    "required_drop_ids_enabled": 255,
+    "failures": []
+  }
 }
