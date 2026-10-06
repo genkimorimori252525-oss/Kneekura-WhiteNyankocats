@@ -88,26 +88,32 @@ that row, changes only the set id, and explicitly keeps BannerON at 1.
 Therefore the appended row is structurally compatible with the original Rare
 Gacha parser and reuses an already proven original banner configuration.
 
-## Four-file mutation surface
+## Four-file DownloadLocal overlay surface
 
-Only these decrypted DataLocal entries may change:
+The first device attempt proved that rewriting built-in `DataLocal.list/.pack`
+is not acceptable for this runtime proof: after the original 615.69 MiB server
+bootstrap completed, the game stopped on H01.
+
+The H01-safe build therefore leaves both built-in DataLocal container files
+**byte-identical** to the exact JP 15.7.1 source.
+
+Only these four override files are appended to the existing DownloadLocal
+overlay:
 
 - `GatyaDataSetR1.csv`
 - `GatyaDataSetR2.csv`
 - `GatyaDataSetR3.csv`
 - `GatyaData_Option_SetR.tsv`
 
-For the appended set:
+Each overlay file contains the exact original table plus one appended set:
 
 - R1 contains the three tiny proof unit ids plus `-1`;
 - R2 is `-1`;
 - R3 is `-1`;
-- the option row is cloned from an original BannerON row with id changed to
+- the option row is cloned from original BannerON set 49 with id changed to
   1089.
 
-All existing rows are byte-for-byte preserved at the decrypted payload level.
-The DataLocal pack writer also verifies all untouched DataLocal entries retain
-their original decrypted payload hashes.
+Every original DownloadLocal entry is also preserved.
 
 ## Build path
 
@@ -115,7 +121,7 @@ their original decrypted payload hashes.
 
 1. exact owned JP 15.7.1 split extraction;
 2. deterministic tiny set generation;
-3. DataLocal-only InstallPack rewrite;
+3. append-only DownloadLocal overlay injection while DataLocal remains byte-identical;
 4. inert Kneekura shim bootstrap;
 5. isolated package flavor;
 6. Frida-free static MyActivity bridge;
@@ -127,10 +133,13 @@ The final data verifier is:
 
 `tools/base_mod/verify_gacha_ui_data_proof.py`
 
-It decrypts the original and final DataLocal containers and proves:
+It compares the original DataLocal tables against the final DownloadLocal
+overrides and proves:
 
-- original R1/R2/R3/option rows are unchanged;
-- exactly one row is appended to each table;
+- original DataLocal.list/DataLocal.pack are byte-identical;
+- all original DownloadLocal payloads are preserved;
+- each override retains every original R1/R2/R3/option row;
+- exactly one row is appended to each override table;
 - set id is 1089;
 - R1 pool equals the deterministic proof pool;
 - R2/R3 are empty;
@@ -203,3 +212,22 @@ adapter exists only so the research package's downloaded cache is accessible
 without root and survives normal same-signature `adb install -r` retries.
 
 Personal MAX and Practice Clean never enable this storage adapter.
+
+
+## H01 integrity decision
+
+The project does not disable the native pack/list checksum path.
+
+Historical Battle Cats modding tooling associates H01 with modified pack/list
+integrity checks, while Battle Cats Complete's modern APK exporter places packed
+mod files in the existing `DownloadLocal` family. The runtime proof therefore
+adopts the overlay strategy instead of a native checksum bypass.
+
+Hard rule for this proof:
+
+- `DataLocal.list`: exact source bytes;
+- `DataLocal.pack`: exact source bytes;
+- `DownloadLocal.list/.pack`: only the four gacha override additions;
+- native MD5 bypass: **forbidden**.
+
+This keeps H01 useful as an integrity signal rather than suppressing it.
