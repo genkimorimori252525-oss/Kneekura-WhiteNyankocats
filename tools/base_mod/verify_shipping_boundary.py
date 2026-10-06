@@ -103,6 +103,24 @@ def audit_repository(root: Path) -> dict:
         failures.append("static bridge research log gate missing")
     if template.count("super.newHttpRequest(") < 2:
         failures.append("static bridge exact-original fall-through drift")
+    if "__KNEEKURA_USE_EXTERNAL_FILES_DIR__" not in template:
+        failures.append("external files-dir research gate placeholder missing")
+    if "super.getExternalFilesDir(null)" not in template:
+        failures.append("external files-dir research adapter missing")
+    if "return super.getFilesDir()" not in template:
+        failures.append("external files-dir feature-OFF fallthrough missing")
+
+    injector_source = (
+        root / "tools/base_mod/inject_java_http_bridge.py"
+    ).read_text(encoding="utf-8")
+    if "use_external_files_dir: bool = False" not in injector_source:
+        failures.append("external files-dir bridge option no longer defaults OFF")
+
+    gacha_builder = (
+        root / "tools/base_mod/build_owned_gacha_ui_proof.py"
+    ).read_text(encoding="utf-8")
+    if 'research_external_files_dir = flavor == "research"' not in gacha_builder:
+        failures.append("gacha proof external files-dir mode is not research-only")
 
     package_flavor = (
         root / "tools/base_mod/package_flavor.py"
@@ -128,6 +146,8 @@ def audit_repository(root: Path) -> dict:
         "research_gadget_path_isolated": True,
         "research_log_compiled_only_for_research": True,
         "original_http_fallthrough_required": True,
+        "external_files_dir_default_off": True,
+        "external_files_dir_research_only": True,
     }
 
 
