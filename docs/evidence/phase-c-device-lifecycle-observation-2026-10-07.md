@@ -252,3 +252,45 @@ Installation of the full six-split signed set succeeded and
 
 This closes the first selective local HTTP bridge proof. The project no longer
 needs Frida for this promoted product-path seam.
+
+
+## Final shipping/gacha smoke — server asset gate classified
+
+The owner-device final Phase C runner subsequently reached the following
+verified state:
+
+```text
+package_alive               true
+personal_shipping_parity    true
+practice_shipping_parity    true
+personal_frida_absent       true
+practice_frida_absent       true
+gacha_proof_set_id          1089
+gacha_proof_units           [37, 30, 34]
+gacha_clone_option_set      49
+gacha_rows_append_only      true
+research_frida_seen         false
+fatal_seen                  false
+backup_local_replay_seen    true
+```
+
+The normal Rare Gacha scene was **not** reached. The isolated package stopped at
+the original additional-game-data screen.
+
+The first version of the runner emitted
+`schedule_provider_required=true` when the banner question was answered
+`false`. That field is now explicitly quarantined as a runner-classification
+bug: banner visibility cannot be evaluated before the Rare Gacha UI exists.
+
+Exact owner-export analysis resolves the blocker:
+
+- 35 original `download_*.tsv` lanes;
+- aggregate archive size 645,599,537 bytes;
+- 615.691697 MiB;
+- no preseeded files in the fresh export's app `files/` directory.
+
+This matches the observed 615 MB screen and reclassifies the current runtime
+gate as **original server-asset bootstrap**, not gacha schedule selection.
+
+The corrected final runner records `schedule_provider_required=null` whenever
+the original Rare Gacha UI was not reached.
