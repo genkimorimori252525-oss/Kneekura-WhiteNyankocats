@@ -86,6 +86,16 @@ class PhaseCPreflightTests(unittest.TestCase):
         self.assertFalse(
             report["tiny_gacha_prototype"]["rarity_probability_vector_defined"]
         )
+        self.assertEqual(
+            report["original_ui_gacha_proof"]["target_set_id"],
+            1089,
+        )
+        self.assertFalse(
+            report["original_ui_gacha_proof"]["original_scene_code_modified"]
+        )
+        self.assertFalse(
+            report["original_ui_gacha_proof"]["visibility_schedule_defined"]
+        )
 
 
 if __name__ == "__main__":
