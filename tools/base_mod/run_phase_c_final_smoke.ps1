@@ -299,20 +299,25 @@ try {
 
 $originalUiOk = $false
 $extraBanner = $null
+$h01Seen = $false
 if (-not $downloadGateSeen -or $originalDownloadCompleted) {
     Write-Host ""
     Write-Host "Open the normal Battle Cats Rare Gacha screen."
     Write-Host "Do not perform a draw yet."
-    Write-Host "The proof appends set 1089 using the original Rare Gacha tables."
+    Write-Host "The proof appends set 1089 through DownloadLocal while DataLocal stays byte-identical."
     Write-Host "Its banner metadata clones original visible set 49, so it may look like an existing banner."
     $originalUiOk = Read-YesNo "Did the normal Battle Cats Rare Gacha screen open without a custom Kneekura screen or crash?"
     if ($originalUiOk) {
         $extraBanner = Read-YesNo "Did you observe an additional/duplicated Rare Gacha banner after installing the proof?"
+    } else {
+        $h01Seen = Read-YesNo "Did the app show loading/data-read error H01?"
     }
 }
 
 $runtimeClassification = if ($downloadGateSeen -and -not $originalDownloadCompleted) {
     "server_asset_download_gate"
+} elseif ($h01Seen) {
+    "data_read_error_h01"
 } elseif (-not $originalUiOk) {
     "original_ui_not_reached"
 } elseif (-not $extraBanner) {
@@ -333,6 +338,8 @@ $result = [ordered]@{
     gacha_proof_units = @(37, 30, 34)
     gacha_clone_option_set = 49
     gacha_rows_append_only = $true
+    datalocal_byte_identical = $true
+    downloadlocal_overlay_entry_count = 4
     research_external_files_dir = $true
     research_frida_seen = ($frida.Count -gt 0)
     fatal_seen = ($fatal.Count -gt 0)
@@ -349,6 +356,7 @@ $result = [ordered]@{
     external_cache_kib = $externalCacheKiB
     original_rare_gacha_ui_opened = $originalUiOk
     appended_banner_visible = $extraBanner
+    h01_seen = $h01Seen
     schedule_provider_required = if ($originalUiOk) { -not $extraBanner } else { $null }
     runtime_gate_classification = $runtimeClassification
     personal_report = $personalReport
@@ -374,6 +382,12 @@ if ($runtimeClassification -eq "server_asset_download_gate") {
     Write-Host "Static/data proof PASS, but the original server-asset bootstrap is still incomplete."
     Write-Host "This is not a gacha schedule failure."
     exit 5
+}
+if ($runtimeClassification -eq "data_read_error_h01") {
+    Write-Host ""
+    Write-Host "H01 is still present even with byte-identical DataLocal and a DownloadLocal overlay."
+    Write-Host "Record this as a distinct integrity gate; do not infer gacha schedule."
+    exit 6
 }
 if (-not $originalUiOk) {
     exit 3
