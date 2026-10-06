@@ -18,6 +18,7 @@ on:
       - "docs/architecture/phase-c-static-http-bridge.md"
       - "docs/architecture/phase-c-research-preflight.md"
       - "docs/architecture/phase-c-gacha-original-ui-proof.md"
+      - "docs/architecture/phase-c-shipping-boundary.md"
       - "docs/architecture/phase-c-shipping-parity.md"
       - "docs/references/native-service-map-jp15.7.1.*"
       - "docs/references/hook-candidate-matrix-jp15.7.1.*"
@@ -185,6 +186,7 @@ jobs:
           cp docs/architecture/phase-c-static-http-bridge.md build/patch-kit/docs/architecture/
           cp docs/architecture/phase-c-research-preflight.md build/patch-kit/docs/architecture/
           cp docs/architecture/phase-c-gacha-original-ui-proof.md build/patch-kit/docs/architecture/
+          cp docs/architecture/phase-c-shipping-boundary.md build/patch-kit/docs/architecture/
           cp docs/architecture/phase-c-shipping-parity.md build/patch-kit/docs/architecture/
 
           cp docs/references/native-service-map-jp15.7.1.* build/patch-kit/docs/references/
