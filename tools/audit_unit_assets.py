@@ -12,7 +12,6 @@ import collections
 from dataclasses import dataclass
 import json
 import pathlib
-import re
 import sys
 from typing import Any, Iterable
 
@@ -58,13 +57,13 @@ class AssetIndex:
 
     def motions(self, base: str) -> list[str]:
         found: set[str] = set()
+        extension = ".maanim"
         for name in self._items:
-            if not name.startswith(base) or not name.lower().endswith(".maanim"):
+            if not name.startswith(base) or not name.lower().endswith(extension):
                 continue
-            match = MAANIM_RE.fullmatch(name)
-            if not match or match.group("base") != base:
-                continue
-            found.add(match.group("suffix"))
+            suffix = name[len(base) : -len(extension)]
+            if suffix.isdigit() or suffix.startswith("_"):
+                found.add(suffix)
         return sorted(found)
 
 
