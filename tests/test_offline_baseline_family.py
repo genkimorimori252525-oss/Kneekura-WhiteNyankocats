@@ -70,6 +70,22 @@ class SemanticBaselineFamilyTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "game version"):
             maxsave.validate_baseline_family(bytes(data))
 
+    def test_builder_uses_semantic_baseline_gate(self):
+        source = (
+            __import__("pathlib").Path(__file__).resolve().parents[1]
+            / "tools/base_mod/build_offline_max_save.py"
+        ).read_text(encoding="utf-8")
+        self.assertIn("baseline_validation = validate_baseline_family(source)", source)
+        self.assertNotIn("input SAVE_DATA is not the exact captured bootstrap baseline", source)
+        self.assertIn(
+            'max(_read_i32(out, I32["tutorial_state"]), 1)',
+            source,
+        )
+        self.assertIn(
+            'max(_read_i32(out, I32["story_chapter0_progress"]), 1)',
+            source,
+        )
+
     def test_evolved_baseline_is_rejected(self):
         data = bytearray(self._build_clean_baseline())
         start = maxsave.ARRAYS_I32["cat_current_form"][0]
