@@ -1,0 +1,290 @@
+{
+  "schema_version": 1,
+  "anchor": {
+    "game_version": "15.7.1",
+    "version_code": 1507010,
+    "architecture": "arm64-v8a",
+    "native_sha256": "333d2974ab2ff881fd70087fd62dea7d12d82addbc55cab2f2a675ad67e3a7e2",
+    "native_build_id": "8cb3815648eb9642da10bfb039d71bff7a3519bd",
+    "text_vaddr": "0x317370",
+    "rodata_vaddr": "0x18f2c0"
+  },
+  "jni_exports": [
+    {
+      "name": "Java_jp_co_ponos_battlecats_MyActivity_appInit",
+      "address": "0x31748c",
+      "role": "original application/native initialization"
+    },
+    {
+      "name": "Java_jp_co_ponos_battlecats_MyActivity_appUpdateDraw",
+      "address": "0x31755c",
+      "role": "render/update bridge; uses steady_clock and must not be repurposed as login-day clock"
+    },
+    {
+      "name": "Java_jp_co_ponos_battlecats_MyActivity_request",
+      "address": "0x317b1c",
+      "size": "0x9c",
+      "role": "native -> Java/service request bridge"
+    },
+    {
+      "name": "Java_jp_co_ponos_battlecats_MyActivity_kill",
+      "address": "0x317bb8",
+      "role": "application shutdown bridge"
+    },
+    {
+      "name": "Java_jp_co_ponos_battlecats_MyActivity_newResponse",
+      "address": "0x46158c",
+      "size": "0x6e4",
+      "role": "Java/service -> native response ingress"
+    },
+    {
+      "name": "Java_jp_co_ponos_battlecats_MyActivity_onResponseCodeHeaders",
+      "address": "0x461e30",
+      "size": "0x3d4",
+      "role": "HTTP response code/header ingress"
+    },
+    {
+      "name": "Java_jp_co_ponos_battlecats_MyActivity_onResponseData",
+      "address": "0x462204",
+      "size": "0x2e8",
+      "role": "HTTP response body ingress"
+    },
+    {
+      "name": "Java_jp_co_ponos_battlecats_MyActivity_onResponseFinish",
+      "address": "0x4624ec",
+      "size": "0xd4",
+      "role": "HTTP request completion ingress"
+    }
+  ],
+  "java_bridges": [
+    {
+      "class": "jp.co.ponos.battlecats.MyActivity",
+      "method": "newHttpRequest",
+      "descriptor": "(String,String,float,HashMap,ByteBuffer,String[],boolean,boolean)->int",
+      "native": false,
+      "native_string_vaddr": "0x19cf89",
+      "native_xrefs": [
+        "0x45fac0",
+        "0x4603cc"
+      ],
+      "confidence": "high"
+    },
+    {
+      "class": "jp.co.ponos.battlecats.MyActivity",
+      "method": "isNetworkAvailable",
+      "descriptor": "()->boolean",
+      "native": false,
+      "native_string_vaddr": "0x19ac42",
+      "native_xrefs": [
+        "0x373ac4"
+      ],
+      "confidence": "high"
+    },
+    {
+      "class": "jp.co.ponos.battlecats.MyActivity",
+      "method": "createDefaults",
+      "descriptor": "()->String",
+      "native": false,
+      "native_string_vaddr": "0x19f925",
+      "native_xrefs": [
+        "0x9d2bf4"
+      ],
+      "confidence": "high"
+    }
+  ],
+  "time_imports": [
+    {
+      "symbol": "_ZNSt6__ndk16chrono12steady_clock3nowEv@plt",
+      "address": "0xad76f0",
+      "note": "frame/update elapsed-time source; not login-day source"
+    },
+    {
+      "symbol": "_ZNSt6__ndk16chrono12system_clock3nowEv@plt",
+      "address": "0xad7db0"
+    },
+    {
+      "symbol": "time@plt",
+      "address": "0xad7820"
+    },
+    {
+      "symbol": "clock_gettime@plt",
+      "address": "0xad8f30"
+    },
+    {
+      "symbol": "localtime_r@plt",
+      "address": "0xad9b50"
+    },
+    {
+      "symbol": "mktime@plt",
+      "address": "0xad9b60"
+    }
+  ],
+  "time_candidates": [
+    {
+      "callsite": "0x4734d4",
+      "callee": "time@plt",
+      "nearby": [
+        "0x4734f4 localtime_r@plt"
+      ],
+      "confidence": "medium",
+      "note": "general local-date/time utility candidate"
+    },
+    {
+      "callsite": "0x473584",
+      "callee": "localtime_r/gmtime branch",
+      "confidence": "medium"
+    },
+    {
+      "callsite": "0x4735fc",
+      "callee": "mktime@plt",
+      "confidence": "medium"
+    },
+    {
+      "callsite": "0x473cc0",
+      "callee": "time@plt",
+      "nearby": [
+        "0x473ce0 localtime_r@plt"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "callsite": "0x473c6c",
+      "callee": "mktime/timegm conversion",
+      "confidence": "medium"
+    }
+  ],
+  "endpoints": [
+    {
+      "url": "https://nyanko-purchase.ponosgames.com",
+      "string_vaddr": "0x196229",
+      "xref": "0x3279c0"
+    },
+    {
+      "url": "https://nyanko-backups.ponosgames.com/",
+      "string_vaddr": "0x19863c",
+      "xref": "0x327ab0"
+    },
+    {
+      "url": "https://nyanko-ranking.ponosgames.com",
+      "string_vaddr": "0x19ed6c",
+      "xref": "0x327cd0"
+    },
+    {
+      "url": "https://nyanko-auth.ponosgames.com",
+      "string_vaddr": "0x1a0ca4",
+      "xref": "0x327980"
+    },
+    {
+      "url": "https://nyanko-club.ponosgames.com",
+      "string_vaddr": "0x1a2b56",
+      "xref": "0x327d30"
+    },
+    {
+      "url": "https://nyanko-announcement.ponosgames.com",
+      "string_vaddr": "0x1a2ba1",
+      "xref": "0x32ac84"
+    },
+    {
+      "url": "https://nyanko-events.ponosgames.com",
+      "string_vaddr": "0x1a4d78",
+      "xref": "0x327d80"
+    },
+    {
+      "url": "https://nyanko-save.ponosgames.com",
+      "string_vaddr": "0x1a6009",
+      "xref": "0x327a70"
+    },
+    {
+      "url": "https://nyanko-managed-item.ponosgames.com",
+      "string_vaddr": "0x1a8c2b",
+      "xref": "0x327a10"
+    },
+    {
+      "url": "https://nyanko-items.ponosgames.com",
+      "string_vaddr": "0x1a8c56",
+      "xref": "0x327c8c"
+    },
+    {
+      "url": "https://nyanko-assets.ponosgames.com/iphone/",
+      "string_vaddr": "0x1aae0b",
+      "xref": "0x32162c"
+    },
+    {
+      "url": "https://nyanko-receipts.ponosgames.com/api/v3/gpp_verify.php",
+      "string_vaddr": "0x19cc5a"
+    },
+    {
+      "url": "https://nyanko-receipts.ponosgames.com/android",
+      "string_vaddr": "0x1af2e4"
+    }
+  ],
+  "data_literals": [
+    {
+      "name": "DailyLoginEventGrade.json",
+      "string_vaddr": "0x18f84a",
+      "xref": "0x5f70c8",
+      "role": "login bonus grade data"
+    },
+    {
+      "name": "Map_option.csv",
+      "string_vaddr": "0x1926b1",
+      "xref": "0x6ca40c",
+      "role": "map metadata"
+    },
+    {
+      "name": "Stage_option.csv",
+      "string_vaddr": "0x19e64c",
+      "xref": "0x8e102c",
+      "role": "stage restrictions"
+    },
+    {
+      "name": "EventGatya_Setting.csv",
+      "string_vaddr": "0x1ac5c7",
+      "xref": "0x57bd84",
+      "role": "event/rare gacha configuration"
+    },
+    {
+      "name": "/event.json",
+      "string_vaddr": "0x195292",
+      "xref": "0x327f64",
+      "role": "event service payload/path"
+    },
+    {
+      "name": "eventDisplayData.json",
+      "string_vaddr": "0x1aec24",
+      "xref": "0x9bc51c",
+      "role": "event display data"
+    },
+    {
+      "name": "SAVE_DATA",
+      "string_vaddr": "0x191955",
+      "role": "save-related literal"
+    },
+    {
+      "name": "SAVE_DATA4",
+      "string_vaddr": "0x1a57df",
+      "role": "save-related literal"
+    },
+    {
+      "name": "SAVE_DATA8",
+      "string_vaddr": "0x1a9591",
+      "role": "save-related literal"
+    },
+    {
+      "name": "BACKUP_SAVE_DATA",
+      "string_vaddr": "0x1ad865",
+      "role": "backup save-related literal"
+    },
+    {
+      "name": "SaveDataTransfer",
+      "string_vaddr": "0x1a253c",
+      "role": "save transfer-related literal"
+    }
+  ],
+  "recommendations": {
+    "network_hook_seam": "Prefer the original Java newHttpRequest/isNetworkAvailable bridge over raw socket/TLS interception or per-endpoint call-site rewriting.",
+    "login_clock_seam": "Do not hook appUpdateDraw/steady_clock. Confirm the local date utility family around 0x4734xx before connecting OfflineClock.",
+    "save_seam": "Keep original save serializer authoritative; custom state belongs in an app-private sidecar until an exact save boundary is proven.",
+    "feature_activation": "All Phase-B provider APIs remain disconnected until exact hook behavior is verified on the anchored binary."
+  }
+}
