@@ -19,6 +19,7 @@ import java.util.Map;
  */
 public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
     private static final boolean ENABLE_BACKUP_OFFLINE_REPLAY = __KNEEKURA_ENABLE_BACKUP_REPLAY__;
+    private static final boolean DEBUG_RESEARCH_LOG = __KNEEKURA_DEBUG_LOG__;
 
     private static final String BACKUP_SCHEME = "https";
     private static final String BACKUP_HOST = "nyanko-backups.ponosgames.com";
@@ -55,6 +56,12 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
                     String[].class
             );
             requestConstructor.setAccessible(true);
+        }
+    }
+
+    private static void debugResearch(String message) {
+        if (DEBUG_RESEARCH_LOG) {
+            android.util.Log.i("KNEEKURA_STATIC_HTTP", message);
         }
     }
 
@@ -171,8 +178,10 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
                             true);
                 }
             });
+            debugResearch("backup-local-replay requestId=" + requestId);
             return requestId;
         } catch (Throwable ignored) {
+            debugResearch("backup-local-replay fallback-to-original");
             // Fail closed: any unexpected reflection/runtime drift returns to
             // the exact original JP 15.7.1 implementation.
             return super.newHttpRequest(
