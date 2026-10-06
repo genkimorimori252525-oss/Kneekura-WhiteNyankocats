@@ -49,3 +49,19 @@ def test_offline_profile_probe_runs_readonly_save_inspection():
     assert "tools.base_mod.inspect_save_data" in text
     assert "SAVE_DATA-inspection.json" in text
     assert "save_inspection_generated" in text
+
+
+def test_offline_profile_probe_tolerates_missing_optional_siblings():
+    text = SCRIPT.read_text(encoding="utf-8")
+    assert "if [ -e '$escaped' ]; then echo 1; else echo 0; fi" in text
+    assert "ls -d $RemotePath" not in text
+    assert "SAVE_DATA4" in text
+    assert "SAVE_DATA8" in text
+    assert "BACKUP_SAVE_DATA" in text
+
+
+def test_offline_profile_probe_bundles_results_for_upload():
+    text = SCRIPT.read_text(encoding="utf-8")
+    assert "offline-profile-baseline-bundle.zip" in text
+    assert "Compress-Archive" in text
+    assert "Bundle: $bundlePath" in text
