@@ -13,6 +13,7 @@ on:
       - "tests/test_native_shim_source.py"
       - "tests/test_native_sidecar_contract.py"
       - "tests/test_native_provider_abi.py"
+      - "tests/test_login_provider_anchor.py"
       - ".github/workflows/build-kneekura-shim.yml"
   workflow_dispatch:
 
@@ -72,6 +73,7 @@ jobs:
           grep -F "kneekura_clock_observe_epoch_day" /tmp/kneekura-symbols.txt
           grep -F "kneekura_provider_gacha_cost" /tmp/kneekura-symbols.txt
           grep -F "kneekura_provider_stage_cat_food" /tmp/kneekura-symbols.txt
+          grep -F "kneekura_provider_login_template_id" /tmp/kneekura-symbols.txt
 
       - name: Test portable Clock Sidecar Profile core
         shell: bash
@@ -126,7 +128,7 @@ jobs:
             --output build/kneekura-shim/shim-import-audit.json
 
       - name: Test native dependency injection helper
-        run: python -m unittest tests.test_native_shim_inject tests.test_native_shim_source tests.test_native_sidecar_contract tests.test_native_provider_abi tests.test_shim_import_audit -v
+        run: python -m unittest tests.test_native_shim_inject tests.test_native_shim_source tests.test_native_sidecar_contract tests.test_native_provider_abi tests.test_login_provider_anchor tests.test_shim_import_audit -v
 
       - uses: actions/upload-artifact@v4
         with:
