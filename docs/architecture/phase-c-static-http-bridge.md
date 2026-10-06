@@ -208,3 +208,16 @@ trace where the native response ingress was observed on the GLThread.
 
 Therefore the first static replay's `"{}"`, null body, status 0 and true flag
 are exact JP 15.7.1 fallback semantics, not invented payload values.
+
+
+## Native library extraction parity
+
+The Frida research package temporarily required
+`android:extractNativeLibs="true"` so Gadget sidecar files existed as ordinary
+filesystem neighbors.
+
+The Frida-free static HTTP bridge does **not** require that change.
+`build_owned_static_http_bridge.py` explicitly disables the research-only
+native extraction override, so the static smoke preserves the original
+JP 15.7.1 `extractNativeLibs=false` behavior. This keeps the final proof closer
+to the Personal/Practice shipping configuration.
