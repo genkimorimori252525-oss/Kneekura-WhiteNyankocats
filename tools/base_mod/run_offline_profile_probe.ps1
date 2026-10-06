@@ -67,8 +67,12 @@ function Select-Device {
 function Test-RemotePath {
     param([string]$AdbPath, [string]$DeviceId, [string]$RemotePath)
 
-    $output = @(& $AdbPath -s $DeviceId shell ls -d $RemotePath 2>$null)
-    return ($LASTEXITCODE -eq 0 -and $output.Count -gt 0)
+    # Avoid PowerShell turning Android 'ls: ... No such file' stderr into a
+    # terminating NativeCommandError. Ask the remote shell for a quiet boolean.
+    $escaped = $RemotePath.Replace("'", "'\''")
+    $probe = @(& $AdbPath -s $DeviceId shell "if [ -e '$escaped' ]; then echo 1; else echo 0; fi" 2>$null)
+    if ($LASTEXITCODE -ne 0 -or $probe.Count -eq 0) { return $false }
+    return (($probe -join "").Trim() -eq "1")
 }
 
 $adbPath = Resolve-Adb -Explicit $Adb
@@ -179,11 +183,22 @@ New-Item -ItemType Directory -Force -Path $root | Out-Null
 $resultPath = Join-Path $root "offline-profile-probe.json"
 $result | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $resultPath -Encoding UTF8
 
+$bundlePath = Join-Path $root "offline-profile-baseline-bundle.zip"
+if (Test-Path -LiteralPath $bundlePath) {
+    Remove-Item -LiteralPath $bundlePath -Force
+}
+$bundleInputs = @($resultPath)
+if (Test-Path -LiteralPath $baselineDir -PathType Container) {
+    $bundleInputs += $baselineDir
+}
+Compress-Archive -Path $bundleInputs -DestinationPath $bundlePath -CompressionLevel Optimal
+
 Write-Host ""
 Write-Host "Offline profile read-only probe:"
 Write-Host ($result | ConvertTo-Json -Depth 8)
 Write-Host ""
 Write-Host "Result: $resultPath"
+Write-Host "Bundle: $bundlePath"
 if (-not $result.save_data_found) {
     Write-Host "SAVE_DATA was not found. No device file was modified." -ForegroundColor Yellow
 } else {
