@@ -12,6 +12,7 @@ import collections
 from dataclasses import dataclass
 import json
 import pathlib
+import re
 import sys
 from typing import Any, Iterable
 

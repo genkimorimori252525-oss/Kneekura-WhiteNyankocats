@@ -54,7 +54,20 @@ python -m tools.import_battlecats_catalog nyanko_battlecats_2026-10-06.zip \
 
 The current JP 15.7.1 export is expected to produce 882 consecutive unit IDs. The catalog keeps raw stat columns and localization rows independently, records provenance/hash data for every decoded source entry, and never writes decrypted assets back into the APK.
 
-Visual/animation completeness is a separate layer: historical content may depend on app-private downloaded `*Server.pack` shards that were not present in the standard-ADB export.
+Visual/animation completeness is a separate layer: historical content may depend on downloaded `*Server.pack` shards that were not present in the standard-ADB export. Current work has now proven the 15.7.1 X server lane can be downloaded through the public TBCML-compatible route and has added a metadata-only 882-unit audit tool.
+
+Important ID rule: catalog unit numbers are one-based while visual asset stems are zero-based, so `unit289.csv` / 鹿目まどか maps to asset stem `288`.
+
+Run the local completeness audit once a metadata-only server manifest index is available:
+
+```bash
+python -m tools.audit_unit_assets nyanko_battlecats_2026-10-06.zip \\
+  --server-index reports/private/server-manifest-index.json \\
+  --expect-sha256 38c3bbb8d2cf2101793c9462617d4293e19fc99588b6655fd40299fd61a0ef56 \\
+  --output reports/private/unit-asset-completeness.json
+```
+
+The project-development gate remains closed until the report proves the required unit assets are complete; no original game asset bytes are committed.
 
 ## Design source of truth
 

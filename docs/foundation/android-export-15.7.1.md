@@ -231,20 +231,67 @@ A read-only manifest scan of those public `.list` files found 32,882 archived as
 
 Verified examples:
 
-- unit 289 (Madoka): `gatyachara_289_f.png`, `uni289_c00.png`, `289_c.imgcut`, `289_c.mamodel`, `289_c00.maanim` and additional form/enemy animations
-- unit 290 (Homura): corresponding PNG/imgcut/mamodel/maanim families
-- unit 363 (Saber / Fate): corresponding PNG/imgcut/mamodel/maanim families
-- Evangelion unit family 403–415: corresponding PNG/imgcut/mamodel/maanim families
-- unit 488: corresponding PNG/imgcut/mamodel/maanim families
-- unit 511 (Street Fighter family): corresponding PNG/imgcut/mamodel/maanim families
-- unit 536 (Hatsune Miku): corresponding PNG/imgcut/mamodel/maanim families
-- unit 552: corresponding PNG/imgcut/mamodel/maanim families
-- unit 597 (Ranma family): corresponding PNG/imgcut/mamodel/maanim families
-- unit 704 and 711: corresponding PNG/imgcut/mamodel/maanim families
+- catalog unit 289 / asset ID 288 (Madoka): `gatyachara_288_f.png`, `uni288_c00.png`, `288_c.imgcut`, `288_c.mamodel`, `288_c00.maanim` and additional form/enemy animations
+- catalog unit 290 / asset ID 289 (Homura): corresponding PNG/imgcut/mamodel/maanim families
+- catalog unit 363 / asset ID 362 (Saber / Fate): corresponding PNG/imgcut/mamodel/maanim families
+- Evangelion catalog units 403–415 / asset IDs 402–414: corresponding PNG/imgcut/mamodel/maanim families
+- catalog unit 488 / asset ID 487: corresponding PNG/imgcut/mamodel/maanim families
+- catalog unit 511 / asset ID 510 (Street Fighter family): corresponding PNG/imgcut/mamodel/maanim families
+- catalog unit 536 / asset ID 535 (Hatsune Miku): corresponding PNG/imgcut/mamodel/maanim families
+- catalog unit 552 / asset ID 551: corresponding PNG/imgcut/mamodel/maanim families
+- catalog unit 597 / asset ID 596 (Ranma family): corresponding PNG/imgcut/mamodel/maanim families
+- catalog units 704 and 711 / asset IDs 703 and 710: corresponding PNG/imgcut/mamodel/maanim families
 
 This materially changes the recovery assessment: older collaboration visuals and animation metadata are not lost merely because they are absent from the current InstallPack.
 
-One tested recent ID, 815, was not present in this older public archive. That does **not** establish that the asset is unavailable: the current 15.7.1 native library also references newer `XUnitServer`, `XImageServer`, `XNumberServer`, `XMapServer` families that are newer than the archived A–V snapshot.
+One tested recent catalog unit, 815 (asset ID 814), was not complete in this older public archive. That does **not** establish that the asset is unavailable: the current 15.7.1 native library also references newer `XUnitServer`, `XImageServer`, `XNumberServer`, `XMapServer` families that are newer than the archived A–V snapshot.
+
+### 9.2 Asset-ID correction and current 15.7.1 server routing
+
+A later cross-check against runtime-oriented filename code exposed an important indexing correction:
+
+- catalog files/names are one-based: `unit001.csv` / `Unit_Explanation1_ja.csv` are the first unit;
+- battle asset stems are zero-based: the first unit uses asset ID `000`;
+- therefore the audit mapping is **`asset_id = unit_no - 1`**.
+
+This means the earlier direct manifest probes that searched catalog number 289 as filename stem 289 were off by one. For example, catalog unit 289 (`鹿目まどか`) maps to asset stem `288`, while catalog unit 290 (`暁美ほむら`) maps to asset stem `289`. The completeness tool now encodes this mapping explicitly and tests it.
+
+The JP 15.7.1 `split_InstallPack.apk` contains 35 server download tables, `download_0.tsv` through `download_34.tsv`. The final two lanes are especially relevant:
+
+- `download_33.tsv` declares `WImageDataServer.list` (451,888 bytes) and `WImageDataServer.pack` (79,788,272 bytes).
+- `download_34.tsv` declares `XImageDataServer`, `XImageServer`, `XMapServer`, `XNumberServer`, and `XUnitServer` pairs.
+- In this build, `XImageDataServer.pack` is empty (0 bytes), while the X image/map/number/unit packs contain data.
+
+The TBCML server handler was pinned to public commit `9bb62d99b2b1e0da113c5592685a47f720bf7a4d`. Its `ServerFileHandler` derives the JP project name as `battlecats`, constructs the version/lane ZIP URL, signs the CloudFront request, downloads the ZIP, and extracts server files. Its public example calls `apk.download_server_files()` directly.
+
+A GitHub Actions proof run then exercised that route for lane 34 rather than merely documenting it:
+
+- workflow run: `37417655457`
+- URL lane: `battlecats_150400_34_00.zip`
+- HTTP result: `206`
+- downloaded size: **15,366,935 bytes**, exactly matching the first line of `download_34.tsv`
+- extracted current manifests: `XImageDataServer.list`, `XImageServer.list`, `XMapServer.list`, `XNumberServer.list`, `XUnitServer.list`
+- historical BCData manifests read in the same run: **88**
+- combined metadata index: **93 manifests / 33,780 filename entries**
+
+No downloaded pack body or original asset is committed. The workflow uploads only a short-lived, metadata-only manifest index and probe status artifact.
+
+### 9.3 Unit visual/animation completeness contract
+
+The repository now contains `tools/audit_unit_assets.py` and synthetic tests for the 882-unit gate. The current strict baseline is:
+
+- form codes: Normal=`f`, Evolved=`c`, True=`s`, Ultra=`u`;
+- each stat-backed form resolves an animation base such as `288_f`;
+- required battle rig: `<base>.png`, `<base>.imgcut`, `<base>.mamodel`;
+- playable-form baseline motions: `00`, `01`, `02`, `03` `.maanim` tracks;
+- playable forms require the deploy icon `uniNNN_<form>00.png`;
+- egg/alternate-art rows use their `m` asset IDs instead of the ordinary unit stem;
+- `udi...` evolution art and `gatyachara_...` art are recorded, but are not treated as universal battle-playability gates;
+- every filename carries source/family provenance from InstallPack, historical manifests, or current-server manifests.
+
+The strict contract is intentionally conservative. If the full corpus demonstrates legitimate units that omit or replace a standard motion, the exception must be evidence-backed and encoded explicitly rather than silently weakening the gate.
+
+The remaining decisive step is to run this auditor against the verified 15.7.1 export plus the combined historical/current manifest index and record the exact `complete / 882` result. Until that run is clean, **882/882 visual completeness remains unclaimed**.
 
 The next completeness task is therefore not device-root extraction. It is:
 

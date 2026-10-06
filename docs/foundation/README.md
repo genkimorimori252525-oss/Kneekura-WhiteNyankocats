@@ -19,3 +19,7 @@ Current known source:
 Do not infer a file format or game role from a filename alone. Record raw path/size/hash evidence first, then promote an interpretation only after parser, code, or behavior evidence supports it.
 
 Game assets, APKs, extracted textures/audio, and `.pack/.list` payloads stay outside Git.
+
+## Current completeness gate
+
+See `unit-asset-completeness-2026-10-06.md` for the server-route proof, zero-based asset-ID correction, current 882-unit audit contract, and the still-unclaimed final 882/882 result.
