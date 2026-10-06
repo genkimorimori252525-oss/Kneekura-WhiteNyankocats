@@ -9,8 +9,6 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
-$ExpectedBaselineSha256 = "cad00e84f3d64910b623b8a89b57ae1a37e8947554f4b418f50efa1c6bdc1d3c"
-
 function Resolve-Adb {
     param([string]$Explicit)
     if ($Explicit) {
@@ -50,8 +48,10 @@ if (-not (Test-Path -LiteralPath $backupPath -PathType Leaf)) {
     throw "Rollback SAVE_DATA not found: $backupPath"
 }
 $backupSha = Get-Sha256 -Path $backupPath
-if ($backupSha -ne $ExpectedBaselineSha256) {
-    throw "Rollback file is not the approved exact baseline: $backupSha"
+$rollbackBaselineVerification = Join-Path ([System.IO.Path]::GetFullPath($OutDir)) "rollback-baseline-verification.json"
+& python -m tools.base_mod.verify_offline_baseline $backupPath --output $rollbackBaselineVerification | Out-Host
+if ($LASTEXITCODE -ne 0) {
+    throw "Rollback file is not an approved JP 15.7.1 clean baseline"
 }
 
 $root = [System.IO.Path]::GetFullPath($OutDir)
@@ -75,8 +75,8 @@ $verify = Join-Path $root "manual-rollback-verify-SAVE_DATA"
 & $adbPath -s $deviceId pull $remoteSave $verify | Out-Host
 if ($LASTEXITCODE -ne 0) { throw "Rollback verification pull failed" }
 $verifySha = Get-Sha256 -Path $verify
-if ($verifySha -ne $ExpectedBaselineSha256) {
-    throw "Rollback verification SHA mismatch: $verifySha"
+if ($verifySha -ne $backupSha) {
+    throw "Rollback verification SHA mismatch: $verifySha != $backupSha"
 }
 
 & $adbPath -s $deviceId shell "rm -f '$remoteRoot/KNEEKURA_OFFLINE_MAX_BOOTSTRAP.json'" 2>$null | Out-Null
@@ -86,6 +86,7 @@ $result = [ordered]@{
     mode = "offline-max-manual-rollback"
     package = $Package
     restored_sha256 = $verifySha
+    baseline_verification = $rollbackBaselineVerification
     rollback_verified = $true
 }
 $resultPath = Join-Path $root "offline-max-rollback-result.json"
