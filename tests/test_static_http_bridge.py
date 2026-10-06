@@ -29,6 +29,7 @@ class StaticHttpBridgeTests(unittest.TestCase):
         self.assertIn('"GET".equals(method)', source)
         self.assertIn('BACKUP_HOST = "nyanko-backups.ponosgames.com"', source)
         self.assertIn('BACKUP_PATH = "/"', source)
+        self.assertIn("parsed.getQuery() != null", source)
         self.assertIn("Float.compare(timeout, 10.0f)", source)
         self.assertIn("headers == null || !headers.isEmpty()", source)
         self.assertIn("body != null", source)
