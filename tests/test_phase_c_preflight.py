@@ -75,6 +75,14 @@ class PhaseCPreflightTests(unittest.TestCase):
             "0x5ed65c",
         )
         self.assertTrue(report["tiny_gacha_prototype"]["append_only"])
+        self.assertEqual(
+            report["tiny_gacha_prototype"]["synthetic_new_set_id"],
+            2,
+        )
+        self.assertEqual(
+            report["tiny_gacha_prototype"]["synthetic_pool_size"],
+            2,
+        )
         self.assertFalse(
             report["tiny_gacha_prototype"]["rarity_probability_vector_defined"]
         )
