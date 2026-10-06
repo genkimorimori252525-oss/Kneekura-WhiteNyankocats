@@ -99,8 +99,46 @@ $splitRoot = [System.IO.Path]::GetFullPath($SignedSplitDir)
 if (-not (Test-Path -LiteralPath $splitRoot -PathType Container)) {
     throw "Signed research split directory not found: $splitRoot"
 }
-$apks = @(Get-ChildItem -LiteralPath $splitRoot -Filter *.apk -File | Sort-Object Name | ForEach-Object { $_.FullName })
-if ($apks.Count -ne 6) { throw "Expected exactly 6 signed research APK splits, found $($apks.Count)" }
+$sourceApks = @(Get-ChildItem -LiteralPath $splitRoot -Filter *.apk -File | Sort-Object Name)
+if ($sourceApks.Count -ne 6) { throw "Expected exactly 6 signed research APK splits, found $($sourceApks.Count)" }
+
+# adb.exe on Windows can mis-decode non-ASCII host paths. Always stage the
+# signed split APKs under an ASCII-only path before install-multiple.
+$systemDrive = if ($env:SystemDrive) { $env:SystemDrive } else { "C:" }
+$asciiStageRoot = Join-Path $systemDrive ("KneekuraAdbStage\\persistence-" + $PID)
+if ($asciiStageRoot -match "[^\x00-\x7F]") {
+    throw "ASCII adb staging path unexpectedly contains non-ASCII characters: $asciiStageRoot"
+}
+if (Test-Path -LiteralPath $asciiStageRoot) {
+    Remove-Item -LiteralPath $asciiStageRoot -Recurse -Force
+}
+New-Item -ItemType Directory -Force -Path $asciiStageRoot | Out-Null
+
+$stagedApks = @()
+$splitHashes = @()
+foreach ($sourceApk in $sourceApks) {
+    if ($sourceApk.Name -match "[^\x00-\x7F]") {
+        throw "APK filename is not ASCII-safe for adb staging: $($sourceApk.Name)"
+    }
+
+    $stagedPath = Join-Path $asciiStageRoot $sourceApk.Name
+    Copy-Item -LiteralPath $sourceApk.FullName -Destination $stagedPath -Force
+
+    $sourceHash = Get-Sha256 -Path $sourceApk.FullName
+    $stagedHash = Get-Sha256 -Path $stagedPath
+    if ($sourceHash -ne $stagedHash) {
+        throw "Staged APK hash mismatch for $($sourceApk.Name)"
+    }
+
+    $stagedApks += $stagedPath
+    $splitHashes += [ordered]@{
+        name = $sourceApk.Name
+        sha256 = $sourceHash
+    }
+}
+if ($stagedApks.Count -ne 6) {
+    throw "ASCII staging did not produce exactly 6 APKs"
+}
 
 $root = [System.IO.Path]::GetFullPath($OutDir)
 New-Item -ItemType Directory -Force -Path $root | Out-Null
@@ -139,12 +177,29 @@ if ($offline -notin @("y", "yes")) {
 }
 
 Write-Host "[3/6] Performing same-signature install-multiple -r without uninstall..."
-$installArgs = @("-s", $deviceId, "install-multiple", "--no-streaming", "-r") + $apks
-$installOutput = @(& $adbPath @installArgs 2>&1)
+Write-Host "      adb APK staging: $asciiStageRoot"
+$installArgs = @("-s", $deviceId, "install-multiple", "--no-streaming", "-r") + $stagedApks
+
+$oldErrorActionPreference = $ErrorActionPreference
+$installOutput = @()
+$installExitCode = $null
+try {
+    # Native stderr must be captured as install evidence rather than promoted to
+    # a terminating PowerShell exception before LASTEXITCODE can be inspected.
+    $ErrorActionPreference = "Continue"
+    $installOutput = @(& $adbPath @installArgs 2>&1)
+    $installExitCode = $LASTEXITCODE
+}
+finally {
+    $ErrorActionPreference = $oldErrorActionPreference
+}
 $installOutput | ForEach-Object { $log.Add([string]$_) }
-if ($LASTEXITCODE -ne 0) {
+
+if ($installExitCode -ne 0) {
+    $log.Add("ascii_stage_root=$asciiStageRoot")
+    $log.Add("install_exit_code=$installExitCode")
     $log | Set-Content -LiteralPath $logPath -Encoding UTF8
-    throw "adb install-multiple -r failed; SAVE_DATA backup is at $preSave"
+    throw "adb install-multiple -r failed; SAVE_DATA was not modified by this runner and backup is at $preSave"
 }
 
 if (-not (Test-RemotePath -AdbPath $adbPath -DeviceId $deviceId -RemotePath $remoteSave)) {
@@ -188,7 +243,10 @@ $result = [ordered]@{
     mode = "offline-max-install-r-persistence-gate"
     package = $Package
     signed_split_dir = $splitRoot
-    signed_split_count = $apks.Count
+    signed_split_count = $sourceApks.Count
+    adb_ascii_stage_root = $asciiStageRoot
+    staged_split_count = $stagedApks.Count
+    split_sha256 = $splitHashes
     install_r_success = $true
     uninstall_used = $false
     pre_install_save_sha256 = $preSha
