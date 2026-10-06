@@ -146,3 +146,34 @@ At this checkpoint the correct implementation is intentionally asymmetric:
 
 That is how the project preserves the original game rather than letting reverse
 engineering guesses become permanent runtime behavior.
+
+### Exact login-data loader xrefs
+
+The anchored ARM64 binary now has direct string-reference pairs for all three
+login data families:
+
+| Data | String VA | ADRP | ADD/string xref |
+| --- | ---: | ---: | ---: |
+| `DailyLoginEventData.csv` | `0x1a2698` | `0x9c3424` | `0x9c3428` |
+| `DailyLoginEventGrade.json` | `0x18f84a` | `0x5f70c4` | `0x5f70c8` |
+| `StampData.csv` | `0x1aec53` | `0x9c5758` | `0x9c575c` |
+
+The code around `DailyLoginEventData.csv` allocates/loads the filename and
+then iterates integer cells through the same generic CSV reader family already
+seen elsewhere. This is consistent with Battle Cats Complete's independently
+reconstructed variable-length daily-login group parser.
+
+The code around `StampData.csv` explicitly sets a loop count of
+`0x1f` (**31**) before reading/storing two integer cells per row, matching both
+the exact 31-row local file and BCC's reconstruction.
+
+These are now **exact loader anchors**, but they are not yet claim/scene
+decision hooks. The product still waits for runtime evidence identifying:
+
+- event/template selection;
+- current stamp index;
+- claim confirmation;
+- reward grant/settlement.
+
+That distinction is important: knowing where data is loaded does not justify
+patching the reward flow.
