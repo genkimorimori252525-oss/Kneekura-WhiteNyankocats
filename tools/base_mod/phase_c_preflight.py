@@ -226,9 +226,12 @@ def audit(root: Path) -> dict:
         "tools/base_mod/build_owned_static_http_bridge.py",
         "tools/base_mod/verify_static_http_bridge.py",
         "tools/base_mod/run_static_http_smoke.ps1",
+        "tools/base_mod/build_owned_gacha_ui_proof.py",
+        "tools/base_mod/verify_gacha_ui_data_proof.py",
         "bridge/java/MyActivity.java.in",
         "docs/architecture/phase-c-static-http-bridge.md",
         "docs/architecture/phase-c-research-preflight.md",
+        "docs/architecture/phase-c-gacha-original-ui-proof.md",
     ]
     missing_tools = [
         relative for relative in required_tools if not (root / relative).is_file()
@@ -279,9 +282,21 @@ def audit(root: Path) -> dict:
                 "rarity_probability_vector_defined"
             ),
         },
+        "original_ui_gacha_proof": {
+            "target_set_id": 1089,
+            "changed_datalocal_entries": [
+                "GatyaDataSetR1.csv",
+                "GatyaDataSetR2.csv",
+                "GatyaDataSetR3.csv",
+                "GatyaData_Option_SetR.tsv",
+            ],
+            "original_scene_code_modified": False,
+            "visibility_schedule_defined": False,
+        },
         "next_gate": (
-            "exercise one tiny append-only original-format gacha/event data proof "
-            "through the unchanged original Battle Cats UI before expanding content"
+            "build the exact owner-data set-1089 proof and ask the unchanged "
+            "original Rare Gacha scene whether an additional local visibility "
+            "schedule provider is required"
         ),
     }
 
