@@ -1,7 +1,7 @@
 """Build the exact JP 15.7.1 one-time offline MAX research SAVE_DATA.
 
 This tool is intentionally fail-closed:
-- it accepts only the exact device baseline captured on 2026-10-07;
+- it accepts only the exact JP 15.7.1 clean-baseline layout family;
 - it verifies the original JP salted-MD5 trailer;
 - it derives eligible cats and drop-save IDs from the exact owned DataLocal;
 - it patches only independently mapped SAVE_DATA fields;
@@ -164,6 +164,90 @@ def _assert_i32_count(data: bytes, name: str, expected: int) -> None:
         raise ValueError(f"{name} count mismatch: save={actual}, map={length}, expected={expected}")
 
 
+def validate_baseline_family(source: bytes) -> dict[str, Any]:
+    """Validate a clean JP 15.7.1 baseline without pinning volatile timestamps.
+
+    The original game legitimately rewrites timestamps and bookkeeping while
+    keeping the same 496,340-byte pre-MAX layout. This gate therefore pins the
+    save format/integrity rather than one historical SHA-256.
+    """
+    if len(source) != BASELINE_SIZE:
+        raise ValueError(
+            f"unexpected clean baseline size: {len(source)} != {BASELINE_SIZE}"
+        )
+
+    stored_md5, expected_md5 = _verify_jp_hash(source)
+    if _read_i32(source, 0) != 150700:
+        raise ValueError("unexpected SAVE_DATA game version")
+
+    expected_counts = (
+        ("cat_unlocked", 882),
+        ("cat_current_form", 882),
+        ("cat_gatya_seen", 882),
+        ("unit_drops", 400),
+        ("cat_unlocked_forms", 882),
+        ("catfruit", 29),
+        ("cat_fourth_form", 882),
+        ("catseyes", 6),
+        ("catamins", 3),
+        ("base_materials", 16),
+        ("lucky_tickets", 55),
+    )
+    for name, expected in expected_counts:
+        _assert_i32_count(source, name, expected)
+
+    if source[484927] != 4:
+        raise ValueError(f"labyrinth medal count mismatch: {source[484927]}")
+    if source[495796] != 42:
+        raise ValueError(f"treasure chest count mismatch: {source[495796]}")
+    if _read_i16(source, TALENT_ORB_COUNT_OFFSET) != 0:
+        raise ValueError("clean baseline talent-orb section is not empty")
+
+    # The bootstrap contract is first-form ownership. Accept changes to volatile
+    # timestamps/UI bookkeeping, but do not silently downgrade an evolved save.
+    form_nonzero = 0
+    unlocked_forms_nonzero = 0
+    fourth_form_nonzero = 0
+    for name, counter in (
+        ("cat_current_form", "form"),
+        ("cat_unlocked_forms", "unlocked"),
+        ("cat_fourth_form", "fourth"),
+    ):
+        start, length, _ = ARRAYS_I32[name]
+        values = [_read_i32(source, start + i * 4) for i in range(length)]
+        count = sum(value != 0 for value in values)
+        if counter == "form":
+            form_nonzero = count
+        elif counter == "unlocked":
+            unlocked_forms_nonzero = count
+        else:
+            fourth_form_nonzero = count
+
+    if form_nonzero or unlocked_forms_nonzero or fourth_form_nonzero:
+        raise ValueError(
+            "SAVE_DATA is not a clean first-form baseline: "
+            f"current_form_nonzero={form_nonzero}, "
+            f"unlocked_forms_nonzero={unlocked_forms_nonzero}, "
+            f"fourth_form_nonzero={fourth_form_nonzero}"
+        )
+
+    return {
+        "schema_version": 1,
+        "mode": "jp-15.7.1-clean-baseline-family",
+        "size": len(source),
+        "sha256": _sha256(source),
+        "matches_original_capture_sha256": _sha256(source) == BASELINE_SHA256,
+        "jp_salted_md5": stored_md5,
+        "jp_hash_valid": stored_md5 == expected_md5,
+        "game_version": 150700,
+        "talent_orb_count": 0,
+        "current_form_nonzero": form_nonzero,
+        "unlocked_forms_nonzero": unlocked_forms_nonzero,
+        "fourth_form_nonzero": fourth_form_nonzero,
+        "layout_counts": {name: expected for name, expected in expected_counts},
+    }
+
+
 def _derive_unit_contract(export: Path) -> tuple[list[int], list[int], dict[str, Any]]:
     manifest = build_manifest(export, expected_sha256=EXPORT_SHA256)
     eligible = [int(item["asset_id"]) for item in manifest["eligible_units"]]
@@ -229,38 +313,10 @@ def _derive_unit_contract(export: Path) -> tuple[list[int], list[int], dict[str,
 
 
 def build_max_save(source: bytes, export: Path) -> tuple[bytes, dict[str, Any]]:
-    if len(source) != BASELINE_SIZE:
-        raise ValueError(f"unexpected SAVE_DATA size: {len(source)} != {BASELINE_SIZE}")
-    source_sha = _sha256(source)
-    if source_sha != BASELINE_SHA256:
-        raise ValueError(
-            "input SAVE_DATA is not the exact captured bootstrap baseline; "
-            f"sha256={source_sha}"
-        )
-
-    stored_md5, expected_md5 = _verify_jp_hash(source)
-    if _read_i32(source, 0) != 150700:
-        raise ValueError("unexpected SAVE_DATA game version")
-
-    for name, expected in (
-        ("cat_unlocked", 882),
-        ("cat_current_form", 882),
-        ("cat_gatya_seen", 882),
-        ("unit_drops", 400),
-        ("cat_unlocked_forms", 882),
-        ("catfruit", 29),
-        ("cat_fourth_form", 882),
-        ("catseyes", 6),
-        ("catamins", 3),
-        ("base_materials", 16),
-        ("lucky_tickets", 55),
-    ):
-        _assert_i32_count(source, name, expected)
-
-    if source[484927] != 4:
-        raise ValueError(f"labyrinth medal count mismatch: {source[484927]}")
-    if source[495796] != 42:
-        raise ValueError(f"treasure chest count mismatch: {source[495796]}")
+    baseline_validation = validate_baseline_family(source)
+    source_sha = baseline_validation["sha256"]
+    stored_md5 = baseline_validation["jp_salted_md5"]
+    expected_md5 = stored_md5
 
     eligible, drop_save_ids, contract = _derive_unit_contract(export)
     if len(eligible) != 835:
@@ -269,14 +325,14 @@ def build_max_save(source: bytes, export: Path) -> tuple[bytes, dict[str, Any]]:
     out = bytearray(source)
 
     # Minimal tutorial escape as independently corroborated by the parser.
-    _write_i32(out, I32["tutorial_state"], 1)
-    _write_i32(out, I32["korea_superior_treasure_state"], 2)
-    _write_i32(out, I32["ui6"], 1)
-    _write_i32(out, I32["story_chapter0_progress"], 1)
-    _write_i32(out, I32["story_chapter0_stage0_clear"], 1)
-    _write_i32(out, I32["new_dialog_1"], 2)
-    _write_i32(out, I32["new_dialog_5"], 2)
-    _write_i32(out, I32["menu_unlock_equip"], 1)
+    _write_i32(out, I32["tutorial_state"], max(_read_i32(out, I32["tutorial_state"]), 1))
+    _write_i32(out, I32["korea_superior_treasure_state"], max(_read_i32(out, I32["korea_superior_treasure_state"]), 2))
+    _write_i32(out, I32["ui6"], max(_read_i32(out, I32["ui6"]), 1))
+    _write_i32(out, I32["story_chapter0_progress"], max(_read_i32(out, I32["story_chapter0_progress"]), 1))
+    _write_i32(out, I32["story_chapter0_stage0_clear"], max(_read_i32(out, I32["story_chapter0_stage0_clear"]), 1))
+    _write_i32(out, I32["new_dialog_1"], max(_read_i32(out, I32["new_dialog_1"]), 2))
+    _write_i32(out, I32["new_dialog_5"], max(_read_i32(out, I32["new_dialog_5"]), 2))
+    _write_i32(out, I32["menu_unlock_equip"], max(_read_i32(out, I32["menu_unlock_equip"]), 1))
 
     # First-form ownership. Hidden/internal/test/regional rows remain untouched.
     unlocked_base = ARRAYS_I32["cat_unlocked"][0]
@@ -357,6 +413,7 @@ def build_max_save(source: bytes, export: Path) -> tuple[bytes, dict[str, Any]]:
             "size": len(source),
             "sha256": source_sha,
             "jp_md5": stored_md5,
+            "baseline_family_validation": baseline_validation,
         },
         "output": {
             "size": len(built),
