@@ -30,6 +30,7 @@ R1 = "GatyaDataSetR1.csv"
 R2 = "GatyaDataSetR2.csv"
 R3 = "GatyaDataSetR3.csv"
 OPTION = "GatyaData_Option_SetR.tsv"
+UNITBUY = "unitbuy.csv"
 
 EXPLICIT_EXCLUDED_UNIT_IDS = {673}
 MAX_PROTOTYPE_POOL = 10
@@ -62,6 +63,89 @@ def _r1_union(lines: list[str]) -> set[int]:
         for line in lines
         for unit_id in _dataset_units(line)
     }
+
+
+
+
+def _unit_rarities(payload: bytes) -> dict[int, int]:
+    result: dict[int, int] = {}
+    for unit_id, line in enumerate(_text(payload).splitlines()):
+        body = line.split("//", 1)[0].strip()
+        if not body:
+            continue
+        cells = [cell.strip() for cell in body.split(",")]
+        if len(cells) <= 13:
+            continue
+        try:
+            result[unit_id] = int(cells[13])
+        except ValueError:
+            continue
+    return result
+
+
+def choose_safe_seed_units(
+    r1_payload: bytes,
+    unitbuy_payload: bytes,
+    *,
+    count: int = 3,
+) -> list[int]:
+    if count <= 0 or count > MAX_PROTOTYPE_POOL:
+        raise ValueError(
+            f"auto pool size must be within 1..{MAX_PROTOTYPE_POOL}"
+        )
+
+    r1_lines = _normalized_lines(r1_payload)
+    local_union = _r1_union(r1_lines)
+    rarities = _unit_rarities(unitbuy_payload)
+
+    selected: list[int] = []
+    # Prefer one deterministic representative from Rare / Super Rare / Uber
+    # before filling from the remaining exact-local Rare-through-Legend union.
+    for rarity in (2, 3, 4, 5):
+        candidates = sorted(
+            unit_id
+            for unit_id in local_union
+            if unit_id not in EXPLICIT_EXCLUDED_UNIT_IDS
+            and rarities.get(unit_id) == rarity
+        )
+        if candidates:
+            selected.append(candidates[0])
+        if len(selected) >= count:
+            return selected[:count]
+
+    remaining = sorted(
+        unit_id
+        for unit_id in local_union
+        if unit_id not in EXPLICIT_EXCLUDED_UNIT_IDS
+        and rarities.get(unit_id) in {2, 3, 4, 5}
+        and unit_id not in selected
+    )
+    selected.extend(remaining[: max(0, count - len(selected))])
+    if len(selected) != count:
+        raise ValueError(
+            f"could not derive {count} safe exact-local Rare-through-Legend ids"
+        )
+    return selected
+
+
+def choose_visible_clone_option_set(option_payload: bytes) -> int:
+    lines = _normalized_lines(option_payload)
+    if len(lines) < 2:
+        raise ValueError("option table has no data rows")
+    for row_index, line in enumerate(lines[1:]):
+        cells = line.split("\t")
+        if len(cells) < 2:
+            continue
+        try:
+            set_id = int(cells[0])
+            banner_on = int(cells[1])
+        except ValueError:
+            continue
+        if set_id != row_index:
+            continue
+        if banner_on != 0:
+            return set_id
+    raise ValueError("no existing BannerON option row is available to clone")
 
 
 def build_replacements(
@@ -185,9 +269,10 @@ def build_from_export(
     export_zip: Path,
     output_dir: Path,
     *,
-    clone_option_set: int,
-    unit_ids: list[int],
+    clone_option_set: int | None = None,
+    unit_ids: list[int] | None = None,
     banner_on: int | None = None,
+    auto_pool_size: int = 3,
 ) -> dict:
     with BattleCatsExport(
         export_zip,
@@ -197,8 +282,17 @@ def build_from_export(
         data = export.pack("DataLocal")
         payloads = {
             name: data.read(name)[0]
-            for name in (R1, R2, R3, OPTION)
+            for name in (R1, R2, R3, OPTION, UNITBUY)
         }
+
+    if unit_ids is None:
+        unit_ids = choose_safe_seed_units(
+            payloads[R1],
+            payloads[UNITBUY],
+            count=auto_pool_size,
+        )
+    if clone_option_set is None:
+        clone_option_set = choose_visible_clone_option_set(payloads[OPTION])
 
     replacements, ledger = build_replacements(
         payloads[R1],
@@ -224,8 +318,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("export_zip", type=Path)
     parser.add_argument("--output", required=True, type=Path)
-    parser.add_argument("--clone-option-set", required=True, type=int)
-    parser.add_argument("--unit", action="append", type=int, required=True)
+    parser.add_argument("--clone-option-set", type=int)
+    parser.add_argument("--unit", action="append", type=int)
+    parser.add_argument("--auto-pool-size", type=int, default=3)
     parser.add_argument("--banner-on", type=int, choices=[0, 1])
     args = parser.parse_args()
 
@@ -235,6 +330,7 @@ def main() -> int:
         clone_option_set=args.clone_option_set,
         unit_ids=args.unit,
         banner_on=args.banner_on,
+        auto_pool_size=args.auto_pool_size,
     )
     print(json.dumps(ledger, ensure_ascii=False, indent=2, sort_keys=True))
     return 0
