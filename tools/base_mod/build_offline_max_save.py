@@ -66,13 +66,13 @@ ARRAYS_I32 = {
     "battle_items": (19113, 6, None),
     "cat_gatya_seen": (19851, 882, 19847),
     "unit_drops": (294606, 400, 294602),
-    "cat_unlocked_forms": (310326, 882, 310322),
+    "cat_unlocked_forms": (310322, 882, 310318),
     "catfruit": (385884, 29, 385880),
     "cat_fourth_form": (386004, 882, 386000),
     "catseyes": (393068, 6, 393064),
     "catamins": (393096, 3, 393092),
     "base_materials": (399069, 16, 399065),
-    "lucky_tickets": (439776, 54, 439772),
+    "lucky_tickets": (439776, 55, 439772),
     "treasure_chests": (495797, 42, None),  # u8 count at 495796
 }
 ARRAYS_I16 = {
@@ -216,7 +216,7 @@ def build_max_save(source: bytes, export: Path) -> tuple[bytes, dict[str, Any]]:
         ("catseyes", 6),
         ("catamins", 3),
         ("base_materials", 16),
-        ("lucky_tickets", 54),
+        ("lucky_tickets", 55),
     ):
         _assert_i32_count(source, name, expected)
 
