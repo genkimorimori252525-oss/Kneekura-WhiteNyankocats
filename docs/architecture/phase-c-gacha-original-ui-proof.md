@@ -61,8 +61,21 @@ Selection policy:
 5. for the three-unit proof, choose the lowest deterministic id from Rare,
    Super Rare, and Uber Rare when available.
 
-This avoids hard-coding guessed unit ids into the repository while keeping the
-build reproducible from the exact JP 15.7.1 export.
+This avoids hard-coding guessed unit ids into the selection algorithm while
+keeping the build reproducible from the exact JP 15.7.1 export.
+
+### Exact owned-export derivation
+
+Running that deterministic selection against the anchored owned export yields:
+
+- Rare: unit **37**
+- Super Rare: unit **30**
+- Uber Rare: unit **34**
+- first existing BannerON clone row: set **49**
+
+The shipping-oriented proof builder pins these derived values as exact-version
+postconditions. A change in the derivation fails closed instead of silently
+producing a different test pool.
 
 ## Banner metadata
 
