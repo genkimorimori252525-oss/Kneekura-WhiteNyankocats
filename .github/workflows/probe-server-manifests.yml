@@ -1,0 +1,132 @@
+name: Probe Battle Cats server manifests
+
+on:
+  push:
+    branches:
+      - "jolly/**"
+    paths:
+      - ".github/workflows/probe-server-manifests.yml"
+      - "tools/build_server_manifest_index.py"
+      - "tools/battlecats_pack.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install manifest tooling
+        run: python -m pip install -r requirements-tooling.txt requests cryptography
+
+      - name: Fetch historical JP list manifests only
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/bcdata /tmp/historical-lists
+          git clone --depth 1 --filter=blob:none --no-checkout https://github.com/fieryhenry/BCData.git /tmp/bcdata
+          git -C /tmp/bcdata sparse-checkout init --no-cone
+          printf '/jp_server/*.list\n' > /tmp/bcdata/.git/info/sparse-checkout
+          git -C /tmp/bcdata checkout main
+          mkdir -p /tmp/historical-lists
+          find /tmp/bcdata/jp_server -maxdepth 1 -type f -name '*.list' -exec cp {} /tmp/historical-lists/ \;
+          echo "historical lists: $(find /tmp/historical-lists -type f -name '*.list' | wc -l)"
+
+      - name: Install pinned TBCML server handler
+        run: python -m pip install "git+https://github.com/fieryhenry/tbcml.git@9bb62d99b2b1e0da113c5592685a47f720bf7a4d"
+
+      - name: Fetch current 15.7.1 X lane metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/current-x-lists reports/private
+          python - <<'PY'
+          import io
+          import json
+          import pathlib
+          import zipfile
+
+          import requests
+          from tbcml.server_handler import CloudFront
+
+          target = pathlib.Path("/tmp/current-x-lists")
+          status_path = pathlib.Path("reports/private/current-server-probe.json")
+          url = "https://nyanko-assets.ponosgames.com/iphone/battlecats/download/battlecats_150400_34_00.zip"
+          result = {"url": url, "lane_index": 34, "native_game_version": 15040000}
+
+          try:
+              cookie = CloudFront().generate_signed_cookie("https://nyanko-assets.ponosgames.com/*")
+              headers = {
+                  "accept-encoding": "gzip",
+                  "connection": "keep-alive",
+                  "cookie": cookie,
+                  "range": "bytes=0-",
+                  "user-agent": "Dalvik/2.1.0 (Linux; U; Android 9; Pixel 2 Build/PQ3A.190801.002)",
+              }
+              response = requests.get(url, headers=headers, timeout=120)
+              result["http_status"] = response.status_code
+              result["download_size"] = len(response.content)
+              response.raise_for_status()
+
+              with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
+                  list_names = []
+                  for member in archive.namelist():
+                      if not member.endswith(".list"):
+                          continue
+                      name = pathlib.PurePosixPath(member).name
+                      (target / name).write_bytes(archive.read(member))
+                      list_names.append(name)
+              result["list_files"] = sorted(list_names)
+              result["success"] = True
+          except Exception as exc:
+              result["success"] = False
+              result["error_type"] = type(exc).__name__
+              result["error"] = str(exc)
+
+          status_path.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+          print(json.dumps({key: value for key, value in result.items() if key != "url"}, indent=2))
+          PY
+
+      - name: Build metadata-only manifest index
+        run: |
+          python -m tools.build_server_manifest_index \
+            --source historical-bcdata=/tmp/historical-lists \
+            --source current-x=/tmp/current-x-lists \
+            --output reports/private/server-manifest-index.json
+
+      - name: Print completeness landmarks
+        run: |
+          python - <<'PY'
+          import json
+          import pathlib
+          import re
+
+          path = pathlib.Path("reports/private/server-manifest-index.json")
+          doc = json.loads(path.read_text(encoding="utf-8"))
+          names = [entry["name"] for entry in doc["entries"]]
+          for asset_id in [288, 289, 362, 402, 487, 510, 535, 551, 596, 703, 710, 814, 881]:
+              pattern = re.compile(rf"^(?:uni|udi|gatyachara_)?{asset_id:03d}(?:_|\.).*", re.IGNORECASE)
+              hits = sorted(name for name in names if pattern.match(name))
+              print(f"asset {asset_id:03d}: {len(hits)} filenames")
+              for name in hits[:12]:
+                  print(f"  {name}")
+          print(f"manifest_count={doc['manifest_count']} entry_count={doc['entry_count']}")
+          PY
+
+      - name: Upload metadata-only probe artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: battlecats-server-manifest-index
+          path: |
+            reports/private/server-manifest-index.json
+            reports/private/current-server-probe.json
+          if-no-files-found: warn
+          retention-days: 7
