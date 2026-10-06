@@ -104,6 +104,12 @@ jobs:
               assert result["dex_size"] > 0
           PY
 
+      - name: Validate Windows smoke runner syntax
+        shell: pwsh
+        run: |
+          $source = Get-Content tools/base_mod/run_static_http_smoke.ps1 -Raw
+          [void][scriptblock]::Create($source)
+
       - name: Build Frida 17 Java-bridge trace bundle
         shell: bash
         run: |
