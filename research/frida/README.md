@@ -6,6 +6,14 @@ They exist only to promote an exact JP 15.7.1 candidate boundary from static
 evidence to observed call-contract evidence before a static Kneekura hook is
 written.
 
+## Frida Gadget compatibility
+
+`trace_service_bridge.js` currently relies on the Java bridge being available as the global `Java` object. That is the pre-Frida-17 runtime model.
+
+For this Phase-C raw-script path, use **Frida Gadget 16.7.19 AArch64** (`frida-gadget-16.7.19-android-arm64.so.xz`). Do not use Frida 17.x with this unbundled script. Frida 17 removed the built-in language bridges; supporting it requires importing `frida-java-bridge` and bundling the agent with `frida-compile` first.
+
+This is a research-only compatibility pin, not a product runtime dependency. A future Frida-17 path should ship a precompiled/bundled research agent instead of silently accepting an incompatible Gadget.
+
 ## trace_service_bridge.js
 
 Targets the original class:
