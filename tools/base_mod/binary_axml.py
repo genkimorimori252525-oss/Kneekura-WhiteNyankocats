@@ -138,3 +138,79 @@ def patch_equal_length_strings(
             )
 
     return bytes(mutable), counts
+
+RES_XML_START_ELEMENT_TYPE = 0x0102
+TYPE_INT_BOOLEAN = 0x12
+NO_INDEX = 0xFFFFFFFF
+
+
+def patch_boolean_attribute(
+    data: bytes,
+    *,
+    element_name: str,
+    attribute_name: str,
+    expected: bool,
+    replacement: bool,
+) -> tuple[bytes, int]:
+    """Patch one exact binary-AXML boolean attribute without moving chunks."""
+
+    slots = manifest_string_slots(data)
+    values = {slot.index: slot.value for slot in slots}
+    mutable = bytearray(data)
+    matches = 0
+
+    _, xml_header_size, _ = struct.unpack_from("<HHI", data, 0)
+    cursor = xml_header_size
+    while cursor < len(data):
+        chunk_type, _, chunk_size = struct.unpack_from("<HHI", data, cursor)
+        if chunk_size < 8 or cursor + chunk_size > len(data):
+            raise ValueError("malformed Android binary XML chunk")
+
+        if chunk_type == RES_XML_START_ELEMENT_TYPE:
+            # ResXMLTree_node is 16 bytes; ResXMLTree_attrExt follows it.
+            ext = cursor + 16
+            _, name_index = struct.unpack_from("<II", data, ext)
+            tag_name = values.get(name_index)
+
+            attribute_start, attribute_size, attribute_count = struct.unpack_from(
+                "<HHH", data, ext + 8
+            )
+            if attribute_size < 20:
+                raise ValueError("unexpected Android binary XML attribute size")
+
+            base = ext + attribute_start
+            for index in range(attribute_count):
+                attribute = base + index * attribute_size
+                _, attr_name_index, _ = struct.unpack_from("<III", data, attribute)
+                attr_name = values.get(attr_name_index)
+                if tag_name != element_name or attr_name != attribute_name:
+                    continue
+
+                value_size, _, data_type, value = struct.unpack_from(
+                    "<HBBI", data, attribute + 12
+                )
+                if value_size != 8 or data_type != TYPE_INT_BOOLEAN:
+                    raise ValueError(
+                        f"{element_name}.{attribute_name} is not a boolean value"
+                    )
+                expected_value = 1 if expected else 0
+                if value != expected_value:
+                    raise ValueError(
+                        f"{element_name}.{attribute_name} expected "
+                        f"{expected_value}, got {value}"
+                    )
+                struct.pack_into(
+                    "<I",
+                    mutable,
+                    attribute + 16,
+                    1 if replacement else 0,
+                )
+                matches += 1
+
+        cursor += chunk_size
+
+    if matches != 1:
+        raise ValueError(
+            f"expected exactly one {element_name}.{attribute_name}, got {matches}"
+        )
+    return bytes(mutable), matches
