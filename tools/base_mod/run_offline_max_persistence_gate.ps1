@@ -55,6 +55,18 @@ function Get-Sha256 {
     return (Get-FileHash -Algorithm SHA256 -LiteralPath $Path).Hash.ToLowerInvariant()
 }
 
+function Get-OptionalProperty {
+    param(
+        [object]$Object,
+        [string]$Name,
+        $DefaultValue = $null
+    )
+    if ($null -eq $Object) { return $DefaultValue }
+    $property = $Object.PSObject.Properties[$Name]
+    if ($null -eq $property) { return $DefaultValue }
+    return $property.Value
+}
+
 function Pull-Checked {
     param([string]$AdbPath, [string]$DeviceId, [string]$Remote, [string]$Local)
     & $AdbPath -s $DeviceId pull $Remote $Local | Out-Host
@@ -238,6 +250,16 @@ if ($LASTEXITCODE -ne 0) {
 $postVerifyObject = Get-Content -LiteralPath $postVerify -Raw | ConvertFrom-Json
 
 Write-Host "[6/6] Recording persistence evidence..."
+$preVerificationLevel = Get-OptionalProperty -Object $preVerifyObject -Name "verification_level" -DefaultValue "unknown"
+$preLayoutProfile = Get-OptionalProperty -Object $preVerifyObject -Name "layout_profile" -DefaultValue "unknown"
+$preSemanticComplete = [bool](Get-OptionalProperty -Object $preVerifyObject -Name "semantic_scope_complete" -DefaultValue $false)
+
+$postVerificationLevel = Get-OptionalProperty -Object $postVerifyObject -Name "verification_level" -DefaultValue "unknown"
+$postLayoutProfile = Get-OptionalProperty -Object $postVerifyObject -Name "layout_profile" -DefaultValue "unknown"
+$postSemanticComplete = [bool](Get-OptionalProperty -Object $postVerifyObject -Name "semantic_scope_complete" -DefaultValue $false)
+
+$fullSemanticPersistence = $preSemanticComplete -and $postSemanticComplete
+
 $result = [ordered]@{
     schema_version = 1
     mode = "offline-max-install-r-persistence-gate"
@@ -253,21 +275,32 @@ $result = [ordered]@{
     post_install_save_sha256 = $postSha
     sentinel_survived_install_r = $true
     pre_install_max_verification = $preVerify
-    pre_install_verification_level = $preVerifyObject.verification_level
-    pre_install_layout_profile = $preVerifyObject.layout_profile
+    pre_install_verification_level = $preVerificationLevel
+    pre_install_layout_profile = $preLayoutProfile
+    pre_install_semantic_scope_complete = $preSemanticComplete
     post_install_max_verification = $postVerify
-    post_install_verification_level = $postVerifyObject.verification_level
-    post_install_layout_profile = $postVerifyObject.layout_profile
+    post_install_verification_level = $postVerificationLevel
+    post_install_layout_profile = $postLayoutProfile
+    post_install_semantic_scope_complete = $postSemanticComplete
+    full_semantic_persistence_verified = $fullSemanticPersistence
     original_ui_manual_check = $true
     network_disabled_confirmed_by_user = $true
     log = $logPath
 }
 $resultPath = Join-Path $root "offline-max-persistence-gate-result.json"
 $result | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $resultPath -Encoding UTF8
-$log.Add("persistence_gate=passed")
+if ($fullSemanticPersistence) {
+    $log.Add("persistence_gate=passed-full-semantic")
+} else {
+    $log.Add("persistence_gate=passed-stable-prefix-only")
+}
 $log | Set-Content -LiteralPath $logPath -Encoding UTF8
 
 Write-Host ""
-Write-Host "Offline MAX install -r persistence gate passed." -ForegroundColor Green
+if ($fullSemanticPersistence) {
+    Write-Host "Offline MAX install -r persistence gate passed (full semantic)." -ForegroundColor Green
+} else {
+    Write-Host "Offline MAX install -r persistence gate passed at stable-prefix scope; full semantic mapping is pending for this SAVE_DATA length." -ForegroundColor Yellow
+}
 Write-Host "Result: $resultPath"
 Write-Host "Log:    $logPath"
