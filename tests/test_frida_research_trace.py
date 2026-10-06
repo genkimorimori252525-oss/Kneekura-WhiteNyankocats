@@ -10,7 +10,7 @@ class FridaResearchTraceTests(unittest.TestCase):
         source = (
             ROOT / "research/frida/trace_service_bridge.js"
         ).read_text(encoding="utf-8")
-        self.assertIn("overload.call(this, ...arguments)", source)
+        self.assertIn("overload.call(receiver, ...originalArgs)", source)
         self.assertIn("newHttpRequest", source)
         self.assertIn("isNetworkAvailable", source)
         self.assertIn("onResponseData", source)
@@ -25,7 +25,7 @@ class FridaResearchTraceTests(unittest.TestCase):
         self.assertIn("keys: keys", source)
         self.assertNotIn("value.array()", source)
         self.assertNotIn("entrySet()", source)
-        self.assertIn("?<redacted>", source)
+        self.assertIn("?<redacted>", source)\n        self.assertIn("staticMethod: true", source)
 
     def test_research_readme_forbids_shipping_frida(self) -> None:
         readme = (ROOT / "research/frida/README.md").read_text(encoding="utf-8")
