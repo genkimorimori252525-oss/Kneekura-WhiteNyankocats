@@ -146,6 +146,14 @@ jobs:
           $source = Get-Content tools/base_mod/run_offline_profile_probe.ps1 -Raw
           [void][scriptblock]::Create($source)
 
+      - name: Validate offline MAX bootstrap runner syntax
+        shell: pwsh
+        run: |
+          $source = Get-Content tools/base_mod/run_offline_max_bootstrap.ps1 -Raw
+          [void][scriptblock]::Create($source)
+          $source = Get-Content tools/base_mod/run_offline_max_rollback.ps1 -Raw
+          [void][scriptblock]::Create($source)
+
       - name: Build Frida 17 Java-bridge trace bundle
         shell: bash
         run: |
@@ -181,6 +189,8 @@ jobs:
           cp tools/base_mod/run_static_http_smoke.ps1 build/patch-kit/tools/base_mod/
           cp tools/base_mod/run_phase_c_final_smoke.ps1 build/patch-kit/tools/base_mod/
           cp tools/base_mod/run_offline_profile_probe.ps1 build/patch-kit/tools/base_mod/
+          cp tools/base_mod/run_offline_max_bootstrap.ps1 build/patch-kit/tools/base_mod/
+          cp tools/base_mod/run_offline_max_rollback.ps1 build/patch-kit/tools/base_mod/
           cp tools/battlecats_pack.py build/patch-kit/tools/
           cp tools/battlecats_source.py build/patch-kit/tools/
           cp tools/analyze_gacha_foundation.py build/patch-kit/tools/
@@ -214,6 +224,9 @@ jobs:
           cp docs/evidence/phase-c-gacha-ui-proof-jp15.7.1.* build/patch-kit/docs/evidence/
           cp docs/evidence/phase-c-server-download-gate-jp15.7.1.* build/patch-kit/docs/evidence/
           cp docs/evidence/phase-c-h01-integrity-gate-jp15.7.1.* build/patch-kit/docs/evidence/
+          cp docs/evidence/offline-profile-save-roundtrip-jp15.7.1.* build/patch-kit/docs/evidence/
+          cp docs/evidence/offline-profile-unit-selection-jp15.7.1.json build/patch-kit/docs/evidence/
+          cp docs/evidence/offline-profile-device-baseline-probe-jp15.7.1.json build/patch-kit/docs/evidence/
           cp docs/evidence/offline-profile-static-map-jp15.7.1.* build/patch-kit/docs/evidence/
           cp docs/evidence/offline-profile-unit-selection-jp15.7.1.json build/patch-kit/docs/evidence/
           cp docs/evidence/loginbg-019-server-manifest-corroboration.md build/patch-kit/docs/evidence/
