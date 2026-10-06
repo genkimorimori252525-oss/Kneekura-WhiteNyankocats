@@ -191,10 +191,13 @@ Java.perform(function () {
                 if (name === 'newHttpRequest') {
                     lastActivity = this;
                 }
-                const stateReceiver = (options && options.staticMethod)
-                    ? lastActivity
-                    : this;
-                const stateBefore = requestState(stateReceiver);
+                const observeRequestState = (
+                    name === 'newHttpRequest' || name === 'isNetworkAvailable'
+                );
+                const stateReceiver = observeRequestState ? this : null;
+                const stateBefore = observeRequestState
+                    ? requestState(stateReceiver)
+                    : null;
                 const args = [];
                 for (let i = 0; i < originalArgs.length; i++) {
                     if (options && options.urlArg === i) {
@@ -226,7 +229,9 @@ Java.perform(function () {
                         overload: index,
                         error: safeString(error),
                         thread: threadContext(),
-                        request_state: requestState(stateReceiver)
+                        request_state: observeRequestState
+                            ? requestState(stateReceiver)
+                            : null
                     });
                     throw error;
                 }
@@ -237,7 +242,9 @@ Java.perform(function () {
                     overload: index,
                     result: summarize(result, overload.returnType.className),
                     thread: threadContext(),
-                    request_state: requestState(stateReceiver)
+                    request_state: observeRequestState
+                        ? requestState(stateReceiver)
+                        : null
                 });
                 return result;
             };
