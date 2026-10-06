@@ -170,3 +170,26 @@ The first experiment remains selective:
 - feature OFF -> exact original path
 - original native response methods remain response ingress
 - Personal MAX and Practice Clean remain free of Frida instrumentation
+
+
+## Instrumentation stability note
+
+A follow-up trace that added reflective reads of `mNextRequestHandle` and
+`mRequestHandles` around every observed method caused the research build to
+become unstable on-device.
+
+Symptoms:
+- normal capture showed two `script_loaded` / `trace_ready` sequences;
+- no response callbacks were captured in that unstable run;
+- the game process was observed to terminate/restart during the verification.
+
+Policy:
+- that run is **not** accepted as behavior-preservation evidence;
+- the request-side state snapshots are useful only as corroboration of the
+  already-proven static handle-allocation flow;
+- reflective request-state reads are now restricted to
+  `newHttpRequest` / `isNetworkAvailable`;
+- static native response callbacks record thread metadata only.
+
+The stable fixed6 normal/airplane lifecycle capture remains the authoritative
+runtime callback evidence until a new behavior-preserving trace supersedes it.
