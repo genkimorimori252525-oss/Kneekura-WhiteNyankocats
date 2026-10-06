@@ -60,6 +60,17 @@ class SemanticBaselineFamilyTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "hash mismatch"):
             maxsave.validate_baseline_family(bytes(data))
 
+    def test_layout_count_mismatch_is_rejected(self):
+        data = bytearray(self._build_clean_baseline())
+        count_offset = maxsave.ARRAYS_I32["cat_unlocked"][2]
+        struct.pack_into("<i", data, count_offset, 881)
+        digest = hashlib.md5(
+            maxsave.JP_SALT + bytes(data[:-maxsave.HASH_LEN])
+        ).hexdigest().encode("ascii")
+        data[-maxsave.HASH_LEN:] = digest
+        with self.assertRaisesRegex(ValueError, "count mismatch"):
+            maxsave.validate_baseline_family(bytes(data))
+
     def test_wrong_version_is_rejected(self):
         data = bytearray(self._build_clean_baseline())
         struct.pack_into("<i", data, 0, 150600)
