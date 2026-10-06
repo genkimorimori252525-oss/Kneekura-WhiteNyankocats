@@ -180,8 +180,8 @@ public final class BattleCatsImporter {
         return result;
     }
 
-    private static Map<Integer, List<StageRestriction>> importStageRestrictions(Pack data) throws Exception {
-        Map<Integer, List<StageRestriction>> result = new HashMap<>();
+    private static Map<String, List<StageRestriction>> importStageRestrictions(Pack data) throws Exception {
+        Map<String, List<StageRestriction>> result = new HashMap<>();
         if (!data.has("Stage_option.csv")) {
             return result;
         }
@@ -907,16 +907,6 @@ public final class BattleCatsImporter {
 
         static MapStageExtra empty() {
             return new MapStageExtra(-1, -1, -1, -1, -1, -1, new ArrayList<>());
-        }
-    }
-
-    private static final class IndexedRestriction {
-        final int stageId;
-        final StageRestriction restriction;
-
-        IndexedRestriction(int stageId, StageRestriction restriction) {
-            this.stageId = stageId;
-            this.restriction = restriction;
         }
     }
 
