@@ -1,12 +1,16 @@
 # Kneekura WhiteNyankocats — Current Design
 
-Status: initial compatibility-first architecture.
+Status: compatibility-first architecture; product direction corrected 2026-10-06.
 
 ## Product identity
 
-Kneekura WhiteNyankocats is a PC-capable, offline-only independent runtime that can import locally owned Battle Cats data and combine it with original custom units. It is not an in-place patcher for the installed Android game.
+The primary Android target is now a **base-preserving offline Battle Cats modification**: preserve the original application's scenes, UI, transitions, battle rendering and native game flow, and add Kneekura behavior by the smallest practical data/service/hook surface.
 
-The default experience should preserve the familiar mobile game's screen flow, layout logic, animation timing, and battle feel as closely as evidence allows. Kneekura-only tools live behind a separate developer/sandbox surface so normal play does not feel like a debug build.
+PC support remains a later target, but the Android checkpoint comes first specifically to prove that the original game itself can be kept intact while offline/local features are injected.
+
+The standalone Android app currently under `app/` is **not the product UI**. It is retained only as a verification harness for pack parsing, stage normalization and battle-rule experiments. No new user-facing feature should be justified by saying "the harness can draw it"; the product path must prove that the original Battle Cats scene can host or consume the feature.
+
+Kneekura-only developer tools remain separate from normal play so the original-looking experience stays clean.
 
 ## Hard boundaries
 
@@ -90,3 +94,24 @@ The battle core should use a fixed simulation step and deterministic RNG once th
 4. Reproduce one minimal battle pair.
 5. Add one custom unit through the same runtime registry.
 6. Expand compatibility coverage before adding large sandbox-only features.
+
+
+## 2026-10-06 product-direction correction
+
+The earlier independent-runtime wording is superseded for Android.
+
+**Product path**
+- original Battle Cats APK/native scene flow as the presentation and gameplay host;
+- offline local service/state layer replacing only live-service dependencies;
+- original pack/data formats whenever they can express the feature;
+- minimal native/data hooks only where no compatible original extension point exists;
+- custom content appears inside original screens rather than replacing them.
+
+**Verification-harness path**
+- the current Java Android catalog/battle screen;
+- parser experiments;
+- deterministic rule tests;
+- stage/gacha/login data inspection;
+- never treated as visual/product parity.
+
+A future PC version may reuse the normalized data and compatibility research, but Android base preservation is the immediate proof target.
