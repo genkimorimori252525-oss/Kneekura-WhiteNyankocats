@@ -1,7 +1,7 @@
 param(
     [string]$Root = ".",
-    [string]$Device = "ce679eed",
-    [string]$StorePass = "Kneekura1234",
+    [string]$Device = "",
+    [string]$StorePass = "",
     [string]$Alias = "kneekura",
     [int]$WaitSeconds = 20
 )
@@ -31,6 +31,34 @@ if (-not $env:ANDROID_HOME) {
     $env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
 }
 $env:ANDROID_SDK_ROOT = $env:ANDROID_HOME
+
+if (-not $Device) {
+    $deviceLines = @(& $adb devices | Select-Object -Skip 1 | Where-Object {
+        $_ -match "\sdevice\s*$"
+    })
+    $deviceIds = @($deviceLines | ForEach-Object { ($_ -split "\s+")[0] })
+    if ($deviceIds.Count -ne 1) {
+        throw "Expected exactly one authorized ADB device; found $($deviceIds.Count). Pass -Device explicitly if needed."
+    }
+    $Device = $deviceIds[0]
+}
+
+if (-not $StorePass) {
+    if ($env:KNEEKURA_STOREPASS) {
+        $StorePass = $env:KNEEKURA_STOREPASS
+    } else {
+        $secure = Read-Host "Kneekura keystore password" -AsSecureString
+        $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
+        try {
+            $StorePass = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
+        } finally {
+            [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+        }
+    }
+}
+if (-not $StorePass) {
+    throw "Keystore password is required"
+}
 
 $exportZip = Join-Path $Root "nyanko_battlecats_2026-10-06.zip"
 $shim = Join-Path $Root "libkneekura.so"
