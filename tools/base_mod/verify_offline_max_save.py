@@ -22,21 +22,30 @@ from tools.base_mod.build_offline_max_save import (
     I16,
     I32,
     MAX_VALUES,
+    TALENT_ORB_COUNT,
+    TALENT_ORB_COUNT_OFFSET,
+    TALENT_ORB_DATA_OFFSET,
+    TALENT_ORB_INSERT_BYTES,
+    TALENT_ORB_VALUE,
     _derive_unit_contract,
     _verify_jp_hash,
 )
 
 
-EXPECTED_SIZE = 496_340
+EXPECTED_SIZE = 497_580
 EXPECTED_GAME_VERSION = 150700
 
 
+def _candidate_offset(offset: int) -> int:
+    return offset + TALENT_ORB_INSERT_BYTES if offset >= TALENT_ORB_DATA_OFFSET else offset
+
+
 def _read_i32(data: bytes, offset: int) -> int:
-    return struct.unpack_from("<i", data, offset)[0]
+    return struct.unpack_from("<i", data, _candidate_offset(offset))[0]
 
 
 def _read_i16(data: bytes, offset: int) -> int:
-    return struct.unpack_from("<h", data, offset)[0]
+    return struct.unpack_from("<h", data, _candidate_offset(offset))[0]
 
 
 def _read_i32_array(data: bytes, name: str) -> list[int]:
@@ -89,6 +98,7 @@ def verify_max_save(data: bytes, owned_export: Path) -> dict[str, Any]:
         "np": _read_i32(data, I32["np"]),
         "leadership": _read_i16(data, I16["leadership"]),
         "hundred_million_ticket": _read_i32(data, I32["hundred_million_ticket"]),
+        "engineers": _read_i32(data, I32["engineers"]),
     }
 
     arrays = {
