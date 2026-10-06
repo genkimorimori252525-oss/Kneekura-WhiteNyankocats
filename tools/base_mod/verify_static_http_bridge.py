@@ -73,6 +73,7 @@ def verify_static_http_bridge(
     *,
     flavor: str,
     replay_enabled: bool,
+    allow_datalocal_patch: bool = False,
 ) -> dict:
     package_name = FLAVOR_PACKAGES.get(flavor)
     if package_name is None:
@@ -124,6 +125,16 @@ def verify_static_http_bridge(
             if diff["added"] != [SHIM_ENTRY]:
                 raise ValueError(
                     f"bridge arm64 added surface drifted: {diff['added']}"
+                )
+        elif name == "split_InstallPack.apk" and allow_datalocal_patch:
+            expected_changed = {
+                "AndroidManifest.xml",
+                "assets/DataLocal.list",
+                "assets/DataLocal.pack",
+            }
+            if set(diff["changed"]) != expected_changed or diff["added"]:
+                raise ValueError(
+                    f"{name}: static data-proof surface drifted; diff={diff}"
                 )
         else:
             if set(diff["changed"]) != {"AndroidManifest.xml"} or diff["added"]:
@@ -255,6 +266,7 @@ def verify_static_http_bridge(
         "unknown_request_super_fallthrough": True,
         "shim_dependency_present": True,
         "frida_absent": True,
+        "datalocal_patch_allowed": allow_datalocal_patch,
         "split_diffs": reports,
     }
 
@@ -265,6 +277,7 @@ def main() -> int:
     parser.add_argument("modified_dir", type=Path)
     parser.add_argument("--flavor", required=True, choices=sorted(FLAVOR_PACKAGES))
     parser.add_argument("--replay-enabled", action="store_true")
+    parser.add_argument("--allow-datalocal-patch", action="store_true")
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
 
@@ -273,6 +286,7 @@ def main() -> int:
         args.modified_dir.resolve(),
         flavor=args.flavor,
         replay_enabled=args.replay_enabled,
+        allow_datalocal_patch=args.allow_datalocal_patch,
     )
     rendered = json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
     if args.output:
