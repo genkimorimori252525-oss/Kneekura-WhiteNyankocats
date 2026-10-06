@@ -6,6 +6,15 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class FridaResearchTraceTests(unittest.TestCase):
+    def test_trace_redacts_response_header_values(self) -> None:
+        source = (
+            Path(__file__).resolve().parents[1]
+            / "research/frida/trace_service_bridge.js"
+        ).read_text(encoding="utf-8")
+        self.assertIn("summarizeHeaderBlock", source)
+        self.assertIn("redacted: true", source)
+        self.assertIn("headerArg: 3", source)
+
     def test_trace_emits_to_android_logcat(self) -> None:
         source = (
             Path(__file__).resolve().parents[1]
