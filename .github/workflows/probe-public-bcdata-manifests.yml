@@ -33,7 +33,7 @@ jobs:
               704:"Eva704",711:"Eva711",815:"Eva815"
           }
           families = (
-              ["ImageServer","UnitServer","NumberServer","MapServer"] +
+              ["ImageServer","UnitServer","NumberServer","MapServer","WImageDataServer"] +
               [f"{c}{kind}Server" for c in "ABCDEFGHIJKLMNOPQRSTUV"
                for kind in ("Image","Unit","Number","Map")]
           )
