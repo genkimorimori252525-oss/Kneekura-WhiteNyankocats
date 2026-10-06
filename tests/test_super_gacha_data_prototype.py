@@ -6,6 +6,8 @@ from tools.base_mod.super_gacha_data_prototype import (
     R2,
     R3,
     build_replacements,
+    choose_safe_seed_units,
+    choose_visible_clone_option_set,
 )
 
 
@@ -21,6 +23,38 @@ class SuperGachaDataPrototypeTests(unittest.TestCase):
             b"1\t1\t21\t0\t0\t1\t1\t-1\t0\t-1\n"
         )
         return r1, r2, r3, option
+
+    def test_auto_seed_pool_prefers_distinct_rare_tiers(self) -> None:
+        r1 = b"30,31,40,41,50,60,-1\n"
+        unit_rows = []
+        for unit_id in range(61):
+            rarity = 1
+            if unit_id == 30:
+                rarity = 2
+            elif unit_id == 40:
+                rarity = 3
+            elif unit_id == 50:
+                rarity = 4
+            elif unit_id == 60:
+                rarity = 5
+            cells = ["0"] * 14
+            cells[13] = str(rarity)
+            unit_rows.append(",".join(cells))
+        unitbuy = ("\n".join(unit_rows) + "\n").encode()
+
+        self.assertEqual(
+            choose_safe_seed_units(r1, unitbuy, count=3),
+            [30, 40, 50],
+        )
+
+    def test_clone_selector_uses_existing_banner_on_row(self) -> None:
+        option = (
+            b"GatyaSetID\tBannerON_OFF\tItemID_Ticket\n"
+            b"0\t0\t21\n"
+            b"1\t1\t21\n"
+            b"2\t1\t21\n"
+        )
+        self.assertEqual(choose_visible_clone_option_set(option), 1)
 
     def test_append_only_prototype_keeps_original_rows(self) -> None:
         r1, r2, r3, option = self.source_files()
