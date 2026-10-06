@@ -11,6 +11,14 @@ import argparse
 import json
 from pathlib import Path
 
+from tools.base_mod.super_gacha_data_prototype import (
+    R1,
+    R2,
+    R3,
+    OPTION,
+    build_replacements,
+)
+
 
 EXPECTED_NATIVE_SHA256 = (
     "333d2974ab2ff881fd70087fd62dea7d12d82addbc55cab2f2a675ad67e3a7e2"
@@ -41,6 +49,41 @@ def _read_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+
+def _audit_tiny_gacha_prototype() -> dict:
+    r1 = b"30,31,-1\n40,41,42,-1\n"
+    r2 = b"-1\n-1\n"
+    r3 = b"-1\n-1\n"
+    option = (
+        b"GatyaSetID\tBannerON_OFF\tItemID_Ticket\tanimeID\tbtnCutID\t"
+        b"seriesID\tmenuCutID\tCharaID\twaitmaanimON_OFF\timgID\n"
+        b"0\t0\t21\t0\t0\t0\t1\t-1\t0\t-1\n"
+        b"1\t1\t21\t0\t0\t1\t1\t-1\t0\t-1\n"
+    )
+    replacements, ledger = build_replacements(
+        r1,
+        r2,
+        r3,
+        option,
+        clone_option_set=1,
+        unit_ids=[30, 42],
+        banner_on=1,
+    )
+    if ledger.get("new_set_id") != 2:
+        raise ValueError("tiny gacha prototype set-id drift")
+    if ledger.get("original_rows_replaced") is not False:
+        raise ValueError("tiny gacha prototype is no longer append-only")
+    if ledger.get("rarity_probability_vector_defined") is not False:
+        raise ValueError("tiny gacha prototype invented a rate vector")
+    if not replacements[R1].startswith(r1):
+        raise ValueError("tiny gacha prototype replaced original R1 rows")
+    if not replacements[R2].startswith(r2) or not replacements[R3].startswith(r3):
+        raise ValueError("tiny gacha prototype replaced original R2/R3 rows")
+    if not replacements[OPTION].startswith(option):
+        raise ValueError("tiny gacha prototype replaced original option rows")
+    return ledger
+
+
 def audit(root: Path) -> dict:
     root = root.resolve()
 
@@ -61,6 +104,12 @@ def audit(root: Path) -> dict:
     )
 
     failures: list[str] = []
+
+    try:
+        prototype_runtime = _audit_tiny_gacha_prototype()
+    except ValueError as exc:
+        failures.append(str(exc))
+        prototype_runtime = {}
 
     anchor = native_map.get("anchor", {})
     if anchor.get("native_sha256") != EXPECTED_NATIVE_SHA256:
@@ -220,10 +269,14 @@ def audit(root: Path) -> dict:
             "gacha_dataset_loader": "0x5ed65c",
         },
         "tiny_gacha_prototype": {
-            "append_only": True,
+            "append_only": prototype_runtime.get("original_rows_replaced") is False,
+            "synthetic_new_set_id": prototype_runtime.get("new_set_id"),
+            "synthetic_pool_size": prototype_runtime.get("prototype_pool_size"),
             "local_r1_membership_required": True,
             "explicit_excluded_unit_ids": [673],
-            "rarity_probability_vector_defined": False,
+            "rarity_probability_vector_defined": prototype_runtime.get(
+                "rarity_probability_vector_defined"
+            ),
         },
         "next_gate": (
             "exercise one tiny append-only original-format gacha/event data proof "
