@@ -104,3 +104,34 @@ Those are explicit later layers, not guessed into this checkpoint.
 Every imported stage becomes a normalized StageDefinition containing its source identity plus EnemySpawn rows. That gives future agents a stable object to compare against community walkthroughs, wiki lineups, expected boss timing, screenshots/videos, exact stage CSV evidence and regression simulations.
 
 Future work can therefore ask why stage X differs instead of manually rediscovering each stage format.
+
+## Exact stage auxiliary CSV contract
+
+JP 15.7.1 DataLocal was decoded again for this checkpoint. The exact files are present in the verified pack:
+
+- `Map_option.csv`
+- `Stage_option.csv`
+- 1,279 `MapStageData*.csv` files
+- representative stage files including `stage00.csv`, `stageRN000_00.csv`, `stageRS017_00.csv`, and `stageRC000_00.csv`
+
+The exact 15.7.1 `Map_option.csv` header has 20 columns:
+
+`stageID, 星解放, 裏星解放, 星1倍率, 星2倍率, 星3倍率, 星4倍率, ゲリラset, 報酬リセットType, 1度きり表示, 表示順, インターバル, 挑戦フラグ, マップ難易度, クリア後非表示, XP2倍広告, 生産額倍率, 統率力フラグ, ステージ全表示設定, マップ名`
+
+Therefore the current-version importer treats map id as column 0, star count/unlock as column 1, star magnifications as columns 3-6, difficulty mask as column 13, and map name as column 19. This intentionally differs from older helper-source layouts where the name column is earlier.
+
+The exact `Stage_option.csv` header is:
+
+`mapID, 対応★, stageID, レア度制限, 出撃制限数, スロット編成数制限, 生産コスト制限条件下限, 上限, groupID`
+
+This confirms that stage restrictions join on absolute map id + stage id, with star id in column 1 and restriction fields in columns 3-8.
+
+The exact `MapStageDataS_017.csv` for 狂乱のネコ降臨 contains stage row:
+
+`200,4000,33,99,34,100,1103,1,-1`
+
+This independently confirms the runtime-facing order used by TBCML: energy, clear XP, start BGM, enemy-base HP percentage for boss BGM, boss BGM, first reward probability/id/amount, then reward type/additional reward fields.
+
+The exact `stageRS017_00.csv` has width 4400, enemy-base HP 400000 and max enemy count 10. Its enemy rows include the same first-spawn frame, repeat interval, base-HP trigger and magnification fields used by the current StageDefinition importer.
+
+For reference, `stageRN000_00.csv` has width 4200/base HP 60000/max enemy count 7. These values are now treated as regression anchors for the Android importer.
