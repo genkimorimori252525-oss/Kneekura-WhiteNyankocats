@@ -19,8 +19,12 @@ from tools.base_mod.extract_owned_splits import (
     EXPECTED_EXPORT_SHA256,
     extract_owned_splits,
 )
-from tools.base_mod.inject_shim import inject_shim
-from tools.base_mod.package_flavor import FLAVOR_PACKAGES, LAUNCHER_CLASS, apply_flavor
+from tools.base_mod.inject_shim import patch_split_set as inject_kneekura_shim
+from tools.base_mod.package_flavor import (
+    FLAVOR_PACKAGES,
+    LAUNCHER_CLASS,
+    patch_split_set as apply_package_flavor,
+)
 from tools.base_mod.repack import baseline_resign
 from tools.base_mod.verify_parity import verify_split_set
 
@@ -59,8 +63,17 @@ def build_owned_boot_smoke(
         shutil.rmtree(signed)
 
     source_ledger = extract_owned_splits(export_zip, original)
-    bootstrap_ledger = inject_shim(original, shim=shim, output_dir=bootstrap)
-    flavor_ledger = apply_flavor(bootstrap, flavor=flavor, output_dir=flavored)
+    bootstrap_ledger = inject_kneekura_shim(
+        original,
+        bootstrap,
+        shim,
+    )
+    flavor_ledger = apply_package_flavor(
+        bootstrap,
+        flavored,
+        flavor=flavor,
+        research_native_extraction=False,
+    )
     signing_ledger = baseline_resign(
         flavored,
         signed,
