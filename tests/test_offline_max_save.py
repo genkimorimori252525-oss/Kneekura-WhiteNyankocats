@@ -90,6 +90,27 @@ class OfflineMaxSaveLayoutTest(unittest.TestCase):
         self.assertEqual(evidence["candidate_values"]["engineers"], 5)
         self.assertEqual(evidence["candidate_values"]["platinum_shards"], 9)
 
+    def test_known_runtime_rewrite_shift_map(self):
+        from tools.base_mod import verify_offline_max_save as verifier
+
+        self.assertEqual(verifier.RUNTIME_REWRITE_SIZE, 507174)
+        self.assertEqual(
+            verifier._profile_offset(maxsave.ARRAYS_I32["base_materials"][0], "runtime-rewrite"),
+            maxsave.ARRAYS_I32["base_materials"][0] + 6725,
+        )
+        self.assertEqual(
+            verifier._profile_offset(maxsave.ARRAYS_I32["lucky_tickets"][0], "runtime-rewrite"),
+            maxsave.ARRAYS_I32["lucky_tickets"][0] + 9485,
+        )
+        self.assertEqual(
+            verifier._talent_count_offset("runtime-rewrite"),
+            maxsave.TALENT_ORB_COUNT_OFFSET + 9578,
+        )
+        self.assertEqual(
+            verifier._profile_offset(maxsave.I32["legend_tickets"], "runtime-rewrite"),
+            maxsave.I32["legend_tickets"] + maxsave.TALENT_ORB_INSERT_BYTES + 9578,
+        )
+
     def test_runtime_rewrite_size_growth_uses_stable_prefix_mode(self):
         data = bytearray(maxsave.HASH_LEN + 497_680)
         struct.pack_into("<i", data, 0, 150700)
