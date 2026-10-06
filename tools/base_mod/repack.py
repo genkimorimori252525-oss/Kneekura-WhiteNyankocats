@@ -35,6 +35,15 @@ _SIGNATURE_RE = re.compile(
     r"certificate SHA-256 digest:\s*([0-9a-fA-F:]+)", re.IGNORECASE
 )
 
+# These root ZIP entries are generated/consumed by Android's signing/layout
+# machinery rather than by the game payload itself.  Modern apksigner removes
+# an existing source-stamp hash when resigning with a different certificate,
+# and may regenerate pinlist metadata from APK pin hints.
+_SIGNING_METADATA_ENTRIES = {
+    "stamp-cert-sha256",
+    "pinlist.meta",
+}
+
 
 def sha256_file(path: Path) -> str:
     digest = hashlib.sha256()
@@ -45,6 +54,9 @@ def sha256_file(path: Path) -> str:
 
 
 def _is_signature_entry(name: str) -> bool:
+    if name in _SIGNING_METADATA_ENTRIES:
+        return True
+
     upper = name.upper()
     if not upper.startswith("META-INF/"):
         return False
@@ -59,7 +71,7 @@ def _is_signature_entry(name: str) -> bool:
 
 
 def payload_fingerprint(path: Path) -> str:
-    """Hash ZIP entry names + uncompressed bytes, ignoring APK signature entries."""
+    """Hash game payload entries while ignoring Android signing/layout metadata."""
 
     digest = hashlib.sha256()
     with zipfile.ZipFile(path, "r") as archive:
