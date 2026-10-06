@@ -109,6 +109,26 @@ This evidence supports automatic catalog import. It does **not** by itself prove
 
 For importer design, numeric `unitNNN.csv` columns remain **raw indexed fields** until their semantics are independently mapped and tested. Do not prematurely name columns from memory.
 
+## 5.1 Catalog parser constraints observed across all 882 units
+
+A full read-only pass over all 882 `unitNNN.csv` files produced these form-row shapes:
+
+- 832 units: 3 stat rows / 3 text rows
+- 24 units: 1 stat row / 1 text row
+- 23 units: 4 stat rows / 4 text rows
+- 3 units: 2 stat rows / 3 text rows
+
+The three form-count mismatches are unit IDs `737`, `739`, and `816`. Their third localized text row duplicates an earlier form name while no third stat row exists. The importer therefore keeps text forms and stat forms independently rather than assuming a strict 1:1 row count.
+
+Observed stat-row field counts are not fixed. Across the current data they range from 52 to 119 fields, with many intermediate layouts. Two observed rows also contain an empty field. Therefore:
+
+1. raw stat fields are preserved positionally;
+2. empty fields become explicit nulls rather than shifting columns;
+3. parsers must not reject a row merely because it is shorter/longer than another unit;
+4. typed semantic views are layered on top only after each column/version relationship is evidenced.
+
+This is now a hard importer contract.
+
 ## 6. Animation/model format evidence
 
 Representative `ImageDataLocal` chunks are directly readable text structures:
