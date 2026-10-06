@@ -67,7 +67,7 @@ python -m tools.audit_unit_assets nyanko_battlecats_2026-10-06.zip \\
   --output reports/private/unit-asset-completeness.json
 ```
 
-The project-development gate remains closed until the report proves the required unit assets are complete; no original game asset bytes are committed.
+The real JP 15.7.1 audit now reports **879/882 strict catalog rows complete**. The three residual rows are explained nonstandard cases (one documented single-form cheat unit plus two JP placeholder/regional slots), so the **JP reconstruction assessment is GO** while the raw strict number intentionally remains 879/882. No original game asset bytes are committed.
 
 ## Design source of truth
 
