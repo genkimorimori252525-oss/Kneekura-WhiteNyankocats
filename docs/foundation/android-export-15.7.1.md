@@ -291,15 +291,17 @@ The repository now contains `tools/audit_unit_assets.py` and synthetic tests for
 
 The strict contract is intentionally conservative. If the full corpus demonstrates legitimate units that omit or replace a standard motion, the exception must be evidence-backed and encoded explicitly rather than silently weakening the gate.
 
-The remaining decisive step is to run this auditor against the verified 15.7.1 export plus the combined historical/current manifest index and record the exact `complete / 882` result. Until that run is clean, **882/882 visual completeness remains unclaimed**.
+That real audit has now been executed. After correcting the false assumption that every stat row denotes an implemented visual form, the verified result is:
 
-The next completeness task is therefore not device-root extraction. It is:
+- **879 / 882 strict-complete catalog rows**;
+- **2,173 / 2,178 required visual forms complete**;
+- exactly five missing form sets, all concentrated in three catalog rows;
+- catalog 674 / asset 673 is Cheetah Cat, whose real first form is complete and which is documented as having no evolution;
+- catalog 741 / asset 740 and catalog 789 / asset 788 are JP placeholder/regional-content slots rather than unexplained missing JP downloads.
 
-1. derive the current server-file manifest/version routing from the user's own 15.7.1 APK;
-2. obtain the current server-file set through the same download path used by the game/tooling;
-3. merge current server assets with the historical archive;
-4. compute per-unit completeness across definitions, texture sprites, icons, imgcut, mamodel, and maanim;
-5. only declare the project blocked if units still lack required assets after both sources are exhausted.
+Accordingly, the strict raw gate remains 879/882 and must not be rewritten as 882/882. The **JP reconstruction gate is GO**, because no ordinary JP unit retains an unexplained required visual/animation gap after InstallPack + historical server manifests + current X manifests are exhausted.
+
+The metadata-only result is preserved in `unit-asset-audit-summary-15.7.1.json`; the detailed interpretation and exception boundary are in `unit-asset-completeness-2026-10-06.md`.
 
 ## 10. Importer priority order
 
