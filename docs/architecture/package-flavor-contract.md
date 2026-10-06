@@ -50,7 +50,11 @@ contract and likely JNI binding.
 ## Pipeline
 
 ```bash
-python -m tools.base_mod.package_flavor private/jp-15.7.1/splits \
+python -m tools.base_mod.inject_shim private/jp-15.7.1/splits \
+  --shim build/libkneekura.so \
+  --output private/jp-15.7.1/bootstrap
+
+python -m tools.base_mod.package_flavor private/jp-15.7.1/bootstrap \
   --flavor personal \
   --output private/jp-15.7.1/personal-unsigned
 
@@ -77,3 +81,20 @@ The package patch emits `package-patch-ledger.json`.  The signing pass emits
 - signer mismatch between splits -> fail.
 
 This is a version-pinned JP 15.7.1 patch, not a generic search-and-replace tool.
+
+## Exact JP 15.7.1 package-bearing runtime strings
+
+A deeper anchor pass found package identity outside the manifests as well:
+
+- `base.apk/resources.arsc`: one dotted application-id occurrence;
+- `classes4.dex`: exactly two string-table values, the plain package and
+  `<package>.NotificationChannel.`;
+- `libnative-lib.so`: one dotted application-id occurrence.
+
+Those values are package identity, not Java class namespace, and are therefore
+patched to the equal-length flavor id.
+
+The bootstrap is injected **before** package flavoring so the native injector
+can validate the untouched exact libnative SHA/build ID. The later package
+flavor pass only changes the already anchored dotted package bytes in the ELF;
+JNI class symbols remain untouched.
