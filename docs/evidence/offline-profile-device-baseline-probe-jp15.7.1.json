@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "captured_on": "2026-10-07",
+  "mode": "offline-profile-device-baseline-probe",
+  "package": "jp.kn.trace.battlecats",
+  "anchor": "jp-15.7.1",
+  "save_data": {
+    "remote_path": "/sdcard/Android/data/jp.kn.trace.battlecats/files/SAVE_DATA",
+    "file_size": 496340,
+    "payload_size": 496308,
+    "sha256": "cad00e84f3d64910b623b8a89b57ae1a37e8947554f4b418f50efa1c6bdc1d3c",
+    "hash_trailer_ascii_hex": true,
+    "stored_md5": "3552ae85c3fde366d413360d27fdb76e",
+    "expected_jp_salted_md5": "3552ae85c3fde366d413360d27fdb76e",
+    "jp_salted_md5_valid": true
+  },
+  "stable_prefix": {
+    "game_version": 150700,
+    "ub1": false,
+    "mute_bgm": false,
+    "mute_se": false,
+    "catfood": 0,
+    "current_energy": 100,
+    "date_prefix": {
+      "year_primary": 2026,
+      "year_secondary": 0,
+      "month_primary": 10,
+      "month_secondary": 0,
+      "day_primary": 7,
+      "day_secondary": 0,
+      "hour": 3,
+      "minute": 59,
+      "second": 24,
+      "timestamp": 1791313108.0
+    },
+    "parsed_prefix_bytes": 59
+  },
+  "optional_save_siblings": {
+    "SAVE_DATA4": "absent-confirmed-before-runner-error",
+    "SAVE_DATA8": "not_checked_due_runner_error",
+    "BACKUP_SAVE_DATA": "not_checked_due_runner_error"
+  },
+  "probe_failure": {
+    "kind": "powershell-native-stderr-handling",
+    "device_mutation": false,
+    "detail": "adb shell ls on missing SAVE_DATA4 emitted stderr, which PowerShell promoted to NativeCommandError under ErrorActionPreference=Stop."
+  },
+  "interpretation": {
+    "save_envelope_confirmed_on_exact_15_7_1": true,
+    "pack_list_h01_path_distinct_from_save_hash_path": true,
+    "full_save_schema_still_requires_bytes": true
+  }
+}
