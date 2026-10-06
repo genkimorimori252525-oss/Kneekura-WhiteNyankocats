@@ -1,6 +1,11 @@
 # Phase C — Original-UI Tiny Super Kneekura Gacha Proof
 
-Status: static/data implementation in progress for exact JP 15.7.1.
+Status: deferred after static/data proof for exact JP 15.7.1.
+
+Runtime Rare Gacha visibility work is intentionally postponed as of 2026-10-07.
+The project now prioritizes a durable offline local profile bootstrap (all owned
+units + capped progression currencies/materials) so future runtime verification
+does not depend on repeating the tutorial or losing local test state.
 
 ## Goal
 
