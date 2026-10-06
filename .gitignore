@@ -25,3 +25,8 @@ dist/
 .vscode/
 .DS_Store
 Thumbs.db
+
+*.p12
+*.jks
+*.keystore
+*.so
