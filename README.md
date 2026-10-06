@@ -71,7 +71,7 @@ The real JP 15.7.1 audit now reports **879/882 strict catalog rows complete**. T
 
 ## Design source of truth
 
-- `docs/architecture/current-design.md`
+- `docs/architecture/design-philosophy.md` — approved preservation-first product principles\n- `docs/architecture/current-design.md`
 - `docs/architecture/runtime-contracts.md`
 - `docs/foundation/README.md`
 - `docs/foundation/release-access-2026-10-06.md`
