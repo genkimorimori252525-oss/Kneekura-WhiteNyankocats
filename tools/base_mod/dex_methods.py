@@ -8,6 +8,7 @@ class_data_item records.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 import struct
@@ -52,6 +53,39 @@ def _strings(data: bytes) -> list[str]:
             raise ValueError("unterminated dex string")
         result.append(data[cursor:end].decode("utf-8", "replace"))
     return result
+
+
+def _code_metadata(data: bytes, code_off: int) -> dict:
+    if code_off == 0:
+        return {}
+    if code_off < 0 or code_off + 16 > len(data):
+        raise ValueError("DEX code_item header out of bounds")
+
+    registers_size = _u16(data, code_off)
+    ins_size = _u16(data, code_off + 2)
+    outs_size = _u16(data, code_off + 4)
+    tries_size = _u16(data, code_off + 6)
+    debug_info_off = _u32(data, code_off + 8)
+    insns_size = _u32(data, code_off + 12)
+    insns_start = code_off + 16
+    insns_end = insns_start + insns_size * 2
+    if insns_end > len(data):
+        raise ValueError("DEX code_item instructions out of bounds")
+
+    insns = data[insns_start:insns_end]
+    header_and_insns = data[code_off:insns_end]
+    return {
+        "registers_size": registers_size,
+        "ins_size": ins_size,
+        "outs_size": outs_size,
+        "tries_size": tries_size,
+        "debug_info_off": debug_info_off,
+        "insns_size": insns_size,
+        "insns_sha256": hashlib.sha256(insns).hexdigest(),
+        "code_header_insns_sha256": hashlib.sha256(
+            header_and_insns
+        ).hexdigest(),
+    }
 
 
 def defined_methods(data: bytes, class_descriptor: str) -> list[dict]:
@@ -167,6 +201,7 @@ def defined_methods(data: bytes, class_descriptor: str) -> list[dict]:
                     "kind": kind,
                     "access_flags": access_flags,
                     "code_off": code_off,
+                    **_code_metadata(data, code_off),
                 }
             )
 
