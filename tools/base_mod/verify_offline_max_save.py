@@ -36,6 +36,59 @@ EXPECTED_SIZE = 497_580
 EXPECTED_GAME_VERSION = 150700
 
 
+def verify_runtime_rewrite_prefix(data: bytes) -> dict[str, Any]:
+    """Verify only fields that are before the first variable-length save region.
+
+    The original game is allowed to reserialize/expand later sections after a
+    successful launch. This mode is deliberately not a substitute for the full
+    semantic verifier; it prevents a benign size drift from being mislabeled as
+    save corruption while preserving fail-closed checks on the JP envelope,
+    version, Cat Food, XP and tutorial gate.
+    """
+    stored_md5, expected_md5 = _verify_jp_hash(data)
+    game_version = struct.unpack_from("<i", data, 0)[0]
+    if game_version != EXPECTED_GAME_VERSION:
+        raise ValueError(f"unexpected SAVE_DATA game version: {game_version}")
+
+    stable = {
+        "catfood": struct.unpack_from("<i", data, I32["catfood"])[0],
+        "xp": struct.unpack_from("<i", data, I32["xp"])[0],
+        "tutorial_state": struct.unpack_from("<i", data, I32["tutorial_state"])[0],
+        "korea_superior_treasure_state": struct.unpack_from(
+            "<i", data, I32["korea_superior_treasure_state"]
+        )[0],
+        "ui6": struct.unpack_from("<i", data, I32["ui6"])[0],
+    }
+
+    failures: list[str] = []
+    if stable["catfood"] != MAX_VALUES["catfood"]:
+        failures.append(f"catfood={stable['catfood']} != {MAX_VALUES['catfood']}")
+    if stable["xp"] != MAX_VALUES["xp"]:
+        failures.append(f"xp={stable['xp']} != {MAX_VALUES['xp']}")
+    if stable["tutorial_state"] < 1:
+        failures.append("tutorial_state < 1")
+    if stable["korea_superior_treasure_state"] < 2:
+        failures.append("korea_superior_treasure_state < 2")
+    if stable["ui6"] < 1:
+        failures.append("ui6 < 1")
+
+    return {
+        "schema_version": 1,
+        "mode": "offline-max-runtime-rewrite-prefix-verification",
+        "verification_level": "stable-prefix-only",
+        "save_size": len(data),
+        "candidate_size": EXPECTED_SIZE,
+        "size_delta_from_candidate": len(data) - EXPECTED_SIZE,
+        "jp_salted_md5": stored_md5,
+        "jp_hash_valid": stored_md5 == expected_md5,
+        "game_version": game_version,
+        "stable_prefix": stable,
+        "full_dynamic_semantic_verification": "pending-postrewrite-layout-map",
+        "failures": failures,
+        "passed": not failures,
+    }
+
+
 def _candidate_offset(offset: int) -> int:
     return offset + TALENT_ORB_INSERT_BYTES if offset >= TALENT_ORB_DATA_OFFSET else offset
 
@@ -57,8 +110,15 @@ def _read_i32_array(data: bytes, name: str) -> list[int]:
     return [_read_i32(data, start + i * 4) for i in range(length)]
 
 
-def verify_max_save(data: bytes, owned_export: Path) -> dict[str, Any]:
+def verify_max_save(
+    data: bytes,
+    owned_export: Path,
+    *,
+    allow_runtime_rewrite: bool = False,
+) -> dict[str, Any]:
     if len(data) != EXPECTED_SIZE:
+        if allow_runtime_rewrite and len(data) > EXPECTED_SIZE:
+            return verify_runtime_rewrite_prefix(data)
         raise ValueError(f"unexpected SAVE_DATA size: {len(data)}")
 
     stored_md5, expected_md5 = _verify_jp_hash(data)
@@ -228,10 +288,19 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("save_data", type=Path)
     parser.add_argument("owned_export", type=Path)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--allow-runtime-rewrite",
+        action="store_true",
+        help="allow an original-game rewritten save to grow and verify only stable prefix anchors",
+    )
     args = parser.parse_args(argv)
 
     try:
-        result = verify_max_save(args.save_data.read_bytes(), args.owned_export)
+        result = verify_max_save(
+            args.save_data.read_bytes(),
+            args.owned_export,
+            allow_runtime_rewrite=args.allow_runtime_rewrite,
+        )
     except (OSError, ValueError, KeyError, json.JSONDecodeError) as exc:
         print(f"offline MAX verification failed: {exc}", file=sys.stderr)
         return 2
