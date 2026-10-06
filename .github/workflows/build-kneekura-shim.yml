@@ -119,12 +119,20 @@ jobs:
             -o /tmp/kneekura-provider-enabled
           /tmp/kneekura-provider-enabled
 
+      - name: Audit shim for network or dynamic hook imports
+        run: |
+          python -m tools.base_mod.audit_shim_imports \
+            build/kneekura-shim/libkneekura.so \
+            --output build/kneekura-shim/shim-import-audit.json
+
       - name: Test native dependency injection helper
-        run: python -m unittest tests.test_native_shim_inject tests.test_native_shim_source tests.test_native_sidecar_contract tests.test_native_provider_abi -v
+        run: python -m unittest tests.test_native_shim_inject tests.test_native_shim_source tests.test_native_sidecar_contract tests.test_native_provider_abi tests.test_shim_import_audit -v
 
       - uses: actions/upload-artifact@v4
         with:
           name: kneekura-arm64-bootstrap-shim
-          path: build/kneekura-shim/libkneekura.so
+          path: |
+            build/kneekura-shim/libkneekura.so
+            build/kneekura-shim/shim-import-audit.json
           if-no-files-found: error
           retention-days: 30
