@@ -21,6 +21,14 @@ The build must pass `parity-report.json` first.
 The research build may contain Frida Gadget. Personal MAX and Practice Clean
 must not.
 
+### Gadget version pin
+
+The current raw Phase-C script uses the pre-Frida-17 global `Java` bridge.
+Use **Frida Gadget 16.7.19 for Android arm64** for this runbook.
+Frida 17.x is not compatible with the unbundled script: Frida 17 removed the
+built-in Java bridge and requires `frida-java-bridge` to be imported and bundled
+with `frida-compile` before Gadget can run Java hooks.
+
 ## Pick one low-risk original action
 
 Use one action only per capture.
