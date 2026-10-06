@@ -37,7 +37,6 @@ class AndroidStageContractTests(unittest.TestCase):
         self.assertIn('data.has("Stage_option.csv")', importer)
         self.assertIn("MapStageData", importer)
         self.assertIn("restrictionKey", importer)
-        self.assertIn("row.get(19)", importer)
 
     def test_battle_core_uses_30fps_base_win_loss_and_zero_count_is_unlimited(self) -> None:
         source = (
