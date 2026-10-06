@@ -88,6 +88,7 @@ def build_owned_static_http_bridge(
         bootstrap,
         flavored,
         flavor=flavor,
+        research_native_extraction=False,
     )
     bridge_build = build_bridge_dex(
         flavor=flavor,
