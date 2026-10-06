@@ -1,6 +1,9 @@
 name: Probe public BCData server manifests
 
 on:
+  push:
+    branches:
+      - "jolly/foundation-tooling-2026-10-06"
   workflow_dispatch:
 
 permissions:
