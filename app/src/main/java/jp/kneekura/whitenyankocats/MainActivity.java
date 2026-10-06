@@ -58,7 +58,7 @@ public final class MainActivity extends Activity {
         root.setBackgroundColor(Color.rgb(246, 239, 216));
 
         TextView title = new TextView(this);
-        title.setText("にーくら大戦争 — Playable Stage Alpha");
+        title.setText("にーくら大戦争 — Stage Fidelity Alpha");
         title.setTextSize(22);
         title.setTextColor(Color.BLACK);
         title.setGravity(Gravity.CENTER_VERTICAL);
@@ -81,10 +81,10 @@ public final class MainActivity extends Activity {
         controls.addView(importButton);
 
         Button stagesButton = new Button(this);
-        stagesButton.setText("ステージ");
+        stagesButton.setText("全ステージ");
         stagesButton.setOnClickListener(v -> {
             mode = Mode.STAGES;
-            searchBox.setHint("ステージ名 / 種別 / IDで検索");
+            searchBox.setHint("マップ名 / ステージ名 / 種別 / IDで検索");
             refreshFilter(searchBox.getText().toString());
         });
         controls.addView(stagesButton);
@@ -112,7 +112,7 @@ public final class MainActivity extends Activity {
         root.addView(controls);
 
         searchBox = new EditText(this);
-        searchBox.setHint("ステージ名 / 種別 / IDで検索");
+        searchBox.setHint("マップ名 / ステージ名 / 種別 / IDで検索");
         searchBox.setSingleLine(true);
         searchBox.setTextSize(15);
         root.addView(searchBox, new LinearLayout.LayoutParams(
@@ -134,7 +134,7 @@ public final class MainActivity extends Activity {
                 LinearLayout.LayoutParams.MATCH_PARENT, 0, 1));
 
         TextView footer = new TextView(this);
-        footer.setText("実データ由来のstage spawnを30fpsで再生する初期戦闘コア / オフライン専用");
+        footer.setText("全ローカルステージ解放 / MapStageData・Stage_option保持 / 完全オフライン");
         footer.setTextColor(Color.DKGRAY);
         footer.setGravity(Gravity.CENTER);
         footer.setPadding(0, dp(4), 0, 0);
@@ -181,7 +181,8 @@ public final class MainActivity extends Activity {
             statusText.setText("初回: 手元の nyanko_battlecats_2026-10-06.zip を選択");
         } else {
             statusText.setText(
-                    allUnits.size() + " キャラ / " + allStages.size() + " ステージ読込済み"
+                    allUnits.size() + " キャラ / " + allStages.size()
+                            + " ステージ / ローカル全解放"
             );
         }
         refreshFilter(searchBox.getText().toString());
@@ -215,7 +216,7 @@ public final class MainActivity extends Activity {
         } catch (SecurityException ignored) {
         }
 
-        setBusy(true, "読み込み中… キャラ・敵・ステージ構成を復元しています");
+        setBusy(true, "読み込み中… キャラ・敵・全ローカルステージを復元しています");
         new Thread(() -> {
             try {
                 GameImportResult imported = BattleCatsImporter.importGameFromUri(this, uri);
@@ -280,19 +281,26 @@ public final class MainActivity extends Activity {
             for (StageDefinition stage : allStages) {
                 String haystack = (
                         stage.category + " "
+                                + stage.mapName + " "
+                                + stage.stageName + " "
                                 + stage.name + " "
                                 + stage.key + " "
                                 + stage.sourceFile
                 ).toLowerCase(Locale.ROOT);
                 if (normalized.isEmpty() || haystack.contains(normalized)) {
                     shownStages.add(stage);
+                    String energy = stage.energy >= 0 ? Integer.toString(stage.energy) : "?";
+                    String xp = stage.clearXp >= 0 ? Integer.toString(stage.clearXp) : "?";
                     adapter.add(String.format(
                             Locale.ROOT,
-                            "[%s] %03d-%02d  %s  (敵構成 %d行)",
+                            "[%s] %s / %s   統率%s XP%s ★%d 制限%d 敵%d",
                             stage.category,
-                            stage.mapIndex,
-                            stage.stageIndex,
-                            stage.name,
+                            stage.mapName,
+                            stage.stageName,
+                            energy,
+                            xp,
+                            Math.max(1, stage.starCount),
+                            stage.restrictions.size(),
                             stage.spawns.size()
                     ));
                 }
@@ -311,6 +319,7 @@ public final class MainActivity extends Activity {
         String detail = "取得: 済み\n"
                 + "使用形態: 第1形態\n\n"
                 + "HP: " + unit.stat(0) + "\n"
+                + "KB: " + unit.stat(1) + "\n"
                 + "速度: " + unit.stat(2) + "\n"
                 + "攻撃力(1): " + unit.stat(3) + "\n"
                 + "射程: " + unit.stat(5) + "\n"

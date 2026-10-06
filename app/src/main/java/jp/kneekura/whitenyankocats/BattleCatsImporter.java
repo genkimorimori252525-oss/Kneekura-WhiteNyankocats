@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -67,11 +68,12 @@ public final class BattleCatsImporter {
                         readZipEntry(install, "assets/MapLocal.pack")
                 );
 
-                Map<Integer, String> mapNames = importMapNames(data);
+                Map<Integer, MapMeta> mapMeta = importMapMeta(data);
+                Map<Integer, List<StageRestriction>> restrictions = importStageRestrictions(data);
                 return new GameImportResult(
                         importUnits(data, res),
                         importEnemies(data, res, map),
-                        importStages(data, res, map, mapNames)
+                        importStages(data, res, map, mapMeta, restrictions)
                 );
             }
         } finally {
@@ -152,29 +154,66 @@ public final class BattleCatsImporter {
         return enemies;
     }
 
-    private static Map<Integer, String> importMapNames(Pack data) throws Exception {
-        Map<Integer, String> names = new TreeMap<>();
+    private static Map<Integer, MapMeta> importMapMeta(Pack data) throws Exception {
+        Map<Integer, MapMeta> result = new TreeMap<>();
         if (!data.has("Map_option.csv")) {
-            return names;
+            return result;
         }
+
         for (List<String> row : csvRows(data.read("Map_option.csv"), ",", false)) {
             int mapId = intAt(row, 0, -1);
-            if (mapId < 0 || row.size() <= 19) {
+            if (mapId < 0) {
                 continue;
             }
-            String name = cleanName(row.get(19));
-            if (!name.isEmpty() && !name.equals("＠")) {
-                names.put(mapId, name);
-            }
+            result.put(mapId, new MapMeta(
+                    cleanName(stringAt(row, 19, "")),
+                    intAt(row, 1, 1),
+                    new int[]{
+                            intAt(row, 3, 100),
+                            intAt(row, 4, 100),
+                            intAt(row, 5, 100),
+                            intAt(row, 6, 100)
+                    },
+                    intAt(row, 13, 0)
+            ));
         }
-        return names;
+        return result;
+    }
+
+    private static Map<Integer, List<StageRestriction>> importStageRestrictions(Pack data) throws Exception {
+        Map<Integer, List<StageRestriction>> result = new HashMap<>();
+        if (!data.has("Stage_option.csv")) {
+            return result;
+        }
+
+        for (List<String> row : csvRows(data.read("Stage_option.csv"), ",", true)) {
+            int mapId = intAt(row, 0, -1);
+            int stageId = intAt(row, 2, -999);
+            if (mapId < 0 || stageId == -999) {
+                continue;
+            }
+            StageRestriction restriction = new StageRestriction(
+                    intAt(row, 1, 0),
+                    intAt(row, 3, 0),
+                    intAt(row, 4, 0),
+                    intAt(row, 5, 0),
+                    intAt(row, 6, 0),
+                    intAt(row, 7, 0),
+                    intAt(row, 8, 0)
+            );
+            result.computeIfAbsent(mapId, ignored -> new ArrayList<>())
+                    .add(new IndexedRestriction(stageId, restriction).restriction);
+        }
+
+        return result;
     }
 
     private static List<StageDefinition> importStages(
             Pack data,
             Pack res,
             Pack map,
-            Map<Integer, String> mapNames
+            Map<Integer, MapMeta> mapMeta,
+            Map<Integer, List<StageRestriction>> restrictionsByMap
     ) throws Exception {
         List<StageDefinition> stages = new ArrayList<>();
 
@@ -219,13 +258,24 @@ public final class BattleCatsImporter {
                 ));
             }
 
-            String stageName = resolveStageName(address, data, res, map);
             int absoluteMapId = absoluteMapId(address);
-            String mapName = mapNames.get(absoluteMapId);
-            String displayName = stageName;
-            if (mapName != null && !mapName.isEmpty() && !stageName.startsWith(mapName)) {
+            MapMeta meta = mapMeta.get(absoluteMapId);
+            String mapName = meta == null || meta.name.isEmpty()
+                    ? address.category + " " + String.format(Locale.ROOT, "%03d", address.mapIndex)
+                    : meta.name;
+            String stageName = resolveStageName(address, data, res, map);
+            String displayName = mapName;
+            if (!stageName.isEmpty() && !stageName.equals(mapName)) {
                 displayName = mapName + " / " + stageName;
             }
+
+            MapStageExtra extra = importMapStageExtra(data, address);
+            List<StageRestriction> stageRestrictions = restrictionsFor(
+                    data,
+                    absoluteMapId,
+                    address.stageIndex
+            );
+
             String key = address.kindKey + ":" + address.mapIndex + ":" + address.stageIndex;
             stages.add(new StageDefinition(
                     key,
@@ -233,6 +283,8 @@ public final class BattleCatsImporter {
                     address.sourcePrefix,
                     address.mapIndex,
                     address.stageIndex,
+                    mapName,
+                    stageName,
                     displayName,
                     fileName,
                     intAt(info, 0, 6000),
@@ -242,16 +294,164 @@ public final class BattleCatsImporter {
                     intAt(info, 4, 0),
                     intAt(info, 5, 50),
                     intAt(info, 6, 0),
+                    extra.energy,
+                    extra.clearXp,
+                    extra.mainMusicId,
+                    extra.bossMusicHpPercentage,
+                    extra.bossMusicId,
+                    extra.rewardType,
+                    meta == null ? 1 : meta.starCount,
+                    meta == null ? new int[]{100, 100, 100, 100} : meta.starMultipliers,
+                    meta == null ? 0 : meta.difficultyMask,
+                    extra.rewards,
+                    stageRestrictions,
                     spawns
             ));
         }
 
         stages.sort(Comparator
                 .comparing((StageDefinition stage) -> stage.category)
+                .thenComparing(stage -> stage.mapName)
                 .thenComparingInt(stage -> stage.mapIndex)
                 .thenComparingInt(stage -> stage.stageIndex)
                 .thenComparing(stage -> stage.sourceFile));
         return stages;
+    }
+
+    private static List<StageRestriction> restrictionsFor(
+            Pack data,
+            int absoluteMapId,
+            int stageIndex
+    ) throws Exception {
+        List<StageRestriction> result = new ArrayList<>();
+        if (absoluteMapId < 0 || !data.has("Stage_option.csv")) {
+            return result;
+        }
+        for (List<String> row : csvRows(data.read("Stage_option.csv"), ",", true)) {
+            if (intAt(row, 0, -1) != absoluteMapId) {
+                continue;
+            }
+            int targetStage = intAt(row, 2, -999);
+            if (targetStage != -1 && targetStage != stageIndex) {
+                continue;
+            }
+            result.add(new StageRestriction(
+                    intAt(row, 1, 0),
+                    intAt(row, 3, 0),
+                    intAt(row, 4, 0),
+                    intAt(row, 5, 0),
+                    intAt(row, 6, 0),
+                    intAt(row, 7, 0),
+                    intAt(row, 8, 0)
+            ));
+        }
+        return result;
+    }
+
+    private static MapStageExtra importMapStageExtra(Pack data, StageAddress address) throws Exception {
+        String fileName = mapStageDataFileName(address);
+        if (fileName == null || !data.has(fileName)) {
+            return MapStageExtra.empty();
+        }
+
+        List<List<String>> rows = csvRows(data.read(fileName), ",", true);
+        int rowIndex = address.stageIndex + 2;
+        if (rowIndex < 0 || rowIndex >= rows.size()) {
+            return MapStageExtra.empty();
+        }
+        List<String> row = rows.get(rowIndex);
+        if (row.size() < 5) {
+            return MapStageExtra.empty();
+        }
+
+        int rewardType = intAt(row, 8, -1);
+        List<StageReward> rewards = new ArrayList<>();
+        int firstProbability = intAt(row, 5, -1);
+        int firstItemId = intAt(row, 6, -1);
+        int firstAmount = intAt(row, 7, 0);
+        if (firstProbability >= 0 && firstItemId >= 0) {
+            rewards.add(new StageReward(firstProbability, firstItemId, firstAmount, false));
+        }
+
+        for (int i = 9; i + 2 < row.size(); i += 3) {
+            int probability = intAt(row, i, -1);
+            int itemId = intAt(row, i + 1, -1);
+            int amount = intAt(row, i + 2, 0);
+            if (probability < 0 || itemId < 0) {
+                break;
+            }
+            rewards.add(new StageReward(probability, itemId, amount, false));
+        }
+
+        return new MapStageExtra(
+                intAt(row, 0, -1),
+                intAt(row, 1, -1),
+                intAt(row, 2, -1),
+                intAt(row, 3, -1),
+                intAt(row, 4, -1),
+                rewardType,
+                rewards
+        );
+    }
+
+    private static String mapStageDataFileName(StageAddress address) {
+        String code;
+        switch (address.sourcePrefix) {
+            case "DM":
+                code = "DM";
+                break;
+            case "L":
+                code = "L";
+                break;
+            case "RA":
+                code = "A";
+                break;
+            case "RB":
+                code = "B";
+                break;
+            case "RC":
+                code = "C";
+                break;
+            case "RCA":
+                code = "CA";
+                break;
+            case "EX":
+                code = "RE";
+                break;
+            case "RH":
+                code = "H";
+                break;
+            case "RM":
+                code = "M";
+                break;
+            case "RN":
+                code = "N";
+                break;
+            case "RNA":
+                code = "NA";
+                break;
+            case "RND":
+                code = "ND";
+                break;
+            case "RQ":
+                code = "Q";
+                break;
+            case "RR":
+                code = "R";
+                break;
+            case "RS":
+                code = "S";
+                break;
+            case "RT":
+                code = "T";
+                break;
+            case "RV":
+                code = "V";
+                break;
+            default:
+                return null;
+        }
+        return String.format(Locale.ROOT, "MapStageData%s_%03d.csv", code, address.mapIndex);
     }
 
     private static StageAddress parseStageAddress(String fileName) {
@@ -323,8 +523,7 @@ public final class BattleCatsImporter {
             return 3006 + address.mapIndex;
         }
 
-        String prefix = address.sourcePrefix;
-        switch (prefix) {
+        switch (address.sourcePrefix) {
             case "RN":
                 return address.mapIndex;
             case "RS":
@@ -466,6 +665,14 @@ public final class BattleCatsImporter {
 
     private static String cleanName(String value) {
         return value == null ? "" : value.replace("\uFEFF", "").trim();
+    }
+
+    private static String stringAt(List<String> row, int index, String fallback) {
+        if (index < 0 || index >= row.size()) {
+            return fallback;
+        }
+        String value = row.get(index);
+        return value == null ? fallback : value;
     }
 
     private static Pack findOwner(String name, Pack... packs) {
@@ -661,6 +868,62 @@ public final class BattleCatsImporter {
             out[i] = (byte) Integer.parseInt(value.substring(i * 2, i * 2 + 2), 16);
         }
         return out;
+    }
+
+    private static final class MapMeta {
+        final String name;
+        final int starCount;
+        final int[] starMultipliers;
+        final int difficultyMask;
+
+        MapMeta(String name, int starCount, int[] starMultipliers, int difficultyMask) {
+            this.name = name;
+            this.starCount = starCount;
+            this.starMultipliers = starMultipliers;
+            this.difficultyMask = difficultyMask;
+        }
+    }
+
+    private static final class MapStageExtra {
+        final int energy;
+        final int clearXp;
+        final int mainMusicId;
+        final int bossMusicHpPercentage;
+        final int bossMusicId;
+        final int rewardType;
+        final List<StageReward> rewards;
+
+        MapStageExtra(
+                int energy,
+                int clearXp,
+                int mainMusicId,
+                int bossMusicHpPercentage,
+                int bossMusicId,
+                int rewardType,
+                List<StageReward> rewards
+        ) {
+            this.energy = energy;
+            this.clearXp = clearXp;
+            this.mainMusicId = mainMusicId;
+            this.bossMusicHpPercentage = bossMusicHpPercentage;
+            this.bossMusicId = bossMusicId;
+            this.rewardType = rewardType;
+            this.rewards = rewards;
+        }
+
+        static MapStageExtra empty() {
+            return new MapStageExtra(-1, -1, -1, -1, -1, -1, new ArrayList<>());
+        }
+    }
+
+    private static final class IndexedRestriction {
+        final int stageId;
+        final StageRestriction restriction;
+
+        IndexedRestriction(int stageId, StageRestriction restriction) {
+            this.stageId = stageId;
+            this.restriction = restriction;
+        }
     }
 
     private static final class StageAddress {
