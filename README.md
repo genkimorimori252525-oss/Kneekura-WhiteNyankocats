@@ -38,11 +38,30 @@ python tools/inventory_android_export.py nyanko_battlecats_2026-10-06.zip \
 
 The generated report contains hashes, paths, sizes, extension counts, and candidate categories only. It does not copy game asset bytes into the report.
 
+Install the catalog-import tooling dependency:
+
+```bash
+python -m pip install -r requirements-tooling.txt
+```
+
+Build the local unit catalog directly from the device export:
+
+```bash
+python -m tools.import_battlecats_catalog nyanko_battlecats_2026-10-06.zip \
+  --expect-sha256 38c3bbb8d2cf2101793c9462617d4293e19fc99588b6655fd40299fd61a0ef56 \
+  --output reports/private/unit-catalog.json
+```
+
+The current JP 15.7.1 export is expected to produce 882 consecutive unit IDs. The catalog keeps raw stat columns and localization rows independently, records provenance/hash data for every decoded source entry, and never writes decrypted assets back into the APK.
+
+Visual/animation completeness is a separate layer: historical content may depend on app-private downloaded `*Server.pack` shards that were not present in the standard-ADB export.
+
 ## Design source of truth
 
 - `docs/architecture/current-design.md`
 - `docs/architecture/runtime-contracts.md`
 - `docs/foundation/README.md`
 - `docs/foundation/release-access-2026-10-06.md`
+- `docs/foundation/android-export-15.7.1.md`
 
 The exact original logical canvas size, simulation tick rate, and internal data meanings remain evidence-driven until measured.
