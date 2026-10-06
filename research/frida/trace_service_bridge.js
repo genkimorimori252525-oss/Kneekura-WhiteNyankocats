@@ -15,6 +15,9 @@ Java.perform(function () {
         AndroidLog = Java.use('android.util.Log');
     const CLASS_NAME = 'jp.co.ponos.battlecats.MyActivity';
     const MyActivity = Java.use(CLASS_NAME);
+    const JavaThread = Java.use('java.lang.Thread');
+    const JavaMap = Java.use('java.util.Map');
+    let lastActivity = null;
 
     function safeString(value) {
         try {
@@ -40,8 +43,45 @@ Java.perform(function () {
         return {
             type: 'java.lang.String',
             redacted: true,
-            length: text.length
+            length: text.length,
+            empty_string: text.length === 0,
+            empty_object: text === '{}'
         };
+    }
+
+    function threadContext() {
+        try {
+            const current = JavaThread.currentThread();
+            return {
+                name: safeString(current.getName())
+            };
+        } catch (error) {
+            return { error: safeString(error) };
+        }
+    }
+
+    function requestState(receiver) {
+        if (receiver === null || receiver === undefined) return null;
+        try {
+            const klass = receiver.getClass();
+            const nextField = klass.getDeclaredField('mNextRequestHandle');
+            const mapField = klass.getDeclaredField('mRequestHandles');
+            nextField.setAccessible(true);
+            mapField.setAccessible(true);
+
+            const mapObject = mapField.get(receiver);
+            let mapSize = null;
+            if (mapObject !== null) {
+                mapSize = Java.cast(mapObject, JavaMap).size();
+            }
+
+            return {
+                next_request_handle: nextField.getInt(receiver),
+                request_map_size: mapSize
+            };
+        } catch (error) {
+            return { error: safeString(error) };
+        }
     }
 
     function javaClassName(value) {
@@ -148,6 +188,13 @@ Java.perform(function () {
 
             overload.implementation = function () {
                 const originalArgs = Array.prototype.slice.call(arguments);
+                if (name === 'newHttpRequest') {
+                    lastActivity = this;
+                }
+                const stateReceiver = (options && options.staticMethod)
+                    ? lastActivity
+                    : this;
+                const stateBefore = requestState(stateReceiver);
                 const args = [];
                 for (let i = 0; i < originalArgs.length; i++) {
                     if (options && options.urlArg === i) {
@@ -163,7 +210,9 @@ Java.perform(function () {
                     kind: 'call_enter',
                     method: name,
                     overload: index,
-                    args: args
+                    args: args,
+                    thread: threadContext(),
+                    request_state: stateBefore
                 });
 
                 let result;
@@ -175,7 +224,9 @@ Java.perform(function () {
                         kind: 'call_throw',
                         method: name,
                         overload: index,
-                        error: safeString(error)
+                        error: safeString(error),
+                        thread: threadContext(),
+                        request_state: requestState(stateReceiver)
                     });
                     throw error;
                 }
@@ -184,7 +235,9 @@ Java.perform(function () {
                     kind: 'call_return',
                     method: name,
                     overload: index,
-                    result: summarize(result, overload.returnType.className)
+                    result: summarize(result, overload.returnType.className),
+                    thread: threadContext(),
+                    request_state: requestState(stateReceiver)
                 });
                 return result;
             };
@@ -200,7 +253,7 @@ Java.perform(function () {
         'onResponseFinish'
     ].forEach(describeOverloads);
 
-    hookGeneric('newHttpRequest', { urlArg: 0 });
+    hookGeneric('newHttpRequest', { urlArg: 1 });
     hookGeneric('isNetworkAvailable', {});
     hookGeneric('newResponse', { staticMethod: true, urlArg: 2, headerArg: 3 });
     hookGeneric('onResponseCodeHeaders', { staticMethod: true, urlArg: 2, headerArg: 3 });
