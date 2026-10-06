@@ -30,6 +30,21 @@ function Read-YesNo {
     }
 }
 
+function Get-PackagePid {
+    param(
+        [string]$AdbPath,
+        [string]$DeviceId,
+        [string]$Package
+    )
+    try {
+        $pidLines = @(& $AdbPath -s $DeviceId shell pidof $Package 2>$null)
+        if ($LASTEXITCODE -ne 0 -or $pidLines.Count -eq 0) { return "" }
+        return (($pidLines -join "`n").Trim())
+    } catch {
+        return ""
+    }
+}
+
 $Root = (Resolve-Path $Root).Path
 Set-Location $Root
 
@@ -240,9 +255,49 @@ Write-Host "[8/9] Launching original Battle Cats scene host..."
 if ($LASTEXITCODE -ne 0) { throw "Gacha proof Activity launch failed" }
 Start-Sleep -Seconds $WaitSeconds
 
-$pidText = (& $adb -s $Device shell pidof jp.kn.trace.battlecats).Trim()
+$pidText = ""
+for ($attempt = 1; $attempt -le 5 -and -not $pidText; $attempt++) {
+    $pidText = Get-PackagePid -AdbPath $adb -DeviceId $Device -Package "jp.kn.trace.battlecats"
+    if (-not $pidText -and $attempt -lt 5) { Start-Sleep -Seconds 2 }
+}
 if (-not $pidText) {
-    throw "Research gacha proof package is not alive"
+    Write-Host "Research package did not remain alive after launch; collecting launch diagnostics..." -ForegroundColor Yellow
+    $launchLog = @(& $adb -s $Device logcat -d)
+    $launchSelected = @($launchLog | Select-String -Pattern "jp.kn.trace.battlecats","AndroidRuntime","FATAL EXCEPTION","Fatal signal","Unable to start activity","ActivityTaskManager","Process .* has died","KNEEKURA_STATIC_HTTP")
+    $logPath = Join-Path $out "gacha-ui-proof-smoke-log.txt"
+    $launchSelected | ForEach-Object { $_.Line } | Set-Content $logPath -Encoding UTF8
+
+    $launchFatal = @($launchSelected | Where-Object { $_.Line -match "FATAL EXCEPTION|Fatal signal|Unable to start activity" })
+    $launchResult = [ordered]@{
+        schema_version = 3
+        package_alive = $false
+        pid = $null
+        personal_shipping_parity = $true
+        practice_shipping_parity = $true
+        gacha_proof_set_id = 1089
+        gacha_proof_units = @(37, 30, 34)
+        gacha_clone_option_set = 49
+        gacha_rows_append_only = $true
+        datalocal_byte_identical = $true
+        downloadlocal_overlay_entry_count = 4
+        research_external_files_dir = $true
+        fatal_seen = ($launchFatal.Count -gt 0)
+        h01_seen = $null
+        runtime_gate_classification = "research_process_exited_on_launch"
+        launch_diagnostic_line_count = $launchSelected.Count
+        server_download_gate_report = $downloadGateReport
+        smoke_log = $logPath
+    }
+    $resultPath = Join-Path $out "phase-c-final-result.json"
+    $launchResult | ConvertTo-Json -Depth 6 | Set-Content $resultPath -Encoding UTF8
+    Write-Host ""
+    Write-Host "Launch diagnostic result:"
+    Write-Host ($launchResult | ConvertTo-Json -Depth 6)
+    Write-Host ""
+    Write-Host "Return these files:"
+    Write-Host "  $resultPath"
+    Write-Host "  $logPath"
+    exit 0
 }
 
 $log = & $adb -s $Device logcat -d
@@ -279,7 +334,7 @@ if ($downloadGateSeen) {
         Write-Host "Do not close this PowerShell window."
         [void](Read-Host "When the download has finished and the app has left the download screen, press Enter here")
         Start-Sleep -Seconds 3
-        $afterDownloadPid = (& $adb -s $Device shell pidof jp.kn.trace.battlecats).Trim()
+        $afterDownloadPid = Get-PackagePid -AdbPath $adb -DeviceId $Device -Package "jp.kn.trace.battlecats"
         if (-not $afterDownloadPid) {
             throw "Research package exited during the original server-asset download"
         }
