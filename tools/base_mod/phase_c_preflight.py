@@ -178,6 +178,7 @@ def audit(root: Path) -> dict:
         "tools/base_mod/run_static_http_smoke.ps1",
         "bridge/java/MyActivity.java.in",
         "docs/architecture/phase-c-static-http-bridge.md",
+        "docs/architecture/phase-c-research-preflight.md",
     ]
     missing_tools = [
         relative for relative in required_tools if not (root / relative).is_file()
