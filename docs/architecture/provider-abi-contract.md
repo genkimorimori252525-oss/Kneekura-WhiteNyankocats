@@ -82,3 +82,25 @@ It contains no:
 
 Phase C may connect an exact JP 15.7.1 boundary only after its call contract is
 observed and added to the patch ledger.
+
+
+## Comeback template selection
+
+Exact JP 15.7.1 evidence now pins the local seven-day comeback definition to
+`DailyLoginEventData.csv` event **949**.
+
+The provider ABI therefore exposes:
+
+- `KNEEKURA_COMEBACK_TEMPLATE_ID = 949`
+- `KNEEKURA_COMEBACK_CYCLE_LENGTH = 7`
+- `kneekura_provider_login_template_id(original_id)`
+
+With the provider/login feature disabled, the selector returns the original
+template id unchanged.
+
+When explicitly enabled, it returns 949. This still does not grant a reward or
+open a scene by itself. It only records the approved semantic decision so a
+future exact runtime hook does not embed a magic number in patch bytes.
+
+The reward contents remain owned by the original Battle Cats data row rather
+than duplicated in the shim.
