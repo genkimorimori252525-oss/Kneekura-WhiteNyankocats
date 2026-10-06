@@ -24,12 +24,12 @@ must not.
 ### Gadget / agent compatibility
 
 For current Frida 17.x Gadget, use the patch kit's compiled
-`research/frida/trace_service_bridge.bundle.js`. It contains an explicitly
-imported `frida-java-bridge`, as required since Frida 17 removed language
-bridges from the core runtime.
+`research/frida/trace_service_bridge.bundle.js`. The readable source explicitly
+imports `frida-java-bridge`, and CI bundles it with `frida-compile` because
+Frida 17 removed language bridges from the core runtime.
 
-The readable raw `trace_service_bridge.js` remains usable with Frida 16.7.19,
-where the Java bridge is still built into the runtime.
+Do not inject the readable module source directly; the bundled agent is the
+research runtime artifact.
 
 ## Pick one low-risk original action
 
