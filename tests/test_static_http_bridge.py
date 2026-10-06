@@ -62,7 +62,7 @@ class StaticHttpBridgeTests(unittest.TestCase):
         stub = (
             ROOT / "bridge/java/stub/jp/co/ponos/battlecats/MyActivity.java"
         ).read_text(encoding="utf-8")
-        self.assertIn("compile-only ABI stub", stub)
+        self.assertIn("Compile-only ABI stub", stub)
         self.assertIn("throw new AssertionError", stub)
         self.assertIn("static native void newResponse", stub)
 
