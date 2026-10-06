@@ -173,6 +173,10 @@ def build_bridge_dex(
             "__KNEEKURA_ENABLE_BACKUP_REPLAY__",
             "true" if enabled else "false",
         )
+        .replace(
+            "__KNEEKURA_DEBUG_LOG__",
+            "true" if flavor == "research" else "false",
+        )
     )
     if "__KNEEKURA_" in rendered:
         raise ValueError("bridge template contains unresolved placeholders")
