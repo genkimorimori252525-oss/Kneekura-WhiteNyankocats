@@ -34,6 +34,16 @@ Java.perform(function () {
         return q >= 0 ? noFragment.slice(0, q) + '?<redacted>' : noFragment;
     }
 
+    function summarizeHeaderBlock(value) {
+        const text = safeString(value);
+        if (text === null) return null;
+        return {
+            type: 'java.lang.String',
+            redacted: true,
+            length: text.length
+        };
+    }
+
     function javaClassName(value) {
         try {
             if (value === null || value === undefined) return null;
@@ -142,6 +152,8 @@ Java.perform(function () {
                 for (let i = 0; i < originalArgs.length; i++) {
                     if (options && options.urlArg === i) {
                         args.push({ type: argTypes[i], value: redactUrl(originalArgs[i]) });
+                    } else if (options && options.headerArg === i) {
+                        args.push(summarizeHeaderBlock(originalArgs[i]));
                     } else {
                         args.push(summarize(originalArgs[i], argTypes[i]));
                     }
@@ -190,8 +202,8 @@ Java.perform(function () {
 
     hookGeneric('newHttpRequest', { urlArg: 0 });
     hookGeneric('isNetworkAvailable', {});
-    hookGeneric('newResponse', { staticMethod: true });
-    hookGeneric('onResponseCodeHeaders', { staticMethod: true });
+    hookGeneric('newResponse', { staticMethod: true, urlArg: 2, headerArg: 3 });
+    hookGeneric('onResponseCodeHeaders', { staticMethod: true, urlArg: 2, headerArg: 3 });
     hookGeneric('onResponseData', { staticMethod: true });
     hookGeneric('onResponseFinish', { staticMethod: true });
 
