@@ -90,6 +90,14 @@ class PhaseCPreflightTests(unittest.TestCase):
             report["original_ui_gacha_proof"]["target_set_id"],
             1089,
         )
+        self.assertEqual(
+            report["original_ui_gacha_proof"]["prototype_unit_ids"],
+            [37, 30, 34],
+        )
+        self.assertEqual(
+            report["original_ui_gacha_proof"]["clone_option_set"],
+            49,
+        )
         self.assertFalse(
             report["original_ui_gacha_proof"]["original_scene_code_modified"]
         )
