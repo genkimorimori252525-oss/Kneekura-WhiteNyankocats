@@ -36,9 +36,9 @@ public final class BattleCatsImporter {
 
     private static final Pattern EOC_STAGE = Pattern.compile("^stage(\\d{2})\\.csv$", Pattern.CASE_INSENSITIVE);
     private static final Pattern ITF_STAGE = Pattern.compile("^stageW(\\d{2})_(\\d{2})\\.csv$", Pattern.CASE_INSENSITIVE);
-    private static final Pattern COTC_STAGE = Pattern.compile("^stageSpace(\\d{2})_(\\d{2})\\.csv$", Pattern.CASE_INSENSITIVE);
+    private static final Pattern COTC_INVASION_STAGE = Pattern.compile("^stageSpace(\\d{2})_Invasion(_Z)?_(\\d{2})\\.csv$", Pattern.CASE_INSENSITIVE);\n    private static final Pattern COTC_STAGE = Pattern.compile("^stageSpace(\\d{2})_(\\d{2})\\.csv$", Pattern.CASE_INSENSITIVE);
     private static final Pattern Z_STAGE = Pattern.compile("^stageZ(\\d{2,3})_(\\d{2})\\.csv$", Pattern.CASE_INSENSITIVE);
-    private static final Pattern GENERIC_STAGE = Pattern.compile("^stage([A-Za-z]+)(\\d{3})_(\\d{2})\\.csv$", Pattern.CASE_INSENSITIVE);
+    private static final Pattern GENERIC_STAGE = Pattern.compile("^stage([A-Za-z]+)(\\d{3})_(\\d{2,3})\\.csv$", Pattern.CASE_INSENSITIVE);
 
     private BattleCatsImporter() {
     }
@@ -389,6 +389,22 @@ public final class BattleCatsImporter {
     }
 
     private static String mapStageDataFileName(StageAddress address) {
+        if (address.kindKey.equals("eoc")) {
+            return "stageNormal0.csv";
+        }
+        if (address.kindKey.equals("itf")) {
+            return String.format(Locale.ROOT, "stageNormal1_%d.csv", address.mapIndex);
+        }
+        if (address.kindKey.equals("cotc")) {
+            return String.format(Locale.ROOT, "stageNormal2_%d.csv", address.mapIndex);
+        }
+        if (address.kindKey.equals("cotc_invasion")) {
+            return String.format(Locale.ROOT, "stageNormal2_%d_Invasion.csv", address.mapIndex);
+        }
+        if (address.kindKey.equals("cotc_invasion_z")) {
+            return String.format(Locale.ROOT, "stageNormal2_%d_Invasion_Z.csv", address.mapIndex);
+        }
+
         String code;
         switch (address.sourcePrefix) {
             case "DM":
@@ -462,6 +478,21 @@ public final class BattleCatsImporter {
                     Integer.parseInt(itf.group(2)), "StageName1_ja.csv");
         }
 
+        Matcher invasion = COTC_INVASION_STAGE.matcher(fileName);
+        if (invasion.matches()) {
+            int mapIndex = Math.max(0, Integer.parseInt(invasion.group(1)) - 7);
+            int stageIndex = Integer.parseInt(invasion.group(3));
+            boolean zombieVariant = invasion.group(2) != null;
+            return new StageAddress(
+                    zombieVariant ? "cotc_invasion_z" : "cotc_invasion",
+                    zombieVariant ? "宇宙編侵略Z" : "宇宙編侵略",
+                    zombieVariant ? "SpaceInvasionZ" : "SpaceInvasion",
+                    mapIndex,
+                    stageIndex,
+                    null
+            );
+        }
+
         Matcher cotc = COTC_STAGE.matcher(fileName);
         if (cotc.matches()) {
             return new StageAddress("cotc", "宇宙編", "Space",
@@ -513,7 +544,9 @@ public final class BattleCatsImporter {
         if (address.kindKey.equals("itf")) {
             return 3003 + address.mapIndex;
         }
-        if (address.kindKey.equals("cotc")) {
+        if (address.kindKey.equals("cotc")
+                || address.kindKey.equals("cotc_invasion")
+                || address.kindKey.equals("cotc_invasion_z")) {
             return 3006 + address.mapIndex;
         }
 
