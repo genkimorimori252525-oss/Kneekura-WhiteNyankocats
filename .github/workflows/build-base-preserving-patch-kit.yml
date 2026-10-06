@@ -27,6 +27,7 @@ on:
       - "docs/evidence/login-bonus-foundation-jp15.7.1.*"
       - "docs/evidence/super-kneekura-gacha-foundation-jp15.7.1.*"
       - "docs/evidence/phase-c-gacha-ui-proof-jp15.7.1.*"
+      - "docs/evidence/phase-c-server-download-gate-jp15.7.1.*"
       - "docs/evidence/loginbg-019-server-manifest-corroboration.md"
       - "research/frida/**"
       - "requirements-patching.txt"
@@ -95,12 +96,13 @@ jobs:
           d8 = Path(os.environ["ANDROID_HOME"]) / "build-tools/35.0.0/d8"
 
           builds = [
-              ("research", False, "research-off.dex"),
-              ("research", True, "research-on.dex"),
-              ("personal", True, "personal-on.dex"),
-              ("practice", True, "practice-on.dex"),
+              ("research", False, False, "research-off.dex"),
+              ("research", True, False, "research-on.dex"),
+              ("research", True, True, "research-gacha-external-files.dex"),
+              ("personal", True, False, "personal-on.dex"),
+              ("practice", True, False, "practice-on.dex"),
           ]
-          for flavor, enabled, name in builds:
+          for flavor, enabled, external_files, name in builds:
               output = Path("build/static-http") / name
               result = build_bridge_dex(
                   flavor=flavor,
@@ -109,8 +111,10 @@ jobs:
                   d8=str(d8),
                   android_jar=str(android_jar),
                   root=Path("."),
+                  use_external_files_dir=external_files,
               )
               assert result["dex_size"] > 0
+              assert result["use_external_files_dir"] is external_files
               payload = output.read_bytes()
               if flavor in {"personal", "practice"}:
                   assert b"KNEEKURA_STATIC_HTTP" not in payload
@@ -198,6 +202,7 @@ jobs:
           cp docs/evidence/login-bonus-foundation-jp15.7.1.* build/patch-kit/docs/evidence/
           cp docs/evidence/super-kneekura-gacha-foundation-jp15.7.1.* build/patch-kit/docs/evidence/
           cp docs/evidence/phase-c-gacha-ui-proof-jp15.7.1.* build/patch-kit/docs/evidence/
+          cp docs/evidence/phase-c-server-download-gate-jp15.7.1.* build/patch-kit/docs/evidence/
           cp docs/evidence/loginbg-019-server-manifest-corroboration.md build/patch-kit/docs/evidence/
 
           cp research/frida/* build/patch-kit/research/frida/
@@ -285,7 +290,11 @@ jobs:
             - original HTTP lifecycle observed on-device
             - Frida-free static backup replay promoted and device-smoke PASS
             - unknown requests / feature OFF preserve super.newHttpRequest
-            - next gate is a tiny append-only original-UI data proof
+            - append-only set 1089 data proof is complete
+            - the observed 615 MB screen is classified as the original 35-lane
+              server-asset bootstrap (645,599,537 bytes / 615.69 MiB)
+            - gacha schedule inference is deferred until the original Rare
+              Gacha UI is actually reached
 
           Repository preflight:
             python -m tools.base_mod.phase_c_preflight               --root .               --output phase-c-preflight.json
@@ -298,8 +307,14 @@ jobs:
             - builds and audits Practice feature-OFF shipping profile
             - proves Frida/research payloads are absent from both
             - builds exact append-only Rare Gacha set 1089
-            - installs the isolated research proof
-            - performs one manual original Rare Gacha visibility check
+            - installs/updates the isolated research proof without uninstalling
+            - keeps Personal/Practice storage behavior unchanged
+            - redirects getFilesDir only in the isolated research gacha proof
+              so the unchanged original downloader can populate an ADB-visible
+              app-specific cache
+            - classifies the 615 MiB gate separately from gacha scheduling
+            - after the one-time original download, performs one manual original
+              Rare Gacha visibility check without drawing
 
           Build the tiny original-UI Rare Gacha data proof:
             python -m tools.base_mod.build_owned_gacha_ui_proof               /path/to/nyanko_battlecats_2026-10-06.zip               --shim libkneekura.so               --keystore private/kneekura.p12               --alias kneekura               --storepass YOUR_PASSWORD               --output gacha-ui-proof-out
