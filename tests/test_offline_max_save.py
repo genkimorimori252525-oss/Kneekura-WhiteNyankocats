@@ -22,6 +22,14 @@ class OfflineMaxSaveLayoutTest(unittest.TestCase):
         self.assertEqual(maxsave.ARRAYS_I32["catfruit"], (385884, 29, 385880))
         self.assertEqual(maxsave.ARRAYS_I16["labyrinth_medals"], (484928, 4, None))
 
+    def test_talent_orb_and_engineer_contract(self):
+        self.assertEqual(maxsave.TALENT_ORB_COUNT, 310)
+        self.assertEqual(maxsave.TALENT_ORB_VALUE, 998)
+        self.assertEqual(maxsave.TALENT_ORB_INSERT_BYTES, 1240)
+        self.assertEqual(maxsave.I32["engineers"], 399146)
+        self.assertEqual(maxsave.MAX_VALUES["engineers"], 5)
+        self.assertEqual(maxsave.MAX_VALUES["platinum_shards"], 9)
+
     def test_scalar_width_contract(self):
         self.assertEqual(maxsave.I32["catfood"], 7)
         self.assertEqual(maxsave.I32["xp"], 75)
@@ -59,7 +67,7 @@ class OfflineMaxSaveLayoutTest(unittest.TestCase):
         self.assertEqual(evidence["baseline"]["size"], maxsave.BASELINE_SIZE)
         self.assertEqual(
             evidence["candidate"]["sha256"],
-            "afa5ee976a85d0640244393ba8326c21a5ef5b4378228fbf85e172e28c7beb18",
+            "0f5cbdadf2536f05af7748f7696ca93233dfb01d80dfe98a17da0fd5e6cf65e7",
         )
         self.assertTrue(
             evidence["candidate"]["raw_offset_transform_matches_parser_oracle_byte_for_byte"]
@@ -76,6 +84,11 @@ class OfflineMaxSaveLayoutTest(unittest.TestCase):
         )
         self.assertEqual(evidence["unit_bootstrap"]["eligible_unit_count"], 835)
         self.assertEqual(evidence["unit_bootstrap"]["unit_drop_save_ids_enabled"], 255)
+        self.assertEqual(evidence["candidate"]["size"], 497580)
+        self.assertEqual(evidence["candidate_values"]["talent_orb_types"], 310)
+        self.assertEqual(evidence["candidate_values"]["talent_orbs_each"], 998)
+        self.assertEqual(evidence["candidate_values"]["engineers"], 5)
+        self.assertEqual(evidence["candidate_values"]["platinum_shards"], 9)
 
     def test_caps_fit_serialized_widths(self):
         self.assertLessEqual(maxsave.MAX_VALUES["leadership"], 0x7FFF)
