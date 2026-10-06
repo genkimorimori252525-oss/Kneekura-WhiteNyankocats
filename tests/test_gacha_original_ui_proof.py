@@ -101,6 +101,9 @@ class GachaOriginalUiProofTests(unittest.TestCase):
         self.assertIn('"visibility_schedule_defined": False', source)
         self.assertIn("allow_datalocal_patch=True", source)
         self.assertIn("verify_gacha_ui_data_proof(", source)
+        self.assertIn("research_external_files_dir = flavor == \"research\"", source)
+        self.assertIn("use_external_files_dir=research_external_files_dir", source)
+        self.assertIn('"research_external_files_dir": research_external_files_dir', source)
 
 
 if __name__ == "__main__":
