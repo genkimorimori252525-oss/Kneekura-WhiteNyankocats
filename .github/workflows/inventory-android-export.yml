@@ -1,0 +1,193 @@
+name: Inventory Android export
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download draft release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ASSET_ID: "614397353"
+          EXPECTED_SHA256: "38c3bbb8d2cf2101793c9462617d4293e19fc99588b6655fd40299fd61a0ef56"
+        run: |
+          set -euo pipefail
+          curl -L --fail             -H "Authorization: Bearer $GH_TOKEN"             -H "Accept: application/octet-stream"             -H "X-GitHub-Api-Version: 2022-11-28"             "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/assets/$ASSET_ID"             -o android-export.zip
+          actual="$(sha256sum android-export.zip | awk '{print $1}')"
+          echo "asset_sha256=$actual" >> "$GITHUB_ENV"
+          test "$actual" = "$EXPECTED_SHA256"
+          echo "asset_size=$(stat -c %s android-export.zip)" >> "$GITHUB_ENV"
+
+      - name: Build read-only inventory
+        run: |
+          set -euo pipefail
+          mkdir -p report
+          python3 - <<'PY'
+          import collections
+          import hashlib
+          import io
+          import json
+          import os
+          import pathlib
+          import re
+          import shutil
+          import zipfile
+
+          source = pathlib.Path("android-export.zip")
+          report = pathlib.Path("report")
+          report.mkdir(exist_ok=True)
+
+          interesting_re = re.compile(
+              r"(?:^|/)(?:assets?|res|lib|META-INF)(?:/|$)|"
+              r"\.(?:pack|list|png|jpg|jpeg|webp|img|maanim|mamodel|mamodel|anim|"
+              r"ogg|wav|mp3|json|csv|tsv|txt|xml|dex|so)$",
+              re.I,
+          )
+
+          def ext(name: str) -> str:
+              base = name.rsplit("/", 1)[-1]
+              if "." not in base:
+                  return "<none>"
+              return "." + base.rsplit(".", 1)[-1].lower()
+
+          def zip_entries(zf):
+              out = []
+              for zi in zf.infolist():
+                  out.append({
+                      "path": zi.filename,
+                      "size": zi.file_size,
+                      "compressed_size": zi.compress_size,
+                      "is_dir": zi.is_dir(),
+                  })
+              return out
+
+          result = {
+              "source": {
+                  "name": source.name,
+                  "size": source.stat().st_size,
+                  "sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+              },
+              "outer": {},
+              "apks": [],
+              "shared_storage_candidates": [],
+          }
+
+          with zipfile.ZipFile(source) as outer:
+              outer_entries = zip_entries(outer)
+              result["outer"]["entries"] = len(outer_entries)
+              result["outer"]["extension_counts"] = dict(
+                  collections.Counter(ext(e["path"]) for e in outer_entries if not e["is_dir"]).most_common()
+              )
+              result["outer"]["top_level"] = sorted({
+                  e["path"].split("/", 1)[0] for e in outer_entries if e["path"]
+              })
+
+              apk_infos = [zi for zi in outer.infolist() if not zi.is_dir() and zi.filename.lower().endswith(".apk")]
+              non_apk = [e for e in outer_entries if not e["is_dir"] and not e["path"].lower().endswith(".apk")]
+
+              for e in non_apk:
+                  if interesting_re.search(e["path"]):
+                      result["shared_storage_candidates"].append(e)
+
+              tmp = pathlib.Path("tmp-apks")
+              tmp.mkdir(exist_ok=True)
+              for idx, zi in enumerate(apk_infos):
+                  apk_path = tmp / f"{idx:03d}-{pathlib.Path(zi.filename).name}"
+                  with outer.open(zi) as src, apk_path.open("wb") as dst:
+                      shutil.copyfileobj(src, dst, length=1024 * 1024)
+
+                  apk_sha = hashlib.sha256(apk_path.read_bytes()).hexdigest()
+                  with zipfile.ZipFile(apk_path) as apk:
+                      entries = zip_entries(apk)
+                      files = [e for e in entries if not e["is_dir"]]
+                      candidate = [e for e in files if interesting_re.search(e["path"])]
+                      assets = [e for e in files if e["path"].startswith("assets/")]
+                      res = [e for e in files if e["path"].startswith("res/")]
+                      dex = [e for e in files if e["path"].lower().endswith(".dex")]
+                      libs = [e for e in files if e["path"].lower().endswith(".so")]
+                      packs = [e for e in files if ext(e["path"]) in {".pack", ".list"}]
+                      animations = [e for e in files if ext(e["path"]) in {".maanim", ".mamodel", ".mamodel", ".anim"}]
+                      images = [e for e in files if ext(e["path"]) in {".png", ".jpg", ".jpeg", ".webp", ".img"}]
+                      sounds = [e for e in files if ext(e["path"]) in {".ogg", ".wav", ".mp3"}]
+
+                      result["apks"].append({
+                          "outer_path": zi.filename,
+                          "size": zi.file_size,
+                          "sha256": apk_sha,
+                          "entry_count": len(entries),
+                          "extension_counts": dict(collections.Counter(ext(e["path"]) for e in files).most_common()),
+                          "dex": dex,
+                          "native_libs": libs,
+                          "pack_list": packs,
+                          "animation_candidates": animations[:2000],
+                          "image_candidates": images[:2000],
+                          "sound_candidates": sounds[:1000],
+                          "asset_count": len(assets),
+                          "res_count": len(res),
+                          "candidate_paths": candidate[:5000],
+                      })
+
+          with (report / "inventory.json").open("w", encoding="utf-8") as f:
+              json.dump(result, f, ensure_ascii=False, indent=2)
+
+          lines = []
+          lines.append("# Android export inventory")
+          lines.append("")
+          lines.append(f"- Source: `{result['source']['name']}`")
+          lines.append(f"- Size: {result['source']['size']} bytes")
+          lines.append(f"- SHA-256: `{result['source']['sha256']}`")
+          lines.append(f"- Outer ZIP entries: {result['outer']['entries']}")
+          lines.append(f"- APK count: {len(result['apks'])}")
+          lines.append(f"- Shared-storage interesting files: {len(result['shared_storage_candidates'])}")
+          lines.append("")
+          lines.append("## Top-level paths")
+          for p in result["outer"]["top_level"]:
+              lines.append(f"- `{p}`")
+          lines.append("")
+          lines.append("## APKs")
+          for a in result["apks"]:
+              lines.append(f"### {a['outer_path']}")
+              lines.append(f"- Size: {a['size']} bytes")
+              lines.append(f"- SHA-256: `{a['sha256']}`")
+              lines.append(f"- ZIP entries: {a['entry_count']}")
+              lines.append(f"- assets/: {a['asset_count']}")
+              lines.append(f"- res/: {a['res_count']}")
+              lines.append(f"- DEX: {len(a['dex'])}")
+              lines.append(f"- native .so: {len(a['native_libs'])}")
+              lines.append(f"- .pack/.list: {len(a['pack_list'])}")
+              lines.append(f"- animation candidates: {len(a['animation_candidates'])}")
+              lines.append(f"- image candidates (capped): {len(a['image_candidates'])}")
+              lines.append(f"- sound candidates (capped): {len(a['sound_candidates'])}")
+              if a["pack_list"]:
+                  lines.append("- pack/list paths:")
+                  for e in a["pack_list"][:100]:
+                      lines.append(f"  - `{e['path']}` ({e['size']} bytes)")
+              if a["dex"]:
+                  lines.append("- DEX:")
+                  for e in a["dex"]:
+                      lines.append(f"  - `{e['path']}` ({e['size']} bytes)")
+              if a["native_libs"]:
+                  lines.append("- Native libraries:")
+                  for e in a["native_libs"][:100]:
+                      lines.append(f"  - `{e['path']}` ({e['size']} bytes)")
+              lines.append("")
+          lines.append("## Shared-storage candidates")
+          for e in result["shared_storage_candidates"][:2000]:
+              lines.append(f"- `{e['path']}` ({e['size']} bytes)")
+          lines.append("")
+          lines.append("> This report contains metadata/path inventory only. Game asset bytes are not included.")
+          (report / "summary.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+          PY
+
+      - name: Upload text-only inventory
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-export-inventory
+          path: report/
+          retention-days: 7
+          if-no-files-found: error
