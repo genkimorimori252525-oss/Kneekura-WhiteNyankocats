@@ -11,6 +11,8 @@ on:
       - "requirements-patching.txt"
       - "tests/test_native_shim_inject.py"
       - "tests/test_native_shim_source.py"
+      - "tests/test_native_sidecar_contract.py"
+      - "tests/test_native_provider_abi.py"
       - ".github/workflows/build-kneekura-shim.yml"
   workflow_dispatch:
 
@@ -46,11 +48,15 @@ jobs:
         run: |
           set -euo pipefail
           NDK="$ANDROID_HOME/ndk/27.2.12479018"
-          cmake -S native/kneekura-shim -B build/kneekura-shim             -DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake"             -DANDROID_ABI=arm64-v8a             -DANDROID_PLATFORM=android-29             -DCMAKE_BUILD_TYPE=Release
+          cmake -S native/kneekura-shim -B build/kneekura-shim \
+            -DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI=arm64-v8a \
+            -DANDROID_PLATFORM=android-29 \
+            -DCMAKE_BUILD_TYPE=Release
           cmake --build build/kneekura-shim --parallel
           test -f build/kneekura-shim/libkneekura.so
 
-      - name: Verify shim ABI and no-op contract
+      - name: Verify shim ABI and default-off contract
         shell: bash
         run: |
           set -euo pipefail
@@ -64,8 +70,10 @@ jobs:
           grep -F "kneekura_target_native_sha256" /tmp/kneekura-symbols.txt
           grep -F "kneekura_sidecar_save_atomic" /tmp/kneekura-symbols.txt
           grep -F "kneekura_clock_observe_epoch_day" /tmp/kneekura-symbols.txt
+          grep -F "kneekura_provider_gacha_cost" /tmp/kneekura-symbols.txt
+          grep -F "kneekura_provider_stage_cat_food" /tmp/kneekura-symbols.txt
 
-      - name: Test portable Clock/Sidecar/Profile core
+      - name: Test portable Clock Sidecar Profile core
         shell: bash
         run: |
           set -euo pipefail
@@ -73,6 +81,7 @@ jobs:
             -Inative/kneekura-shim/include \
             native/kneekura-shim/src/kneekura_shim.c \
             native/kneekura-shim/src/kneekura_state.c \
+            native/kneekura-shim/src/kneekura_provider.c \
             native/kneekura-shim/tests/kneekura_state_test.c \
             -o /tmp/kneekura-state-inert
           /tmp/kneekura-state-inert
@@ -82,12 +91,36 @@ jobs:
             -Inative/kneekura-shim/include \
             native/kneekura-shim/src/kneekura_shim.c \
             native/kneekura-shim/src/kneekura_state.c \
+            native/kneekura-shim/src/kneekura_provider.c \
             native/kneekura-shim/tests/kneekura_state_test.c \
             -o /tmp/kneekura-state-enabled
           /tmp/kneekura-state-enabled
 
+      - name: Test provider ABI disabled and enabled semantics
+        shell: bash
+        run: |
+          set -euo pipefail
+          cc -std=c11 -Wall -Wextra -Werror \
+            -Inative/kneekura-shim/include \
+            native/kneekura-shim/src/kneekura_shim.c \
+            native/kneekura-shim/src/kneekura_state.c \
+            native/kneekura-shim/src/kneekura_provider.c \
+            native/kneekura-shim/tests/kneekura_provider_test.c \
+            -o /tmp/kneekura-provider-inert
+          /tmp/kneekura-provider-inert
+
+          cc -std=c11 -Wall -Wextra -Werror \
+            -DKNEEKURA_DEFAULT_FEATURE_MASK=127ull \
+            -Inative/kneekura-shim/include \
+            native/kneekura-shim/src/kneekura_shim.c \
+            native/kneekura-shim/src/kneekura_state.c \
+            native/kneekura-shim/src/kneekura_provider.c \
+            native/kneekura-shim/tests/kneekura_provider_test.c \
+            -o /tmp/kneekura-provider-enabled
+          /tmp/kneekura-provider-enabled
+
       - name: Test native dependency injection helper
-        run: python -m unittest tests.test_native_shim_inject tests.test_native_shim_source tests.test_native_sidecar_contract -v
+        run: python -m unittest tests.test_native_shim_inject tests.test_native_shim_source tests.test_native_sidecar_contract tests.test_native_provider_abi -v
 
       - uses: actions/upload-artifact@v4
         with:
