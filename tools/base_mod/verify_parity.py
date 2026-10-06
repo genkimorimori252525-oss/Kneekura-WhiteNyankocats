@@ -28,7 +28,16 @@ def _import_lief():
     return lief
 
 
+_SIGNING_METADATA_ENTRIES = {
+    "stamp-cert-sha256",
+    "pinlist.meta",
+}
+
+
 def _is_signature_entry(name: str) -> bool:
+    if name in _SIGNING_METADATA_ENTRIES:
+        return True
+
     upper = name.upper()
     if not upper.startswith("META-INF/"):
         return False
