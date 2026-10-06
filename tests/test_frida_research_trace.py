@@ -6,6 +6,25 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class FridaResearchTraceTests(unittest.TestCase):
+    def test_backup_replay_is_exact_and_falls_through(self) -> None:
+        source = (
+            Path(__file__).resolve().parents[1]
+            / "research/frida/replay_backup_offline.js"
+        ).read_text(encoding="utf-8")
+        self.assertIn("nyanko-backups.ponosgames.com", source)
+        self.assertIn("parsed.getPath()) === '/'", source)
+        self.assertIn("safeString(method) !== 'GET'", source)
+        self.assertIn("Number(timeout) !== 10", source)
+        self.assertIn("return newHttp.call(", source)
+        self.assertIn("mNextRequestHandle", source)
+        self.assertIn("mRequestHandles", source)
+        self.assertIn("queueEvent", source)
+        self.assertIn("MyActivity.newResponse(", source)
+        self.assertIn("response_status: 0", source)
+        self.assertIn("response_header_shape: 'empty-object'", source)
+        self.assertIn("response_body: 'null'", source)
+        self.assertIn("response_flag: true", source)
+
     def test_static_response_callbacks_do_not_reflect_request_state(self) -> None:
         source = (
             Path(__file__).resolve().parents[1]
