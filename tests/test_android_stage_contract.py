@@ -7,19 +7,24 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class AndroidStageContractTests(unittest.TestCase):
     def test_importer_reads_maplocal_and_major_stage_families(self) -> None:
-        source = (
+        importer = (
             ROOT / "app/src/main/java/jp/kneekura/whitenyankocats/BattleCatsImporter.java"
         ).read_text(encoding="utf-8")
+        spawn = (
+            ROOT / "app/src/main/java/jp/kneekura/whitenyankocats/EnemySpawn.java"
+        ).read_text(encoding="utf-8")
 
-        self.assertIn("assets/MapLocal.list", source)
-        self.assertIn('"StageName_" + stageNameCode + "_ja.csv"', source)
-        self.assertIn('case "RN"', source)
-        self.assertIn('case "RS"', source)
-        self.assertIn('case "RC"', source)
-        self.assertIn('case "RNA"', source)
-        self.assertIn('case "RND"', source)
-        self.assertIn("spawnBasePercent", source)
-        self.assertIn("magnification", source)
+        self.assertIn("assets/MapLocal.list", importer)
+        self.assertIn('"StageName_" + stageNameCode + "_ja.csv"', importer)
+        self.assertIn('case "RN"', importer)
+        self.assertIn('case "RS"', importer)
+        self.assertIn('case "RC"', importer)
+        self.assertIn('case "RNA"', importer)
+        self.assertIn('case "RND"', importer)
+        self.assertIn("intAt(row, 5, 100)", importer)
+        self.assertIn("intAt(row, 9, 100)", importer)
+        self.assertIn("spawnBasePercent", spawn)
+        self.assertIn("magnification", spawn)
 
     def test_battle_core_uses_30fps_and_base_win_loss(self) -> None:
         source = (
