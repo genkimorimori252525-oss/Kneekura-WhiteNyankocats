@@ -97,7 +97,7 @@ MAX_VALUES = {
     "rare_tickets": 299,
     "platinum_tickets": 9,
     "legend_tickets": 4,
-    "platinum_shards": 90,
+    "platinum_shards": 9,
     "np": 9_999,
     "leadership": 9_999,
     "battle_items": 9_999,
@@ -175,6 +175,8 @@ def _derive_unit_contract(export: Path) -> tuple[list[int], list[int], dict[str,
     ) as source:
         data_local = source.pack("DataLocal")
         drop_payload, drop_provenance = data_local.read("drop_chara.csv")
+        equipment_payload, equipment_provenance = data_local.read("equipmentlist.json")
+        castle_limit_payload, castle_limit_provenance = data_local.read("CastleCustomLimit.csv")
 
     drop_rows = list(csv.reader(io.StringIO(drop_payload.decode("utf-8-sig", "replace"))))
     drop_save_ids: set[int] = set()
@@ -190,6 +192,27 @@ def _derive_unit_contract(export: Path) -> tuple[list[int], list[int], dict[str,
         if chara_id in eligible_set and 0 <= save_id < ARRAYS_I32["unit_drops"][1]:
             drop_save_ids.add(save_id)
 
+    equipment_document = json.loads(equipment_payload.decode("utf-8-sig"))
+    equipment_ids = equipment_document.get("ID")
+    if not isinstance(equipment_ids, list) or len(equipment_ids) != TALENT_ORB_COUNT:
+        raise ValueError(
+            f"unexpected equipmentlist.json orb count: "
+            f"{len(equipment_ids) if isinstance(equipment_ids, list) else 'invalid'}"
+        )
+
+    castle_limit_rows = list(
+        csv.reader(io.StringIO(castle_limit_payload.decode("utf-8-sig", "replace")))
+    )
+    try:
+        exact_engineer_max = int(castle_limit_rows[0][0])
+    except (IndexError, ValueError) as exc:
+        raise ValueError("invalid CastleCustomLimit.csv") from exc
+    if exact_engineer_max != MAX_VALUES["engineers"]:
+        raise ValueError(
+            f"unexpected exact engineer max: {exact_engineer_max} != "
+            f"{MAX_VALUES['engineers']}"
+        )
+
     evidence = {
         "eligible_count": len(eligible),
         "eligible_ids_sha256": hashlib.sha256(
@@ -197,6 +220,10 @@ def _derive_unit_contract(export: Path) -> tuple[list[int], list[int], dict[str,
         ).hexdigest(),
         "drop_save_id_count": len(drop_save_ids),
         "drop_chara_sha256": drop_provenance.payload_sha256,
+        "talent_orb_count": len(equipment_ids),
+        "equipmentlist_sha256": equipment_provenance.payload_sha256,
+        "engineer_max": exact_engineer_max,
+        "castle_custom_limit_sha256": castle_limit_provenance.payload_sha256,
     }
     return eligible, sorted(drop_save_ids), evidence
 
