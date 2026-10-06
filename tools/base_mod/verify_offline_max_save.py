@@ -110,12 +110,19 @@ def verify_max_save(data: bytes, owned_export: Path) -> dict[str, Any]:
         "lucky_tickets": _read_i32_array(data, "lucky_tickets"),
         "treasure_chests": _read_i32_array(data, "treasure_chests"),
     }
-    if data[484927] != ARRAYS_I16["labyrinth_medals"][1]:
+    if data[_candidate_offset(484927)] != ARRAYS_I16["labyrinth_medals"][1]:
         raise ValueError("labyrinth medal count mismatch")
-    if data[495796] != ARRAYS_I32["treasure_chests"][1]:
+    if data[_candidate_offset(495796)] != ARRAYS_I32["treasure_chests"][1]:
         raise ValueError("treasure chest count mismatch")
     lab_start, lab_len, _ = ARRAYS_I16["labyrinth_medals"]
     labyrinth_medals = [_read_i16(data, lab_start + i * 2) for i in range(lab_len)]
+
+    talent_count = struct.unpack_from("<h", data, TALENT_ORB_COUNT_OFFSET)[0]
+    talent_orbs: list[tuple[int, int]] = []
+    if talent_count == TALENT_ORB_COUNT:
+        for i in range(talent_count):
+            offset = TALENT_ORB_DATA_OFFSET + i * 4
+            talent_orbs.append(struct.unpack_from("<hh", data, offset))
 
     tutorial = {
         "tutorial_state": _read_i32(data, I32["tutorial_state"]),
