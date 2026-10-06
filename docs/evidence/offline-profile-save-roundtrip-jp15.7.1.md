@@ -41,9 +41,13 @@ is stored in
 Notable corrections found during this audit:
 
 - `cat_unlocked_forms` count is at 310,318 and cat 0 starts at 310,322;
-- the exact 15.7.1 `lucky_tickets` array contains **55**, not 54, entries.
+- the exact 15.7.1 `lucky_tickets` array contains **55**, not 54, entries;
+- the Talent Orb section is an i16 count at 483,324 followed by
+  `i16 orb_id + i16 count` records at 483,326;
+- exact `equipmentlist.json` contains **310** valid Talent Orb IDs;
+- exact `CastleCustomLimit.csv` sets the engineer maximum to **5**.
 
-Both corrections are now reflected in the independent transformer.
+These are now reflected in the independent transformer.
 
 ## First-form all-unit contract
 
@@ -79,16 +83,23 @@ rebuilt from the exact offsets without importing BCSFE. The two outputs are
 
 Candidate identity:
 
-- size: 496,340 bytes;
+- size: **497,580 bytes** (the 1,240-byte increase is exactly 310 Talent
+  Orb records × 4 bytes);
 - SHA-256:
-  `afa5ee976a85d0640244393ba8326c21a5ef5b4378228fbf85e172e28c7beb18`;
+  `0f5cbdadf2536f05af7748f7696ca93233dfb01d80dfe98a17da0fd5e6cf65e7`;
 - JP salted-MD5:
-  `c5de35c24bb635cf1a312da0d6139120`;
+  `808f172a858b6ea3c686168a51cbe0c7`;
 - parser re-read: PASS;
 - candidate parser reserialization: byte-identical PASS.
 
 The exact-independent implementation is
 `tools/base_mod/build_offline_max_save.py`.
+
+The final candidate also includes all **310** exact JP 15.7.1 Talent Orb
+inventory types at 998 each and the exact engineer cap of 5. Platinum Shards
+are 9 when Platinum Tickets are already at their 9-ticket cap; this follows the
+editor's dependent shard maximum instead of the earlier inconsistent 90/9
+combination.
 
 ## Resource cap boundary
 
