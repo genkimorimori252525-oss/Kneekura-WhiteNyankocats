@@ -70,15 +70,15 @@ class AssetIndex:
 
 @dataclass(frozen=True)
 class UnitBuyRow:
-    guide_order: int
-    true_form_id: int
-    ultra_form_id: int
-    egg_id_normal: int
-    egg_id_evolved: int
+    position_order: int
+    tf_id: int
+    uf_id: int
+    egg_val: int
+    egg_id: int
 
     @property
     def playable(self) -> bool:
-        return self.guide_order >= 0
+        return self.position_order >= 0
 
 
 def _int_at(columns: list[str], index: int, default: int) -> int:
@@ -103,44 +103,69 @@ def parse_unitbuy_rows(payload: bytes) -> dict[int, UnitBuyRow]:
             continue
         columns = [value.strip() for value in raw_line.split(",")]
         rows[line_index] = UnitBuyRow(
-            guide_order=_int_at(columns, 14, -1),
-            true_form_id=_int_at(columns, 23, 0),
-            ultra_form_id=_int_at(columns, 24, 0),
-            egg_id_normal=_int_at(columns, 61, -1),
-            egg_id_evolved=_int_at(columns, 62, -1),
+            position_order=_int_at(columns, 14, -1),
+            tf_id=_int_at(columns, 23, 0),
+            uf_id=_int_at(columns, 24, 0),
+            egg_val=_int_at(columns, 61, -1),
+            egg_id=_int_at(columns, 62, -1),
         )
     return rows
 
 
 def animation_base(asset_id: int, form_index: int, unitbuy: UnitBuyRow) -> str:
-    if form_index == 0 and unitbuy.egg_id_normal >= 0:
-        return f"{unitbuy.egg_id_normal:03d}_m"
-    if form_index == 1 and unitbuy.egg_id_evolved >= 0:
-        return f"{unitbuy.egg_id_evolved:03d}_m"
+    if form_index == 0 and unitbuy.egg_val >= 0:
+        return f"{unitbuy.egg_val:03d}_m"
+    if form_index == 1 and unitbuy.egg_id >= 0:
+        return f"{unitbuy.egg_id:03d}_m"
     return f"{asset_id:03d}_{FORM_CODES[form_index]}"
 
 
 def icon_name(asset_id: int, form_index: int, unitbuy: UnitBuyRow) -> str:
-    if form_index == 0 and unitbuy.egg_id_normal >= 0:
-        return f"uni{unitbuy.egg_id_normal:03d}_m00.png"
-    if form_index == 1 and unitbuy.egg_id_evolved >= 0:
-        return f"uni{unitbuy.egg_id_evolved:03d}_m01.png"
+    if form_index == 0 and unitbuy.egg_val >= 0:
+        return f"uni{unitbuy.egg_val:03d}_m00.png"
+    if form_index == 1 and unitbuy.egg_id >= 0:
+        return f"uni{unitbuy.egg_id:03d}_m01.png"
     return f"uni{asset_id:03d}_{FORM_CODES[form_index]}00.png"
 
 
 def banner_name(asset_id: int, form_index: int, unitbuy: UnitBuyRow) -> str:
-    if form_index == 0 and unitbuy.egg_id_normal >= 0:
-        return f"udi{unitbuy.egg_id_normal:03d}_m00.png"
-    if form_index == 1 and unitbuy.egg_id_evolved >= 0:
-        return f"udi{unitbuy.egg_id_evolved:03d}_m01.png"
+    if form_index == 0 and unitbuy.egg_val >= 0:
+        return f"udi{unitbuy.egg_val:03d}_m00.png"
+    if form_index == 1 and unitbuy.egg_id >= 0:
+        return f"udi{unitbuy.egg_id:03d}_m01.png"
     return f"udi{asset_id:03d}_{FORM_CODES[form_index]}.png"
 
 
 def gacha_candidates(asset_id: int, unitbuy: UnitBuyRow) -> list[str]:
     names = [f"gatyachara_{asset_id:03d}_f.png", f"gatyachara_{asset_id:03d}_z.png"]
-    if unitbuy.egg_id_normal >= 0 or unitbuy.egg_id_evolved >= 0:
+    if unitbuy.egg_val >= 0 or unitbuy.egg_id >= 0:
         names.append(f"gatyachara_{asset_id:03d}_m.png")
     return names
+
+
+def required_form_count(stat_form_count: int, unitbuy: UnitBuyRow) -> int:
+    """Return the number of visual forms that actually gate completeness.
+
+    Unit stat CSVs may contain trailing placeholder rows even when a unit has no
+    corresponding True/Ultra form assets. For playable units, the first two
+    forms are the baseline when present; unitbuy.tf_id/uf_id promote the gate to
+    the third/fourth form. A one-row stat file remains one-form. Internal rows
+    keep every stat-backed form because unitbuy progression flags do not describe
+    their runtime/internal asset layout.
+    """
+    if stat_form_count < 1 or stat_form_count > len(FORM_CODES):
+        raise ValueError(f"unsupported stat form count {stat_form_count}")
+    if not unitbuy.playable:
+        return stat_form_count
+    if stat_form_count == 1:
+        return 1
+
+    required = 2
+    if unitbuy.tf_id > 0:
+        required = 3
+    if unitbuy.uf_id > 0:
+        required = 4
+    return min(required, stat_form_count)
 
 
 def _source_summary(index: AssetIndex) -> dict[str, int]:
@@ -288,22 +313,17 @@ def build_audit(
             raise ValueError(f"unitbuy.csv has no row for asset id {asset_id} / unit {unit_no}")
 
         stat_forms = [form for form in catalog_unit["forms"] if form.get("stats_raw") is not None]
-        form_count = len(stat_forms)
-        if form_count < 1 or form_count > len(FORM_CODES):
-            raise ValueError(f"unit {unit_no} has unsupported stat form count {form_count}")
+        stat_form_count = len(stat_forms)
+        audited_form_count = required_form_count(stat_form_count, unitbuy)
 
-        declared_count = 2
-        if unitbuy.true_form_id > 0:
-            declared_count = 3
-        if unitbuy.ultra_form_id > 0:
-            declared_count = 4
-        if unitbuy.playable and declared_count != form_count:
+        if unitbuy.playable and audited_form_count != stat_form_count:
             form_shape_mismatches.append(
                 {
                     "unit_no": unit_no,
                     "asset_id": asset_id,
-                    "stat_forms": form_count,
-                    "unitbuy_declared_forms": declared_count,
+                    "stat_forms": stat_form_count,
+                    "audited_forms": audited_form_count,
+                    "ignored_trailing_stat_rows": stat_form_count - audited_form_count,
                 }
             )
 
@@ -314,7 +334,7 @@ def build_audit(
                 form_index=form_index,
                 unitbuy=unitbuy,
             )
-            for form_index in range(form_count)
+            for form_index in range(audited_form_count)
         ]
         total_forms += len(forms)
         complete_forms += sum(1 for form in forms if form["complete"])
@@ -358,13 +378,13 @@ def build_audit(
                     None,
                 ),
                 "playable": unitbuy.playable,
-                "guide_order": unitbuy.guide_order,
-                "egg_ids": {
-                    "normal": unitbuy.egg_id_normal,
-                    "evolved": unitbuy.egg_id_evolved,
+                "guide_order": unitbuy.position_order,
+                "egg_asset_fields": {
+                    "normal_m": unitbuy.egg_val,
+                    "evolved_m": unitbuy.egg_id,
                 },
-                "stat_form_count": form_count,
-                "unitbuy_declared_form_count": declared_count,
+                "stat_form_count": stat_form_count,
+                "audited_form_count": audited_form_count,
                 "forms": forms,
                 "gacha_art": gacha,
                 "complete": unit_complete,
@@ -378,6 +398,17 @@ def build_audit(
             "unit_number_to_asset_id": "asset_id = unit_no - 1",
             "form_codes": list(FORM_CODES),
             "playable_motion_policy": list(STANDARD_MOTIONS),
+            "form_presence_policy": (
+                "playable: one-row stays one; otherwise f/c baseline, tf_id>0 adds s, "
+                "uf_id>0 adds u; internal: all stat-backed rows"
+            ),
+            "unitbuy_schema": {
+                "position_order": 14,
+                "tf_id": 23,
+                "uf_id": 24,
+                "egg_val": 61,
+                "egg_id": 62,
+            },
             "internal_motion_policy": "at least one maanim",
             "rig_required": ["png", "imgcut", "mamodel"],
             "deploy_icon_required_for_playable": True,
