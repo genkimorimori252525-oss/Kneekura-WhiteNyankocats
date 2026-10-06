@@ -35,6 +35,13 @@ JP_SALT = b"battlecats"
 HASH_LEN = 32
 EXPORT_SHA256 = "38c3bbb8d2cf2101793c9462617d4293e19fc99588b6655fd40299fd61a0ef56"
 
+TALENT_ORB_COUNT_OFFSET = 483_324
+TALENT_ORB_DATA_OFFSET = 483_326
+TALENT_ORB_COUNT = 310
+TALENT_ORB_VALUE = 998
+TALENT_ORB_RECORD_SIZE = 4
+TALENT_ORB_INSERT_BYTES = TALENT_ORB_COUNT * TALENT_ORB_RECORD_SIZE
+
 # Exact baseline field map, proven by differential serialization against the
 # pinned parser and re-read from the real JP 15.7.1 research SAVE_DATA.
 I32 = {
@@ -55,6 +62,7 @@ I32 = {
     "legend_tickets": 483481,
     "platinum_shards": 483703,
     "hundred_million_ticket": 495780,
+    "engineers": 399146,
 }
 I16 = {
     "leadership": 451697,
@@ -101,6 +109,8 @@ MAX_VALUES = {
     "labyrinth_medals": 9_999,
     "hundred_million_ticket": 9_999,
     "treasure_chests": 9_999,
+    "talent_orbs": TALENT_ORB_VALUE,
+    "engineers": 5,
 }
 
 
@@ -269,6 +279,7 @@ def build_max_save(source: bytes, export: Path) -> tuple[bytes, dict[str, Any]]:
         "platinum_shards",
         "np",
         "hundred_million_ticket",
+        "engineers",
     ):
         _write_i32(out, I32[name], MAX_VALUES[name])
     _write_i16(out, I16["leadership"], MAX_VALUES["leadership"])
@@ -291,6 +302,21 @@ def build_max_save(source: bytes, export: Path) -> tuple[bytes, dict[str, Any]]:
     start, length, _ = ARRAYS_I16["labyrinth_medals"]
     for i in range(length):
         _write_i16(out, start + i * 2, MAX_VALUES["labyrinth_medals"])
+
+    # Talent Orbs are a variable-length section. The exact baseline contains a
+    # zero short count at 483,324 and no records. For JP 15.7.1 each record is
+    # short id + short count. Insert all 310 exact equipmentlist.json IDs with
+    # the storage-safe/current editor cap of 998.
+    if _read_i16(out, TALENT_ORB_COUNT_OFFSET) != 0:
+        raise ValueError("baseline talent orb section is not empty as expected")
+    _write_i16(out, TALENT_ORB_COUNT_OFFSET, TALENT_ORB_COUNT)
+    talent_payload = b"".join(
+        struct.pack("<hh", orb_id, TALENT_ORB_VALUE)
+        for orb_id in range(TALENT_ORB_COUNT)
+    )
+    if len(talent_payload) != TALENT_ORB_INSERT_BYTES:
+        raise AssertionError("unexpected talent orb payload length")
+    out[TALENT_ORB_DATA_OFFSET:TALENT_ORB_DATA_OFFSET] = talent_payload
 
     new_md5 = _rewrite_hash(out)
     built = bytes(out)
@@ -317,6 +343,11 @@ def build_max_save(source: bytes, export: Path) -> tuple[bytes, dict[str, Any]]:
             "unlocked_forms": 0,
             "fourth_form": 0,
             "drop_save_ids_enabled": len(drop_save_ids),
+        },
+        "talent_orbs": {
+            "count": TALENT_ORB_COUNT,
+            "value_each": TALENT_ORB_VALUE,
+            "inserted_bytes": TALENT_ORB_INSERT_BYTES,
         },
         "tutorial": {
             "minimal_clear": True,
