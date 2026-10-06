@@ -77,12 +77,8 @@ jobs:
             frida-compile@19.1.0 \
             frida-java-bridge@7.0.13
           mkdir -p build/frida-agent
-          {
-            printf '%s\n' 'import Java from "frida-java-bridge";'
-            cat research/frida/trace_service_bridge.js
-          } > build/frida-agent/trace_service_bridge.entry.js
           npx frida-compile \
-            build/frida-agent/trace_service_bridge.entry.js \
+            research/frida/trace_service_bridge.js \
             -o build/frida-agent/trace_service_bridge.bundle.js
           test -s build/frida-agent/trace_service_bridge.bundle.js
           grep -q 'KNEEKURA_TRACE ' build/frida-agent/trace_service_bridge.bundle.js
