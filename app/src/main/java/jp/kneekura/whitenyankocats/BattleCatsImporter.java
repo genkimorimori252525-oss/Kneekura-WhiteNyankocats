@@ -69,7 +69,7 @@ public final class BattleCatsImporter {
                 );
 
                 Map<Integer, MapMeta> mapMeta = importMapMeta(data);
-                Map<Integer, List<StageRestriction>> restrictions = importStageRestrictions(data);
+                Map<String, List<StageRestriction>> restrictions = importStageRestrictions(data);
                 return new GameImportResult(
                         importUnits(data, res),
                         importEnemies(data, res, map),
@@ -201,8 +201,8 @@ public final class BattleCatsImporter {
                     intAt(row, 7, 0),
                     intAt(row, 8, 0)
             );
-            result.computeIfAbsent(mapId, ignored -> new ArrayList<>())
-                    .add(new IndexedRestriction(stageId, restriction).restriction);
+            result.computeIfAbsent(restrictionKey(mapId, stageId), ignored -> new ArrayList<>())
+                    .add(restriction);
         }
 
         return result;
@@ -213,7 +213,7 @@ public final class BattleCatsImporter {
             Pack res,
             Pack map,
             Map<Integer, MapMeta> mapMeta,
-            Map<Integer, List<StageRestriction>> restrictionsByMap
+            Map<String, List<StageRestriction>> restrictionsByMap
     ) throws Exception {
         List<StageDefinition> stages = new ArrayList<>();
 
@@ -271,7 +271,7 @@ public final class BattleCatsImporter {
 
             MapStageExtra extra = importMapStageExtra(data, address);
             List<StageRestriction> stageRestrictions = restrictionsFor(
-                    data,
+                    restrictionsByMap,
                     absoluteMapId,
                     address.stageIndex
             );
@@ -319,33 +319,27 @@ public final class BattleCatsImporter {
     }
 
     private static List<StageRestriction> restrictionsFor(
-            Pack data,
+            Map<String, List<StageRestriction>> restrictionsByMap,
             int absoluteMapId,
             int stageIndex
-    ) throws Exception {
+    ) {
         List<StageRestriction> result = new ArrayList<>();
-        if (absoluteMapId < 0 || !data.has("Stage_option.csv")) {
+        if (absoluteMapId < 0) {
             return result;
         }
-        for (List<String> row : csvRows(data.read("Stage_option.csv"), ",", true)) {
-            if (intAt(row, 0, -1) != absoluteMapId) {
-                continue;
-            }
-            int targetStage = intAt(row, 2, -999);
-            if (targetStage != -1 && targetStage != stageIndex) {
-                continue;
-            }
-            result.add(new StageRestriction(
-                    intAt(row, 1, 0),
-                    intAt(row, 3, 0),
-                    intAt(row, 4, 0),
-                    intAt(row, 5, 0),
-                    intAt(row, 6, 0),
-                    intAt(row, 7, 0),
-                    intAt(row, 8, 0)
-            ));
+        List<StageRestriction> mapWide = restrictionsByMap.get(restrictionKey(absoluteMapId, -1));
+        if (mapWide != null) {
+            result.addAll(mapWide);
+        }
+        List<StageRestriction> exact = restrictionsByMap.get(restrictionKey(absoluteMapId, stageIndex));
+        if (exact != null) {
+            result.addAll(exact);
         }
         return result;
+    }
+
+    private static String restrictionKey(int absoluteMapId, int stageId) {
+        return absoluteMapId + ":" + stageId;
     }
 
     private static MapStageExtra importMapStageExtra(Pack data, StageAddress address) throws Exception {
