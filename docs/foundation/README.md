@@ -22,4 +22,4 @@ Game assets, APKs, extracted textures/audio, and `.pack/.list` payloads stay out
 
 ## Current completeness gate
 
-See `unit-asset-completeness-2026-10-06.md` for the server-route proof, zero-based asset-ID correction, current 882-unit audit contract, and the still-unclaimed final 882/882 result.
+See `unit-asset-completeness-2026-10-06.md` and `unit-asset-audit-summary-15.7.1.json` for the server-route proof, zero-based asset-ID correction, real 879/882 strict result, three explained residual slots, and the resulting **GO** decision for JP reconstruction.
