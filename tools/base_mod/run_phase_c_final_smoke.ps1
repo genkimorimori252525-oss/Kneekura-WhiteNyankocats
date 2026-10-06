@@ -144,14 +144,17 @@ Write-Host "[5/9] Preparing exact set-1089 original-UI gacha proof..."
 $gachaOut = Join-Path $out "gacha-ui-proof"
 $gachaSigned = Join-Path $gachaOut "research-gacha-ui-proof-signed-splits"
 $existingBridgeLedger = Join-Path $gachaSigned "http-bridge-build-ledger.json"
+$existingProofLedger = Join-Path $gachaSigned "gacha-ui-proof-ledger.json"
 $needGachaBuild = $true
 
-if (-not $Clean -and (Test-Path $existingBridgeLedger)) {
+if (-not $Clean -and (Test-Path $existingBridgeLedger) -and (Test-Path $existingProofLedger)) {
     try {
         $existingBridge = Get-Content $existingBridgeLedger -Raw | ConvertFrom-Json
-        if ($existingBridge.use_external_files_dir -eq $true) {
+        $existingProof = Get-Content $existingProofLedger -Raw | ConvertFrom-Json
+        $overlayCount = @($existingProof.downloadlocal_overlay_entries).Count
+        if ($existingBridge.use_external_files_dir -eq $true -and $existingProof.datalocal_byte_identical -eq $true -and $overlayCount -eq 4) {
             $needGachaBuild = $false
-            Write-Host "Reusing gacha proof with research external-files cache mode."
+            Write-Host "Reusing H01-safe DownloadLocal overlay gacha proof."
         }
     } catch {
         $needGachaBuild = $true
@@ -190,6 +193,12 @@ if (($proof.prototype_unit_ids -join ",") -ne "37,30,34") {
 if ($proof.clone_option_set -ne 49) { throw "Gacha option clone drift" }
 if (-not $proof.data_rows_verified_append_only) { throw "Gacha append-only verification failed" }
 if ($proof.frida_absent -ne $true) { throw "Frida leaked into gacha proof" }
+if ($proof.datalocal_byte_identical -ne $true) {
+    throw "H01-safe proof requires byte-identical DataLocal"
+}
+if (@($proof.downloadlocal_overlay_entries).Count -ne 4) {
+    throw "H01-safe proof requires four DownloadLocal gacha overlay files"
+}
 if ($proof.research_external_files_dir -ne $true) {
     throw "Research gacha proof is missing external-files cache mode"
 }
