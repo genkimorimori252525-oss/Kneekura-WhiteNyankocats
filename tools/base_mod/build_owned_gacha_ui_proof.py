@@ -156,6 +156,7 @@ def build_owned_gacha_ui_proof(
         research_native_extraction=False,
     )
 
+    research_external_files_dir = flavor == "research"
     bridge_build = build_bridge_dex(
         flavor=flavor,
         enabled=enable_backup_offline_replay,
@@ -164,6 +165,7 @@ def build_owned_gacha_ui_proof(
         d8=d8,
         android_jar=android_jar,
         root=root,
+        use_external_files_dir=research_external_files_dir,
     )
     bridge_ledger = inject_bridge_split_set(
         flavored,
@@ -222,6 +224,7 @@ def build_owned_gacha_ui_proof(
         "unknown_request_super_fallthrough": static_parity[
             "unknown_request_super_fallthrough"
         ],
+        "research_external_files_dir": research_external_files_dir,
         "warning": (
             "Set 1089 is structurally loadable and BannerON in the original "
             "Rare Gacha dataset format. A live/server-style visibility schedule "
@@ -265,7 +268,10 @@ Preservation contract:
 - BannerON is 1 by cloning an existing BannerON row;
 - no rarity-rate vector or server visibility schedule is invented;
 - Frida is absent;
-- unknown HTTP requests still call the exact original transport.
+- unknown HTTP requests still call the exact original transport;
+- research flavor only redirects getFilesDir() to its app-specific external
+  files directory so verified owner-local server assets can be preseeded over
+  ADB without root. Personal/Practice shipping builds do not use this override.
 
 This build proves the version-pinned data/scene boundary. Runtime visibility of
 set 1089 remains a separate proof because the live event schedule contract has
