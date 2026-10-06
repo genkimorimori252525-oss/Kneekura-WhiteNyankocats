@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "anchor": {
+    "region": "jp",
+    "game_version": "15.7.1",
+    "game_version_code": 150700,
+    "source_export_sha256": "38c3bbb8d2cf2101793c9462617d4293e19fc99588b6655fd40299fd61a0ef56"
+  },
+  "tables": {
+    "unitbuy.csv": {
+      "rows": 882,
+      "sha256": "bc1adab2fc6ad79f3b8198a8a4d40786756d586af846fdbdeccdbaec55226daf"
+    },
+    "nyankoPictureBookData.csv": {
+      "rows": 882,
+      "sha256": "bc3f233d2d8b7c3e69229464c1da4eb7d6dcd886de55feaccf44f0c6394f1aee"
+    }
+  },
+  "selection": {
+    "rule": "catguide_visible AND position_order>=0 AND unit_game_version<=150700",
+    "eligible_count": 835,
+    "eligible_ids_canonical_csv_sha256": "3508d8b83d9e89b5d2fbc41b9a2c323420902e03e6ffdb89b8b81e9497907ac3",
+    "guide_visible_but_not_playable_count": 0,
+    "playable_but_guide_hidden_count": 24,
+    "hidden_internal_count": 23,
+    "excluded_count": 47
+  },
+  "excluded": {
+    "guide_hidden_but_playable": [
+      53, 139, 155, 182, 285, 320, 339, 353, 432, 433, 465, 492,
+      497, 498, 499, 500, 673, 740, 741, 742, 743, 744, 745, 788
+    ],
+    "guide_hidden_and_not_roster_playable": [
+      729, 732, 734, 739, 755, 761, 764, 770, 775, 782, 800, 802,
+      812, 816, 818, 821, 825, 838, 839, 855, 860, 875, 876
+    ]
+  },
+  "asset_gate": {
+    "known_incomplete_asset_ids": [673, 740, 788],
+    "eligible_overlap": [],
+    "passed": true
+  },
+  "eligible_metadata": {
+    "rarity_distribution": {
+      "0": 10,
+      "1": 192,
+      "2": 187,
+      "3": 105,
+      "4": 323,
+      "5": 18
+    },
+    "picturebook_total_forms_distribution": {
+      "2": 424,
+      "3": 388,
+      "4": 23
+    },
+    "limited_count": 373,
+    "highest_unit_game_version": 150700,
+    "highest_eligible_asset_id": 881
+  },
+  "first_form_contract": {
+    "owned": true,
+    "gacha_seen": true,
+    "current_form": 0,
+    "unlocked_forms": 0,
+    "force_true_form": false,
+    "force_fourth_form": false,
+    "force_talents": false,
+    "force_upgrade_level": false
+  },
+  "note": "Metadata-only evidence. The full ordered eligible list is regenerated from the exact user-owned DataLocal by tools/base_mod/build_offline_profile_unit_manifest.py."
+}
