@@ -12,7 +12,7 @@ The battle renderer is intentionally primitive at this checkpoint. Original imag
 
 ## Primary evidence
 
-The exact JP 15.7.1 export previously verified in this repository contains a MapLocal family with 608 manifest entries.
+The exact JP 15.7.1 export has now been re-checked directly from the recoverable beginning of split_InstallPack.apk. DataLocal contains 8,955 entries and is the stage-definition source. It contains 6,355 filenames matching the supported concrete stage-file grammar. MapLocal has 608 entries, but those entries are PNG map/stage imagery; it is not the primary stage-CSV source.
 
 TBCML public source defines the stage schema used by this implementation:
 
@@ -21,7 +21,7 @@ TBCML public source defines the stage schema used by this implementation:
 - MapStageDataStage: energy, XP, music and rewards.
 - StageOptionInfo: rarity/deploy/cost restrictions.
 
-TBCML also provides the filename map for the major stage families. The Android importer follows those filename rules rather than inferring categories from display text.
+TBCML also provides the filename map for the major stage families. The Android importer follows those filename rules rather than inferring categories from display text. Direct JP 15.7.1 DataLocal inspection confirms representative exact files such as stage00.csv, stageRN000_00.csv, stageRS000_00.csv and stageRC000_00.csv, together with Map_option.csv, Stage_option.csv, 1,279 MapStageData files, and t_unit.csv.
 
 ## Filename families handled now
 
@@ -48,7 +48,7 @@ TBCML also provides the filename map for the major stage families. The Android i
   - L Labyrinth
   - Z outbreaks
 
-Unknown future prefixes are retained as その他(prefix) instead of being dropped.
+Unknown future prefixes are retained as その他(prefix) instead of being dropped. The current JP DataLocal also contains additional prefixes such as G, Normal, RPR and RSR; these stay preserved until their exact semantics are promoted from evidence.\n\nExact current JP stage-file counts include RN 324, RNA 286, RND 217, RS 1,215, RC 847, RCA 459, RA 1,147, RB 74, RH 85, RM 1, RQ 60, RR 50, RT 2, RV 260, EX 192, DM 49, L 113, Z 432, W 144, Space 146 and 57 numeric main-story stage files.\n\nMap_option.csv also directly contains named maps for the Crazed/Manic line (for example 狂乱のネコ降臨 through 狂乱の巨神降臨 and 大狂乱のネコ降臨 through 大狂乱の巨神降臨), plus historical collaboration map names such as 魔法少女まどか☆マギカ, Evangelion, 初音ミク, らんま1/2 and Street Fighter. This is stronger evidence that these stage definitions can be preserved locally than relying on an active event schedule.
 
 ## Community reconnaissance
 
@@ -82,7 +82,7 @@ The first battle core is deliberately narrower than final compatibility:
 
 - 30 simulation ticks per second;
 - stage width and enemy-base HP from imported StageInfo;
-- enemy spawn count/timing/base-HP trigger/magnification from imported StageEnemyData;
+- enemy spawn count/timing/base-HP trigger/magnification from imported StageEnemyData; zero spawn-count is treated as unlimited, matching the JP CSV comment;
 - basic player/enemy HP, movement, range, attack and base destruction;
 - stage victory/defeat when a base reaches zero.
 

@@ -395,7 +395,7 @@ public final class BattleActivity extends Activity {
         }
 
         boolean canSpawnAgain() {
-            return spawn.maxEnemyCount < 0 || spawned < spawn.maxEnemyCount;
+            return spawn.maxEnemyCount <= 0 || spawned < spawn.maxEnemyCount;
         }
     }
 

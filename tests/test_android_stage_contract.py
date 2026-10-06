@@ -14,7 +14,7 @@ class AndroidStageContractTests(unittest.TestCase):
             ROOT / "app/src/main/java/jp/kneekura/whitenyankocats/EnemySpawn.java"
         ).read_text(encoding="utf-8")
 
-        self.assertIn("assets/MapLocal.list", importer)
+        self.assertIn("assets/MapLocal.list", importer)\n        self.assertIn("for (String fileName : data.names())", importer)\n        self.assertIn("enemyReleaseId < 2", importer)
         self.assertIn('"StageName_" + stageNameCode + "_ja.csv"', importer)
         self.assertIn('case "RN"', importer)
         self.assertIn('case "RS"', importer)
@@ -35,7 +35,7 @@ class AndroidStageContractTests(unittest.TestCase):
         self.assertIn("enemyBaseHp <= 0", source)
         self.assertIn("playerBaseHp <= 0", source)
         self.assertIn("spawn.spawnBasePercent", source)
-        self.assertIn("spawn.magnification", source)
+        self.assertIn("spawn.magnification", source)\n        self.assertIn("spawn.maxEnemyCount <= 0", source)
 
     def test_manifest_remains_offline(self) -> None:
         manifest = (ROOT / "app/src/main/AndroidManifest.xml").read_text(encoding="utf-8")

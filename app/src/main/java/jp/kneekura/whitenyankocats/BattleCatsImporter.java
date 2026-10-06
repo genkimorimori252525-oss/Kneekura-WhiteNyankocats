@@ -153,13 +153,13 @@ public final class BattleCatsImporter {
     private static List<StageDefinition> importStages(Pack data, Pack res, Pack map) throws Exception {
         List<StageDefinition> stages = new ArrayList<>();
 
-        for (String fileName : map.names()) {
+        for (String fileName : data.names()) {
             StageAddress address = parseStageAddress(fileName);
             if (address == null) {
                 continue;
             }
 
-            List<List<String>> rows = csvRows(map.read(fileName), ",", true);
+            List<List<String>> rows = csvRows(data.read(fileName), ",", true);
             if (rows.isEmpty()) {
                 continue;
             }
@@ -177,7 +177,7 @@ public final class BattleCatsImporter {
             for (int i = infoRow + 1; i < rows.size(); i++) {
                 List<String> row = rows.get(i);
                 int enemyReleaseId = intAt(row, 0, -1);
-                if (enemyReleaseId < 0) {
+                if (enemyReleaseId < 2) {
                     continue;
                 }
                 spawns.add(new EnemySpawn(
