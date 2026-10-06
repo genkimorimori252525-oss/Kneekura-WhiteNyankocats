@@ -90,6 +90,31 @@ class OfflineMaxSaveLayoutTest(unittest.TestCase):
         self.assertEqual(evidence["candidate_values"]["engineers"], 5)
         self.assertEqual(evidence["candidate_values"]["platinum_shards"], 9)
 
+    def test_runtime_rewrite_size_growth_uses_stable_prefix_mode(self):
+        data = bytearray(maxsave.HASH_LEN + 497_680)
+        struct.pack_into("<i", data, 0, 150700)
+        struct.pack_into("<i", data, maxsave.I32["catfood"], maxsave.MAX_VALUES["catfood"])
+        struct.pack_into("<i", data, maxsave.I32["xp"], maxsave.MAX_VALUES["xp"])
+        struct.pack_into("<i", data, maxsave.I32["tutorial_state"], 1)
+        struct.pack_into(
+            "<i",
+            data,
+            maxsave.I32["korea_superior_treasure_state"],
+            2,
+        )
+        struct.pack_into("<i", data, maxsave.I32["ui6"], 1)
+        digest = hashlib.md5(
+            maxsave.JP_SALT + bytes(data[:-maxsave.HASH_LEN])
+        ).hexdigest().encode("ascii")
+        data[-maxsave.HASH_LEN:] = digest
+
+        from tools.base_mod.verify_offline_max_save import verify_runtime_rewrite_prefix
+
+        result = verify_runtime_rewrite_prefix(bytes(data))
+        self.assertTrue(result["passed"])
+        self.assertEqual(result["verification_level"], "stable-prefix-only")
+        self.assertGreater(result["size_delta_from_candidate"], 0)
+
     def test_caps_fit_serialized_widths(self):
         self.assertLessEqual(maxsave.MAX_VALUES["leadership"], 0x7FFF)
         self.assertLessEqual(maxsave.MAX_VALUES["labyrinth_medals"], 0x7FFF)
