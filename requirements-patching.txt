@@ -1,1 +1,1 @@
-lief>=0.15,<1
+lief>=0.15,<1pycryptodome>=3.20,<4
