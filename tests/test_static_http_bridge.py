@@ -62,6 +62,12 @@ class StaticHttpBridgeTests(unittest.TestCase):
         self.assertIn("{ORIGINAL_LAUNCHER: launcher}", injector)
         self.assertNotIn("patch_exact_dex_string(", injector)
 
+    def test_static_builder_preserves_original_native_extraction(self) -> None:
+        source = (
+            ROOT / "tools/base_mod/build_owned_static_http_bridge.py"
+        ).read_text(encoding="utf-8")
+        self.assertIn("research_native_extraction=False", source)
+
     def test_compile_stub_is_never_product_logic(self) -> None:
         stub = (
             ROOT / "bridge/java/stub/jp/co/ponos/battlecats/MyActivity.java"
