@@ -1,6 +1,6 @@
 # Phase C Static HTTP Bridge — JP 15.7.1
 
-Status: **Frida-free bridge implementation present; repository CI green; final owner-device smoke remains before step-003 promotion.**
+Status: **PROMOTED. Frida-free bridge implementation, repository CI, and owner-device smoke all PASS.**
 
 ## Why this exists
 
@@ -145,15 +145,16 @@ Repository CI:
 - d8 generation for ON variant: PASS
 - patch-kit generation: PASS
 
-Remaining step-003 gate:
-- one owner-device smoke of the Frida-free static bridge;
-- verify original screen still boots;
-- verify process remains alive;
-- verify unknown/event request behavior remains original;
-- verify exact backup request can take the local replay path;
-- then record the final patch ledger evidence.
+Owner-device static smoke: **PASS**.
 
-No more routine normal/airplane tracing is planned.
+- original screen launched from the flavor MyActivity;
+- process remained alive;
+- exact backup request emitted `KNEEKURA_STATIC_HTTP: backup-local-replay requestId=1`;
+- no Frida runtime marker was present;
+- no fatal exception/signal was present;
+- static parity reported original transport preservation and unknown-request fall-through.
+
+Step 003 is therefore promoted. No more routine normal/airplane tracing is planned.
 
 
 ## Exact DEX corroboration for the replay internals
