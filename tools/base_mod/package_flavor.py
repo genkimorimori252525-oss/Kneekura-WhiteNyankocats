@@ -27,6 +27,7 @@ ORIGINAL_PACKAGE = "jp.co.ponos.battlecats"
 FLAVOR_PACKAGES = {
     "personal": "jp.kn.white.battlecats",
     "practice": "jp.kn.clean.battlecats",
+    "research": "jp.kn.trace.battlecats",
 }
 
 _BASE_SUFFIXES = (
