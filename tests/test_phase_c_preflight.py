@@ -23,7 +23,7 @@ ROOT = Path(__file__).resolve().parents[1]
 class PhaseCPreflightTests(unittest.TestCase):
     def test_repository_preflight_passes(self) -> None:
         report = audit(ROOT)
-        self.assertEqual(report["status"], "ready_for_original_ui_data_proof")
+        self.assertEqual(report["status"], "ready_for_h01_safe_original_ui_retry")
         self.assertEqual(
             report["anchor"]["native_sha256"],
             EXPECTED_NATIVE_SHA256,
@@ -143,6 +143,28 @@ class PhaseCPreflightTests(unittest.TestCase):
         )
         self.assertTrue(
             report["server_asset_bootstrap_gate"]["research_external_files_dir_only"]
+        )
+        self.assertFalse(report["h01_integrity_gate"]["native_md5_bypass"])
+        self.assertTrue(
+            report["h01_integrity_gate"]["datalocal_byte_identical_required"]
+        )
+        self.assertTrue(
+            report["h01_integrity_gate"]["downloadlocal_overlay_required"]
+        )
+        self.assertTrue(
+            report["original_ui_gacha_proof"]["datalocal_byte_identical"]
+        )
+        self.assertFalse(
+            report["original_ui_gacha_proof"]["native_md5_bypass"]
+        )
+        self.assertEqual(
+            report["original_ui_gacha_proof"]["downloadlocal_overlay_entries"],
+            [
+                "GatyaDataSetR1.csv",
+                "GatyaDataSetR2.csv",
+                "GatyaDataSetR3.csv",
+                "GatyaData_Option_SetR.tsv",
+            ],
         )
 
 
