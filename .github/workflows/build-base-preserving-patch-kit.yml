@@ -154,6 +154,12 @@ jobs:
           $source = Get-Content tools/base_mod/run_offline_max_rollback.ps1 -Raw
           [void][scriptblock]::Create($source)
 
+      - name: Validate offline MAX persistence runner syntax
+        shell: pwsh
+        run: |
+          $source = Get-Content tools/base_mod/run_offline_max_persistence_gate.ps1 -Raw
+          [void][scriptblock]::Create($source)
+
       - name: Build Frida 17 Java-bridge trace bundle
         shell: bash
         run: |
@@ -191,6 +197,7 @@ jobs:
           cp tools/base_mod/run_offline_profile_probe.ps1 build/patch-kit/tools/base_mod/
           cp tools/base_mod/run_offline_max_bootstrap.ps1 build/patch-kit/tools/base_mod/
           cp tools/base_mod/run_offline_max_rollback.ps1 build/patch-kit/tools/base_mod/
+          cp tools/base_mod/run_offline_max_persistence_gate.ps1 build/patch-kit/tools/base_mod/
           cp tools/battlecats_pack.py build/patch-kit/tools/
           cp tools/battlecats_source.py build/patch-kit/tools/
           cp tools/analyze_gacha_foundation.py build/patch-kit/tools/
@@ -300,6 +307,16 @@ jobs:
 
           Offline MAX rollback:
             powershell -ExecutionPolicy Bypass -File .\tools\base_mod\run_offline_max_rollback.ps1
+
+          Offline MAX install-r persistence gate:
+            after the one-time bootstrap passes, keep network disabled and run:
+            powershell -ExecutionPolicy Bypass -File .\tools\base_mod\run_offline_max_persistence_gate.ps1
+
+            The gate verifies MAX state before install-r, performs the same-signature
+            six-split install-multiple -r without uninstall, checks the original UI,
+            verifies the post-install SAVE_DATA semantically, and records:
+              offline-max-persistence-out\offline-max-persistence-gate-result.json
+              offline-max-persistence-out\offline-max-persistence-gate.log
 
           Supply your AArch64 libfrida-gadget.so, then build:
             python -m tools.base_mod.build_owned_research_trace \
