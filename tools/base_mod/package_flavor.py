@@ -14,7 +14,11 @@ from pathlib import Path
 import shutil
 import zipfile
 
-from tools.base_mod.binary_axml import patch_equal_length_strings, string_values
+from tools.base_mod.binary_axml import (
+    patch_boolean_attribute,
+    patch_equal_length_strings,
+    string_values,
+)
 from tools.base_mod.dex_strings import patch_exact_dex_string
 from tools.base_mod.repack import (
     JP_15_7_1_SPLITS,
@@ -114,6 +118,7 @@ def _patch_manifest(
     package_name: str,
     *,
     base: bool,
+    extract_native_libs: bool | None = None,
 ) -> bytes:
     if len(package_name.encode("utf-8")) != len(
         ORIGINAL_PACKAGE.encode("utf-8")
@@ -129,6 +134,15 @@ def _patch_manifest(
         mapping = {ORIGINAL_PACKAGE: package_name}
 
     patched, _ = patch_equal_length_strings(manifest, mapping)
+
+    if base and extract_native_libs is not None:
+        patched, _ = patch_boolean_attribute(
+            patched,
+            element_name="application",
+            attribute_name="extractNativeLibs",
+            expected=False,
+            replacement=extract_native_libs,
+        )
 
     values = string_values(patched)
     if package_name not in values:
@@ -238,6 +252,11 @@ def patch_split_set(
                 manifest,
                 package_name,
                 base=split_name == "base.apk",
+                extract_native_libs=(
+                    True
+                    if flavor == "research" and split_name == "base.apk"
+                    else None
+                ),
             )
 
             if split_name == "base.apk":
@@ -299,6 +318,7 @@ def patch_split_set(
         "package": package_name,
         "launcher_class_preserved": LAUNCHER_CLASS,
         "java_namespace_preserved": ORIGINAL_PACKAGE,
+        "research_extract_native_libs": flavor == "research",
         "splits": split_rows,
     }
     (output_dir / "package-patch-ledger.json").write_text(
