@@ -136,7 +136,13 @@ jobs:
           Disposable Phase-C research package:
             package = jp.kn.trace.battlecats
 
-          Supply your own AArch64 libfrida-gadget.so, then build:
+          Phase-C raw trace compatibility pin:
+            - use Frida Gadget 16.7.19 for Android arm64
+            - asset: frida-gadget-16.7.19-android-arm64.so.xz
+            - Frida 17.x requires a bundled frida-java-bridge agent and is not
+              compatible with the raw trace_service_bridge.js in this kit
+
+          Supply that AArch64 libfrida-gadget.so, then build:
             python -m tools.base_mod.build_owned_research_trace \
               /path/to/nyanko_battlecats_2026-10-06.zip \
               --shim libkneekura.so \
