@@ -1,5 +1,7 @@
 'use strict';
 
+import Java from 'frida-java-bridge';
+
 /*
  * Research-only trace for the exact JP 15.7.1 MyActivity service bridge.
  *
@@ -7,7 +9,14 @@
  * calls the original implementation unchanged.
  */
 
+console.log('KNEEKURA_TRACE ' + JSON.stringify({
+    kind: 'script_loaded',
+    source: 'kneekura-jp15.7.1-service-trace',
+    ts_ms: Date.now()
+}));
+
 Java.perform(function () {
+    try {
     const CLASS_NAME = 'jp.co.ponos.battlecats.MyActivity';
     const MyActivity = Java.use(CLASS_NAME);
 
@@ -82,7 +91,6 @@ Java.perform(function () {
     function emit(payload) {
         payload.source = 'kneekura-jp15.7.1-service-trace';
         payload.ts_ms = Date.now();
-        send(payload);
         console.log('KNEEKURA_TRACE ' + JSON.stringify(payload));
     }
 
@@ -187,4 +195,12 @@ Java.perform(function () {
         className: CLASS_NAME,
         note: 'observation only; originals called unchanged'
     });
+    } catch (error) {
+        console.log('KNEEKURA_TRACE ' + JSON.stringify({
+            kind: 'trace_setup_error',
+            source: 'kneekura-jp15.7.1-service-trace',
+            ts_ms: Date.now(),
+            error: String(error)
+        }));
+    }
 });
