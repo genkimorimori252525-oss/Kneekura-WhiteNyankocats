@@ -6,6 +6,8 @@ on:
       - "jolly/**"
     paths:
       - "tools/base_mod/**"
+      - "tools/analyze_gacha_foundation.py"
+      - "tools/analyze_login_bonus_foundation.py"
       - "native/kneekura-shim/**"
       - "docs/architecture/base-preserving-boot-smoke.md"
       - "docs/architecture/package-flavor-contract.md"
@@ -13,7 +15,11 @@ on:
       - "docs/architecture/phase-c-hook-handoff.md"
       - "docs/references/native-service-map-jp15.7.1.*"
       - "docs/references/hook-candidate-matrix-jp15.7.1.*"
-      - "docs/evidence/myactivity-service-methods-jp15.7.1.json"\n      - "tools/analyze_login_bonus_foundation.py"\n      - "tools/analyze_gacha_foundation.py"\n      - "docs/evidence/loginbg-019-server-manifest-corroboration.md"\n      - "docs/evidence/super-kneekura-gacha-foundation-jp15.7.1.*"\n      - "docs/evidence/login-bonus-foundation-jp15.7.1.*"\n      - "docs/evidence/original-login-gacha-runtime-anchors-jp15.7.1.*"
+      - "docs/evidence/myactivity-service-methods-jp15.7.1.json"
+      - "docs/evidence/original-login-gacha-runtime-anchors-jp15.7.1.*"
+      - "docs/evidence/login-bonus-foundation-jp15.7.1.*"
+      - "docs/evidence/super-kneekura-gacha-foundation-jp15.7.1.*"
+      - "docs/evidence/loginbg-019-server-manifest-corroboration.md"
       - "research/frida/**"
       - "requirements-patching.txt"
       - ".github/workflows/build-base-preserving-patch-kit.yml"
@@ -67,19 +73,29 @@ jobs:
           mkdir -p build/patch-kit/docs/references
           mkdir -p build/patch-kit/docs/evidence
           mkdir -p build/patch-kit/research/frida
+
           cp -a tools/base_mod/*.py build/patch-kit/tools/base_mod/
           cp tools/analyze_gacha_foundation.py build/patch-kit/tools/
           cp tools/analyze_login_bonus_foundation.py build/patch-kit/tools/
           cp requirements-patching.txt build/patch-kit/
           cp build/shim/libkneekura.so build/patch-kit/
+
           cp docs/architecture/base-preserving-boot-smoke.md build/patch-kit/docs/architecture/
           cp docs/architecture/package-flavor-contract.md build/patch-kit/docs/architecture/
           cp docs/architecture/design-philosophy.md build/patch-kit/docs/architecture/
           cp docs/architecture/phase-c-hook-handoff.md build/patch-kit/docs/architecture/
+
           cp docs/references/native-service-map-jp15.7.1.* build/patch-kit/docs/references/
           cp docs/references/hook-candidate-matrix-jp15.7.1.* build/patch-kit/docs/references/
+
           cp docs/evidence/myactivity-service-methods-jp15.7.1.json build/patch-kit/docs/evidence/
+          cp docs/evidence/original-login-gacha-runtime-anchors-jp15.7.1.* build/patch-kit/docs/evidence/
+          cp docs/evidence/login-bonus-foundation-jp15.7.1.* build/patch-kit/docs/evidence/
+          cp docs/evidence/super-kneekura-gacha-foundation-jp15.7.1.* build/patch-kit/docs/evidence/
+          cp docs/evidence/loginbg-019-server-manifest-corroboration.md build/patch-kit/docs/evidence/
+
           cp research/frida/* build/patch-kit/research/frida/
+
           cat > build/patch-kit/README-FIRST.txt <<'EOF'
           Kneekura base-preserving JP 15.7.1 patch kit
 
@@ -105,7 +121,8 @@ jobs:
               --storepass YOUR_PASSWORD \
               --output out
 
-          Practice Clean boot smoke: change --flavor personal to --flavor practice.
+          Practice Clean boot smoke:
+            change --flavor personal to --flavor practice.
 
           Disposable Phase-C research package:
             package = jp.kn.trace.battlecats
@@ -128,9 +145,9 @@ jobs:
           research/frida/trace_service_bridge.js is observation-only and must
           never ship in Personal or Practice.
 
-          The generated signed-splits directory includes INSTALL-SMOKE.txt and
-          parity-report.json.  Do not proceed to gameplay-feature patches unless
-          static parity passes and the original MyActivity boots on the device.
+          The generated signed-splits directory includes parity evidence.
+          Do not promote gameplay hooks unless the original MyActivity boots
+          and the exact original scene remains unchanged with the feature OFF.
           EOF
 
       - uses: actions/upload-artifact@v4
