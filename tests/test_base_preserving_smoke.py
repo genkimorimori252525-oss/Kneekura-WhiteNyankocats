@@ -11,6 +11,27 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class BootSmokeContractTests(unittest.TestCase):
+    def test_boot_smoke_builder_imports_current_patch_apis(self) -> None:
+        from tools.base_mod import build_owned_boot_smoke as builder
+
+        source = Path(builder.__file__).read_text(encoding="utf-8")
+        self.assertIn(
+            "patch_split_set as inject_kneekura_shim",
+            source,
+        )
+        self.assertIn(
+            "patch_split_set as apply_package_flavor",
+            source,
+        )
+        self.assertNotIn(
+            "from tools.base_mod.inject_shim import inject_shim",
+            source,
+        )
+        self.assertNotIn(
+            "LAUNCHER_CLASS, apply_flavor",
+            source,
+        )
+
     def test_exact_split_contract_contains_installpack(self) -> None:
         self.assertEqual(len(EXPECTED_SPLITS), 6)
         self.assertEqual(
