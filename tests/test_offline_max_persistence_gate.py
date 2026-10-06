@@ -32,6 +32,14 @@ class OfflineMaxPersistenceGateTest(unittest.TestCase):
         self.assertIn("$installExitCode = $LASTEXITCODE", text)
         self.assertIn("install_exit_code=", text)
 
+    def test_prefix_only_verification_result_does_not_require_layout_property(self):
+        text = PERSISTENCE.read_text(encoding="utf-8")
+        self.assertIn("function Get-OptionalProperty", text)
+        self.assertIn("pre_install_semantic_scope_complete", text)
+        self.assertIn("post_install_semantic_scope_complete", text)
+        self.assertIn("full_semantic_persistence_verified", text)
+        self.assertIn("passed-stable-prefix-only", text)
+
     def test_runner_requires_sentinel_and_verifies_before_and_after(self):
         text = PERSISTENCE.read_text(encoding="utf-8")
         self.assertIn("KNEEKURA_OFFLINE_MAX_BOOTSTRAP.json", text)
