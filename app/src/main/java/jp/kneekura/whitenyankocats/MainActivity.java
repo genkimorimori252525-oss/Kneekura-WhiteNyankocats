@@ -6,6 +6,8 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.ArrayAdapter;
@@ -15,8 +17,6 @@ import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-import android.text.Editable;
-import android.text.TextWatcher;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,9 +26,17 @@ import java.util.Map;
 public final class MainActivity extends Activity {
     private static final int REQUEST_EXPORT_ZIP = 1401;
 
+    private enum Mode {
+        UNITS,
+        STAGES
+    }
+
     private final List<UnitRecord> allUnits = new ArrayList<>();
     private final List<UnitRecord> shownUnits = new ArrayList<>();
+    private final List<StageDefinition> allStages = new ArrayList<>();
+    private final List<StageDefinition> shownStages = new ArrayList<>();
 
+    private Mode mode = Mode.STAGES;
     private TextView statusText;
     private TextView resourceText;
     private ArrayAdapter<String> adapter;
@@ -46,21 +54,21 @@ public final class MainActivity extends Activity {
     private void buildUi() {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(18), dp(12), dp(18), dp(12));
+        root.setPadding(dp(18), dp(10), dp(18), dp(10));
         root.setBackgroundColor(Color.rgb(246, 239, 216));
 
         TextView title = new TextView(this);
-        title.setText("にーくら大戦争 — Android Offline Alpha");
-        title.setTextSize(24);
+        title.setText("にーくら大戦争 — Playable Stage Alpha");
+        title.setTextSize(22);
         title.setTextColor(Color.BLACK);
         title.setGravity(Gravity.CENTER_VERTICAL);
         root.addView(title, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(48)));
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(44)));
 
         resourceText = new TextView(this);
-        resourceText.setTextSize(18);
+        resourceText.setTextSize(17);
         resourceText.setTextColor(Color.rgb(125, 76, 12));
-        resourceText.setPadding(0, dp(4), 0, dp(8));
+        resourceText.setPadding(0, dp(3), 0, dp(5));
         root.addView(resourceText);
 
         LinearLayout controls = new LinearLayout(this);
@@ -68,46 +76,68 @@ public final class MainActivity extends Activity {
         controls.setGravity(Gravity.CENTER_VERTICAL);
 
         Button importButton = new Button(this);
-        importButton.setText("export ZIPを読み込む");
+        importButton.setText("export ZIP読込");
         importButton.setOnClickListener(v -> chooseExportZip());
         controls.addView(importButton);
 
+        Button stagesButton = new Button(this);
+        stagesButton.setText("ステージ");
+        stagesButton.setOnClickListener(v -> {
+            mode = Mode.STAGES;
+            searchBox.setHint("ステージ名 / 種別 / IDで検索");
+            refreshFilter(searchBox.getText().toString());
+        });
+        controls.addView(stagesButton);
+
+        Button unitsButton = new Button(this);
+        unitsButton.setText("キャラ");
+        unitsButton.setOnClickListener(v -> {
+            mode = Mode.UNITS;
+            searchBox.setHint("キャラ名 / IDで検索");
+            refreshFilter(searchBox.getText().toString());
+        });
+        controls.addView(unitsButton);
+
         statusText = new TextView(this);
-        statusText.setTextSize(15);
+        statusText.setTextSize(14);
         statusText.setTextColor(Color.DKGRAY);
-        statusText.setPadding(dp(14), 0, 0, 0);
+        statusText.setPadding(dp(10), 0, 0, 0);
         controls.addView(statusText, new LinearLayout.LayoutParams(
                 0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
 
         progressBar = new ProgressBar(this);
         progressBar.setVisibility(View.GONE);
-        controls.addView(progressBar, new LinearLayout.LayoutParams(dp(36), dp(36)));
+        controls.addView(progressBar, new LinearLayout.LayoutParams(dp(34), dp(34)));
 
         root.addView(controls);
 
         searchBox = new EditText(this);
-        searchBox.setHint("キャラ名 / IDで検索");
+        searchBox.setHint("ステージ名 / 種別 / IDで検索");
         searchBox.setSingleLine(true);
-        searchBox.setTextSize(16);
+        searchBox.setTextSize(15);
         root.addView(searchBox, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(52)));
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(48)));
 
         ListView listView = new ListView(this);
         adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, new ArrayList<>());
         listView.setAdapter(adapter);
         listView.setOnItemClickListener((parent, view, position, id) -> {
-            if (position >= 0 && position < shownUnits.size()) {
-                showUnit(shownUnits.get(position));
+            if (mode == Mode.UNITS) {
+                if (position >= 0 && position < shownUnits.size()) {
+                    showUnit(shownUnits.get(position));
+                }
+            } else if (position >= 0 && position < shownStages.size()) {
+                launchStage(shownStages.get(position));
             }
         });
         root.addView(listView, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, 0, 1));
 
         TextView footer = new TextView(this);
-        footer.setText("完全オフライン / 独立セーブ / 公式アプリ・公式サーバーへ書き込みません");
+        footer.setText("実データ由来のstage spawnを30fpsで再生する初期戦闘コア / オフライン専用");
         footer.setTextColor(Color.DKGRAY);
         footer.setGravity(Gravity.CENTER);
-        footer.setPadding(0, dp(6), 0, 0);
+        footer.setPadding(0, dp(4), 0, 0);
         root.addView(footer);
 
         searchBox.addTextChangedListener(new TextWatcher() {
@@ -144,10 +174,15 @@ public final class MainActivity extends Activity {
     private void loadLocalCatalog() {
         allUnits.clear();
         allUnits.addAll(CatalogStore.load(this));
-        if (allUnits.isEmpty()) {
-            statusText.setText("初回のみ: 手元の nyanko_battlecats_2026-10-06.zip を選択");
+        allStages.clear();
+        allStages.addAll(GameContentStore.loadStages(this));
+
+        if (allUnits.isEmpty() && allStages.isEmpty()) {
+            statusText.setText("初回: 手元の nyanko_battlecats_2026-10-06.zip を選択");
         } else {
-            statusText.setText(allUnits.size() + " キャラ枠読み込み済み / 全解放 / 第1形態");
+            statusText.setText(
+                    allUnits.size() + " キャラ / " + allStages.size() + " ステージ読込済み"
+            );
         }
         refreshFilter(searchBox.getText().toString());
     }
@@ -180,14 +215,20 @@ public final class MainActivity extends Activity {
         } catch (SecurityException ignored) {
         }
 
-        setBusy(true, "読み込み中… InstallPackからキャラ一覧を構築しています");
+        setBusy(true, "読み込み中… キャラ・敵・ステージ構成を復元しています");
         new Thread(() -> {
             try {
-                List<UnitRecord> units = BattleCatsImporter.importFromUri(this, uri);
-                CatalogStore.save(this, units);
+                GameImportResult imported = BattleCatsImporter.importGameFromUri(this, uri);
+                CatalogStore.save(this, imported.units);
+                GameContentStore.save(this, imported.enemies, imported.stages);
                 ProfileStore.ensureMaxed(this);
                 runOnUiThread(() -> {
-                    setBusy(false, units.size() + " キャラ枠を読み込みました / 全解放 / 第1形態");
+                    setBusy(
+                            false,
+                            imported.units.size() + " キャラ / "
+                                    + imported.enemies.size() + " 敵 / "
+                                    + imported.stages.size() + " ステージ"
+                    );
                     loadLocalCatalog();
                 });
             } catch (Exception exception) {
@@ -213,27 +254,57 @@ public final class MainActivity extends Activity {
             return;
         }
         String normalized = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
-        shownUnits.clear();
         adapter.clear();
 
-        for (UnitRecord unit : allUnits) {
-            String id = Integer.toString(unit.unitNo);
-            String padded = String.format(Locale.ROOT, "%03d", unit.unitNo);
-            String name = unit.name.toLowerCase(Locale.ROOT);
-            if (normalized.isEmpty()
-                    || id.contains(normalized)
-                    || padded.contains(normalized)
-                    || name.contains(normalized)) {
-                shownUnits.add(unit);
-                adapter.add(String.format(
-                        Locale.ROOT,
-                        "%03d  %s   [取得済み / 第1形態]",
-                        unit.unitNo,
-                        unit.name
-                ));
+        if (mode == Mode.UNITS) {
+            shownUnits.clear();
+            for (UnitRecord unit : allUnits) {
+                String id = Integer.toString(unit.unitNo);
+                String padded = String.format(Locale.ROOT, "%03d", unit.unitNo);
+                String name = unit.name.toLowerCase(Locale.ROOT);
+                if (normalized.isEmpty()
+                        || id.contains(normalized)
+                        || padded.contains(normalized)
+                        || name.contains(normalized)) {
+                    shownUnits.add(unit);
+                    adapter.add(String.format(
+                            Locale.ROOT,
+                            "%03d  %s   [取得済み / 第1形態]",
+                            unit.unitNo,
+                            unit.name
+                    ));
+                }
+            }
+        } else {
+            shownStages.clear();
+            for (StageDefinition stage : allStages) {
+                String haystack = (
+                        stage.category + " "
+                                + stage.name + " "
+                                + stage.key + " "
+                                + stage.sourceFile
+                ).toLowerCase(Locale.ROOT);
+                if (normalized.isEmpty() || haystack.contains(normalized)) {
+                    shownStages.add(stage);
+                    adapter.add(String.format(
+                            Locale.ROOT,
+                            "[%s] %03d-%02d  %s  (敵構成 %d行)",
+                            stage.category,
+                            stage.mapIndex,
+                            stage.stageIndex,
+                            stage.name,
+                            stage.spawns.size()
+                    ));
+                }
             }
         }
         adapter.notifyDataSetChanged();
+    }
+
+    private void launchStage(StageDefinition stage) {
+        Intent intent = new Intent(this, BattleActivity.class);
+        intent.putExtra(BattleActivity.EXTRA_STAGE_KEY, stage.key);
+        startActivity(intent);
     }
 
     private void showUnit(UnitRecord unit) {
