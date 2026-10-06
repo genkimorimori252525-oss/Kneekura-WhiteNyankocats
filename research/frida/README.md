@@ -53,3 +53,36 @@ If original behavior changes while tracing, discard the run.
 
 A successful trace is converted into a narrow static version-pinned patch.
 Frida/Gadget must not remain in the final APK.
+
+
+## Exact JP 15.7.1 method definitions
+
+A dependency-free DEX definition pass over the exact base APK fixes these
+`MyActivity` methods in `classes4.dex`:
+
+- `newHttpRequest(String,String,float,HashMap,ByteBuffer,String[],boolean,boolean): int` — public Java instance method.
+- `isNetworkAvailable(): boolean` — public Java instance method.
+- `newResponse(int,int,String,String,ByteBuffer,boolean): void` — public static native.
+- `onResponseCodeHeaders(int,int,String,String): void` — public static native.
+- `onResponseData(int,ByteBuffer): void` — public static native.
+- `onResponseFinish(int,boolean): void` — public static native.
+
+The trace script treats the response methods as static and calls the original
+native implementation through the class wrapper. The exact evidence is stored
+in `docs/evidence/myactivity-service-methods-jp15.7.1.json`.
+
+## Summarize a captured log
+
+The trace emits one machine-readable line for every sanitized event:
+
+`KNEEKURA_TRACE {json}`
+
+After capturing Frida output:
+
+```bash
+python -m tools.base_mod.summarize_service_trace trace.log \
+  --output service-trace-summary.json
+```
+
+The summarizer correlates `newHttpRequest` return ids with response callback
+sequences without needing raw response bodies or header values.
