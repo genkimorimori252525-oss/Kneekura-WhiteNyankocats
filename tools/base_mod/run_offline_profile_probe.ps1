@@ -134,6 +134,14 @@ if ($remoteRoot) {
             throw "Rollback copy hash mismatch for $name"
         }
 
+        $inspectionPath = $null
+        $inspectionExitCode = $null
+        if ($name -eq "SAVE_DATA") {
+            $inspectionPath = Join-Path $baselineDir "SAVE_DATA-inspection.json"
+            & python -m tools.base_mod.inspect_save_data $local --output $inspectionPath | Out-Host
+            $inspectionExitCode = $LASTEXITCODE
+        }
+
         $files += [ordered]@{
             name = $name
             remote_path = $remote
@@ -142,6 +150,8 @@ if ($remoteRoot) {
             size = [int64]$item.Length
             sha256 = $hash
             rollback_sha256 = $rollbackHash
+            inspection_path = $inspectionPath
+            inspection_exit_code = $inspectionExitCode
         }
     }
 }
@@ -162,6 +172,7 @@ $result = [ordered]@{
     mutation_attempted = $false
     adb_push_used = $false
     rollback_copies_created = $files.Count
+    save_inspection_generated = [bool]($files | Where-Object { $_.name -eq "SAVE_DATA" -and $_.inspection_path })
 }
 
 New-Item -ItemType Directory -Force -Path $root | Out-Null
