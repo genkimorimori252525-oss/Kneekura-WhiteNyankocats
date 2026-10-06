@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "anchor": {
+    "game_version": "15.7.1",
+    "version_code": 1507010,
+    "base_apk_sha256": "60e5e9df891b7be487abc4590fb3ca2e98218225efedbe4ba26b39dc10ce5c9a",
+    "dex": "classes4.dex",
+    "myactivity": "Ljp/co/ponos/battlecats/MyActivity;"
+  },
+  "methods": {
+    "MyActivity.isNetworkAvailable": {
+      "code_off": "0x45eb20",
+      "insns_sha256": "536588a2c61fbf437769573b7581cd31433144a2b1355ccb4e5ec71d6c2e4bd4",
+      "code_header_insns_sha256": "2e0ea922d783ed5145018a69fd7ed59a72722239067148d4e5ab986849e9ed1e",
+      "flow": [
+        "const-string connectivity",
+        "Context.getSystemService(String)",
+        "ConnectivityManager.getActiveNetworkInfo()",
+        "NetworkInfo.isConnectedOrConnecting()"
+      ]
+    },
+    "MyActivity.newHttpRequest": {
+      "code_off": "0x45fc58",
+      "insns_sha256": "14f896e5b42b8e5b8ab50f756bdc79ad44614325eb153ab99ffcdafb98c70a80",
+      "code_header_insns_sha256": "5d5f0e5abe0a390902c519299f67ad582ad3780668e755b4c8b1fd6207f7bb2d",
+      "flow": [
+        "new java.net.URL(requestUrl)",
+        "construct obfuscated request object La32",
+        "increment MyActivity.mNextRequestHandle",
+        "store request in MyActivity.mRequestHandles",
+        "call La32.run(MyActivity.mGLView, boolean, boolean)",
+        "return La32.getHandle()"
+      ]
+    },
+    "La32.run": {
+      "code_off": "0x1f1968",
+      "insns_sha256": "b1a8679be3ccf9deadf5a5ef6eca2730220c4414ef08064e12b3f1220ef547e7",
+      "code_header_insns_sha256": "42e0da8694f04f44207f0e2607560f7d24f1bd3852e74b912a9745072d5c32cd",
+      "flow": [
+        "new java.lang.Thread",
+        "construct Runnable Lz22 with request + GL view + flags",
+        "Thread.start()"
+      ]
+    },
+    "Lz22.run": {
+      "code_off": "0x1f11c0",
+      "insns_sha256": "ad74dcde42dcfa2533de3f57b1b86a04d46326ce5c2c90ac46b4db3c9a669d7a",
+      "code_header_insns_sha256": "d845fd124e5a4a01f83ff04d82460f07088993a179084939562240942c8f2e74",
+      "flow": [
+        "URL.openConnection()",
+        "URLConnection.setReadTimeout()",
+        "URLConnection.setConnectTimeout()",
+        "HttpURLConnection.setRequestMethod()",
+        "CookieManager set/get cookie",
+        "URLConnection.setRequestProperty() / addRequestProperty()",
+        "optional OutputStream body write",
+        "HttpURLConnection.getResponseCode()",
+        "URLConnection.getHeaderFields()",
+        "MyActivity.onResponseCodeHeaders(...)",
+        "URLConnection.getInputStream() or HttpURLConnection.getErrorStream()",
+        "ByteBuffer.allocateDirect + body copy",
+        "MyActivity.onResponseData(...)",
+        "MyActivity.onResponseFinish(...)",
+        "HttpURLConnection.disconnect()"
+      ]
+    },
+    "Lz22.a": {
+      "code_off": "0x1f1120",
+      "insns_sha256": "b03f69b5a8187bee470b7fdbcee8416e3a01b667f080f37a2042786e3efd1abe",
+      "code_header_insns_sha256": "080de32a788e88adbb994bb6cb819e771028202298e57242a194fabe61877d0c",
+      "flow": [
+        "error/fallback response path",
+        "MyActivity.onResponseFinish(...)",
+        "MyActivity.newResponse(...)",
+        "queue callbacks through GLSurfaceView"
+      ]
+    }
+  },
+  "conclusion": {
+    "confidence": "high",
+    "preferred_hook_boundary": "MyActivity.newHttpRequest",
+    "reason": "The exact original network transport is Java HttpURLConnection behind one compact MyActivity bridge. A selective local provider can therefore intercept recognized Battle Cats service requests before the Thread/HttpURLConnection transport while preserving original native callers and response callbacks.",
+    "fallback_rule": "Unrecognized requests must call the exact original newHttpRequest body unchanged.",
+    "rejected_as_primary": [
+      "raw socket interception",
+      "TLS interception",
+      "per-endpoint string rewriting",
+      "replacement networking UI"
+    ],
+    "runtime_gate": "Static call graph is proven; endpoint-specific request/response payload contracts still require the isolated Phase-C observation run before a product hook is enabled."
+  }
+}
