@@ -106,12 +106,25 @@ jobs:
           Practice Clean boot smoke: change --flavor personal to --flavor practice.
 
           Disposable Phase-C research package:
-            use --flavor research
             package = jp.kn.trace.battlecats
 
-          research/frida/trace_service_bridge.js is observation-only and is
-          included for the first network/request lifecycle trace.  It is NOT
-          injected automatically and must never ship in Personal or Practice.
+          Supply your own AArch64 libfrida-gadget.so, then build:
+            python -m tools.base_mod.build_owned_research_trace \
+              /path/to/nyanko_battlecats_2026-10-06.zip \
+              --shim libkneekura.so \
+              --frida-gadget /path/to/libfrida-gadget.so \
+              --trace-script research/frida/trace_service_bridge.js \
+              --keystore private/kneekura.p12 \
+              --alias kneekura \
+              --storepass YOUR_PASSWORD \
+              --output research-out
+
+          The research builder never downloads Frida and is separate from the
+          Personal/Practice product paths. TRACE-INSTRUCTIONS.txt explains the
+          observation run and trace summarizer.
+
+          research/frida/trace_service_bridge.js is observation-only and must
+          never ship in Personal or Practice.
 
           The generated signed-splits directory includes INSTALL-SMOKE.txt and
           parity-report.json.  Do not proceed to gameplay-feature patches unless
