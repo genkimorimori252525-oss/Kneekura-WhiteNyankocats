@@ -104,6 +104,16 @@ class PhaseCPreflightTests(unittest.TestCase):
         self.assertFalse(
             report["original_ui_gacha_proof"]["visibility_schedule_defined"]
         )
+        self.assertEqual(
+            report["shipping_parity_gate"]["personal_practice_feature_mask_default"],
+            0,
+        )
+        self.assertEqual(
+            report["shipping_parity_gate"]["original_launcher_required"],
+            "jp.co.ponos.battlecats.MyActivity",
+        )
+        self.assertFalse(report["shipping_parity_gate"]["frida_allowed"])
+        self.assertFalse(report["shipping_parity_gate"]["research_classes5_allowed"])
 
 
 if __name__ == "__main__":
