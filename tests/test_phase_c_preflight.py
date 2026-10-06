@@ -128,6 +128,22 @@ class PhaseCPreflightTests(unittest.TestCase):
         )
         self.assertFalse(report["shipping_parity_gate"]["frida_allowed"])
         self.assertFalse(report["shipping_parity_gate"]["research_classes5_allowed"])
+        self.assertEqual(
+            report["server_asset_bootstrap_gate"]["exact_download_lane_count"],
+            35,
+        )
+        self.assertEqual(
+            report["server_asset_bootstrap_gate"]["exact_download_archive_bytes"],
+            645599537,
+        )
+        self.assertFalse(
+            report["server_asset_bootstrap_gate"][
+                "gacha_schedule_inference_allowed_before_ui"
+            ]
+        )
+        self.assertTrue(
+            report["server_asset_bootstrap_gate"]["research_external_files_dir_only"]
+        )
 
 
 if __name__ == "__main__":
