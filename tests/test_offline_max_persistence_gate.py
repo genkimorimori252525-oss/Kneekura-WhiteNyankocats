@@ -9,10 +9,11 @@ VERIFIER = ROOT / "tools/base_mod/verify_offline_max_save.py"
 
 class OfflineMaxPersistenceGateTest(unittest.TestCase):
     def test_runner_uses_only_install_r_and_never_uninstall(self):
-        text = " ".join(PERSISTENCE.read_text(encoding="utf-8").lower().split())
-        self.assertIn(" install-multiple ", f" {text} ")
-        self.assertIn(" --no-streaming ", f" {text} ")
-        self.assertIn(" -r ", f" {text} ")
+        raw = PERSISTENCE.read_text(encoding="utf-8")
+        text = " ".join(raw.lower().split())
+        self.assertIn('"install-multiple"', raw)
+        self.assertIn('"--no-streaming"', raw)
+        self.assertIn('"-r"', raw)
         self.assertNotIn(" uninstall ", f" {text} ")
         self.assertNotIn(" pm clear ", f" {text} ")
 
