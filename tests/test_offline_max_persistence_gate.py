@@ -30,6 +30,8 @@ class OfflineMaxPersistenceGateTest(unittest.TestCase):
     def test_persistence_gate_allows_original_game_rewrite_layout(self):
         text = PERSISTENCE.read_text(encoding="utf-8")
         self.assertGreaterEqual(text.count("--allow-runtime-rewrite"), 2)
+        self.assertIn("pre_install_layout_profile", text)
+        self.assertIn("post_install_layout_profile", text)
 
     def test_verifier_is_read_only(self):
         text = VERIFIER.read_text(encoding="utf-8")
