@@ -126,3 +126,29 @@ def test_asset_gate_accepts_hidden_residual():
     apply_asset_audit_gate(manifest, audit)
     assert manifest["asset_gate"]["passed"] is True
     assert manifest["asset_gate"]["eligible_overlap"] == []
+
+
+def test_exact_evidence_excludes_all_asset_residuals():
+    from pathlib import Path
+    import json
+
+    root = Path(__file__).resolve().parents[1]
+    evidence = json.loads(
+        (root / "docs/evidence/offline-profile-unit-selection-jp15.7.1.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    audit = json.loads(
+        (root / "docs/foundation/unit-asset-audit-summary-15.7.1.json").read_text(
+            encoding="utf-8"
+        )
+    )
+
+    hidden = set(evidence["excluded"]["guide_hidden_but_playable"])
+    hidden.update(evidence["excluded"]["guide_hidden_and_not_roster_playable"])
+    residuals = {int(item["asset_id"]) for item in audit["residuals"]}
+
+    assert residuals == {673, 740, 788}
+    assert residuals <= hidden
+    assert evidence["asset_gate"]["eligible_overlap"] == []
+    assert evidence["asset_gate"]["passed"] is True
