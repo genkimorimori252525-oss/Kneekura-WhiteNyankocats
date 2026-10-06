@@ -16,6 +16,7 @@ on:
       - "docs/architecture/phase-c-hook-handoff.md"
       - "docs/architecture/phase-c-device-trace-runbook.md"
       - "docs/architecture/phase-c-static-http-bridge.md"
+      - "docs/architecture/phase-c-research-preflight.md"
       - "docs/references/native-service-map-jp15.7.1.*"
       - "docs/references/hook-candidate-matrix-jp15.7.1.*"
       - "docs/evidence/myactivity-service-methods-jp15.7.1.json"
@@ -158,6 +159,7 @@ jobs:
           cp docs/architecture/phase-c-hook-handoff.md build/patch-kit/docs/architecture/
           cp docs/architecture/phase-c-device-trace-runbook.md build/patch-kit/docs/architecture/
           cp docs/architecture/phase-c-static-http-bridge.md build/patch-kit/docs/architecture/
+          cp docs/architecture/phase-c-research-preflight.md build/patch-kit/docs/architecture/
 
           cp docs/references/native-service-map-jp15.7.1.* build/patch-kit/docs/references/
           cp docs/references/hook-candidate-matrix-jp15.7.1.* build/patch-kit/docs/references/
