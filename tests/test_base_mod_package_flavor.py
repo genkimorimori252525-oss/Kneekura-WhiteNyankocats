@@ -8,6 +8,7 @@ import unittest
 import zlib
 
 from tools.base_mod.binary_axml import (
+    patch_boolean_attribute,
     patch_equal_length_strings,
     string_values,
 )
@@ -118,6 +119,26 @@ class PackageFlavorTests(unittest.TestCase):
         self.assertIn(personal, values)
         self.assertIn(ORIGINAL_PACKAGE + ".MyActivity", values)
         self.assertNotIn(personal + ".MyActivity", values)
+
+    def test_boolean_attribute_patcher_rejects_missing_attribute(self) -> None:
+        source = _fake_axml(["application", "extractNativeLibs"])
+        with self.assertRaisesRegex(ValueError, "exactly one"):
+            patch_boolean_attribute(
+                source,
+                element_name="application",
+                attribute_name="extractNativeLibs",
+                expected=False,
+                replacement=True,
+            )
+
+    def test_research_manifest_code_requests_native_extraction(self) -> None:
+        source = (
+            Path(__file__).resolve().parents[1]
+            / "tools/base_mod/package_flavor.py"
+        ).read_text(encoding="utf-8")
+        self.assertIn('flavor == "research"', source)
+        self.assertIn('attribute_name="extractNativeLibs"', source)
+        self.assertIn("replacement=extract_native_libs", source)
 
     def test_dex_equal_length_patch_repairs_header(self) -> None:
         practice = FLAVOR_PACKAGES["practice"]
