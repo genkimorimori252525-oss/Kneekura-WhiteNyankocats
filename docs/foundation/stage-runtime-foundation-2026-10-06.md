@@ -12,7 +12,7 @@ The battle renderer is intentionally primitive at this checkpoint. Original imag
 
 ## Primary evidence
 
-The exact JP 15.7.1 export has now been re-checked directly from the recoverable beginning of split_InstallPack.apk. DataLocal contains 8,955 entries and is the stage-definition source. It contains 6,355 filenames matching the supported concrete stage-file grammar. MapLocal has 608 entries, but those entries are PNG map/stage imagery; it is not the primary stage-CSV source.
+The exact JP 15.7.1 export has now been re-checked directly from the recoverable beginning of split_InstallPack.apk. DataLocal contains 8,955 entries and is the stage-definition source. It contains 6,355 `stage*.csv`-style files after excluding StageName/Stage_option. Of these, 6,333 are concrete battle-layout files covered by the runtime grammar after accounting for three-digit Labyrinth floors and the two Space Invasion layouts; the remaining stage-prefixed CSVs are auxiliary/config data such as `stageNormal*.csv`, `stage.csv`, stage conditions and skip/hint settings. MapLocal has 608 entries, but those entries are PNG map/stage imagery; it is not the primary stage-CSV source.
 
 TBCML public source defines the stage schema used by this implementation:
 
@@ -135,3 +135,20 @@ This independently confirms the runtime-facing order used by TBCML: energy, clea
 The exact `stageRS017_00.csv` has width 4400, enemy-base HP 400000 and max enemy count 10. Its enemy rows include the same first-spawn frame, repeat interval, base-HP trigger and magnification fields used by the current StageDefinition importer.
 
 For reference, `stageRN000_00.csv` has width 4200/base HP 60000/max enemy count 7. These values are now treated as regression anchors for the Android importer.
+
+
+### Main-story MapStageData equivalent and late stage shapes
+
+The exact pack also resolves a gap left by the generic TBCML map helper:
+
+- 日本編 stage metadata/rewards: `stageNormal0.csv`
+- 未来編 chapters: `stageNormal1_0.csv` .. `stageNormal1_2.csv`
+- 宇宙編 chapters: `stageNormal2_0.csv` .. `stageNormal2_2.csv`
+- Space invasion reward metadata: `stageNormal2_2_Invasion.csv` and `stageNormal2_2_Invasion_Z.csv`
+- concrete invasion battle layouts: `stageSpace09_Invasion_00.csv` and `stageSpace09_Invasion_Z_00.csv`
+
+These use the same MapStageData-like stage-row ordering for energy/XP/music/reward data, so the Android importer now attaches that metadata to main-story stages as well.
+
+Labyrinth stage indices are not limited to two digits: the verified pack includes `stageL000_100.csv` through `stageL000_112.csv`. The runtime grammar therefore accepts two- or three-digit stage indices for generic stage families.
+
+A direct manifest pass counts 6,333 concrete battle-layout files under the current importer grammar. It leaves only auxiliary/config stage-prefixed CSVs outside the battle catalog rather than silently dropping real floors or invasion battles.
