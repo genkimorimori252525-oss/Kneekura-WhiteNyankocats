@@ -12,7 +12,7 @@
 
 Release notes say the export contains installed split APKs and the app-owned shared-storage folder copied from the Android device. Standard ADB did not obtain `/data/user/0/jp.co.ponos.battlecats`.
 
-## Access attempts
+## GitHub integration access attempts
 
 ### GitHub Actions run 37411794202
 
@@ -36,15 +36,36 @@ Result:
 
 The draft release metadata is readable, but the private draft asset's browser-download URL is not exposed as a fetchable binary through the connector path used here.
 
-## Current conclusion
+These failures describe the GitHub integration boundary only. They do not indicate that the release asset is corrupt or inaccessible to the repository owner.
 
-The release metadata and expected digest are confirmed. **The asset bytes have not yet been inspected in this session.**
+## Resolution for analysis
 
-Therefore none of the following are currently claimed as fact:
+The same-named export ZIP was later attached directly to the project/chat and became available to the local analysis runtime.
 
-- exact split APK filenames/count
-- exact `.pack/.list` locations
-- exact character/animation/UI asset presence
-- whether every historical collaboration asset is present
+Direct verification of that attached copy produced:
 
-The local inventory tool is the next evidence-producing step once the ZIP bytes are available to a local process or another supported binary-access path.
+- Size: `156585000` bytes
+- SHA-256: `38c3bbb8d2cf2101793c9462617d4293e19fc99588b6655fd40299fd61a0ef56`
+
+Both values exactly match the Draft Release metadata above. The attached copy is therefore treated as the verified analysis source for this foundation pass.
+
+The actual bytes have now been inspected read-only. Confirmed findings include:
+
+- six installed APK splits, including `split_InstallPack.apk`
+- the local `.list/.pack` families and their manifest entry counts
+- 882 consecutive `unitNNN.csv` definitions
+- 882 matching Japanese `Unit_ExplanationN_ja.csv` entries
+- local imgcut/mamodel/maanim structures
+- native evidence for additional downloaded `*Server.pack` families
+
+The detailed evidence and current interpretation live in:
+
+- `docs/foundation/android-export-15.7.1.md`
+
+## Remaining boundary
+
+The export still does not contain the app-private directory `/data/user/0/jp.co.ponos.battlecats`.
+
+Accordingly, this analysis does **not** claim that `split_InstallPack.apk` alone contains every historical collaboration texture/animation. Native evidence indicates additional downloaded Unit/Image/Number/Map server-pack shards, and those may account for historical content that remains usable offline after it has been downloaded.
+
+This distinction must remain explicit in future importer and asset-resolver work.
