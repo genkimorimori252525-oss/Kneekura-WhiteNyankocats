@@ -1,9 +1,17 @@
 # Package Flavor Contract — Personal / Practice
 
-Approved package identities:
+Approved product package identities:
 
 - Personal MAX: `jp.kn.white.battlecats`
 - Practice Clean: `jp.kn.clean.battlecats`
+
+Research-only package identity:
+
+- Trace/Frida research: `jp.kn.trace.battlecats`
+
+The research package is not a third gameplay profile. It exists only so
+temporary instrumentation can be installed without contaminating either
+Personal MAX or Practice Clean.
 
 Both are intentionally 22 ASCII bytes, exactly matching
 `jp.co.ponos.battlecats`.
@@ -98,3 +106,15 @@ The bootstrap is injected **before** package flavoring so the native injector
 can validate the untouched exact libnative SHA/build ID. The later package
 flavor pass only changes the already anchored dotted package bytes in the ELF;
 JNI class symbols remain untouched.
+
+## Research flavor rule
+
+Use `--flavor research` only for temporary observation builds.
+
+It preserves the same original launcher and Java/JNI namespace as the product
+flavors, but its save sandbox is disposable. No progression from that package
+is considered authoritative project state.
+
+Research-only dependencies such as Frida may be added to that flavor during a
+trace experiment, but must never be copied into Personal MAX or Practice Clean
+artifacts.
