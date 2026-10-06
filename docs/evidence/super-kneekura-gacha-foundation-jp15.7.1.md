@@ -125,3 +125,57 @@ passes.
 
 `tools/analyze_gacha_foundation.py` reproduces the local-table hashes, row
 counts, rarity counts and unresolved-rate verdict from the owner's exact export.
+
+
+## Local original R1 membership union
+
+The exact local `GatyaDataSetR1.csv` rows contain **495 unique unit ids**.
+
+Their rarity distribution is:
+
+| Rarity | Unique ids present in local R1 sets |
+| --- | ---: |
+| Rare | 69 |
+| Super Rare | 88 |
+| Uber Rare | 320 |
+| Legend Rare | 18 |
+
+This is a much stronger starting point than simply taking every rarity 2–5 row
+from `unitbuy.csv`.
+
+Why:
+
+- every one of these 495 ids is already referenced by at least one original
+  JP 15.7.1 Rare Gacha data set;
+- the original loader is therefore known to accept the id as R-set content;
+- explicit cheat/test unit id 673 (ネコチーター) is **not** present in the
+  local R1 union.
+
+There are **169** Rare-through-Legend ids in `unitbuy.csv` that do not occur in
+the local R1 union:
+
+- Rare: 125
+- Super Rare: 17
+- Uber Rare: 24
+- Legend Rare: 3
+
+Those 169 are not automatically "unsafe"; many may be story/event rewards or
+historical units whose relevant banner set is not present in the local install.
+But their absence means the local R1 table alone cannot prove original Rare
+Gacha membership.
+
+### Approved seed-pool policy
+
+The first Super Kneekura prototype should therefore begin from the exact
+**495-id local R1 union**, then narrow further to a tiny observed-safe test pool.
+
+Expansion beyond that union requires one of:
+
+1. exact historical/server R-set evidence;
+2. direct original acquisition/duplicate-path proof in Phase C.
+
+Normal/Special/story-only units remain outside v1 until their nonstandard
+acquisition semantics are proven.
+
+This keeps "all characters" as the destination without using save corruption as
+a shortcut.
