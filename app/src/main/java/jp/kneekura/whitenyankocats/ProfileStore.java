@@ -67,7 +67,8 @@ public final class ProfileStore {
 
         SharedPreferences.Editor edit = prefs.edit();
         edit.putBoolean(INITIALIZED, true);
-        edit.putBoolean("all_units_unlocked", true);\n        edit.putBoolean("all_stages_unlocked", true);
+        edit.putBoolean("all_units_unlocked", true);
+        edit.putBoolean("all_stages_unlocked", true);
         edit.putInt("default_form", 0);
         edit.putBoolean("offline_only", true);
         edit.putBoolean("resource_mode_max", true);
