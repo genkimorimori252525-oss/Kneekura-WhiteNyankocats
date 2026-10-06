@@ -222,6 +222,7 @@ def patch_split_set(
     output_dir: Path,
     *,
     flavor: str,
+    research_native_extraction: bool = True,
 ) -> dict:
     package_name = FLAVOR_PACKAGES.get(flavor)
     if package_name is None:
@@ -254,7 +255,11 @@ def patch_split_set(
                 base=split_name == "base.apk",
                 extract_native_libs=(
                     True
-                    if flavor == "research" and split_name == "base.apk"
+                    if (
+                        flavor == "research"
+                        and research_native_extraction
+                        and split_name == "base.apk"
+                    )
                     else None
                 ),
             )
@@ -318,7 +323,9 @@ def patch_split_set(
         "package": package_name,
         "launcher_class_preserved": LAUNCHER_CLASS,
         "java_namespace_preserved": ORIGINAL_PACKAGE,
-        "research_extract_native_libs": flavor == "research",
+        "research_extract_native_libs": (
+            flavor == "research" and research_native_extraction
+        ),
         "splits": split_rows,
     }
     (output_dir / "package-patch-ledger.json").write_text(
