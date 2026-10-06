@@ -78,7 +78,13 @@ public final class BattleActivity extends Activity {
         for (int i = 0; i < slots; i++) {
             UnitRecord unit = units.get(i);
             Button button = new Button(this);
-            button.setText(String.format(Locale.ROOT, "%03d\n%s", unit.unitNo, unit.name));
+            button.setText(String.format(
+                    Locale.ROOT,
+                    "%03d\n%s\n¥%d",
+                    unit.unitNo,
+                    unit.name,
+                    unitCost(unit)
+            ));
             button.setAllCaps(false);
             button.setOnClickListener(v -> battleView.deploy(unit));
             unitBar.addView(button, new LinearLayout.LayoutParams(dp(150), dp(72)));
@@ -106,7 +112,14 @@ public final class BattleActivity extends Activity {
         CharSequence[] labels = new CharSequence[units.size()];
         for (int i = 0; i < units.size(); i++) {
             UnitRecord unit = units.get(i);
-            labels[i] = String.format(Locale.ROOT, "%03d  %s", unit.unitNo, unit.name);
+            labels[i] = String.format(
+                    Locale.ROOT,
+                    "%03d  %s  ¥%d  再生産%dF",
+                    unit.unitNo,
+                    unit.name,
+                    unitCost(unit),
+                    unitRecharge(unit)
+            );
         }
 
         new AlertDialog.Builder(this)
@@ -118,6 +131,22 @@ public final class BattleActivity extends Activity {
                 })
                 .setNegativeButton("閉じる", null)
                 .show();
+    }
+
+    private static int unitCost(UnitRecord unit) {
+        return Math.max(0, unitStatInt(unit, 6, 0));
+    }
+
+    private static int unitRecharge(UnitRecord unit) {
+        return Math.max(1, unitStatInt(unit, 7, 30));
+    }
+
+    private static int unitStatInt(UnitRecord unit, int index, int fallback) {
+        try {
+            return Integer.parseInt(unit.stat(index));
+        } catch (Exception ignored) {
+            return fallback;
+        }
     }
 
     private int dp(int value) {
@@ -135,14 +164,19 @@ public final class BattleActivity extends Activity {
         private final Handler handler = new Handler(Looper.getMainLooper());
         private final Random random;
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Map<Integer, Long> nextDeployFrame = new HashMap<>();
 
         private long frame;
+        private long battleMoney = 6000;
+        private final long battleMoneyMax = 99999;
+        private final long passiveIncomePerTick = 5;
         private long playerBaseHp = 100_000;
         private final long playerBaseMax = 100_000;
         private long enemyBaseHp;
         private final long enemyBaseMax;
         private boolean running;
         private String resultText = "";
+        private String battleMessage = "";
 
         BattleView(StageDefinition stage, Map<Integer, EnemyRecord> enemyById) {
             super(BattleActivity.this);
@@ -169,9 +203,27 @@ public final class BattleActivity extends Activity {
             if (!running) {
                 return;
             }
+
+            int cost = unitCost(unit);
+            long readyAt = nextDeployFrame.getOrDefault(unit.unitNo, 0L);
+            if (frame < readyAt) {
+                battleMessage = "再生産まで " + (readyAt - frame) + "F";
+                invalidate();
+                return;
+            }
+            if (battleMoney < cost) {
+                battleMessage = "お金不足: ¥" + cost + " 必要";
+                invalidate();
+                return;
+            }
+
+            battleMoney -= cost;
+            nextDeployFrame.put(unit.unitNo, frame + unitRecharge(unit));
+
             Actor actor = Actor.fromUnit(unit);
             actor.x = 120f;
             actors.add(actor);
+            battleMessage = unit.name + " 出撃";
             invalidate();
         }
 
@@ -191,6 +243,7 @@ public final class BattleActivity extends Activity {
 
         private void tick() {
             frame++;
+            battleMoney = Math.min(battleMoneyMax, battleMoney + passiveIncomePerTick);
             spawnEnemies();
 
             for (Actor actor : new ArrayList<>(actors)) {
@@ -199,6 +252,10 @@ public final class BattleActivity extends Activity {
                 }
                 if (actor.cooldown > 0) {
                     actor.cooldown--;
+                }
+                if (actor.kbStunFrames > 0) {
+                    actor.kbStunFrames--;
+                    continue;
                 }
 
                 Actor target = nearestTarget(actor);
@@ -319,8 +376,52 @@ public final class BattleActivity extends Activity {
             if (attacker.cooldown > 0) {
                 return;
             }
-            target.hp -= Math.max(1, attacker.damage);
+            applyDamage(target, Math.max(1, attacker.damage));
             attacker.cooldown = Math.max(10, attacker.attackInterval);
+        }
+
+        private void applyDamage(Actor target, long damage) {
+            if (target.hp <= 0) {
+                return;
+            }
+
+            long before = target.hp;
+            target.hp -= Math.max(1, damage);
+
+            if (target.hp <= 0) {
+                target.hp = 0;
+                if (target.enemy && before > 0) {
+                    battleMoney = Math.min(
+                            battleMoneyMax,
+                            battleMoney + Math.max(0, target.moneyDrop)
+                    );
+                    if (target.moneyDrop > 0) {
+                        battleMessage = target.name + " 撃破 +¥" + target.moneyDrop;
+                    }
+                }
+                return;
+            }
+
+            int nonLethalKnockbacks = Math.max(0, target.kbCount - 1);
+            if (target.kbTriggered >= nonLethalKnockbacks) {
+                return;
+            }
+
+            long threshold = target.maxHp
+                    * (target.kbCount - (target.kbTriggered + 1L))
+                    / Math.max(1, target.kbCount);
+            if (target.hp <= threshold) {
+                target.kbTriggered++;
+                target.kbStunFrames = 10;
+                float knockbackDistance = 160f;
+                target.x += target.enemy ? knockbackDistance : -knockbackDistance;
+                target.x = Math.max(
+                        0f,
+                        Math.min(Math.max(stage.width, 1000), target.x)
+                );
+                battleMessage = target.name + " KB "
+                        + target.kbTriggered + "/" + nonLethalKnockbacks;
+            }
         }
 
         private void attackOrApproachBase(Actor actor) {
@@ -385,11 +486,22 @@ public final class BattleActivity extends Activity {
                     paint
             );
             canvas.drawText(
-                    String.format(Locale.ROOT, "frame %d  %.1fs  30fps", frame, frame / 30.0),
+                    String.format(
+                            Locale.ROOT,
+                            "frame %d  %.1fs  30fps    所持金 ¥%d/%d",
+                            frame,
+                            frame / 30.0,
+                            battleMoney,
+                            battleMoneyMax
+                    ),
                     20,
                     58,
                     paint
             );
+            if (!battleMessage.isEmpty()) {
+                paint.setTextSize(18);
+                canvas.drawText(battleMessage, 20, 84, paint);
+            }
 
             if (!resultText.isEmpty()) {
                 paint.setTextSize(64);
@@ -432,6 +544,10 @@ public final class BattleActivity extends Activity {
         final long damage;
         final int range;
         final int attackInterval;
+        final int kbCount;
+        final long moneyDrop;
+        int kbTriggered;
+        int kbStunFrames;
         int cooldown;
         float x;
 
@@ -442,7 +558,9 @@ public final class BattleActivity extends Activity {
                 float movePerFrame,
                 long damage,
                 int range,
-                int attackInterval
+                int attackInterval,
+                int kbCount,
+                long moneyDrop
         ) {
             this.enemy = enemy;
             this.name = name;
@@ -452,10 +570,13 @@ public final class BattleActivity extends Activity {
             this.damage = Math.max(1, damage);
             this.range = Math.max(20, range);
             this.attackInterval = Math.max(10, attackInterval);
+            this.kbCount = Math.max(1, kbCount);
+            this.moneyDrop = Math.max(0, moneyDrop);
         }
 
         static Actor fromUnit(UnitRecord unit) {
             long hp = parseLong(unit.stat(0), 1000);
+            int kbs = parseInt(unit.stat(1), 1);
             int speed = parseInt(unit.stat(2), 5);
             long damage = parseLong(unit.stat(3), 100);
             int attackInterval = parseInt(unit.stat(4), 30);
@@ -467,7 +588,9 @@ public final class BattleActivity extends Activity {
                     speed / 2f,
                     damage,
                     range,
-                    attackInterval
+                    attackInterval,
+                    kbs,
+                    0
             );
         }
 
@@ -475,6 +598,7 @@ public final class BattleActivity extends Activity {
             int mag = magnification <= 0 ? 100 : magnification;
             long hp = Math.max(1, enemy.hp * (long) mag / 100L);
             long damage = Math.max(1, enemy.attackDamage * (long) mag / 100L);
+            long moneyDrop = Math.max(0, enemy.moneyDrop * (long) mag / 100L);
             return new Actor(
                     true,
                     enemy.name,
@@ -482,7 +606,9 @@ public final class BattleActivity extends Activity {
                     enemy.speed / 2f,
                     damage,
                     enemy.range,
-                    enemy.attackInterval
+                    enemy.attackInterval,
+                    enemy.kbs,
+                    moneyDrop
             );
         }
 
