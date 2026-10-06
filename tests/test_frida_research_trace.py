@@ -25,7 +25,8 @@ class FridaResearchTraceTests(unittest.TestCase):
         self.assertIn("keys: keys", source)
         self.assertNotIn("value.array()", source)
         self.assertNotIn("entrySet()", source)
-        self.assertIn("?<redacted>", source)\n        self.assertIn("staticMethod: true", source)
+        self.assertIn("?<redacted>", source)
+        self.assertIn("staticMethod: true", source)
 
     def test_research_readme_forbids_shipping_frida(self) -> None:
         readme = (ROOT / "research/frida/README.md").read_text(encoding="utf-8")
