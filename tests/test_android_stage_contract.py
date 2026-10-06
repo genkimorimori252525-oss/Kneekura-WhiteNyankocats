@@ -33,6 +33,11 @@ class AndroidStageContractTests(unittest.TestCase):
         self.assertIn("intAt(row, 9, 100)", importer)
         self.assertIn("spawnBasePercent", spawn)
         self.assertIn("magnification", spawn)
+        self.assertIn('data.has("Map_option.csv")', importer)
+        self.assertIn('data.has("Stage_option.csv")', importer)
+        self.assertIn("MapStageData", importer)
+        self.assertIn("restrictionKey", importer)
+        self.assertIn("row.get(19)", importer)
 
     def test_battle_core_uses_30fps_base_win_loss_and_zero_count_is_unlimited(self) -> None:
         source = (
@@ -46,6 +51,12 @@ class AndroidStageContractTests(unittest.TestCase):
         self.assertIn("spawn.magnification", source)
         self.assertIn("spawn.maxEnemyCount <= 0", source)
         self.assertIn('allCats.setText("全キャラ")', source)
+
+    def test_local_profile_unlocks_all_stages(self) -> None:
+        profile = (
+            ROOT / "app/src/main/java/jp/kneekura/whitenyankocats/ProfileStore.java"
+        ).read_text(encoding="utf-8")
+        self.assertIn('"all_stages_unlocked"', profile)
 
     def test_manifest_remains_offline(self) -> None:
         manifest = (ROOT / "app/src/main/AndroidManifest.xml").read_text(encoding="utf-8")
