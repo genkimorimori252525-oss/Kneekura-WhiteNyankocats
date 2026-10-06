@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "audit_date": "2026-10-06",
+  "region": "jp",
+  "game_version": "15.7.1",
+  "source": {
+    "export_size": 156585000,
+    "export_sha256": "38c3bbb8d2cf2101793c9462617d4293e19fc99588b6655fd40299fd61a0ef56"
+  },
+  "manifest_union": {
+    "manifest_count": 93,
+    "filename_entry_count": 33780,
+    "current_x_probe_run_id": 37417655457,
+    "current_x_http_status": 206,
+    "current_x_zip_size": 15366935
+  },
+  "contract": {
+    "asset_id": "unit_no - 1",
+    "form_codes": [
+      "f",
+      "c",
+      "s",
+      "u"
+    ],
+    "playable_form_presence": "one-row stays one; otherwise f/c baseline; tf_id>0 adds s; uf_id>0 adds u",
+    "required_per_form": [
+      "battle_png",
+      "imgcut",
+      "mamodel",
+      "maanim_00",
+      "maanim_01",
+      "maanim_02",
+      "maanim_03",
+      "deploy_icon"
+    ]
+  },
+  "result": {
+    "unit_count": 882,
+    "playable_unit_count": 859,
+    "complete_unit_count": 879,
+    "incomplete_unit_count": 3,
+    "required_form_count": 2178,
+    "complete_form_count": 2173,
+    "incomplete_form_count": 5,
+    "missing_required_by_kind": {
+      "battle_png": 5,
+      "imgcut": 5,
+      "mamodel": 5,
+      "deploy_icon": 5,
+      "maanim": 20
+    },
+    "strict_gate_passed": false,
+    "jp_reconstruction_assessment": "GO_WITH_EXPLAINED_EXCEPTIONS"
+  },
+  "residuals": [
+    {
+      "unit_no": 674,
+      "asset_id": 673,
+      "name": "ネコチーター",
+      "classification": "documented_single_form_unobtainable_unit",
+      "missing_forms": [
+        "c"
+      ],
+      "missing": [
+        "673_c.png",
+        "673_c.imgcut",
+        "673_c.mamodel",
+        "673_c00.maanim",
+        "673_c01.maanim",
+        "673_c02.maanim",
+        "673_c03.maanim",
+        "uni673_c00.png"
+      ]
+    },
+    {
+      "unit_no": 741,
+      "asset_id": 740,
+      "name": "741-1",
+      "classification": "jp_placeholder_or_regional_slot",
+      "missing_forms": [
+        "f",
+        "c"
+      ]
+    },
+    {
+      "unit_no": 789,
+      "asset_id": 788,
+      "name": "789-1",
+      "classification": "jp_placeholder_or_regional_slot",
+      "missing_forms": [
+        "f",
+        "c"
+      ]
+    }
+  ],
+  "note": "Metadata-only evidence. No original game asset payload bytes are stored in this file."
+}
