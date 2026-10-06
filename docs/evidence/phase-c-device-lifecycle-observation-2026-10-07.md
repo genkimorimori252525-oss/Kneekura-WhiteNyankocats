@@ -216,3 +216,39 @@ The same exact DEX also confirms:
 
 This closes the remaining local-replay contract using static exact-version
 evidence rather than another device observation.
+
+
+## Frida-free static bridge smoke — PASS
+
+The owner-device final static smoke succeeded on the isolated research package.
+
+Observed result:
+
+```text
+package_alive      true
+pid                27105
+local_replay_seen  true
+frida_seen         false
+fatal_seen         false
+```
+
+The single proof marker was:
+
+```text
+KNEEKURA_STATIC_HTTP: backup-local-replay requestId=1
+```
+
+Build-time parity also reported:
+
+- `original_new_http_code_preserved=true`
+- `request_constructor_anchor_preserved=true`
+- `offline_fallback_anchor_preserved=true`
+- `unknown_request_super_fallthrough=true`
+- `shim_dependency_present=true`
+- `frida_absent=true`
+
+Installation of the full six-split signed set succeeded and
+`jp.kn.trace.battlecats/jp.kn.trace.battlecats.MyActivity` launched normally.
+
+This closes the first selective local HTTP bridge proof. The project no longer
+needs Frida for this promoted product-path seam.
