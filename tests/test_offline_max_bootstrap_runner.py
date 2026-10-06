@@ -46,3 +46,10 @@ class OfflineMaxBootstrapRunnerTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+    def test_bootstrap_semantically_verifies_post_restart_save(self):
+        text = BOOTSTRAP.read_text(encoding="utf-8")
+        self.assertIn("post-restart-max-verification.json", text)
+        self.assertIn("tools.base_mod.verify_offline_max_save", text)
+        self.assertIn("Post-restart SAVE_DATA no longer satisfies the MAX contract", text)
