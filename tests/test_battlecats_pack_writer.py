@@ -5,6 +5,7 @@ from tools.base_mod.battlecats_pack_writer import (
     _encrypt_entry,
     encrypt_manifest_bytes,
     rebuild_pack,
+    append_pack_entries,
 )
 
 
@@ -64,6 +65,64 @@ class BattleCatsPackWriterTests(unittest.TestCase):
         self.assertEqual(ledger["changed_entries"], ["b.csv"])
         changed = [row for row in ledger["entries"] if row["changed"]]
         self.assertEqual([row["name"] for row in changed], ["b.csv"])
+
+    def test_append_pack_entries_preserves_source_and_adds_new_files(self) -> None:
+        manifest, pack = make_pack(
+            [
+                ("download.png", b"png bytes"),
+                ("download.imgcut", b"imgcut bytes"),
+            ],
+            family="DownloadLocal",
+        )
+        new_manifest, new_pack, ledger = append_pack_entries(
+            "DownloadLocal",
+            manifest,
+            pack,
+            {
+                "GatyaDataSetR1.csv": b"30,40,-1\n",
+                "GatyaDataSetR2.csv": b"-1\n",
+            },
+            region="jp",
+        )
+
+        before = PackReader("DownloadLocal", manifest, pack, region="jp")
+        after = PackReader("DownloadLocal", new_manifest, new_pack, region="jp")
+
+        self.assertEqual(
+            after.read("download.png")[0],
+            before.read("download.png")[0],
+        )
+        self.assertEqual(
+            after.read("download.imgcut")[0],
+            before.read("download.imgcut")[0],
+        )
+        self.assertEqual(
+            after.read("GatyaDataSetR1.csv")[0],
+            b"30,40,-1\n",
+        )
+        self.assertEqual(
+            after.read("GatyaDataSetR2.csv")[0],
+            b"-1\n",
+        )
+        self.assertTrue(ledger["original_entries_preserved"])
+        self.assertEqual(
+            ledger["added_entries"],
+            ["GatyaDataSetR1.csv", "GatyaDataSetR2.csv"],
+        )
+
+    def test_append_pack_entries_rejects_existing_name(self) -> None:
+        manifest, pack = make_pack(
+            [("download.png", b"png bytes")],
+            family="DownloadLocal",
+        )
+        with self.assertRaisesRegex(ValueError, "already exists"):
+            append_pack_entries(
+                "DownloadLocal",
+                manifest,
+                pack,
+                {"download.png": b"replacement"},
+                region="jp",
+            )
 
     def test_unknown_replacement_fails_closed(self) -> None:
         manifest, pack = make_pack([("a.csv", b"alpha")])
