@@ -103,6 +103,9 @@ def audit(root: Path) -> dict:
     gacha = _read_json(
         root / "docs/evidence/super-kneekura-gacha-foundation-jp15.7.1.json"
     )
+    gacha_ui_proof = _read_json(
+        root / "docs/evidence/phase-c-gacha-ui-proof-jp15.7.1.json"
+    )
 
     failures: list[str] = []
 
@@ -160,6 +163,16 @@ def audit(root: Path) -> dict:
     gacha_loader = runtime_anchors.get("gacha_dataset_loader_region", {})
     if gacha_loader.get("observed_prologue") != "0x5ed65c":
         failures.append("gacha dataset loader anchor drift")
+
+    proof_set = gacha_ui_proof.get("proof_set", {})
+    if proof_set.get("new_set_id") != 1089:
+        failures.append("gacha proof set id drift")
+    if [row.get("unit_id") for row in proof_set.get("unit_ids", [])] != [
+        37, 30, 34
+    ]:
+        failures.append("gacha proof unit derivation drift")
+    if proof_set.get("clone_option_set") != 49:
+        failures.append("gacha visible clone set drift")
 
     package_flavor = (
         root / "tools/base_mod/package_flavor.py"
@@ -232,6 +245,7 @@ def audit(root: Path) -> dict:
         "docs/architecture/phase-c-static-http-bridge.md",
         "docs/architecture/phase-c-research-preflight.md",
         "docs/architecture/phase-c-gacha-original-ui-proof.md",
+        "docs/evidence/phase-c-gacha-ui-proof-jp15.7.1.json",
     ]
     missing_tools = [
         relative for relative in required_tools if not (root / relative).is_file()
@@ -284,6 +298,8 @@ def audit(root: Path) -> dict:
         },
         "original_ui_gacha_proof": {
             "target_set_id": 1089,
+            "prototype_unit_ids": [37, 30, 34],
+            "clone_option_set": 49,
             "changed_datalocal_entries": [
                 "GatyaDataSetR1.csv",
                 "GatyaDataSetR2.csv",
