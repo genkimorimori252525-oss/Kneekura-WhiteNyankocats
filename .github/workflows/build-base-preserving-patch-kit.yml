@@ -127,6 +127,12 @@ jobs:
           $source = Get-Content tools/base_mod/run_static_http_smoke.ps1 -Raw
           [void][scriptblock]::Create($source)
 
+      - name: Validate final Phase-C smoke runner syntax
+        shell: pwsh
+        run: |
+          $source = Get-Content tools/base_mod/run_phase_c_final_smoke.ps1 -Raw
+          [void][scriptblock]::Create($source)
+
       - name: Build Frida 17 Java-bridge trace bundle
         shell: bash
         run: |
@@ -159,6 +165,7 @@ jobs:
 
           cp -a tools/base_mod/*.py build/patch-kit/tools/base_mod/
           cp tools/base_mod/run_static_http_smoke.ps1 build/patch-kit/tools/base_mod/
+          cp tools/base_mod/run_phase_c_final_smoke.ps1 build/patch-kit/tools/base_mod/
           cp tools/battlecats_pack.py build/patch-kit/tools/
           cp tools/battlecats_source.py build/patch-kit/tools/
           cp tools/analyze_gacha_foundation.py build/patch-kit/tools/
@@ -278,6 +285,17 @@ jobs:
 
           Repository preflight:
             python -m tools.base_mod.phase_c_preflight               --root .               --output phase-c-preflight.json
+
+          Final Phase-C shipping + original-UI smoke (Windows PowerShell):
+            powershell -ExecutionPolicy Bypass -File tools/base_mod/run_phase_c_final_smoke.ps1
+
+          This single runner:
+            - builds and audits Personal feature-OFF shipping profile
+            - builds and audits Practice feature-OFF shipping profile
+            - proves Frida/research payloads are absent from both
+            - builds exact append-only Rare Gacha set 1089
+            - installs the isolated research proof
+            - performs one manual original Rare Gacha visibility check
 
           Build the tiny original-UI Rare Gacha data proof:
             python -m tools.base_mod.build_owned_gacha_ui_proof               /path/to/nyanko_battlecats_2026-10-06.zip               --shim libkneekura.so               --keystore private/kneekura.p12               --alias kneekura               --storepass YOUR_PASSWORD               --output gacha-ui-proof-out
