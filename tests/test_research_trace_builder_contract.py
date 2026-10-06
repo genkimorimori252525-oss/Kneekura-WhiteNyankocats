@@ -1,5 +1,7 @@
 from pathlib import Path
+import tempfile
 import unittest
+import zipfile
 
 from tools.base_mod.build_owned_research_trace import RESEARCH_FLAVOR
 from tools.base_mod.inject_research_gadget import (
@@ -10,6 +12,7 @@ from tools.base_mod.inject_research_gadget import (
     TRACE_SCRIPT_ENTRY,
 )
 from tools.base_mod.package_flavor import FLAVOR_PACKAGES
+from tools.base_mod.verify_parity import _split_diff
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -65,6 +68,24 @@ class ResearchTraceBuilderContractTests(unittest.TestCase):
         ]:
             self.assertNotIn(token, joined)
         self.assertIn("--frida-gadget", source)
+
+    def test_split_diff_ignores_android_signing_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_name:
+            root = Path(temp_name)
+            original = root / "original.apk"
+            modified = root / "modified.apk"
+            with zipfile.ZipFile(original, "w") as archive:
+                archive.writestr("AndroidManifest.xml", b"same")
+                archive.writestr("assets/data.bin", b"payload")
+                archive.writestr("stamp-cert-sha256", b"old-source-stamp")
+                archive.writestr("pinlist.meta", b"old-pin-layout")
+            with zipfile.ZipFile(modified, "w") as archive:
+                archive.writestr("AndroidManifest.xml", b"same")
+                archive.writestr("assets/data.bin", b"payload")
+            self.assertEqual(
+                _split_diff(original, modified),
+                {"added": [], "removed": [], "changed": []},
+            )
 
     def test_research_builder_uses_exact_owner_export_and_static_audit(self) -> None:
         source = (
