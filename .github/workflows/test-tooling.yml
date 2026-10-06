@@ -18,7 +18,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Install tooling dependencies
+        run: python -m pip install -r requirements-tooling.txt
       - name: Run unit tests
         run: python -m unittest discover -s tests -v
-      - name: Check CLI
+      - name: Check inventory CLI
         run: python tools/inventory_android_export.py --help
+      - name: Check catalog importer CLI
+        run: python -m tools.import_battlecats_catalog --help
