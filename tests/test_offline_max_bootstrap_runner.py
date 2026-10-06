@@ -23,25 +23,22 @@ class OfflineMaxBootstrapRunnerTest(unittest.TestCase):
         for forbidden in (" uninstall ", " pm clear ", " install-multiple ", " adb root "):
             self.assertNotIn(forbidden, f" {text} ")
 
-    def test_bootstrap_pins_exact_baseline_and_candidate(self):
+    def test_bootstrap_uses_semantic_baseline_and_dynamic_candidate_hash(self):
         text = BOOTSTRAP.read_text(encoding="utf-8")
-        self.assertIn(
-            "cad00e84f3d64910b623b8a89b57ae1a37e8947554f4b418f50efa1c6bdc1d3c",
-            text,
-        )
-        self.assertIn(
-            "0f5cbdadf2536f05af7748f7696ca93233dfb01d80dfe98a17da0fd5e6cf65e7",
-            text,
-        )
+        self.assertIn("tools.base_mod.verify_offline_baseline", text)
+        self.assertIn("pre-apply-baseline-verification.json", text)
+        self.assertIn("candidateSha = Get-Sha256", text)
+        self.assertIn("offline-max-candidate-verification.json", text)
+        self.assertNotIn("ExpectedBaselineSha256", text)
+        self.assertNotIn("ExpectedCandidateSha256", text)
 
-    def test_rollback_requires_exact_premax_baseline(self):
+    def test_rollback_requires_semantic_clean_baseline(self):
         text = ROLLBACK.read_text(encoding="utf-8")
-        self.assertIn(
-            "cad00e84f3d64910b623b8a89b57ae1a37e8947554f4b418f50efa1c6bdc1d3c",
-            text,
-        )
+        self.assertIn("tools.base_mod.verify_offline_baseline", text)
+        self.assertIn("rollback-baseline-verification.json", text)
         self.assertIn("manual-rollback-verify-SAVE_DATA", text)
         self.assertIn("rollback_verified = $true", text)
+        self.assertNotIn("ExpectedBaselineSha256", text)
 
 
     def test_bootstrap_semantically_verifies_post_restart_save(self):
