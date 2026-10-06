@@ -43,6 +43,35 @@ Allowed research use here:
 - optionally use an external BCSFE installation as a disposable oracle during
   research, without making it a shipping runtime component.
 
+## SAVE_DATA envelope details corroborated by BCSFE
+
+BCSFE's current `SaveFile` implementation gives a particularly useful,
+narrow envelope contract that can be independently tested without importing the
+editor:
+
+- SAVE_DATA integers are little-endian;
+- bools occupy one signed byte and are true when nonzero;
+- the final 32 bytes are an ASCII lowercase/uppercase hexadecimal MD5 string;
+- the JP patching code is the empty string, so the JP salt is exactly
+  `battlecats`;
+- verification computes
+  `MD5(b"battlecats" + save_bytes_without_final_32_ascii_hash_bytes)`.
+
+This is save-file integrity, not the DataLocal/DownloadLocal pack MD5 path.
+
+A read-only independent checker now lives at
+`tools/base_mod/inspect_save_data.py`. It validates only this envelope and the
+stable early prefix; it deliberately stops before version/state-dependent DST
+and later fields rather than guessing offsets.
+
+Modern-version evidence is stronger than the earlier 15.3 note: BCSFE commit
+`1698cf8ef29c7ac757f0bff3d2a35604e05452f8` is explicitly titled
+`fix jp 15.5.0 parsing` and adds one JP save bool at game version >= 150500.
+Current BCSFE source has no explicit 150600/150700 branch in `SaveFile`.
+That is consistent with either no additional top-level SAVE_DATA field through
+15.7.x or a parser gap; only the pulled 15.7.1 baseline can distinguish those
+possibilities.
+
 ## SAVE_DATA architecture corroborated by BCSFE
 
 BCSFE's Android/root helpers look for:
