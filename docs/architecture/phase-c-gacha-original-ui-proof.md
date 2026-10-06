@@ -175,3 +175,31 @@ This step's static/data contract is ready when:
 The following runtime proof can then ask only one question: does the original
 Rare Gacha scene select/display set 1089, or do we need a narrow local schedule
 provider on top of the already-promoted HTTP seam?
+
+
+## Runtime gate discovered: original server assets
+
+The first owner-device set-1089 run did **not** reach the Rare Gacha scene. It
+stopped at the original additional-game-data screen.
+
+The exact JP 15.7.1 `download_0.tsv` through `download_34.tsv` archive sizes
+sum to **645,599,537 bytes = 615.691697 MiB**, matching that screen. The fresh
+owned export also has no preseeded files under the app's `files/` directory.
+
+Therefore `appended_banner_visible=false` from that run is not evidence that
+the gacha schedule omitted set 1089. The UI had not yet reached the point where
+banner visibility could be evaluated.
+
+The isolated research gacha proof now enables a research-only storage adapter:
+
+```text
+MyActivity.getFilesDir()
+    -> app-specific external files directory
+```
+
+This does not replace the downloader. The unchanged original Battle Cats
+downloader remains responsible for the one-time server-asset bootstrap. The
+adapter exists only so the research package's downloaded cache is accessible
+without root and survives normal same-signature `adb install -r` retries.
+
+Personal MAX and Practice Clean never enable this storage adapter.
