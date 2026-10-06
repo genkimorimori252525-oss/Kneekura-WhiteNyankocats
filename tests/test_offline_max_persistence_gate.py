@@ -27,6 +27,10 @@ class OfflineMaxPersistenceGateTest(unittest.TestCase):
         self.assertIn("offline-max-persistence-gate.log", text)
         self.assertIn("Restore-PreUpgradeSave", text)
 
+    def test_persistence_gate_allows_original_game_rewrite_layout(self):
+        text = PERSISTENCE.read_text(encoding="utf-8")
+        self.assertGreaterEqual(text.count("--allow-runtime-rewrite"), 2)
+
     def test_verifier_is_read_only(self):
         text = VERIFIER.read_text(encoding="utf-8")
         self.assertIn("without modifying the file", text)
