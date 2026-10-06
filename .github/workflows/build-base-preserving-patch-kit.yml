@@ -28,6 +28,7 @@ on:
       - "docs/evidence/super-kneekura-gacha-foundation-jp15.7.1.*"
       - "docs/evidence/phase-c-gacha-ui-proof-jp15.7.1.*"
       - "docs/evidence/phase-c-server-download-gate-jp15.7.1.*"
+      - "docs/evidence/phase-c-h01-integrity-gate-jp15.7.1.*"
       - "docs/evidence/loginbg-019-server-manifest-corroboration.md"
       - "research/frida/**"
       - "requirements-patching.txt"
@@ -203,6 +204,7 @@ jobs:
           cp docs/evidence/super-kneekura-gacha-foundation-jp15.7.1.* build/patch-kit/docs/evidence/
           cp docs/evidence/phase-c-gacha-ui-proof-jp15.7.1.* build/patch-kit/docs/evidence/
           cp docs/evidence/phase-c-server-download-gate-jp15.7.1.* build/patch-kit/docs/evidence/
+          cp docs/evidence/phase-c-h01-integrity-gate-jp15.7.1.* build/patch-kit/docs/evidence/
           cp docs/evidence/loginbg-019-server-manifest-corroboration.md build/patch-kit/docs/evidence/
 
           cp research/frida/* build/patch-kit/research/frida/
@@ -290,7 +292,9 @@ jobs:
             - original HTTP lifecycle observed on-device
             - Frida-free static backup replay promoted and device-smoke PASS
             - unknown requests / feature OFF preserve super.newHttpRequest
-            - append-only set 1089 data proof is complete
+            - set 1089 proof now uses DownloadLocal overlay; built-in
+              DataLocal.list/.pack remain byte-identical to avoid H01 integrity
+              failures
             - the observed 615 MB screen is classified as the original 35-lane
               server-asset bootstrap (645,599,537 bytes / 615.69 MiB)
             - gacha schedule inference is deferred until the original Rare
@@ -319,9 +323,10 @@ jobs:
           Build the tiny original-UI Rare Gacha data proof:
             python -m tools.base_mod.build_owned_gacha_ui_proof               /path/to/nyanko_battlecats_2026-10-06.zip               --shim libkneekura.so               --keystore private/kneekura.p12               --alias kneekura               --storepass YOUR_PASSWORD               --output gacha-ui-proof-out
 
-          The proof appends set 1089, preserves all existing rows, clones one
-          existing BannerON row, defines no new rate vector, and leaves the
-          live visibility schedule unresolved by design.
+          The proof appends set 1089 through DownloadLocal, preserves
+          DataLocal.list/.pack byte-identically, clones one existing BannerON
+          row, defines no new rate vector, does not bypass native pack/list
+          integrity checks, and leaves the live visibility schedule unresolved.
 
           Do not expand gacha/event behavior beyond the preflight gates until
           one tiny original-format data proof is visible in the unchanged
