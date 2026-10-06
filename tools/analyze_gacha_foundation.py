@@ -47,9 +47,9 @@ def _nonempty_lines(payload: bytes) -> list[str]:
     return [line for line in _text(payload).splitlines() if line.strip()]
 
 
-def parse_unit_rarity_counts(payload: bytes) -> dict[int, int]:
-    counts: Counter[int] = Counter()
-    for line in _text(payload).splitlines():
+def parse_unit_rarities(payload: bytes) -> dict[int, int]:
+    rarities: dict[int, int] = {}
+    for unit_id, line in enumerate(_text(payload).splitlines()):
         body = line.split("//", 1)[0].strip()
         if not body:
             continue
@@ -60,16 +60,20 @@ def parse_unit_rarity_counts(payload: bytes) -> dict[int, int]:
             rarity = int(columns[13])
         except ValueError:
             continue
-        counts[rarity] += 1
-    return dict(sorted(counts.items()))
+        rarities[unit_id] = rarity
+    return rarities
 
 
-def parse_dataset_row_lengths(payload: bytes) -> list[int]:
-    lengths: list[int] = []
+def parse_unit_rarity_counts(payload: bytes) -> dict[int, int]:
+    return dict(sorted(Counter(parse_unit_rarities(payload).values()).items()))
+
+
+def parse_dataset_rows(payload: bytes) -> list[list[int]]:
+    rows: list[list[int]] = []
     for line in _text(payload).splitlines():
         if not line.strip():
             continue
-        count = 0
+        values: list[int] = []
         for cell in line.split(","):
             cell = cell.strip()
             if not cell:
@@ -80,9 +84,13 @@ def parse_dataset_row_lengths(payload: bytes) -> list[int]:
                 break
             if value == -1:
                 break
-            count += 1
-        lengths.append(count)
-    return lengths
+            values.append(value)
+        rows.append(values)
+    return rows
+
+
+def parse_dataset_row_lengths(payload: bytes) -> list[int]:
+    return [len(row) for row in parse_dataset_rows(payload)]
 
 
 def parse_event_gacha_setting(payload: bytes) -> list[dict]:
@@ -138,15 +146,39 @@ def analyze_export(path: Path) -> dict:
                 },
             }
 
-        rarity_counts = parse_unit_rarity_counts(payloads["unitbuy.csv"])
+        unit_rarities = parse_unit_rarities(payloads["unitbuy.csv"])
+        rarity_counts = dict(sorted(Counter(unit_rarities.values()).items()))
         rarity_counts_labeled = {
             RARITY_LABELS.get(key, f"unknown_{key}"): value
             for key, value in rarity_counts.items()
         }
 
-        r1_lengths = parse_dataset_row_lengths(payloads["GatyaDataSetR1.csv"])
-        r2_lengths = parse_dataset_row_lengths(payloads["GatyaDataSetR2.csv"])
-        r3_lengths = parse_dataset_row_lengths(payloads["GatyaDataSetR3.csv"])
+        r1_rows = parse_dataset_rows(payloads["GatyaDataSetR1.csv"])
+        r2_rows = parse_dataset_rows(payloads["GatyaDataSetR2.csv"])
+        r3_rows = parse_dataset_rows(payloads["GatyaDataSetR3.csv"])
+        r1_lengths = [len(row) for row in r1_rows]
+        r2_lengths = [len(row) for row in r2_rows]
+        r3_lengths = [len(row) for row in r3_rows]
+
+        r1_union = sorted({unit_id for row in r1_rows for unit_id in row})
+        rare_rarities = {2, 3, 4, 5}
+        all_rare_units = {
+            unit_id
+            for unit_id, rarity in unit_rarities.items()
+            if rarity in rare_rarities
+        }
+        local_r1_units = {
+            unit_id
+            for unit_id in r1_union
+            if unit_rarities.get(unit_id) in rare_rarities
+        }
+        local_r1_by_rarity = Counter(
+            unit_rarities[unit_id] for unit_id in local_r1_units
+        )
+        not_in_local_r1 = sorted(all_rare_units - local_r1_units)
+        not_in_local_r1_by_rarity = Counter(
+            unit_rarities[unit_id] for unit_id in not_in_local_r1
+        )
 
         options = _nonempty_lines(payloads["GatyaData_Option_SetR.tsv"])
         chance_animation = _nonempty_lines(
@@ -166,6 +198,24 @@ def analyze_export(path: Path) -> dict:
                 "r2_nonempty_sets": sum(1 for value in r2_lengths if value > 0),
                 "r3_nonempty_sets": sum(1 for value in r3_lengths if value > 0),
                 "option_rows_excluding_header": max(0, len(options) - 1),
+                "r1_unique_unit_count": len(local_r1_units),
+                "r1_unique_by_rarity": {
+                    RARITY_LABELS.get(key, f"unknown_{key}"): value
+                    for key, value in sorted(local_r1_by_rarity.items())
+                },
+                "rare_through_legend_not_in_local_r1_count": len(not_in_local_r1),
+                "rare_through_legend_not_in_local_r1_by_rarity": {
+                    RARITY_LABELS.get(key, f"unknown_{key}"): value
+                    for key, value in sorted(not_in_local_r1_by_rarity.items())
+                },
+                "rare_through_legend_not_in_local_r1_ids": not_in_local_r1,
+                "explicit_test_unit_673_present_in_r1_union": 673 in local_r1_units,
+                "compatibility_interpretation": (
+                    "Presence in a local original R1 set is strong evidence that "
+                    "the original Rare Gacha data loader accepts that unit id. "
+                    "It is not yet proof of successful acquisition/duplicate save "
+                    "semantics for every unit; Phase C must still observe draws."
+                ),
             },
             "event_gacha_setting": parse_event_gacha_setting(
                 payloads["EventGatya_Setting.csv"]
