@@ -83,6 +83,7 @@ Java.perform(function () {
         payload.source = 'kneekura-jp15.7.1-service-trace';
         payload.ts_ms = Date.now();
         send(payload);
+        console.log('KNEEKURA_TRACE ' + JSON.stringify(payload));
     }
 
     function describeOverloads(name) {
