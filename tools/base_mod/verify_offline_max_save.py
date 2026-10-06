@@ -81,6 +81,7 @@ def verify_runtime_rewrite_prefix(data: bytes) -> dict[str, Any]:
         "schema_version": 1,
         "mode": "offline-max-runtime-rewrite-prefix-verification",
         "verification_level": "stable-prefix-only",
+        "layout_profile": "runtime-rewrite-unmapped",
         "save_size": len(data),
         "candidate_size": CANDIDATE_SIZE,
         "size_delta_from_candidate": len(data) - CANDIDATE_SIZE,
@@ -89,6 +90,7 @@ def verify_runtime_rewrite_prefix(data: bytes) -> dict[str, Any]:
         "game_version": game_version,
         "stable_prefix": stable,
         "full_dynamic_semantic_verification": "pending-postrewrite-layout-map",
+        "semantic_scope_complete": False,
         "failures": failures,
         "passed": not failures,
     }
@@ -314,6 +316,7 @@ def verify_max_save(
         "mode": "offline-max-profile-verification",
         "verification_level": "full-semantic",
         "layout_profile": profile,
+        "semantic_scope_complete": True,
         "save_size": len(data),
         "candidate_size": CANDIDATE_SIZE,
         "runtime_rewrite_size": RUNTIME_REWRITE_SIZE,
