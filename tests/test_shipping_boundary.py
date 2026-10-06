@@ -23,6 +23,8 @@ class ShippingBoundaryTests(unittest.TestCase):
         self.assertTrue(report["research_gadget_path_isolated"])
         self.assertTrue(report["research_log_compiled_only_for_research"])
         self.assertTrue(report["original_http_fallthrough_required"])
+        self.assertTrue(report["external_files_dir_default_off"])
+        self.assertTrue(report["external_files_dir_research_only"])
 
     def test_scanner_rejects_frida_entry_name(self) -> None:
         with tempfile.TemporaryDirectory() as temp_name:
