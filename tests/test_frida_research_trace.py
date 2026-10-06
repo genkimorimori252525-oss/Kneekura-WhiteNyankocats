@@ -1,0 +1,36 @@
+from pathlib import Path
+import unittest
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+class FridaResearchTraceTests(unittest.TestCase):
+    def test_service_trace_is_call_through_only(self) -> None:
+        source = (
+            ROOT / "research/frida/trace_service_bridge.js"
+        ).read_text(encoding="utf-8")
+        self.assertIn("overload.call(this, ...arguments)", source)
+        self.assertIn("newHttpRequest", source)
+        self.assertIn("isNetworkAvailable", source)
+        self.assertIn("onResponseData", source)
+        self.assertNotIn("Interceptor.replace", source)
+        self.assertNotIn("return true; //", source)
+
+    def test_trace_does_not_log_payload_bytes_or_header_values(self) -> None:
+        source = (
+            ROOT / "research/frida/trace_service_bridge.js"
+        ).read_text(encoding="utf-8")
+        self.assertIn("remaining: value.remaining()", source)
+        self.assertIn("keys: keys", source)
+        self.assertNotIn("value.array()", source)
+        self.assertNotIn("entrySet()", source)
+        self.assertIn("?<redacted>", source)
+
+    def test_research_readme_forbids_shipping_frida(self) -> None:
+        readme = (ROOT / "research/frida/README.md").read_text(encoding="utf-8")
+        self.assertIn("must not remain in the final APK", readme)
+
+
+if __name__ == "__main__":
+    unittest.main()
