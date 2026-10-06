@@ -154,3 +154,57 @@ Remaining step-003 gate:
 - then record the final patch ledger evidence.
 
 No more routine normal/airplane tracing is planned.
+
+
+## Exact DEX corroboration for the replay internals
+
+The owned exact JP 15.7.1 `classes4.dex` was re-read after the device trace.
+
+Original request object `La32;` / runtime class `a32`:
+
+```text
+<init>(
+    int,
+    String,
+    java.net.URL,
+    float,
+    java.util.HashMap,
+    java.nio.ByteBuffer,
+    String[]
+) -> void
+code_off = 0x1f18e4
+```
+
+Exact `MyActivity` instance fields used by original `newHttpRequest`:
+
+```text
+mGLView            android.opengl.GLSurfaceView
+mNextRequestHandle int
+mRequestHandles    java.util.Map
+```
+
+The only original Java method that accesses `mNextRequestHandle` and
+`mRequestHandles` is `MyActivity.newHttpRequest`; no separate Java-side map
+removal path was found. This supports reproducing the original allocation/store
+steps before local completion.
+
+The exact `Lz22.a()` fallback body at `code_off 0x1f1120` also resolves the
+previously redacted two-character response-header block without capturing it
+from the device:
+
+```text
+new org.json.JSONObject()
+-> JSONObject.toString()     # "{}"
+-> request URL.toString()
+-> status = 0
+-> body = null
+-> final flag = true
+-> MyActivity.newResponse(...)
+```
+
+For the observed false request flag, the fallback is queued through the
+original `GLSurfaceView.queueEvent(...)` path. This matches the stable device
+trace where the native response ingress was observed on the GLThread.
+
+Therefore the first static replay's `"{}"`, null body, status 0 and true flag
+are exact JP 15.7.1 fallback semantics, not invented payload values.
