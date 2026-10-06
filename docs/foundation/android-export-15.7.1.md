@@ -216,6 +216,44 @@ This explains how an already-downloaded collaboration unit can remain usable off
 
 **Do not claim full visual-asset completeness until the app-private server-pack cache is inventoried or another complete local source is provided.**
 
+## 9.1 External JP server archive recovery evidence
+
+The standard-ADB export does not contain the app-private downloaded server cache, but a public historical BCData archive contains the same JP server-pack families referenced by the 15.7.1 native library.
+
+The archived `jp_server` tree contains 174 Unit/Image/Number/Map server list/pack files (87 pairs), including A–V shards plus base server families. It also contains:
+
+- `WImageDataServer.list`
+- `WImageDataServer.pack`
+
+The latter is the missing animation/model-data tier.
+
+A read-only manifest scan of those public `.list` files found 32,882 archived asset entries. Historical collaboration units that were not obvious in the bundled InstallPack are explicitly present in the archive.
+
+Verified examples:
+
+- unit 289 (Madoka): `gatyachara_289_f.png`, `uni289_c00.png`, `289_c.imgcut`, `289_c.mamodel`, `289_c00.maanim` and additional form/enemy animations
+- unit 290 (Homura): corresponding PNG/imgcut/mamodel/maanim families
+- unit 363 (Saber / Fate): corresponding PNG/imgcut/mamodel/maanim families
+- Evangelion unit family 403–415: corresponding PNG/imgcut/mamodel/maanim families
+- unit 488: corresponding PNG/imgcut/mamodel/maanim families
+- unit 511 (Street Fighter family): corresponding PNG/imgcut/mamodel/maanim families
+- unit 536 (Hatsune Miku): corresponding PNG/imgcut/mamodel/maanim families
+- unit 552: corresponding PNG/imgcut/mamodel/maanim families
+- unit 597 (Ranma family): corresponding PNG/imgcut/mamodel/maanim families
+- unit 704 and 711: corresponding PNG/imgcut/mamodel/maanim families
+
+This materially changes the recovery assessment: older collaboration visuals and animation metadata are not lost merely because they are absent from the current InstallPack.
+
+One tested recent ID, 815, was not present in this older public archive. That does **not** establish that the asset is unavailable: the current 15.7.1 native library also references newer `XUnitServer`, `XImageServer`, `XNumberServer`, `XMapServer` families that are newer than the archived A–V snapshot.
+
+The next completeness task is therefore not device-root extraction. It is:
+
+1. derive the current server-file manifest/version routing from the user's own 15.7.1 APK;
+2. obtain the current server-file set through the same download path used by the game/tooling;
+3. merge current server assets with the historical archive;
+4. compute per-unit completeness across definitions, texture sprites, icons, imgcut, mamodel, and maanim;
+5. only declare the project blocked if units still lack required assets after both sources are exhausted.
+
 ## 10. Importer priority order
 
 ### P0 — Catalog importer
