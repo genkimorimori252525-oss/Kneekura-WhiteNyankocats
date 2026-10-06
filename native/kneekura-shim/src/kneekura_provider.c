@@ -33,6 +33,15 @@ int32_t kneekura_provider_gacha_cost(
     return original_cost;
 }
 
+uint32_t kneekura_provider_login_template_id(
+        uint32_t original_template_id) {
+    if (kneekura_feature_enabled(KNEEKURA_FEATURE_PROVIDER_API) == 0u
+            || kneekura_feature_enabled(KNEEKURA_FEATURE_LOGIN_BONUS) == 0u) {
+        return original_template_id;
+    }
+    return KNEEKURA_COMEBACK_TEMPLATE_ID;
+}
+
 int32_t kneekura_provider_login_claim(
         KneekuraSidecarState *state,
         int64_t observed_epoch_day,
