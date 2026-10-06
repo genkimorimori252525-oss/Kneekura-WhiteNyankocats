@@ -1,0 +1,115 @@
+{
+  "schema_version": 1,
+  "anchor": "jp-15.7.1-arm64",
+  "policy": "No candidate below confirmed may be connected to the product runtime.",
+  "candidates": [
+    {
+      "id": "network-java-http-bridge",
+      "area": "network",
+      "exact_evidence": [
+        "MyActivity.newHttpRequest exists as non-native Java method",
+        "native method-name string 0x19cf89; xrefs 0x45fac0,0x4603cc",
+        "MyActivity.isNetworkAvailable exists; native string 0x19ac42; xref 0x373ac4",
+        "JNI response ingress functions exported at 0x46158c/0x461e30/0x462204/0x4624ec"
+      ],
+      "public_reference": [
+        "TBCML supports smali/native injection and temporary Frida instrumentation",
+        "BCC models platform/service boundaries rather than requiring UI replacement"
+      ],
+      "confidence": "high",
+      "phase_c_action": "Trace one original request through newHttpRequest and response callbacks; if stable, insert a selective local-provider wrapper at the Java bridge.",
+      "product_rule": "Do not raw-socket/TLS hook and do not rewrite endpoint strings unless the shared bridge proves unusable."
+    },
+    {
+      "id": "clock-local-day-utility",
+      "area": "clock",
+      "exact_evidence": [
+        "system_clock::now/time/localtime_r/mktime imports exist",
+        "candidate game date utility callsites in 0x4734xx-0x473cxx",
+        "appUpdateDraw uses steady_clock and is explicitly a render/update elapsed-time path"
+      ],
+      "public_reference": [
+        "BCC now_seconds -> std_chrono_system_clock_now -> platform.system_clock_now"
+      ],
+      "confidence": "medium",
+      "phase_c_action": "Trace login/event checks and prove which 0x4734xx utility produces wall-clock calendar state before installing any clock hook.",
+      "product_rule": "Never hook steady_clock/appUpdateDraw for daily login."
+    },
+    {
+      "id": "login-original-scene-data",
+      "area": "login",
+      "exact_evidence": [
+        "DailyLoginEventGrade.json literal at 0x18f84a; xref 0x5f70c8"
+      ],
+      "public_reference": [
+        "BCC load_daily_login_grade_json reads DailyLoginEventGrade.json into stamp group/grade/conditions",
+        "BCC battle_check_login_bonus delegates to the original scene host and is called from multiple original scene flows"
+      ],
+      "confidence": "high-data-medium-callsite",
+      "phase_c_action": "Preserve original login scene/data parser, then trace the original claim/day decision; replace only the day/claim provider with Kneekura state.",
+      "product_rule": "No custom login screen."
+    },
+    {
+      "id": "gacha-setting-data",
+      "area": "gacha",
+      "exact_evidence": [
+        "EventGatya_Setting.csv literal at 0x1ac5c7; xref 0x57bd84"
+      ],
+      "public_reference": [
+        "BCC load_gacha_setting_csv parses gatya_id and repeated group/unit/value triples from EventGatya_Setting.csv",
+        "BCU provides unit/rarity/battle semantics but is a separate UI host, so it is not used as a runtime hook"
+      ],
+      "confidence": "high-data",
+      "phase_c_action": "First prove whether an additional permanent local gacha can be expressed entirely through original data tables; only trace result-provider logic if data alone is insufficient.",
+      "product_rule": "Original gacha scene/capsule/result UI must remain the host."
+    },
+    {
+      "id": "save-original-plus-sidecar",
+      "area": "save",
+      "exact_evidence": [
+        "SAVE_DATA/SAVE_DATA4/SAVE_DATA8/BACKUP_SAVE_DATA/SaveDataTransfer literals exist",
+        "native imports local file I/O"
+      ],
+      "public_reference": [
+        "BCC request_save_data delegates to host meta.request_save and is used by battle/fade/result paths"
+      ],
+      "confidence": "medium-original-hook-high-sidecar",
+      "phase_c_action": "Do not hook original serializer yet. Keep original save authoritative and persist Kneekura-only data through an app-private atomic sidecar.",
+      "product_rule": "Never write the official app sandbox; separate package flavors own their own save roots."
+    },
+    {
+      "id": "stage-event-provider",
+      "area": "events",
+      "exact_evidence": [
+        "/event.json literal at 0x195292; xref 0x327f64",
+        "eventDisplayData.json literal at 0x1aec24; xref 0x9bc51c",
+        "Map_option.csv and Stage_option.csv exact loaders are already mapped"
+      ],
+      "public_reference": [
+        "BCC stage/map flow consumes local map/stage data and event-facing state"
+      ],
+      "confidence": "medium-high",
+      "phase_c_action": "Trace original event availability query at the Java request bridge and return a local snapshot while leaving stage-list scene untouched.",
+      "product_rule": "Locally available historical content is surfaced through original stage UI."
+    },
+    {
+      "id": "native-injection-transport",
+      "area": "patch transport",
+      "exact_evidence": [
+        "Phase-A exact SHA/build-ID-gated DT_NEEDED libkneekura.so injection works and preserves exports"
+      ],
+      "public_reference": [
+        "TBCML Pkg.add_native_library adds a native dependency and places the library beside libnative; TBCML also supports Frida research and version-scoped lib patches"
+      ],
+      "confidence": "confirmed",
+      "phase_c_action": "Keep the Phase-A loader path; use temporary instrumentation only for discovery, then implement static version-pinned hooks in the shim.",
+      "product_rule": "Frida is never a final runtime dependency."
+    }
+  ],
+  "non_candidates": [
+    {
+      "source": "Battle Cats Ultimate",
+      "reason": "Excellent stage/unit/enemy/animation schema and behavior reference, but it is a separate application/UI runtime; using its Activity/scene model would violate preservation-first product design."
+    }
+  ]
+}
