@@ -1,6 +1,7 @@
 package jp.kneekura.whitenyankocats;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -83,6 +84,11 @@ public final class BattleActivity extends Activity {
             unitBar.addView(button, new LinearLayout.LayoutParams(dp(150), dp(72)));
         }
 
+        Button allCats = new Button(this);
+        allCats.setText("全キャラ");
+        allCats.setOnClickListener(v -> showAllUnitPicker(battleView, units));
+        unitBar.addView(allCats, new LinearLayout.LayoutParams(dp(120), dp(72)));
+
         Button leave = new Button(this);
         leave.setText("戻る");
         leave.setOnClickListener(v -> finish());
@@ -94,6 +100,24 @@ public final class BattleActivity extends Activity {
 
         setContentView(root);
         battleView.start();
+    }
+
+    private void showAllUnitPicker(BattleView battleView, List<UnitRecord> units) {
+        CharSequence[] labels = new CharSequence[units.size()];
+        for (int i = 0; i < units.size(); i++) {
+            UnitRecord unit = units.get(i);
+            labels[i] = String.format(Locale.ROOT, "%03d  %s", unit.unitNo, unit.name);
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle("出撃キャラ選択（全キャラ・第1形態）")
+                .setItems(labels, (dialog, which) -> {
+                    if (which >= 0 && which < units.size()) {
+                        battleView.deploy(units.get(which));
+                    }
+                })
+                .setNegativeButton("閉じる", null)
+                .show();
     }
 
     private int dp(int value) {
