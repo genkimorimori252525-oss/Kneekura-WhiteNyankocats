@@ -6,6 +6,15 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class FridaResearchTraceTests(unittest.TestCase):
+    def test_trace_emits_to_android_logcat(self) -> None:
+        source = (
+            Path(__file__).resolve().parents[1]
+            / "research/frida/trace_service_bridge.js"
+        ).read_text(encoding="utf-8")
+        self.assertIn("android.util.Log", source)
+        self.assertIn("AndroidLog.i('KNEEKURA_TRACE'", source)
+        self.assertIn("AndroidLog.e('KNEEKURA_TRACE'", source)
+
     def test_service_trace_is_call_through_only(self) -> None:
         source = (
             ROOT / "research/frida/trace_service_bridge.js"
