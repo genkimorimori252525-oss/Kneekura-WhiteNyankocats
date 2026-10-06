@@ -1,8 +1,14 @@
-"""Verify the exact JP 15.7.1 tiny Rare Gacha original-UI data proof.
+"""Verify the exact JP 15.7.1 tiny Rare Gacha original-UI overlay proof.
 
-This verifier reads the encrypted DataLocal containers from the original and
-modified InstallPack APKs. It proves that the four allowed gacha tables preserve
-all original rows and append exactly one set.
+The preservation-first proof leaves the built-in DataLocal.list/.pack bytes
+untouched and appends four complete override files to the existing
+DownloadLocal overlay pack.
+
+The verifier proves:
+- DataLocal.list and DataLocal.pack are byte-identical to the exact source;
+- every original DownloadLocal payload is preserved;
+- the four gacha override files exist only in DownloadLocal;
+- each override equals the exact original table plus one append-only set 1089.
 """
 
 from __future__ import annotations
@@ -13,9 +19,11 @@ from pathlib import Path
 import zipfile
 
 from tools.battlecats_pack import PackReader
-from tools.base_mod.patch_installpack_data import (
+from tools.base_mod.patch_installpack_downloadlocal import (
     DATALOCAL_LIST,
     DATALOCAL_PACK,
+    DOWNLOADLOCAL_LIST,
+    DOWNLOADLOCAL_PACK,
     INSTALLPACK_SPLIT,
 )
 from tools.base_mod.super_gacha_data_prototype import OPTION, R1, R2, R3
@@ -24,12 +32,17 @@ from tools.base_mod.super_gacha_data_prototype import OPTION, R1, R2, R3
 EXPECTED_SET_ID = 1089
 
 
-def _data_reader(apk: Path) -> PackReader:
+def _reader(
+    apk: Path,
+    family: str,
+    manifest_name: str,
+    pack_name: str,
+) -> PackReader:
     with zipfile.ZipFile(apk, "r") as archive:
-        manifest = archive.read(DATALOCAL_LIST)
-        pack = archive.read(DATALOCAL_PACK)
+        manifest = archive.read(manifest_name)
+        pack = archive.read(pack_name)
     return PackReader(
-        "DataLocal",
+        family,
         manifest,
         pack,
         region="jp",
@@ -62,15 +75,42 @@ def verify_gacha_ui_data_proof(
     clone_option_set: int,
     expected_set_id: int = EXPECTED_SET_ID,
 ) -> dict:
-    original_reader = _data_reader(original_dir / INSTALLPACK_SPLIT)
-    modified_reader = _data_reader(modified_dir / INSTALLPACK_SPLIT)
+    original_apk = original_dir / INSTALLPACK_SPLIT
+    modified_apk = modified_dir / INSTALLPACK_SPLIT
+
+    with zipfile.ZipFile(original_apk, "r") as before, zipfile.ZipFile(
+        modified_apk, "r"
+    ) as after:
+        if after.read(DATALOCAL_LIST) != before.read(DATALOCAL_LIST):
+            raise ValueError("DataLocal.list changed in overlay proof")
+        if after.read(DATALOCAL_PACK) != before.read(DATALOCAL_PACK):
+            raise ValueError("DataLocal.pack changed in overlay proof")
+
+    original_data = _reader(
+        original_apk,
+        "DataLocal",
+        DATALOCAL_LIST,
+        DATALOCAL_PACK,
+    )
+    original_download = _reader(
+        original_apk,
+        "DownloadLocal",
+        DOWNLOADLOCAL_LIST,
+        DOWNLOADLOCAL_PACK,
+    )
+    modified_download = _reader(
+        modified_apk,
+        "DownloadLocal",
+        DOWNLOADLOCAL_LIST,
+        DOWNLOADLOCAL_PACK,
+    )
 
     original = {
-        name: _lines(original_reader, name)
+        name: _lines(original_data, name)
         for name in (R1, R2, R3, OPTION)
     }
-    modified = {
-        name: _lines(modified_reader, name)
+    override = {
+        name: _lines(modified_download, name)
         for name in (R1, R2, R3, OPTION)
     }
 
@@ -86,30 +126,30 @@ def verify_gacha_ui_data_proof(
         raise ValueError("original option row count drift")
 
     for name in (R1, R2, R3):
-        if len(modified[name]) != len(original[name]) + 1:
-            raise ValueError(f"{name}: expected exactly one appended row")
-        if modified[name][:-1] != original[name]:
-            raise ValueError(f"{name}: an original row was modified")
+        if len(override[name]) != len(original[name]) + 1:
+            raise ValueError(f"{name}: overlay must contain exactly one appended row")
+        if override[name][:-1] != original[name]:
+            raise ValueError(f"{name}: overlay changed an original row")
 
-    if len(modified[OPTION]) != len(original[OPTION]) + 1:
-        raise ValueError("option table: expected exactly one appended row")
-    if modified[OPTION][:-1] != original[OPTION]:
-        raise ValueError("option table: an original row was modified")
+    if len(override[OPTION]) != len(original[OPTION]) + 1:
+        raise ValueError("option overlay must contain exactly one appended row")
+    if override[OPTION][:-1] != original[OPTION]:
+        raise ValueError("option overlay changed an original row")
 
-    appended_units = _parse_units(modified[R1][-1])
+    appended_units = _parse_units(override[R1][-1])
     if appended_units != expected_units:
         raise ValueError(
             f"appended R1 pool drift: {appended_units} != {expected_units}"
         )
-    if modified[R2][-1].strip() != "-1":
+    if override[R2][-1].strip() != "-1":
         raise ValueError("appended R2 row is not empty")
-    if modified[R3][-1].strip() != "-1":
+    if override[R3][-1].strip() != "-1":
         raise ValueError("appended R3 row is not empty")
 
     if clone_option_set < 0 or clone_option_set >= expected_set_id:
         raise ValueError("clone option set outside exact original range")
     clone_cells = original[OPTION][clone_option_set + 1].split("\t")
-    appended_cells = modified[OPTION][-1].split("\t")
+    appended_cells = override[OPTION][-1].split("\t")
     if len(appended_cells) != len(clone_cells):
         raise ValueError("appended option column count drift")
     if int(appended_cells[0]) != expected_set_id:
@@ -121,20 +161,32 @@ def verify_gacha_ui_data_proof(
             "appended option metadata differs from selected visible clone"
         )
 
+    # Existing DownloadLocal content must survive unchanged at payload level.
+    for entry in original_download.entries:
+        before_payload, _ = original_download.read(entry.name)
+        after_payload, _ = modified_download.read(entry.name)
+        if after_payload != before_payload:
+            raise ValueError(
+                f"original DownloadLocal payload changed: {entry.name}"
+            )
+
     return {
-        "schema_version": 1,
-        "mode": "gacha-original-ui-data-proof",
+        "schema_version": 2,
+        "mode": "gacha-original-ui-downloadlocal-overlay-proof",
         "new_set_id": expected_set_id,
         "prototype_unit_ids": expected_units,
         "clone_option_set": clone_option_set,
         "original_r1_rows": len(original[R1]),
-        "modified_r1_rows": len(modified[R1]),
+        "overlay_r1_rows": len(override[R1]),
         "original_rows_preserved": True,
         "appended_rows_per_table": 1,
         "r2_empty": True,
         "r3_empty": True,
         "banner_on": True,
         "option_metadata_cloned": True,
+        "datalocal_byte_identical": True,
+        "downloadlocal_original_payloads_preserved": True,
+        "overlay_entries": [R1, R2, R3, OPTION],
         "changed_data_files": [R1, R2, R3, OPTION],
     }
 
