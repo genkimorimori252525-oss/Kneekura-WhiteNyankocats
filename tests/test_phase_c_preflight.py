@@ -105,6 +105,20 @@ class PhaseCPreflightTests(unittest.TestCase):
             report["original_ui_gacha_proof"]["visibility_schedule_defined"]
         )
         self.assertEqual(
+            report["shipping_boundary"]["personal_package"],
+            "jp.kn.white.battlecats",
+        )
+        self.assertEqual(
+            report["shipping_boundary"]["practice_package"],
+            "jp.kn.clean.battlecats",
+        )
+        self.assertFalse(
+            report["shipping_boundary"]["product_frida_allowed"]
+        )
+        self.assertFalse(
+            report["shipping_boundary"]["research_log_in_product_dex"]
+        )
+        self.assertEqual(
             report["shipping_parity_gate"]["personal_practice_feature_mask_default"],
             0,
         )
