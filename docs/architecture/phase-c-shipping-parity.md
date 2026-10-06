@@ -64,15 +64,19 @@ newResponse(id, 0, url, "{}", null, true)
 
 ## Original-UI gacha proof
 
-The final Phase C research proof appends exact Rare Gacha set **1089** using
-only original-format DataLocal tables.
+The final Phase C research proof appends exact Rare Gacha set **1089** through
+the existing **DownloadLocal overlay** while keeping built-in
+`DataLocal.list/.pack` byte-identical.
 
 Pinned exact derived proof:
 
 - set id: 1089
 - unit ids: 37 (Rare), 30 (Super Rare), 34 (Uber Rare)
 - visible option clone: set 49
+- original DataLocal bytes changed: false
 - original rows replaced: false
+- DownloadLocal overlay additions: four gacha table files
+- native pack/list MD5 bypass: false
 - R2/R3: empty
 - BannerON: 1
 - rarity probability vector: intentionally undefined
@@ -142,3 +146,22 @@ unchanged.
 This redirect is build-time opt-in and is enabled only for the research gacha
 proof. Personal/Practice feature-OFF shipping profiles preserve the platform's
 normal internal `getFilesDir()` behavior.
+
+
+## H01 checkpoint
+
+The first runtime proof rewrote DataLocal and reached **H01 immediately after
+the original 615.69 MiB server bootstrap completed**.
+
+External Battle Cats modding references associate H01 with pack/list MD5
+integrity checks. Rather than disable that integrity path, the proof has been
+redesigned to use the game's existing DownloadLocal overlay family.
+
+The final runner now refuses to reuse an older proof unless its ledger states:
+
+- `datalocal_byte_identical=true`;
+- exactly four `downloadlocal_overlay_entries`;
+- research external-files cache mode enabled.
+
+If H01 still appears under those conditions, it is recorded as a distinct
+`data_read_error_h01` gate and no gacha-schedule inference is made.
