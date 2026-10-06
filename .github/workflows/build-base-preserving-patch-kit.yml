@@ -9,6 +9,7 @@ on:
       - "tools/analyze_gacha_foundation.py"
       - "tools/analyze_login_bonus_foundation.py"
       - "native/kneekura-shim/**"
+      - "bridge/**"
       - "docs/architecture/base-preserving-boot-smoke.md"
       - "docs/architecture/package-flavor-contract.md"
       - "docs/architecture/design-philosophy.md"
@@ -44,10 +45,15 @@ jobs:
         with:
           node-version: "20"
 
+      - uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
       - name: Install patching dependencies
         run: python -m pip install -r requirements-patching.txt
 
-      - name: Install NDK
+      - name: Install Android build dependencies
         shell: bash
         run: |
           set -euo pipefail
@@ -55,7 +61,7 @@ jobs:
           if [ ! -x "$SDKMANAGER" ]; then
             SDKMANAGER="$(command -v sdkmanager)"
           fi
-          "$SDKMANAGER" "ndk;27.2.12479018"
+          "$SDKMANAGER"             "ndk;27.2.12479018"             "platforms;android-35"             "build-tools;35.0.0"
 
       - name: Build inert ARM64 shim
         shell: bash
@@ -68,6 +74,34 @@ jobs:
             -DANDROID_PLATFORM=android-29 \
             -DCMAKE_BUILD_TYPE=Release
           cmake --build build/shim --parallel
+
+      - name: Compile Frida-free static Java HTTP bridge
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/static-http
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          from tools.base_mod.inject_java_http_bridge import build_bridge_dex
+
+          android_jar = Path(os.environ["ANDROID_HOME"]) / "platforms/android-35/android.jar"
+          d8 = Path(os.environ["ANDROID_HOME"]) / "build-tools/35.0.0/d8"
+
+          for enabled, name in [
+              (False, "bridge-off.dex"),
+              (True, "bridge-on.dex"),
+          ]:
+              result = build_bridge_dex(
+                  flavor="research",
+                  enabled=enabled,
+                  output=Path("build/static-http") / name,
+                  d8=str(d8),
+                  android_jar=str(android_jar),
+                  root=Path("."),
+              )
+              assert result["dex_size"] > 0
+          PY
 
       - name: Build Frida 17 Java-bridge trace bundle
         shell: bash
@@ -97,6 +131,7 @@ jobs:
           mkdir -p build/patch-kit/docs/references
           mkdir -p build/patch-kit/docs/evidence
           mkdir -p build/patch-kit/research/frida
+          mkdir -p build/patch-kit/bridge/java/stub/jp/co/ponos/battlecats
 
           cp -a tools/base_mod/*.py build/patch-kit/tools/base_mod/
           cp tools/battlecats_pack.py build/patch-kit/tools/
@@ -105,6 +140,9 @@ jobs:
           cp tools/analyze_login_bonus_foundation.py build/patch-kit/tools/
           cp requirements-patching.txt build/patch-kit/
           cp build/shim/libkneekura.so build/patch-kit/
+
+          cp bridge/java/MyActivity.java.in build/patch-kit/bridge/java/
+          cp bridge/java/stub/jp/co/ponos/battlecats/MyActivity.java             build/patch-kit/bridge/java/stub/jp/co/ponos/battlecats/
 
           cp docs/architecture/base-preserving-boot-smoke.md build/patch-kit/docs/architecture/
           cp docs/architecture/package-flavor-contract.md build/patch-kit/docs/architecture/
@@ -182,6 +220,13 @@ jobs:
               --alias kneekura \
               --storepass YOUR_PASSWORD \
               --output research-out
+
+          Frida-free static HTTP bridge proof:
+            python -m tools.base_mod.build_owned_static_http_bridge               /path/to/nyanko_battlecats_2026-10-06.zip               --flavor research               --shim libkneekura.so               --keystore private/kneekura.p12               --alias kneekura               --storepass YOUR_PASSWORD               --enable-backup-offline-replay               --output static-http-out
+
+          This static bridge injects a flavor MyActivity subclass as classes5.dex.
+          Exact unrecognized requests and feature-OFF call super.newHttpRequest.
+          It contains no Frida runtime.
 
           The research builder never downloads Frida and is separate from the
           Personal/Practice product paths. TRACE-INSTRUCTIONS.txt and
