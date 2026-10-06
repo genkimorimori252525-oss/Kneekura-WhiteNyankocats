@@ -223,7 +223,9 @@
       "name": "DailyLoginEventGrade.json",
       "string_vaddr": "0x18f84a",
       "xref": "0x5f70c8",
-      "role": "login bonus grade data"
+      "role": "daily login grade/condition data",
+      "xref_adrp": "0x5f70c4",
+      "xref_add": "0x5f70c8"
     },
     {
       "name": "Map_option.csv",
@@ -279,12 +281,27 @@
       "name": "SaveDataTransfer",
       "string_vaddr": "0x1a253c",
       "role": "save transfer-related literal"
+    },
+    {
+      "name": "DailyLoginEventData.csv",
+      "string_vaddr": "0x1a2698",
+      "xref_adrp": "0x9c3424",
+      "xref_add": "0x9c3428",
+      "role": "variable-length daily login event/reward rows"
+    },
+    {
+      "name": "StampData.csv",
+      "string_vaddr": "0x1aec53",
+      "xref_adrp": "0x9c5758",
+      "xref_add": "0x9c575c",
+      "role": "31-slot ordinary login stamp table"
     }
   ],
   "recommendations": {
     "network_hook_seam": "Prefer the original Java newHttpRequest/isNetworkAvailable bridge over raw socket/TLS interception or per-endpoint call-site rewriting.",
     "login_clock_seam": "Do not hook appUpdateDraw/steady_clock. Confirm the local date utility family around 0x4734xx before connecting OfflineClock.",
     "save_seam": "Keep original save serializer authoritative; custom state belongs in an app-private sidecar until an exact save boundary is proven.",
-    "feature_activation": "All Phase-B provider APIs remain disconnected until exact hook behavior is verified on the anchored binary."
+    "feature_activation": "All Phase-B provider APIs remain disconnected until exact hook behavior is verified on the anchored binary.",
+    "login_data_seam": "Exact DailyLoginEventData/Grade/StampData loader xrefs are now pinned. Reuse event 949 and original stamp scene; runtime selection/current-index/reward-grant hooks remain unproven."
   }
 }
