@@ -173,6 +173,7 @@ jobs:
           mkdir -p build/patch-kit/docs/architecture
           mkdir -p build/patch-kit/docs/references
           mkdir -p build/patch-kit/docs/evidence
+          mkdir -p build/patch-kit/docs/research
           mkdir -p build/patch-kit/research/frida
           mkdir -p build/patch-kit/bridge/java/stub/jp/co/ponos/battlecats
 
@@ -200,6 +201,7 @@ jobs:
           cp docs/architecture/phase-c-gacha-original-ui-proof.md build/patch-kit/docs/architecture/
           cp docs/architecture/phase-c-shipping-boundary.md build/patch-kit/docs/architecture/
           cp docs/architecture/phase-c-shipping-parity.md build/patch-kit/docs/architecture/
+          cp docs/architecture/offline-local-profile-bootstrap.md build/patch-kit/docs/architecture/
 
           cp docs/references/native-service-map-jp15.7.1.* build/patch-kit/docs/references/
           cp docs/references/hook-candidate-matrix-jp15.7.1.* build/patch-kit/docs/references/
@@ -212,7 +214,10 @@ jobs:
           cp docs/evidence/phase-c-gacha-ui-proof-jp15.7.1.* build/patch-kit/docs/evidence/
           cp docs/evidence/phase-c-server-download-gate-jp15.7.1.* build/patch-kit/docs/evidence/
           cp docs/evidence/phase-c-h01-integrity-gate-jp15.7.1.* build/patch-kit/docs/evidence/
+          cp docs/evidence/offline-profile-static-map-jp15.7.1.* build/patch-kit/docs/evidence/
+          cp docs/evidence/offline-profile-unit-selection-jp15.7.1.json build/patch-kit/docs/evidence/
           cp docs/evidence/loginbg-019-server-manifest-corroboration.md build/patch-kit/docs/evidence/
+          cp docs/research/offline-profile-community-prior-art.md build/patch-kit/docs/research/
 
           cp research/frida/* build/patch-kit/research/frida/
           cp build/frida-agent/trace_service_bridge.bundle.js \
@@ -263,6 +268,14 @@ jobs:
             - Frida 16.7.19: the raw trace_service_bridge.js also works because
               the Java bridge is built into the pre-17 runtime
             - prefer the bundled agent for current Frida 17.x Gadget
+
+          Offline-profile static unit manifest:
+            python -m tools.base_mod.build_offline_profile_unit_manifest \
+              /path/to/nyanko_battlecats_2026-10-06.zip \
+              --output offline-profile-unit-manifest.json
+
+          Offline-profile read-only device probe:
+            powershell -ExecutionPolicy Bypass -File .\tools\base_mod\run_offline_profile_probe.ps1
 
           Supply your AArch64 libfrida-gadget.so, then build:
             python -m tools.base_mod.build_owned_research_trace \
