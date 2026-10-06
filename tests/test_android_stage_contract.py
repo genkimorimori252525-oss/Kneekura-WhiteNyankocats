@@ -12,7 +12,7 @@ class AndroidStageContractTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
 
         self.assertIn("assets/MapLocal.list", source)
-        self.assertIn("StageName_RN_ja.csv", source)
+        self.assertIn('"StageName_" + stageNameCode + "_ja.csv"', source)
         self.assertIn('case "RN"', source)
         self.assertIn('case "RS"', source)
         self.assertIn('case "RC"', source)
