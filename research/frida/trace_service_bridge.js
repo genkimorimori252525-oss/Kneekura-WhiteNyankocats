@@ -44,7 +44,12 @@ Java.perform(function () {
         const type = declaredType || javaClassName(value) || typeof value;
         try {
             if (type === 'java.lang.String') {
-                return { type: type, value: safeString(value) };
+                const text = safeString(value);
+                if (text === null) return null;
+                const redacted = (text.indexOf('://') >= 0 || text.indexOf('?') >= 0)
+                    ? redactUrl(text)
+                    : (text.length > 256 ? text.slice(0, 256) + '<truncated>' : text);
+                return { type: type, value: redacted };
             }
             if (type === 'java.nio.ByteBuffer') {
                 return {
@@ -118,12 +123,13 @@ Java.perform(function () {
             });
 
             overload.implementation = function () {
+                const originalArgs = Array.prototype.slice.call(arguments);
                 const args = [];
-                for (let i = 0; i < arguments.length; i++) {
+                for (let i = 0; i < originalArgs.length; i++) {
                     if (options && options.urlArg === i) {
-                        args.push({ type: argTypes[i], value: redactUrl(arguments[i]) });
+                        args.push({ type: argTypes[i], value: redactUrl(originalArgs[i]) });
                     } else {
-                        args.push(summarize(arguments[i], argTypes[i]));
+                        args.push(summarize(originalArgs[i], argTypes[i]));
                     }
                 }
 
@@ -136,7 +142,8 @@ Java.perform(function () {
 
                 let result;
                 try {
-                    result = overload.call(this, ...arguments);
+                    const receiver = options && options.staticMethod ? MyActivity : this;
+                    result = overload.call(receiver, ...originalArgs);
                 } catch (error) {
                     emit({
                         kind: 'call_throw',
@@ -169,10 +176,10 @@ Java.perform(function () {
 
     hookGeneric('newHttpRequest', { urlArg: 0 });
     hookGeneric('isNetworkAvailable', {});
-    hookGeneric('newResponse', {});
-    hookGeneric('onResponseCodeHeaders', {});
-    hookGeneric('onResponseData', {});
-    hookGeneric('onResponseFinish', {});
+    hookGeneric('newResponse', { staticMethod: true });
+    hookGeneric('onResponseCodeHeaders', { staticMethod: true });
+    hookGeneric('onResponseData', { staticMethod: true });
+    hookGeneric('onResponseFinish', { staticMethod: true });
 
     emit({
         kind: 'trace_ready',
