@@ -93,12 +93,17 @@ jobs:
           cp docs/references/hook-candidate-matrix-jp15.7.1.* build/patch-kit/docs/references/
 
           cp docs/evidence/myactivity-service-methods-jp15.7.1.json build/patch-kit/docs/evidence/
+          cp docs/evidence/myactivity-http-transport-jp15.7.1.* build/patch-kit/docs/evidence/
           cp docs/evidence/original-login-gacha-runtime-anchors-jp15.7.1.* build/patch-kit/docs/evidence/
           cp docs/evidence/login-bonus-foundation-jp15.7.1.* build/patch-kit/docs/evidence/
           cp docs/evidence/super-kneekura-gacha-foundation-jp15.7.1.* build/patch-kit/docs/evidence/
           cp docs/evidence/loginbg-019-server-manifest-corroboration.md build/patch-kit/docs/evidence/
 
           cp research/frida/* build/patch-kit/research/frida/
+
+          python -m tools.base_mod.phase_c_preflight \
+            --root build/patch-kit \
+            --output build/patch-kit/phase-c-preflight.json
 
           cat > build/patch-kit/README-FIRST.txt <<'EOF'
           Kneekura base-preserving JP 15.7.1 patch kit
