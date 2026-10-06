@@ -235,6 +235,7 @@ def audit(root: Path) -> dict:
         "tools/base_mod/arm64_string_xrefs.py",
         "tools/base_mod/battlecats_pack_writer.py",
         "tools/base_mod/patch_installpack_data.py",
+        "tools/base_mod/patch_installpack_downloadlocal.py",
         "tools/base_mod/super_gacha_data_prototype.py",
         "tools/base_mod/build_owned_static_http_bridge.py",
         "tools/base_mod/verify_static_http_bridge.py",
@@ -254,6 +255,8 @@ def audit(root: Path) -> dict:
         "docs/architecture/phase-c-shipping-parity.md",
         "docs/evidence/phase-c-server-download-gate-jp15.7.1.json",
         "docs/evidence/phase-c-server-download-gate-jp15.7.1.md",
+        "docs/evidence/phase-c-h01-integrity-gate-jp15.7.1.json",
+        "docs/evidence/phase-c-h01-integrity-gate-jp15.7.1.md",
         "docs/evidence/phase-c-gacha-ui-proof-jp15.7.1.json",
     ]
     missing_tools = [
@@ -267,7 +270,7 @@ def audit(root: Path) -> dict:
 
     return {
         "schema_version": 1,
-        "status": "ready_for_original_ui_data_proof",
+        "status": "ready_for_h01_safe_original_ui_retry",
         "anchor": {
             "native_sha256": EXPECTED_NATIVE_SHA256,
             "native_build_id": EXPECTED_NATIVE_BUILD_ID,
@@ -327,23 +330,31 @@ def audit(root: Path) -> dict:
             "acquisition": "unchanged-original-downloader",
             "research_external_files_dir_only": True,
         },
+        "h01_integrity_gate": {
+            "native_md5_bypass": False,
+            "datalocal_byte_identical_required": True,
+            "downloadlocal_overlay_required": True,
+            "gacha_schedule_inference_allowed_before_ui": False,
+        },
         "original_ui_gacha_proof": {
             "target_set_id": 1089,
             "prototype_unit_ids": [37, 30, 34],
             "clone_option_set": 49,
-            "changed_datalocal_entries": [
+            "downloadlocal_overlay_entries": [
                 "GatyaDataSetR1.csv",
                 "GatyaDataSetR2.csv",
                 "GatyaDataSetR3.csv",
                 "GatyaData_Option_SetR.tsv",
             ],
+            "datalocal_byte_identical": True,
+            "native_md5_bypass": False,
             "original_scene_code_modified": False,
             "visibility_schedule_defined": False,
         },
         "next_gate": (
-            "build the exact owner-data set-1089 proof and ask the unchanged "
-            "original Rare Gacha scene whether an additional local visibility "
-            "schedule provider is required"
+            "install the H01-safe DownloadLocal overlay build over the existing "
+            "research package/cache, confirm original UI is reachable without "
+            "H01, then evaluate set-1089 visibility in the unchanged Rare Gacha scene"
         ),
     }
 
