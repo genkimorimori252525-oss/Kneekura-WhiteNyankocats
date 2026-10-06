@@ -129,6 +129,7 @@ $preSha = Get-Sha256 -Path $preSave
 $preVerify = Join-Path $root "pre-install-r-max-verification.json"
 & python -m tools.base_mod.verify_offline_max_save $preSave $exportPath --output $preVerify --allow-runtime-rewrite | Out-Host
 if ($LASTEXITCODE -ne 0) { throw "Pre-install-r SAVE_DATA no longer satisfies the MAX contract" }
+$preVerifyObject = Get-Content -LiteralPath $preVerify -Raw | ConvertFrom-Json
 
 Write-Host "[2/6] Confirming first persistence proof remains offline..."
 $offline = (Read-Host "Are Wi-Fi and mobile data disabled? [y/n]").Trim().ToLowerInvariant()
@@ -179,6 +180,7 @@ if ($LASTEXITCODE -ne 0) {
     $log | Set-Content -LiteralPath $logPath -Encoding UTF8
     exit 4
 }
+$postVerifyObject = Get-Content -LiteralPath $postVerify -Raw | ConvertFrom-Json
 
 Write-Host "[6/6] Recording persistence evidence..."
 $result = [ordered]@{
@@ -193,7 +195,11 @@ $result = [ordered]@{
     post_install_save_sha256 = $postSha
     sentinel_survived_install_r = $true
     pre_install_max_verification = $preVerify
+    pre_install_verification_level = $preVerifyObject.verification_level
+    pre_install_layout_profile = $preVerifyObject.layout_profile
     post_install_max_verification = $postVerify
+    post_install_verification_level = $postVerifyObject.verification_level
+    post_install_layout_profile = $postVerifyObject.layout_profile
     original_ui_manual_check = $true
     network_disabled_confirmed_by_user = $true
     log = $logPath
