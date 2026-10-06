@@ -19,7 +19,7 @@ class AndroidStageContractTests(unittest.TestCase):
         self.assertIn("for (String fileName : data.names())", importer)
         self.assertIn("enemyReleaseId < 2", importer)
         self.assertIn('data.has("Map_option.csv")', importer)
-        self.assertIn('row.get(19)', importer)
+        self.assertIn('stringAt(row, 19, "")', importer)
         self.assertIn("Z_STAGE", importer)
         self.assertIn('return 1000 + address.mapIndex', importer)
         self.assertIn('return 2000 + address.mapIndex', importer)
