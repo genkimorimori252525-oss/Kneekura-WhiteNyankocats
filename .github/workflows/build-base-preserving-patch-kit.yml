@@ -251,8 +251,19 @@ jobs:
           never ship in Personal or Practice.
 
           The generated signed-splits directory includes parity evidence.
-          Do not promote gameplay hooks unless the original MyActivity boots
-          and the exact original scene remains unchanged with the feature OFF.
+
+          Current Phase-C status:
+            - original HTTP lifecycle observed on-device
+            - Frida-free static backup replay promoted and device-smoke PASS
+            - unknown requests / feature OFF preserve super.newHttpRequest
+            - next gate is a tiny append-only original-UI data proof
+
+          Repository preflight:
+            python -m tools.base_mod.phase_c_preflight               --root .               --output phase-c-preflight.json
+
+          Do not expand gacha/event behavior beyond the preflight gates until
+          one tiny original-format data proof is visible in the unchanged
+          Battle Cats UI.
           EOF
 
       - uses: actions/upload-artifact@v4
