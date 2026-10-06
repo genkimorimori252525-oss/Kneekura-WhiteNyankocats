@@ -27,6 +27,9 @@ class StaticHttpBridgeTests(unittest.TestCase):
         self.assertIn("extends jp.co.ponos.battlecats.MyActivity", source)
         self.assertIn("ENABLE_BACKUP_OFFLINE_REPLAY", source)
         self.assertIn("DEBUG_RESEARCH_LOG", source)
+        self.assertIn("USE_EXTERNAL_FILES_DIR", source)
+        self.assertIn("super.getExternalFilesDir(null)", source)
+        self.assertIn("return super.getFilesDir()", source)
         self.assertIn("KNEEKURA_STATIC_HTTP", source)
         self.assertIn('"GET".equals(method)', source)
         self.assertIn('BACKUP_HOST = "nyanko-backups.ponosgames.com"', source)
@@ -60,6 +63,8 @@ class StaticHttpBridgeTests(unittest.TestCase):
         self.assertIn("patch_equal_length_strings", injector)
         self.assertIn('"true" if flavor == "research" else "false"', injector)
         self.assertIn("{ORIGINAL_LAUNCHER: launcher}", injector)
+        self.assertIn("use_external_files_dir: bool = False", injector)
+        self.assertIn("__KNEEKURA_USE_EXTERNAL_FILES_DIR__", injector)
         self.assertNotIn("patch_exact_dex_string(", injector)
 
     def test_static_builder_preserves_original_native_extraction(self) -> None:
