@@ -92,20 +92,34 @@ jobs:
           android_jar = Path(os.environ["ANDROID_HOME"]) / "platforms/android-35/android.jar"
           d8 = Path(os.environ["ANDROID_HOME"]) / "build-tools/35.0.0/d8"
 
-          for enabled, name in [
-              (False, "bridge-off.dex"),
-              (True, "bridge-on.dex"),
-          ]:
+          builds = [
+              ("research", False, "research-off.dex"),
+              ("research", True, "research-on.dex"),
+              ("personal", True, "personal-on.dex"),
+              ("practice", True, "practice-on.dex"),
+          ]
+          for flavor, enabled, name in builds:
+              output = Path("build/static-http") / name
               result = build_bridge_dex(
-                  flavor="research",
+                  flavor=flavor,
                   enabled=enabled,
-                  output=Path("build/static-http") / name,
+                  output=output,
                   d8=str(d8),
                   android_jar=str(android_jar),
                   root=Path("."),
               )
               assert result["dex_size"] > 0
+              payload = output.read_bytes()
+              if flavor in {"personal", "practice"}:
+                  assert b"KNEEKURA_STATIC_HTTP" not in payload
+                  assert b"jp.kn.trace.battlecats" not in payload
           PY
+
+      - name: Audit shipping research boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m tools.base_mod.verify_shipping_boundary             --root .             --output build/shipping-boundary-repository.json
 
       - name: Validate Windows smoke runner syntax
         shell: pwsh
