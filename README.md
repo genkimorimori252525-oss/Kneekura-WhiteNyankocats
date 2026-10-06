@@ -78,3 +78,27 @@ The real JP 15.7.1 audit now reports **879/882 strict catalog rows complete**. T
 - `docs/foundation/android-export-15.7.1.md`
 
 The exact original logical canvas size, simulation tick rate, and internal data meanings remain evidence-driven until measured.
+
+## Android playable-stage checkpoint
+
+The Android runtime now has a data-driven stage path in addition to the 882-unit/MAX-profile importer.
+
+Direct inspection of the verified JP 15.7.1 InstallPack establishes:
+
+- DataLocal: 8,955 entries.
+- Concrete supported stage-definition files in DataLocal: 6,355.
+- Stories of Legend (RN): 324 stage files.
+- Uncanny Legends (RNA): 286.
+- Zero Legends (RND): 217.
+- Regular/special event (RS): 1,215.
+- Collaboration (RC): 847.
+- Collaboration gauntlet (RCA): 459.
+- Gauntlet (RA): 1,147.
+- Tower (RV): 260.
+- Main-story Into the Future (W): 144 and Cats of the Cosmos (Space): 146, plus 57 numeric main-story stage files.
+
+Map_option.csv in the same exact export retains named Crazed/Manic maps and historical collaboration maps, including Madoka Magica, Evangelion, Fate/聖杯戦争, Hatsune Miku, Ranma 1/2 and Street Fighter entries.
+
+The Android importer reads exact stage width/base HP, enemy spawn ids/counts/timing, base-HP triggers, boss flags and magnification into a local StageDefinition catalog. The current 0.2 stage alpha can select one of those imported definitions and enter a primitive 30-tick battle simulation with base win/loss.
+
+This is a checkpoint, not a claim of full Battle Cats battle compatibility. Exact abilities, KB state transitions, money/worker economy, restrictions/rewards and original sprite/model/animation playback remain later compatibility layers. Exact imported stage CSV data always outranks community reconstructions.
