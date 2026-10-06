@@ -97,7 +97,17 @@ def _find_d8(explicit: str | None = None) -> str:
                     candidates.append(path)
     if not candidates:
         raise FileNotFoundError("d8 not found in PATH or Android SDK build-tools")
-    return str(sorted(candidates)[-1])
+
+    def version_key(path: Path) -> tuple[int, ...]:
+        parts = []
+        for token in path.parent.name.split("."):
+            try:
+                parts.append(int(token))
+            except ValueError:
+                parts.append(0)
+        return tuple(parts)
+
+    return str(max(candidates, key=version_key))
 
 
 def _find_android_jar(explicit: str | None = None) -> Path:
@@ -124,7 +134,17 @@ def _find_android_jar(explicit: str | None = None) -> Path:
                 candidates.append(jar)
     if not candidates:
         raise FileNotFoundError("android.jar not found in Android SDK platforms")
-    return sorted(candidates)[-1].resolve()
+
+    def api_key(path: Path) -> int:
+        name = path.parent.name
+        if name.startswith("android-"):
+            try:
+                return int(name.split("-", 1)[1])
+            except ValueError:
+                return -1
+        return -1
+
+    return max(candidates, key=api_key).resolve()
 
 
 def build_bridge_dex(
@@ -202,10 +222,19 @@ def build_bridge_dex(
         if not class_files:
             raise RuntimeError("javac produced no bridge classes")
 
+        stub_jar = temp / "battlecats-compile-stub.jar"
+        with zipfile.ZipFile(stub_jar, "w", zipfile.ZIP_DEFLATED) as archive:
+            for class_file in sorted(stub_classes.rglob("*.class")):
+                archive.write(
+                    class_file,
+                    class_file.relative_to(stub_classes).as_posix(),
+                )
+
         _run([
             d8_bin,
             "--min-api", "24",
             "--lib", str(android_jar_path),
+            "--lib", str(stub_jar),
             "--output", str(dex_out),
             *class_files,
         ])
