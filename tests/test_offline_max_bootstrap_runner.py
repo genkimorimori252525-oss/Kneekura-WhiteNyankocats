@@ -48,7 +48,8 @@ class OfflineMaxBootstrapRunnerTest(unittest.TestCase):
         text = BOOTSTRAP.read_text(encoding="utf-8")
         self.assertIn("post-restart-max-verification.json", text)
         self.assertIn("tools.base_mod.verify_offline_max_save", text)
-        self.assertIn("Post-restart SAVE_DATA no longer satisfies the MAX contract", text)
+        self.assertIn("--allow-runtime-rewrite", text)
+        self.assertIn("failed even the stable-prefix runtime verification", text)
 
 
 if __name__ == "__main__":
