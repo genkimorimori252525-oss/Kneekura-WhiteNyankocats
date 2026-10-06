@@ -42,3 +42,10 @@ def test_offline_profile_probe_creates_independent_rollback_copy():
     assert '".rollback"' in text
     assert "rollback_sha256" in text
     assert "Rollback copy hash mismatch" in text
+
+
+def test_offline_profile_probe_runs_readonly_save_inspection():
+    text = SCRIPT.read_text(encoding="utf-8")
+    assert "tools.base_mod.inspect_save_data" in text
+    assert "SAVE_DATA-inspection.json" in text
+    assert "save_inspection_generated" in text
