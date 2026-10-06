@@ -228,7 +228,6 @@ jobs:
           cp docs/evidence/offline-profile-unit-selection-jp15.7.1.json build/patch-kit/docs/evidence/
           cp docs/evidence/offline-profile-device-baseline-probe-jp15.7.1.json build/patch-kit/docs/evidence/
           cp docs/evidence/offline-profile-static-map-jp15.7.1.* build/patch-kit/docs/evidence/
-          cp docs/evidence/offline-profile-unit-selection-jp15.7.1.json build/patch-kit/docs/evidence/
           cp docs/evidence/loginbg-019-server-manifest-corroboration.md build/patch-kit/docs/evidence/
           cp docs/research/offline-profile-community-prior-art.md build/patch-kit/docs/research/
 
@@ -289,6 +288,18 @@ jobs:
 
           Offline-profile read-only device probe:
             powershell -ExecutionPolicy Bypass -File .\tools\base_mod\run_offline_profile_probe.ps1
+
+          Offline MAX one-time bootstrap (research package only):
+            1. Disable Wi-Fi and mobile data on the Android device.
+            2. Run:
+               powershell -ExecutionPolicy Bypass -File .\tools\base_mod\run_offline_max_bootstrap.ps1
+            3. The runner pulls an exact pre-apply rollback copy, builds the
+               pinned candidate, verifies staged/installed SHA-256, checks the
+               original UI twice, and writes a sentinel so later progress is
+               never overwritten by the bootstrap.
+
+          Offline MAX rollback:
+            powershell -ExecutionPolicy Bypass -File .\tools\base_mod\run_offline_max_rollback.ps1
 
           Supply your AArch64 libfrida-gadget.so, then build:
             python -m tools.base_mod.build_owned_research_trace \
