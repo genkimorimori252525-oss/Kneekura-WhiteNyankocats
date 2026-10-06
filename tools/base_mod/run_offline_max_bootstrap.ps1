@@ -210,6 +210,7 @@ if ($LASTEXITCODE -ne 0) {
     Write-Host "Post-restart SAVE_DATA failed even the stable-prefix runtime verification; rollback completed."
     exit 5
 }
+$postRestartVerificationObject = Get-Content -LiteralPath $postRestartVerification -Raw | ConvertFrom-Json
 
 $sentinelLocal = Join-Path $root "KNEEKURA_OFFLINE_MAX_BOOTSTRAP.json"
 $result = [ordered]@{
@@ -221,6 +222,8 @@ $result = [ordered]@{
     installed_sha256_before_launch = $installedSha
     post_restart_save_sha256 = $postRestartSha
     post_restart_max_verification = $postRestartVerification
+    post_restart_verification_level = $postRestartVerificationObject.verification_level
+    post_restart_layout_profile = $postRestartVerificationObject.layout_profile
     post_restart_size = (Get-Item -LiteralPath $postRestart).Length
     post_restart_runtime_rewrite_allowed = $true
     first_launch_original_ui_ok = $true
