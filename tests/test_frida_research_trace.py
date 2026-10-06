@@ -10,6 +10,7 @@ class FridaResearchTraceTests(unittest.TestCase):
         source = (
             ROOT / "research/frida/trace_service_bridge.js"
         ).read_text(encoding="utf-8")
+        self.assertIn("import Java from 'frida-java-bridge';", source)
         self.assertIn("overload.call(receiver, ...originalArgs)", source)
         self.assertIn("newHttpRequest", source)
         self.assertIn("isNetworkAvailable", source)
@@ -25,6 +26,9 @@ class FridaResearchTraceTests(unittest.TestCase):
         self.assertIn("keys: keys", source)
         self.assertNotIn("value.array()", source)
         self.assertNotIn("entrySet()", source)
+        self.assertNotIn("send(payload)", source)
+        self.assertIn("script_loaded", source)
+        self.assertIn("trace_setup_error", source)
         self.assertIn("?<redacted>", source)
         self.assertIn("staticMethod: true", source)
 
