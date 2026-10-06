@@ -39,6 +39,22 @@ class BootSmokeContractTests(unittest.TestCase):
             self.assertEqual(diff["added"], [])
             self.assertEqual(diff["removed"], [])
 
+    def test_exact_source_workflow_is_manual_only(self) -> None:
+        workflow = (
+            ROOT / ".github/workflows/build-base-preserving-smoke.yml"
+        ).read_text(encoding="utf-8")
+        self.assertIn("workflow_dispatch:", workflow)
+        self.assertNotIn('branches:\n      - "jolly/**"', workflow)
+        self.assertIn("KNEEKURA_SOURCE_TOKEN", workflow)
+
+    def test_patch_kit_workflow_contains_no_source_download(self) -> None:
+        workflow = (
+            ROOT / ".github/workflows/build-base-preserving-patch-kit.yml"
+        ).read_text(encoding="utf-8")
+        self.assertIn("libkneekura.so", workflow)
+        self.assertIn("build_owned_boot_smoke", workflow)
+        self.assertNotIn("releases/assets", workflow)
+
     def test_product_workflow_does_not_reference_harness_activity(self) -> None:
         workflow = (
             ROOT / ".github/workflows/build-base-preserving-smoke.yml"

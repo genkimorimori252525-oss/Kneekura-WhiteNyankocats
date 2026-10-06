@@ -1,18 +1,6 @@
 name: Build base-preserving boot smoke
 
 on:
-  push:
-    branches:
-      - "jolly/**"
-    paths:
-      - "tools/base_mod/extract_owned_splits.py"
-      - "tools/base_mod/package_flavor.py"
-      - "tools/base_mod/inject_shim.py"
-      - "tools/base_mod/repack.py"
-      - "tools/base_mod/verify_parity.py"
-      - "native/kneekura-shim/**"
-      - "requirements-patching.txt"
-      - ".github/workflows/build-base-preserving-smoke.yml"
   workflow_dispatch:
 
 permissions:
@@ -54,13 +42,24 @@ jobs:
 
       - name: Download exact user-owned draft-release export
         env:
-          GH_TOKEN: ${{ github.token }}
+          SOURCE_TOKEN: ${{ secrets.KNEEKURA_SOURCE_TOKEN }}
           ASSET_ID: "614397353"
           EXPECTED_SHA256: "38c3bbb8d2cf2101793c9462617d4293e19fc99588b6655fd40299fd61a0ef56"
         shell: bash
         run: |
           set -euo pipefail
-          curl -L --fail             -H "Authorization: Bearer $GH_TOKEN"             -H "Accept: application/octet-stream"             -H "X-GitHub-Api-Version: 2022-11-28"             "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/assets/$ASSET_ID"             -o build/android-export.zip
+          if [ -z "$SOURCE_TOKEN" ]; then
+            echo "::error::KNEEKURA_SOURCE_TOKEN is required for this manual exact-source workflow."
+            echo "::error::GitHub Actions GITHUB_TOKEN cannot reliably read this private draft-release asset."
+            echo "::error::Use the source-free patch-kit workflow and build locally if no token is configured."
+            exit 2
+          fi
+          curl -L --fail \
+            -H "Authorization: Bearer $SOURCE_TOKEN" \
+            -H "Accept: application/octet-stream" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/assets/$ASSET_ID" \
+            -o build/android-export.zip
           actual="$(sha256sum build/android-export.zip | awk '{print $1}')"
           test "$actual" = "$EXPECTED_SHA256"
 
