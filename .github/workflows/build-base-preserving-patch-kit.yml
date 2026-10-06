@@ -13,6 +13,7 @@ on:
       - "docs/architecture/package-flavor-contract.md"
       - "docs/architecture/design-philosophy.md"
       - "docs/architecture/phase-c-hook-handoff.md"
+      - "docs/architecture/phase-c-device-trace-runbook.md"
       - "docs/references/native-service-map-jp15.7.1.*"
       - "docs/references/hook-candidate-matrix-jp15.7.1.*"
       - "docs/evidence/myactivity-service-methods-jp15.7.1.json"
@@ -86,6 +87,7 @@ jobs:
           cp docs/architecture/package-flavor-contract.md build/patch-kit/docs/architecture/
           cp docs/architecture/design-philosophy.md build/patch-kit/docs/architecture/
           cp docs/architecture/phase-c-hook-handoff.md build/patch-kit/docs/architecture/
+          cp docs/architecture/phase-c-device-trace-runbook.md build/patch-kit/docs/architecture/
 
           cp docs/references/native-service-map-jp15.7.1.* build/patch-kit/docs/references/
           cp docs/references/hook-candidate-matrix-jp15.7.1.* build/patch-kit/docs/references/
@@ -141,8 +143,9 @@ jobs:
               --output research-out
 
           The research builder never downloads Frida and is separate from the
-          Personal/Practice product paths. TRACE-INSTRUCTIONS.txt explains the
-          observation run and trace summarizer.
+          Personal/Practice product paths. TRACE-INSTRUCTIONS.txt and
+          docs/architecture/phase-c-device-trace-runbook.md explain the
+          normal/airplane observation runs and trace summarizer.
 
           research/frida/trace_service_bridge.js is observation-only and must
           never ship in Personal or Practice.
