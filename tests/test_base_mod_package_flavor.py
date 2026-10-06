@@ -87,6 +87,15 @@ class PackageFlavorTests(unittest.TestCase):
                 len(ORIGINAL_PACKAGE.encode("utf-8")),
             )
 
+    def test_research_flavor_is_separate_and_equal_length(self) -> None:
+        research = FLAVOR_PACKAGES["research"]
+        self.assertEqual(research, "jp.kn.trace.battlecats")
+        self.assertEqual(len(research), len(ORIGINAL_PACKAGE))
+        self.assertNotIn(research, {
+            FLAVOR_PACKAGES["personal"],
+            FLAVOR_PACKAGES["practice"],
+        })
+
     def test_axml_patch_does_not_rename_launcher_namespace(self) -> None:
         personal = FLAVOR_PACKAGES["personal"]
         source = _fake_axml(
