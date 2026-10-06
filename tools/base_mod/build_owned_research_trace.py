@@ -166,7 +166,7 @@ def main() -> int:
     parser.add_argument(
         "--trace-script",
         type=Path,
-        default=Path("research/frida/trace_service_bridge.js"),
+        default=Path("research/frida/trace_service_bridge.bundle.js"),
     )
     parser.add_argument("--keystore", required=True, type=Path)
     parser.add_argument("--alias", required=True)
