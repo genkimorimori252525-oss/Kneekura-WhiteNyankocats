@@ -10,6 +10,11 @@ on:
       - "docs/architecture/base-preserving-boot-smoke.md"
       - "docs/architecture/package-flavor-contract.md"
       - "docs/architecture/design-philosophy.md"
+      - "docs/architecture/phase-c-hook-handoff.md"
+      - "docs/references/native-service-map-jp15.7.1.*"
+      - "docs/references/hook-candidate-matrix-jp15.7.1.*"
+      - "docs/evidence/myactivity-service-methods-jp15.7.1.json"
+      - "research/frida/**"
       - "requirements-patching.txt"
       - ".github/workflows/build-base-preserving-patch-kit.yml"
   workflow_dispatch:
@@ -59,12 +64,20 @@ jobs:
           set -euo pipefail
           mkdir -p build/patch-kit/tools/base_mod
           mkdir -p build/patch-kit/docs/architecture
+          mkdir -p build/patch-kit/docs/references
+          mkdir -p build/patch-kit/docs/evidence
+          mkdir -p build/patch-kit/research/frida
           cp -a tools/base_mod/*.py build/patch-kit/tools/base_mod/
           cp requirements-patching.txt build/patch-kit/
           cp build/shim/libkneekura.so build/patch-kit/
           cp docs/architecture/base-preserving-boot-smoke.md build/patch-kit/docs/architecture/
           cp docs/architecture/package-flavor-contract.md build/patch-kit/docs/architecture/
           cp docs/architecture/design-philosophy.md build/patch-kit/docs/architecture/
+          cp docs/architecture/phase-c-hook-handoff.md build/patch-kit/docs/architecture/
+          cp docs/references/native-service-map-jp15.7.1.* build/patch-kit/docs/references/
+          cp docs/references/hook-candidate-matrix-jp15.7.1.* build/patch-kit/docs/references/
+          cp docs/evidence/myactivity-service-methods-jp15.7.1.json build/patch-kit/docs/evidence/
+          cp research/frida/* build/patch-kit/research/frida/
           cat > build/patch-kit/README-FIRST.txt <<'EOF'
           Kneekura base-preserving JP 15.7.1 patch kit
 
@@ -91,6 +104,14 @@ jobs:
               --output out
 
           Practice Clean boot smoke: change --flavor personal to --flavor practice.
+
+          Disposable Phase-C research package:
+            use --flavor research
+            package = jp.kn.trace.battlecats
+
+          research/frida/trace_service_bridge.js is observation-only and is
+          included for the first network/request lifecycle trace.  It is NOT
+          injected automatically and must never ship in Personal or Practice.
 
           The generated signed-splits directory includes INSTALL-SMOKE.txt and
           parity-report.json.  Do not proceed to gameplay-feature patches unless
