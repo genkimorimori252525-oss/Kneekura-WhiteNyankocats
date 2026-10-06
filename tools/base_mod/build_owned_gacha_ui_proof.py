@@ -48,6 +48,8 @@ from tools.base_mod.verify_gacha_ui_data_proof import verify_gacha_ui_data_proof
 
 
 EXPECTED_NEW_SET_ID = 1089
+EXPECTED_PROOF_UNITS = [37, 30, 34]
+EXPECTED_CLONE_OPTION_SET = 49
 PROOF_POOL_SIZE = 3
 
 
@@ -113,6 +115,16 @@ def build_owned_gacha_ui_proof(
         )
     if prototype_ledger.get("prototype_pool_size") != PROOF_POOL_SIZE:
         raise ValueError("tiny proof pool size drift")
+    if prototype_ledger.get("prototype_unit_ids") != EXPECTED_PROOF_UNITS:
+        raise ValueError(
+            "exact JP 15.7.1 deterministic proof-unit selection drift: "
+            f"{prototype_ledger.get('prototype_unit_ids')}"
+        )
+    if prototype_ledger.get("clone_option_set") != EXPECTED_CLONE_OPTION_SET:
+        raise ValueError(
+            "exact JP 15.7.1 visible option clone drift: "
+            f"{prototype_ledger.get('clone_option_set')}"
+        )
     if prototype_ledger.get("original_rows_replaced") is not False:
         raise ValueError("prototype is no longer append-only")
     if prototype_ledger.get("rarity_probability_vector_defined") is not False:
