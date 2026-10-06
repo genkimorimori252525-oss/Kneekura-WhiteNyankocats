@@ -10,7 +10,7 @@ import zipfile
 
 from Crypto.Cipher import AES
 
-from tools.audit_unit_assets import build_audit
+from tools.audit_unit_assets import UnitBuyRow, build_audit, required_form_count
 from tools.battlecats_pack import BLOCK_SIZE
 
 
@@ -125,6 +125,42 @@ def make_export(path: pathlib.Path) -> None:
 
 
 class UnitAssetAuditTests(unittest.TestCase):
+    def test_required_form_count_ignores_placeholder_stat_rows(self) -> None:
+        ordinary = UnitBuyRow(
+            position_order=100,
+            tf_id=0,
+            uf_id=0,
+            egg_val=-1,
+            egg_id=-1,
+        )
+        true_form = UnitBuyRow(
+            position_order=100,
+            tf_id=15001,
+            uf_id=0,
+            egg_val=-1,
+            egg_id=-1,
+        )
+        ultra_form = UnitBuyRow(
+            position_order=100,
+            tf_id=15001,
+            uf_id=16001,
+            egg_val=-1,
+            egg_id=-1,
+        )
+        internal = UnitBuyRow(
+            position_order=-1,
+            tf_id=0,
+            uf_id=0,
+            egg_val=-1,
+            egg_id=-1,
+        )
+
+        self.assertEqual(required_form_count(1, ordinary), 1)
+        self.assertEqual(required_form_count(3, ordinary), 2)
+        self.assertEqual(required_form_count(3, true_form), 3)
+        self.assertEqual(required_form_count(4, ultra_form), 4)
+        self.assertEqual(required_form_count(3, internal), 3)
+
     def test_off_by_one_server_merge_and_internal_motion_policy(self) -> None:
         with tempfile.TemporaryDirectory() as temp_name:
             temp = pathlib.Path(temp_name)
