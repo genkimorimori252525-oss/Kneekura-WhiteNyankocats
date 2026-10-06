@@ -9,9 +9,6 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
-$ExpectedBaselineSha256 = "cad00e84f3d64910b623b8a89b57ae1a37e8947554f4b418f50efa1c6bdc1d3c"
-$ExpectedCandidateSha256 = "0f5cbdadf2536f05af7748f7696ca93233dfb01d80dfe98a17da0fd5e6cf65e7"
-
 function Resolve-Adb {
     param([string]$Explicit)
     if ($Explicit) {
@@ -76,7 +73,15 @@ function Push-Checked {
 }
 
 function Restore-Baseline {
-    param([string]$AdbPath, [string]$DeviceId, [string]$PackageName, [string]$RemoteRoot, [string]$Backup, [string]$VerifyDir)
+    param(
+        [string]$AdbPath,
+        [string]$DeviceId,
+        [string]$PackageName,
+        [string]$RemoteRoot,
+        [string]$Backup,
+        [string]$ExpectedRollbackSha256,
+        [string]$VerifyDir
+    )
     Write-Host "Rolling back the exact pre-apply SAVE_DATA..." -ForegroundColor Yellow
     & $AdbPath -s $DeviceId shell am force-stop $PackageName 2>$null | Out-Null
     $rollbackTemp = "$RemoteRoot/SAVE_DATA.kneekura-rollback"
@@ -86,7 +91,9 @@ function Restore-Baseline {
     $verify = Join-Path $VerifyDir "rollback-verify-SAVE_DATA"
     Pull-Checked -AdbPath $AdbPath -DeviceId $DeviceId -Remote "$RemoteRoot/SAVE_DATA" -Local $verify
     $rollbackSha = Get-Sha256 -Path $verify
-    if ($rollbackSha -ne $ExpectedBaselineSha256) { throw "Rollback verification failed: $rollbackSha" }
+    if ($rollbackSha -ne $ExpectedRollbackSha256) {
+        throw "Rollback verification failed: $rollbackSha != $ExpectedRollbackSha256"
+    }
     & $AdbPath -s $DeviceId shell "rm -f '$RemoteRoot/KNEEKURA_OFFLINE_MAX_BOOTSTRAP.json'" 2>$null | Out-Null
     Write-Host "Rollback verified." -ForegroundColor Green
 }
@@ -120,9 +127,13 @@ Write-Host "[2/7] Pulling an immutable pre-apply device backup..."
 $backup = Join-Path $root "pre-apply-device-SAVE_DATA"
 Pull-Checked -AdbPath $adbPath -DeviceId $deviceId -Remote $remoteSave -Local $backup
 $backupSha = Get-Sha256 -Path $backup
-if ($backupSha -ne $ExpectedBaselineSha256) {
-    throw "Current device SAVE_DATA is not the approved exact baseline. Expected: $ExpectedBaselineSha256 Actual: $backupSha. No device file was modified."
+$baselineVerification = Join-Path $root "pre-apply-baseline-verification.json"
+& python -m tools.base_mod.verify_offline_baseline $backup --output $baselineVerification | Out-Host
+if ($LASTEXITCODE -ne 0) {
+    throw "Current device SAVE_DATA is not an approved JP 15.7.1 clean baseline. No device file was modified."
 }
+$baselineVerificationObject = Get-Content -LiteralPath $baselineVerification -Raw | ConvertFrom-Json
+
 $rollbackCopy = Join-Path $root "pre-apply-device-SAVE_DATA.rollback"
 Copy-Item -LiteralPath $backup -Destination $rollbackCopy -Force
 if ((Get-Sha256 -Path $rollbackCopy) -ne $backupSha) { throw "Local rollback copy hash mismatch" }
@@ -133,7 +144,12 @@ $report = Join-Path $root "offline-max-build-report.json"
 & python -m tools.base_mod.build_offline_max_save $backup $exportPath --output $candidate --report $report | Out-Host
 if ($LASTEXITCODE -ne 0) { throw "Offline MAX SAVE_DATA build failed" }
 $candidateSha = Get-Sha256 -Path $candidate
-if ($candidateSha -ne $ExpectedCandidateSha256) { throw "Candidate SHA-256 mismatch: $candidateSha" }
+
+$candidateVerification = Join-Path $root "offline-max-candidate-verification.json"
+& python -m tools.base_mod.verify_offline_max_save $candidate $exportPath --output $candidateVerification | Out-Host
+if ($LASTEXITCODE -ne 0) {
+    throw "Generated candidate failed full semantic MAX verification"
+}
 
 $inspection = Join-Path $root "offline-max-candidate-inspection.json"
 & python -m tools.base_mod.inspect_save_data $candidate --output $inspection | Out-Host
@@ -162,7 +178,7 @@ Push-Checked -AdbPath $adbPath -DeviceId $deviceId -Local $rollbackCopy -Remote 
 Push-Checked -AdbPath $adbPath -DeviceId $deviceId -Local $candidate -Remote $remoteTemp
 $stageVerify = Join-Path $root "staged-candidate-verify"
 Pull-Checked -AdbPath $adbPath -DeviceId $deviceId -Remote $remoteTemp -Local $stageVerify
-if ((Get-Sha256 -Path $stageVerify) -ne $ExpectedCandidateSha256) {
+if ((Get-Sha256 -Path $stageVerify) -ne $candidateSha) {
     throw "Staged candidate verification failed; original SAVE_DATA is still untouched"
 }
 
@@ -172,8 +188,8 @@ if ($LASTEXITCODE -ne 0) { throw "Failed to replace research SAVE_DATA; remote b
 $installedVerify = Join-Path $root "installed-candidate-verify"
 Pull-Checked -AdbPath $adbPath -DeviceId $deviceId -Remote $remoteSave -Local $installedVerify
 $installedSha = Get-Sha256 -Path $installedVerify
-if ($installedSha -ne $ExpectedCandidateSha256) {
-    Restore-Baseline -AdbPath $adbPath -DeviceId $deviceId -PackageName $Package -RemoteRoot $remoteRoot -Backup $rollbackCopy -VerifyDir $root
+if ($installedSha -ne $candidateSha) {
+    Restore-Baseline -AdbPath $adbPath -DeviceId $deviceId -PackageName $Package -RemoteRoot $remoteRoot -Backup $rollbackCopy -ExpectedRollbackSha256 $backupSha -VerifyDir $root
     throw "Installed SAVE_DATA hash mismatch; rollback completed"
 }
 
@@ -182,7 +198,7 @@ Write-Host "[6/7] Launching original Battle Cats scene with the candidate..."
 Start-Sleep -Seconds 8
 $firstOk = (Read-Host "Did the original Battle Cats UI open normally without a save/data-read error? [y/n]").Trim().ToLowerInvariant()
 if ($firstOk -notin @("y", "yes")) {
-    Restore-Baseline -AdbPath $adbPath -DeviceId $deviceId -PackageName $Package -RemoteRoot $remoteRoot -Backup $rollbackCopy -VerifyDir $root
+    Restore-Baseline -AdbPath $adbPath -DeviceId $deviceId -PackageName $Package -RemoteRoot $remoteRoot -Backup $rollbackCopy -ExpectedRollbackSha256 $backupSha -VerifyDir $root
     Write-Host "Candidate rejected by manual UI check; rollback completed."
     exit 3
 }
@@ -194,7 +210,7 @@ Start-Sleep -Seconds 2
 Start-Sleep -Seconds 8
 $secondOk = (Read-Host "After the restart, did the original UI still open normally with the MAX profile intact? [y/n]").Trim().ToLowerInvariant()
 if ($secondOk -notin @("y", "yes")) {
-    Restore-Baseline -AdbPath $adbPath -DeviceId $deviceId -PackageName $Package -RemoteRoot $remoteRoot -Backup $rollbackCopy -VerifyDir $root
+    Restore-Baseline -AdbPath $adbPath -DeviceId $deviceId -PackageName $Package -RemoteRoot $remoteRoot -Backup $rollbackCopy -ExpectedRollbackSha256 $backupSha -VerifyDir $root
     Write-Host "Restart verification failed; rollback completed."
     exit 4
 }
@@ -206,7 +222,7 @@ $postRestartSha = Get-Sha256 -Path $postRestart
 $postRestartVerification = Join-Path $root "post-restart-max-verification.json"
 & python -m tools.base_mod.verify_offline_max_save $postRestart $exportPath --output $postRestartVerification --allow-runtime-rewrite | Out-Host
 if ($LASTEXITCODE -ne 0) {
-    Restore-Baseline -AdbPath $adbPath -DeviceId $deviceId -PackageName $Package -RemoteRoot $remoteRoot -Backup $rollbackCopy -VerifyDir $root
+    Restore-Baseline -AdbPath $adbPath -DeviceId $deviceId -PackageName $Package -RemoteRoot $remoteRoot -Backup $rollbackCopy -ExpectedRollbackSha256 $backupSha -VerifyDir $root
     Write-Host "Post-restart SAVE_DATA failed even the stable-prefix runtime verification; rollback completed."
     exit 5
 }
@@ -217,8 +233,11 @@ $result = [ordered]@{
     schema_version = 1
     mode = "offline-max-bootstrap-runtime-proof"
     package = $Package
-    baseline_sha256 = $ExpectedBaselineSha256
-    candidate_sha256 = $ExpectedCandidateSha256
+    baseline_sha256 = $backupSha
+    baseline_verification = $baselineVerification
+    baseline_matches_original_capture = $baselineVerificationObject.matches_original_capture_sha256
+    candidate_sha256 = $candidateSha
+    candidate_verification = $candidateVerification
     installed_sha256_before_launch = $installedSha
     post_restart_save_sha256 = $postRestartSha
     post_restart_max_verification = $postRestartVerification
