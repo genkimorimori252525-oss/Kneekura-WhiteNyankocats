@@ -1,6 +1,6 @@
 package jp.co.ponos.battlecats;
 
-import androidx.appcompat.app.AppCompatActivity;
+import android.app.Activity;
 
 import java.nio.ByteBuffer;
 import java.util.HashMap;
@@ -11,7 +11,7 @@ import java.util.HashMap;
  * This class is never packaged. It exists only so javac can compile the
  * flavor-specific subclass that is injected as an additional DEX.
  */
-public class MyActivity extends AppCompatActivity {
+public class MyActivity extends Activity {
     public int newHttpRequest(
             String method,
             String requestUrl,
