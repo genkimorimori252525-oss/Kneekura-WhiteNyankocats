@@ -17,6 +17,7 @@ on:
       - "docs/architecture/phase-c-device-trace-runbook.md"
       - "docs/architecture/phase-c-static-http-bridge.md"
       - "docs/architecture/phase-c-research-preflight.md"
+      - "docs/architecture/phase-c-gacha-original-ui-proof.md"
       - "docs/references/native-service-map-jp15.7.1.*"
       - "docs/references/hook-candidate-matrix-jp15.7.1.*"
       - "docs/evidence/myactivity-service-methods-jp15.7.1.json"
@@ -160,6 +161,7 @@ jobs:
           cp docs/architecture/phase-c-device-trace-runbook.md build/patch-kit/docs/architecture/
           cp docs/architecture/phase-c-static-http-bridge.md build/patch-kit/docs/architecture/
           cp docs/architecture/phase-c-research-preflight.md build/patch-kit/docs/architecture/
+          cp docs/architecture/phase-c-gacha-original-ui-proof.md build/patch-kit/docs/architecture/
 
           cp docs/references/native-service-map-jp15.7.1.* build/patch-kit/docs/references/
           cp docs/references/hook-candidate-matrix-jp15.7.1.* build/patch-kit/docs/references/
@@ -260,6 +262,13 @@ jobs:
 
           Repository preflight:
             python -m tools.base_mod.phase_c_preflight               --root .               --output phase-c-preflight.json
+
+          Build the tiny original-UI Rare Gacha data proof:
+            python -m tools.base_mod.build_owned_gacha_ui_proof               /path/to/nyanko_battlecats_2026-10-06.zip               --shim libkneekura.so               --keystore private/kneekura.p12               --alias kneekura               --storepass YOUR_PASSWORD               --output gacha-ui-proof-out
+
+          The proof appends set 1089, preserves all existing rows, clones one
+          existing BannerON row, defines no new rate vector, and leaves the
+          live visibility schedule unresolved by design.
 
           Do not expand gacha/event behavior beyond the preflight gates until
           one tiny original-format data proof is visible in the unchanged
