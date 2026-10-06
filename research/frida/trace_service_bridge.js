@@ -9,14 +9,10 @@ import Java from 'frida-java-bridge';
  * calls the original implementation unchanged.
  */
 
-console.log('KNEEKURA_TRACE ' + JSON.stringify({
-    kind: 'script_loaded',
-    source: 'kneekura-jp15.7.1-service-trace',
-    ts_ms: Date.now()
-}));
-
 Java.perform(function () {
+    let AndroidLog = null;
     try {
+        AndroidLog = Java.use('android.util.Log');
     const CLASS_NAME = 'jp.co.ponos.battlecats.MyActivity';
     const MyActivity = Java.use(CLASS_NAME);
 
@@ -91,8 +87,17 @@ Java.perform(function () {
     function emit(payload) {
         payload.source = 'kneekura-jp15.7.1-service-trace';
         payload.ts_ms = Date.now();
-        console.log('KNEEKURA_TRACE ' + JSON.stringify(payload));
+        const line = 'KNEEKURA_TRACE ' + JSON.stringify(payload);
+        console.log(line);
+        if (AndroidLog !== null) {
+            AndroidLog.i('KNEEKURA_TRACE', line);
+        }
     }
+
+    emit({
+        kind: 'script_loaded',
+        note: 'Android logcat bridge active'
+    });
 
     function describeOverloads(name) {
         let method;
@@ -196,11 +201,16 @@ Java.perform(function () {
         note: 'observation only; originals called unchanged'
     });
     } catch (error) {
-        console.log('KNEEKURA_TRACE ' + JSON.stringify({
+        const payload = {
             kind: 'trace_setup_error',
             source: 'kneekura-jp15.7.1-service-trace',
             ts_ms: Date.now(),
             error: String(error)
-        }));
+        };
+        const line = 'KNEEKURA_TRACE ' + JSON.stringify(payload);
+        console.log(line);
+        if (AndroidLog !== null) {
+            AndroidLog.e('KNEEKURA_TRACE', line);
+        }
     }
 });
