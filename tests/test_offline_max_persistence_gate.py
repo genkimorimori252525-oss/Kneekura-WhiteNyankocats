@@ -17,6 +17,21 @@ class OfflineMaxPersistenceGateTest(unittest.TestCase):
         self.assertNotIn(" uninstall ", f" {text} ")
         self.assertNotIn(" pm clear ", f" {text} ")
 
+    def test_runner_stages_apks_under_ascii_only_path(self):
+        text = PERSISTENCE.read_text(encoding="utf-8")
+        self.assertIn("KneekuraAdbStage", text)
+        self.assertIn("ASCII adb staging", text)
+        self.assertIn("$stagedApks", text)
+        self.assertIn("Staged APK hash mismatch", text)
+        self.assertIn("$installArgs = @(\"-s\", $deviceId, \"install-multiple\", \"--no-streaming\", \"-r\") + $stagedApks", text)
+        self.assertNotIn("+ $apks", text)
+
+    def test_runner_captures_native_adb_stderr_without_terminating_early(self):
+        text = PERSISTENCE.read_text(encoding="utf-8")
+        self.assertIn('$ErrorActionPreference = "Continue"', text)
+        self.assertIn("$installExitCode = $LASTEXITCODE", text)
+        self.assertIn("install_exit_code=", text)
+
     def test_runner_requires_sentinel_and_verifies_before_and_after(self):
         text = PERSISTENCE.read_text(encoding="utf-8")
         self.assertIn("KNEEKURA_OFFLINE_MAX_BOOTSTRAP.json", text)
