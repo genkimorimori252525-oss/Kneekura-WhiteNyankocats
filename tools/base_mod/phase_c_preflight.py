@@ -241,10 +241,13 @@ def audit(root: Path) -> dict:
         "tools/base_mod/run_static_http_smoke.ps1",
         "tools/base_mod/build_owned_gacha_ui_proof.py",
         "tools/base_mod/verify_gacha_ui_data_proof.py",
+        "tools/base_mod/verify_shipping_profile.py",
+        "tools/base_mod/run_phase_c_final_smoke.ps1",
         "bridge/java/MyActivity.java.in",
         "docs/architecture/phase-c-static-http-bridge.md",
         "docs/architecture/phase-c-research-preflight.md",
         "docs/architecture/phase-c-gacha-original-ui-proof.md",
+        "docs/architecture/phase-c-shipping-parity.md",
         "docs/evidence/phase-c-gacha-ui-proof-jp15.7.1.json",
     ]
     missing_tools = [
@@ -295,6 +298,13 @@ def audit(root: Path) -> dict:
             "rarity_probability_vector_defined": prototype_runtime.get(
                 "rarity_probability_vector_defined"
             ),
+        },
+        "shipping_parity_gate": {
+            "personal_practice_feature_mask_default": 0,
+            "original_launcher_required": "jp.co.ponos.battlecats.MyActivity",
+            "frida_allowed": False,
+            "research_classes5_allowed": False,
+            "final_runner": "tools/base_mod/run_phase_c_final_smoke.ps1",
         },
         "original_ui_gacha_proof": {
             "target_set_id": 1089,
