@@ -75,6 +75,8 @@ jobs:
           mkdir -p build/patch-kit/research/frida
 
           cp -a tools/base_mod/*.py build/patch-kit/tools/base_mod/
+          cp tools/battlecats_pack.py build/patch-kit/tools/
+          cp tools/battlecats_source.py build/patch-kit/tools/
           cp tools/analyze_gacha_foundation.py build/patch-kit/tools/
           cp tools/analyze_login_bonus_foundation.py build/patch-kit/tools/
           cp requirements-patching.txt build/patch-kit/
