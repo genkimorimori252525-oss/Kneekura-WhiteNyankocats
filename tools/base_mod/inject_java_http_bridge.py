@@ -156,6 +156,7 @@ def build_bridge_dex(
     d8: str | None = None,
     android_jar: str | None = None,
     root: Path = Path("."),
+    use_external_files_dir: bool = False,
 ) -> dict:
     package_name = FLAVOR_PACKAGES.get(flavor)
     if package_name is None:
@@ -176,6 +177,10 @@ def build_bridge_dex(
         .replace(
             "__KNEEKURA_DEBUG_LOG__",
             "true" if flavor == "research" else "false",
+        )
+        .replace(
+            "__KNEEKURA_USE_EXTERNAL_FILES_DIR__",
+            "true" if use_external_files_dir else "false",
         )
     )
     if "__KNEEKURA_" in rendered:
@@ -255,6 +260,7 @@ def build_bridge_dex(
         "enabled": enabled,
         "dex_sha256": sha256_file(output),
         "dex_size": output.stat().st_size,
+        "use_external_files_dir": use_external_files_dir,
     }
 
 
@@ -399,6 +405,7 @@ def main() -> int:
     parser.add_argument("--d8")
     parser.add_argument("--android-jar")
     parser.add_argument("--root", type=Path, default=Path("."))
+    parser.add_argument("--use-external-files-dir", action="store_true")
     args = parser.parse_args()
 
     output = args.output.resolve()
@@ -416,6 +423,7 @@ def main() -> int:
             d8=args.d8,
             android_jar=args.android_jar,
             root=args.root,
+            use_external_files_dir=args.use_external_files_dir,
         )
 
     ledger = inject_bridge_split_set(
