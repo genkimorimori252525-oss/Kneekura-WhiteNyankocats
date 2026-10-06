@@ -30,7 +30,7 @@ class OfflineMaxBootstrapRunnerTest(unittest.TestCase):
             text,
         )
         self.assertIn(
-            "afa5ee976a85d0640244393ba8326c21a5ef5b4378228fbf85e172e28c7beb18",
+            "0f5cbdadf2536f05af7748f7696ca93233dfb01d80dfe98a17da0fd5e6cf65e7",
             text,
         )
 
@@ -44,12 +44,12 @@ class OfflineMaxBootstrapRunnerTest(unittest.TestCase):
         self.assertIn("rollback_verified = $true", text)
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
     def test_bootstrap_semantically_verifies_post_restart_save(self):
         text = BOOTSTRAP.read_text(encoding="utf-8")
         self.assertIn("post-restart-max-verification.json", text)
         self.assertIn("tools.base_mod.verify_offline_max_save", text)
         self.assertIn("Post-restart SAVE_DATA no longer satisfies the MAX contract", text)
+
+
+if __name__ == "__main__":
+    unittest.main()
