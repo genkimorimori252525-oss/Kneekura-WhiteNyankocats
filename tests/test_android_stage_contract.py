@@ -45,6 +45,7 @@ class AndroidStageContractTests(unittest.TestCase):
         self.assertIn("spawn.spawnBasePercent", source)
         self.assertIn("spawn.magnification", source)
         self.assertIn("spawn.maxEnemyCount <= 0", source)
+        self.assertIn('allCats.setText("全キャラ")', source)
 
     def test_manifest_remains_offline(self) -> None:
         manifest = (ROOT / "app/src/main/AndroidManifest.xml").read_text(encoding="utf-8")
