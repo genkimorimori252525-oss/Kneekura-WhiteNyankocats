@@ -243,6 +243,8 @@ def audit(root: Path) -> dict:
         "tools/base_mod/verify_gacha_ui_data_proof.py",
         "tools/base_mod/verify_shipping_profile.py",
         "tools/base_mod/run_phase_c_final_smoke.ps1",
+        "tools/base_mod/analyze_server_download_gate.py",
+        "tools/base_mod/cache_server_assets.py",
         "bridge/java/MyActivity.java.in",
         "docs/architecture/phase-c-static-http-bridge.md",
         "docs/architecture/phase-c-research-preflight.md",
@@ -250,6 +252,8 @@ def audit(root: Path) -> dict:
         "docs/architecture/phase-c-shipping-boundary.md",
         "tools/base_mod/verify_shipping_boundary.py",
         "docs/architecture/phase-c-shipping-parity.md",
+        "docs/evidence/phase-c-server-download-gate-jp15.7.1.json",
+        "docs/evidence/phase-c-server-download-gate-jp15.7.1.md",
         "docs/evidence/phase-c-gacha-ui-proof-jp15.7.1.json",
     ]
     missing_tools = [
@@ -314,6 +318,14 @@ def audit(root: Path) -> dict:
             "research_package": "jp.kn.trace.battlecats",
             "product_frida_allowed": False,
             "research_log_in_product_dex": False,
+        },
+        "server_asset_bootstrap_gate": {
+            "exact_download_lane_count": 35,
+            "exact_download_archive_bytes": 645599537,
+            "exact_download_archive_mib": 615.6916971206665,
+            "gacha_schedule_inference_allowed_before_ui": False,
+            "acquisition": "unchanged-original-downloader",
+            "research_external_files_dir_only": True,
         },
         "original_ui_gacha_proof": {
             "target_set_id": 1089,
