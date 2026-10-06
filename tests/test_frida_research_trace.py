@@ -6,6 +6,15 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class FridaResearchTraceTests(unittest.TestCase):
+    def test_static_response_callbacks_do_not_reflect_request_state(self) -> None:
+        source = (
+            Path(__file__).resolve().parents[1]
+            / "research/frida/trace_service_bridge.js"
+        ).read_text(encoding="utf-8")
+        self.assertIn("observeRequestState", source)
+        self.assertIn("name === 'newHttpRequest' || name === 'isNetworkAvailable'", source)
+        self.assertIn("const stateReceiver = observeRequestState ? this : null", source)
+
     def test_trace_records_non_sensitive_request_lifecycle_state(self) -> None:
         source = (
             Path(__file__).resolve().parents[1]
