@@ -14,6 +14,13 @@ extern "C" {
 #define KNEEKURA_FEATURE_LOCAL_STATE (1ull << 0)
 #define KNEEKURA_FEATURE_LOCAL_CLOCK (1ull << 1)
 #define KNEEKURA_FEATURE_PROVIDER_API (1ull << 2)
+#define KNEEKURA_FEATURE_LOCAL_EVENTS (1ull << 3)
+#define KNEEKURA_FEATURE_SUPER_GACHA (1ull << 4)
+#define KNEEKURA_FEATURE_LOGIN_BONUS (1ull << 5)
+#define KNEEKURA_FEATURE_STAGE_CATFOOD (1ull << 6)
+
+#define KNEEKURA_PROVIDER_ABI_VERSION 1u
+#define KNEEKURA_GACHA_KIND_SUPER 1u
 
 #ifndef KNEEKURA_DEFAULT_FEATURE_MASK
 #define KNEEKURA_DEFAULT_FEATURE_MASK 0ull
@@ -93,6 +100,23 @@ KNEEKURA_EXPORT int32_t kneekura_sidecar_save_atomic(
 KNEEKURA_EXPORT int32_t kneekura_sidecar_load(
         const char *path,
         KneekuraSidecarState *state);
+
+KNEEKURA_EXPORT uint32_t kneekura_provider_abi_version(void);
+KNEEKURA_EXPORT uint32_t kneekura_provider_event_visible(
+        uint32_t original_visible,
+        uint32_t local_available);
+KNEEKURA_EXPORT int32_t kneekura_provider_gacha_cost(
+        uint32_t gacha_kind,
+        uint32_t draw_count,
+        int32_t original_cost);
+KNEEKURA_EXPORT int32_t kneekura_provider_login_claim(
+        KneekuraSidecarState *state,
+        int64_t observed_epoch_day,
+        uint32_t cycle_length,
+        uint32_t *claimed_index);
+KNEEKURA_EXPORT int32_t kneekura_provider_stage_cat_food(
+        uint32_t difficulty,
+        uint32_t already_claimed);
 
 #ifdef __cplusplus
 }
