@@ -8,14 +8,14 @@ written.
 
 ## Frida Gadget compatibility
 
-`trace_service_bridge.js` is the readable source and uses the pre-Frida-17 global `Java` bridge model.
+`trace_service_bridge.js` is the readable Frida 17 module source. It explicitly imports `frida-java-bridge` and is not injected as raw JavaScript.
 
-The patch-kit CI also produces `trace_service_bridge.bundle.js`, which prepends an explicit `frida-java-bridge` import and compiles it with `frida-compile`. Use that bundled agent with current Frida 17.x Gadget.
+The patch-kit CI compiles that source with `frida-compile` into `trace_service_bridge.bundle.js`. The bundled file is the executable research agent and is the file that must be injected with current Frida 17.x Gadget.
 
 Compatibility:
 
-- Frida 17.x: use `trace_service_bridge.bundle.js`.
-- Frida 16.7.19: the raw `trace_service_bridge.js` is also valid because the Java bridge is built into the runtime.
+- Frida 17.x: inject `trace_service_bridge.bundle.js`.
+- The project no longer relies on the pre-Frida-17 implicit global `Java` bridge path.
 
 The bridge bundle is research-only and must never ship in Personal MAX or Practice Clean.
 
