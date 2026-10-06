@@ -66,10 +66,11 @@ public final class BattleCatsImporter {
                         readZipEntry(install, "assets/MapLocal.pack")
                 );
 
+                Map<Integer, String> mapNames = importMapNames(data);
                 return new GameImportResult(
                         importUnits(data, res),
                         importEnemies(data, res, map),
-                        importStages(data, res, map)
+                        importStages(data, res, map, mapNames)
                 );
             }
         } finally {
@@ -150,7 +151,30 @@ public final class BattleCatsImporter {
         return enemies;
     }
 
-    private static List<StageDefinition> importStages(Pack data, Pack res, Pack map) throws Exception {
+    private static Map<Integer, String> importMapNames(Pack data) throws Exception {
+        Map<Integer, String> names = new TreeMap<>();
+        if (!data.has("Map_option.csv")) {
+            return names;
+        }
+        for (List<String> row : csvRows(data.read("Map_option.csv"), ",", false)) {
+            int mapId = intAt(row, 0, -1);
+            if (mapId < 0 || row.size() <= 19) {
+                continue;
+            }
+            String name = cleanName(row.get(19));
+            if (!name.isEmpty() && !name.equals("＠")) {
+                names.put(mapId, name);
+            }
+        }
+        return names;
+    }
+
+    private static List<StageDefinition> importStages(
+            Pack data,
+            Pack res,
+            Pack map,
+            Map<Integer, String> mapNames
+    ) throws Exception {
         List<StageDefinition> stages = new ArrayList<>();
 
         for (String fileName : data.names()) {
@@ -195,6 +219,12 @@ public final class BattleCatsImporter {
             }
 
             String stageName = resolveStageName(address, data, res, map);
+            int absoluteMapId = absoluteMapId(address);
+            String mapName = mapNames.get(absoluteMapId);
+            String displayName = stageName;
+            if (mapName != null && !mapName.isEmpty() && !stageName.startsWith(mapName)) {
+                displayName = mapName + " / " + stageName;
+            }
             String key = address.kindKey + ":" + address.mapIndex + ":" + address.stageIndex;
             stages.add(new StageDefinition(
                     key,
@@ -202,7 +232,7 @@ public final class BattleCatsImporter {
                     address.sourcePrefix,
                     address.mapIndex,
                     address.stageIndex,
-                    stageName,
+                    displayName,
                     fileName,
                     intAt(info, 0, 6000),
                     longAt(info, 1, 100000),
@@ -244,6 +274,20 @@ public final class BattleCatsImporter {
                     Integer.parseInt(cotc.group(2)), "StageName2_ja.csv");
         }
 
+        Matcher z = Z_STAGE.matcher(fileName);
+        if (z.matches()) {
+            int mapIndex = Integer.parseInt(z.group(1));
+            int stageIndex = Integer.parseInt(z.group(2));
+            return new StageAddress(
+                    "prefix_z",
+                    mapIndex == 9 ? "フィリバスター" : "ゾンビ襲来",
+                    "Z",
+                    mapIndex,
+                    stageIndex,
+                    null
+            );
+        }
+
         Matcher generic = GENERIC_STAGE.matcher(fileName);
         if (!generic.matches()) {
             return null;
@@ -265,6 +309,68 @@ public final class BattleCatsImporter {
                 stageIndex,
                 stageNameFile
         );
+    }
+
+    private static int absoluteMapId(StageAddress address) {
+        if (address.kindKey.equals("eoc")) {
+            return 3000 + address.mapIndex;
+        }
+        if (address.kindKey.equals("itf")) {
+            return 3003 + address.mapIndex;
+        }
+        if (address.kindKey.equals("cotc")) {
+            return 3006 + address.mapIndex;
+        }
+
+        String prefix = address.sourcePrefix;
+        switch (prefix) {
+            case "RN":
+                return address.mapIndex;
+            case "RS":
+                return 1000 + address.mapIndex;
+            case "RC":
+                return 2000 + address.mapIndex;
+            case "EX":
+                return 4000 + address.mapIndex;
+            case "RT":
+                return 6000 + address.mapIndex;
+            case "RV":
+                return 7000 + address.mapIndex;
+            case "RR":
+                return 11000 + address.mapIndex;
+            case "RM":
+                return 12000 + address.mapIndex;
+            case "RNA":
+                return 13000 + address.mapIndex;
+            case "RB":
+                return 14000 + address.mapIndex;
+            case "Z":
+                if (address.mapIndex < 3) {
+                    return 20000 + address.mapIndex;
+                }
+                if (address.mapIndex < 6) {
+                    return 21000 + (address.mapIndex - 3);
+                }
+                if (address.mapIndex < 9) {
+                    return 22000 + (address.mapIndex - 6);
+                }
+                if (address.mapIndex == 9) {
+                    return 23000;
+                }
+                return -1;
+            case "RA":
+                return 24000 + address.mapIndex;
+            case "RH":
+                return 25000 + address.mapIndex;
+            case "RCA":
+                return 27000 + address.mapIndex;
+            case "RQ":
+                return 31000 + address.mapIndex;
+            case "RND":
+                return 34000 + address.mapIndex;
+            default:
+                return -1;
+        }
     }
 
     private static String categoryForPrefix(String prefix) {
