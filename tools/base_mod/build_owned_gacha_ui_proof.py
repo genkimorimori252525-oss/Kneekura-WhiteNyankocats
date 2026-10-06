@@ -44,6 +44,7 @@ from tools.base_mod.super_gacha_data_prototype import (
     build_from_export,
 )
 from tools.base_mod.verify_static_http_bridge import verify_static_http_bridge
+from tools.base_mod.verify_gacha_ui_data_proof import verify_gacha_ui_data_proof
 
 
 EXPECTED_NEW_SET_ID = 1089
@@ -178,6 +179,13 @@ def build_owned_gacha_ui_proof(
         replay_enabled=enable_backup_offline_replay,
         allow_datalocal_patch=True,
     )
+    data_proof = verify_gacha_ui_data_proof(
+        original,
+        signed,
+        expected_units=prototype_ledger["prototype_unit_ids"],
+        clone_option_set=prototype_ledger["clone_option_set"],
+        expected_set_id=EXPECTED_NEW_SET_ID,
+    )
 
     proof = {
         "schema_version": 1,
@@ -196,6 +204,8 @@ def build_owned_gacha_ui_proof(
         "original_gacha_scene_code_modified": False,
         "original_capsule_result_code_modified": False,
         "changed_datalocal_entries": sorted(replacements),
+        "data_rows_verified_append_only": data_proof["original_rows_preserved"],
+        "option_metadata_cloned": data_proof["option_metadata_cloned"],
         "frida_absent": static_parity["frida_absent"],
         "unknown_request_super_fallthrough": static_parity[
             "unknown_request_super_fallthrough"
@@ -217,6 +227,7 @@ def build_owned_gacha_ui_proof(
         "http-bridge-build-ledger.json": bridge_build,
         "http-bridge-ledger.json": bridge_ledger,
         "parity-report.json": static_parity,
+        "gacha-data-proof-report.json": data_proof,
         "gacha-ui-proof-ledger.json": proof,
     }
     for name, payload in ledgers.items():
