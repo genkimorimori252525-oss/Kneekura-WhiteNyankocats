@@ -1,8 +1,9 @@
 """Audit the repository-side Phase-C research preflight.
 
 This command never touches an APK. It verifies that the exact-version evidence,
-research-only package identity, trace harness, and data-first prototype gates all
-agree before an owner-local device trace is attempted.
+research-only package identity, trace harness, promoted static HTTP bridge,
+original login/gacha anchors, and data-first prototype gates all agree before
+the first original-UI data proof is attempted.
 """
 
 from __future__ import annotations
