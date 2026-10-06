@@ -24,6 +24,7 @@ on:
       - "docs/evidence/original-login-gacha-runtime-anchors-jp15.7.1.*"
       - "docs/evidence/login-bonus-foundation-jp15.7.1.*"
       - "docs/evidence/super-kneekura-gacha-foundation-jp15.7.1.*"
+      - "docs/evidence/phase-c-gacha-ui-proof-jp15.7.1.*"
       - "docs/evidence/loginbg-019-server-manifest-corroboration.md"
       - "research/frida/**"
       - "requirements-patching.txt"
@@ -171,6 +172,7 @@ jobs:
           cp docs/evidence/original-login-gacha-runtime-anchors-jp15.7.1.* build/patch-kit/docs/evidence/
           cp docs/evidence/login-bonus-foundation-jp15.7.1.* build/patch-kit/docs/evidence/
           cp docs/evidence/super-kneekura-gacha-foundation-jp15.7.1.* build/patch-kit/docs/evidence/
+          cp docs/evidence/phase-c-gacha-ui-proof-jp15.7.1.* build/patch-kit/docs/evidence/
           cp docs/evidence/loginbg-019-server-manifest-corroboration.md build/patch-kit/docs/evidence/
 
           cp research/frida/* build/patch-kit/research/frida/
