@@ -1,7 +1,5 @@
 import json
 
-import pytest
-
 from tools.base_mod.build_offline_profile_unit_manifest import (
     apply_asset_audit_gate,
     parse_unit_selection,
@@ -98,8 +96,12 @@ def test_asset_gate_fails_closed_on_eligible_incomplete_unit():
         "residuals": [{"asset_id": 0}],
     }
 
-    with pytest.raises(ValueError, match="asset-incomplete"):
+    try:
         apply_asset_audit_gate(manifest, audit)
+    except ValueError as exc:
+        assert "asset-incomplete" in str(exc)
+    else:
+        raise AssertionError("asset gate should fail closed")
 
 
 def test_asset_gate_accepts_hidden_residual():
