@@ -193,3 +193,26 @@ Policy:
 
 The stable fixed6 normal/airplane lifecycle capture remains the authoritative
 runtime callback evidence until a new behavior-preserving trace supersedes it.
+
+
+## Static resolution of the redacted offline header block
+
+The airplane trace intentionally recorded only that the response-header string
+had length 2. Exact `classes4.dex` analysis resolves it without exposing a
+captured header value:
+
+- `Lz22.a()` constructs `org.json.JSONObject`;
+- immediately calls `JSONObject.toString()`;
+- passes that result to `MyActivity.newResponse`;
+- passes status `0`, body `null`, final boolean `true`.
+
+The resulting header string is therefore exactly `"{}"`.
+
+The same exact DEX also confirms:
+- `a32.<init>(int,String,URL,float,HashMap,ByteBuffer,String[])`;
+- `mNextRequestHandle: int`;
+- `mRequestHandles: java.util.Map`;
+- `mGLView: android.opengl.GLSurfaceView`.
+
+This closes the remaining local-replay contract using static exact-version
+evidence rather than another device observation.
