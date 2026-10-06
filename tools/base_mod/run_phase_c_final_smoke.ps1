@@ -208,7 +208,13 @@ Write-Host "This check determines whether the original schedule already exposes 
 Write-Host ""
 
 $originalUiOk = Read-YesNo "Did the normal Battle Cats Rare Gacha screen open without a custom Kneekura screen or crash?"
-$extraBanner = Read-YesNo "Did you observe an additional/duplicated Rare Gacha banner after installing the proof?"
+$downloadGateSeen = $false
+$extraBanner = $null
+if ($originalUiOk) {
+    $extraBanner = Read-YesNo "Did you observe an additional/duplicated Rare Gacha banner after installing the proof?"
+} else {
+    $downloadGateSeen = Read-YesNo "Did the app stop at the additional game-data download screen before the Rare Gacha UI?"
+}
 
 $result = [ordered]@{
     schema_version = 1
@@ -227,7 +233,17 @@ $result = [ordered]@{
     backup_local_replay_seen = ($replay.Count -gt 0)
     original_rare_gacha_ui_opened = $originalUiOk
     appended_banner_visible = $extraBanner
-    schedule_provider_required = (-not $extraBanner)
+    additional_download_gate_seen = $downloadGateSeen
+    schedule_provider_required = if ($originalUiOk) { -not $extraBanner } else { $null }
+    runtime_gate_classification = if (-not $originalUiOk -and $downloadGateSeen) {
+        "server_asset_download_gate"
+    } elseif (-not $originalUiOk) {
+        "original_ui_not_reached"
+    } elseif (-not $extraBanner) {
+        "gacha_visibility_schedule_not_exposed"
+    } else {
+        "original_ui_set_visible"
+    }
     personal_report = $personalReport
     practice_report = $practiceReport
     gacha_proof_ledger = $proofLedger
@@ -246,6 +262,12 @@ Write-Host "Return this file:"
 Write-Host "  $resultPath"
 
 if (-not $originalUiOk) {
+    if ($downloadGateSeen) {
+        Write-Host ""
+        Write-Host "Static/data proof PASS, but the original UI is blocked by the server-asset download gate."
+        Write-Host "Do not classify this as a gacha schedule failure."
+        exit 5
+    }
     exit 3
 }
 if (-not $extraBanner) {
