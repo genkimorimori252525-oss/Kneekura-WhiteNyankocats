@@ -301,6 +301,9 @@ jobs:
             powershell -ExecutionPolicy Bypass -File .\tools\base_mod\run_offline_profile_probe.ps1
 
           Offline MAX one-time bootstrap (research package only):
+            - accepts the JP 15.7.1 semantic clean-baseline family instead of
+              pinning one volatile SHA-256; valid salted-MD5, version, layout
+              counts and first-form safety gates must still pass.
             - final candidate includes 835 eligible cats at first form, all
               configured MAX resources, all 310 exact JP 15.7.1 Talent Orb types
               at 998 each, and the exact engineer maximum of 5.
