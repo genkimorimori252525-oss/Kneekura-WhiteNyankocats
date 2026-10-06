@@ -10,7 +10,7 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
 $ExpectedBaselineSha256 = "cad00e84f3d64910b623b8a89b57ae1a37e8947554f4b418f50efa1c6bdc1d3c"
-$ExpectedCandidateSha256 = "afa5ee976a85d0640244393ba8326c21a5ef5b4378228fbf85e172e28c7beb18"
+$ExpectedCandidateSha256 = "0f5cbdadf2536f05af7748f7696ca93233dfb01d80dfe98a17da0fd5e6cf65e7"
 
 function Resolve-Adb {
     param([string]$Explicit)
