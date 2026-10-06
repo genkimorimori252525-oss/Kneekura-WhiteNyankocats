@@ -40,6 +40,10 @@ jobs:
         with:
           python-version: "3.12"
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
       - name: Install patching dependencies
         run: python -m pip install -r requirements-patching.txt
 
@@ -64,6 +68,24 @@ jobs:
             -DANDROID_PLATFORM=android-29 \
             -DCMAKE_BUILD_TYPE=Release
           cmake --build build/shim --parallel
+
+      - name: Build Frida 17 Java-bridge trace bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --package-lock=false \
+            frida-compile@19.1.0 \
+            frida-java-bridge@7.0.13
+          mkdir -p build/frida-agent
+          {
+            printf '%s\n' 'import Java from "frida-java-bridge";'
+            cat research/frida/trace_service_bridge.js
+          } > build/frida-agent/trace_service_bridge.entry.js
+          npx frida-compile \
+            build/frida-agent/trace_service_bridge.entry.js \
+            -o build/frida-agent/trace_service_bridge.bundle.js
+          test -s build/frida-agent/trace_service_bridge.bundle.js
+          grep -q 'KNEEKURA_TRACE ' build/frida-agent/trace_service_bridge.bundle.js
 
       - name: Assemble source-free local build kit
         shell: bash
@@ -100,6 +122,8 @@ jobs:
           cp docs/evidence/loginbg-019-server-manifest-corroboration.md build/patch-kit/docs/evidence/
 
           cp research/frida/* build/patch-kit/research/frida/
+          cp build/frida-agent/trace_service_bridge.bundle.js \
+            build/patch-kit/research/frida/
 
           python -m tools.base_mod.phase_c_preflight \
             --root build/patch-kit \
@@ -136,18 +160,19 @@ jobs:
           Disposable Phase-C research package:
             package = jp.kn.trace.battlecats
 
-          Phase-C raw trace compatibility pin:
-            - use Frida Gadget 16.7.19 for Android arm64
-            - asset: frida-gadget-16.7.19-android-arm64.so.xz
-            - Frida 17.x requires a bundled frida-java-bridge agent and is not
-              compatible with the raw trace_service_bridge.js in this kit
+          Phase-C trace compatibility:
+            - Frida 17.x: use the bundled
+              research/frida/trace_service_bridge.bundle.js
+            - Frida 16.7.19: the raw trace_service_bridge.js also works because
+              the Java bridge is built into the pre-17 runtime
+            - prefer the bundled agent for current Frida 17.x Gadget
 
-          Supply that AArch64 libfrida-gadget.so, then build:
+          Supply your AArch64 libfrida-gadget.so, then build:
             python -m tools.base_mod.build_owned_research_trace \
               /path/to/nyanko_battlecats_2026-10-06.zip \
               --shim libkneekura.so \
               --frida-gadget /path/to/libfrida-gadget.so \
-              --trace-script research/frida/trace_service_bridge.js \
+              --trace-script research/frida/trace_service_bridge.bundle.js \
               --keystore private/kneekura.p12 \
               --alias kneekura \
               --storepass YOUR_PASSWORD \
