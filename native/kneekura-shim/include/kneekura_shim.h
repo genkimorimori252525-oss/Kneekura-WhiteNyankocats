@@ -21,6 +21,8 @@ extern "C" {
 
 #define KNEEKURA_PROVIDER_ABI_VERSION 1u
 #define KNEEKURA_GACHA_KIND_SUPER 1u
+#define KNEEKURA_COMEBACK_TEMPLATE_ID 949u
+#define KNEEKURA_COMEBACK_CYCLE_LENGTH 7u
 
 #ifndef KNEEKURA_DEFAULT_FEATURE_MASK
 #define KNEEKURA_DEFAULT_FEATURE_MASK 0ull
@@ -109,6 +111,8 @@ KNEEKURA_EXPORT int32_t kneekura_provider_gacha_cost(
         uint32_t gacha_kind,
         uint32_t draw_count,
         int32_t original_cost);
+KNEEKURA_EXPORT uint32_t kneekura_provider_login_template_id(
+        uint32_t original_template_id);
 KNEEKURA_EXPORT int32_t kneekura_provider_login_claim(
         KneekuraSidecarState *state,
         int64_t observed_epoch_day,
