@@ -1,0 +1,27 @@
+# Battle Cats / device-derived data: local only
+local-data/
+device-export/
+extracted/
+captures/
+reports/private/
+*.apk
+*.apks
+*.xapk
+nyanko_battlecats_*.zip
+*.pack
+*.list
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Build/editor
+build/
+dist/
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
