@@ -257,12 +257,13 @@ Write-Host "[8/8] Pulling and verifying persisted Post-EoC state..."
 $postRestart = Join-Path $root "post-restart-SAVE_DATA"
 Pull-Checked -AdbPath $adbPath -DeviceId $deviceId -Remote $remoteSave -Local $postRestart
 $postRestartVerification = Join-Path $root "post-restart-verification.json"
-& python -m tools.base_mod.verify_post_eoc_save $postRestart $exportPath --output $postRestartVerification | Out-Host
+& python -m tools.base_mod.verify_post_eoc_save $postRestart $exportPath --output $postRestartVerification --allow-runtime-rewrite | Out-Host
 
 if ($LASTEXITCODE -ne 0) {
     Restore-CurrentState -AdbPath $adbPath -DeviceId $deviceId -PackageName $Package -RemoteRoot $remoteRoot -CurrentSave $currentSave -ExpectedSha $currentSha -OldSentinel $oldSentinel
     throw "Persisted Post-EoC SAVE_DATA failed semantic verification; rollback completed"
 }
+$postRestartVerificationObject = Get-Content -LiteralPath $postRestartVerification -Raw | ConvertFrom-Json
 
 $profileSentinel = Join-Path $root "KNEEKURA_POST_EOC_PROFILE.json"
 $result = [ordered]@{
@@ -275,6 +276,9 @@ $result = [ordered]@{
     post_restart_sha256 = (Get-Sha256 -Path $postRestart)
     static_verification = $postEocVerification
     post_restart_verification = $postRestartVerification
+    post_restart_verification_level = $postRestartVerificationObject.verification_level
+    post_restart_layout_profile = $postRestartVerificationObject.layout_profile
+    post_restart_semantic_scope_complete = $postRestartVerificationObject.semantic_scope_complete
     original_ui_first_launch_alive = $true
     original_ui_restart_alive = $true
     current_state_backup_remote = $remoteCurrentBackup
