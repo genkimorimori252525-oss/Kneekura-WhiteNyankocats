@@ -10,8 +10,8 @@ research save.
 Built from the real clean JP 15.7.1 baseline captured before the MAX bootstrap:
 
 - size: 497,580 bytes;
-- SHA-256: `d13781c149a355618a26fc59ade91b0ca24b562370228f934282fae20308b641`;
-- JP salted-MD5: `05e86a26c32031c62356d44421bd950d`;
+- SHA-256: `ed4c7089af27181a13fd96e6dc16df6f02c8b4a23fcabbd9e888334ae81dde03`;
+- JP salted-MD5: `908db3c81636002e7baef9ad10567b7f`;
 - pinned research parser: PASS;
 - parser reserialization: byte-for-byte identical;
 - forward-compatible remaining-data: 332 bytes.
@@ -33,20 +33,29 @@ clearing Empire of Cats Chapter 1.
 
 ## Acquisition state
 
-The previous generic 835-unit ownership grant is removed.
+The previous generic "own all 835" grant is refined rather than discarded.
 
-Pre-owned:
+Exact JP 15.7.1 selection:
 
-- the nine normal Cats, IDs 0–8;
-- Valkyrie Cat, ID 24;
-- Bahamut Cat, ID 25.
+- 835 guide-visible/playable units;
+- 158 of those are classified as **stage rewards** because exact
+  `drop_chara.csv` has a non-negative `stageDropCharaID`;
+- those 158 remain unowned so SoL/Tower/event/etc. rewards are earned by play;
+- the remaining **677 units are pre-owned**.
 
-Everything else is acquisition-gated. All 400 stage-drop save flags remain
-zero, so SoL/event rewards are not silently granted.
+Important regression anchors:
 
-Public unit-order data independently corroborates Valkyrie/Bahamut as internal
-units 24/25 and as Empire-of-Cats completion rewards; exact JP data confirms
-those IDs exist in the 15.7.1 catalog.
+- Madoka ID 289 is pre-owned;
+- Homura ID 290 is pre-owned;
+- Saber ID 363 is pre-owned;
+- Hatsune Miku ID 536 is pre-owned;
+- all **18 JP 15.7.1 Legend Rare** units (rarity=5) are pre-owned.
+
+All 400 stage-drop save flags remain zero, so stage reward settlement still
+belongs to the original game.
+
+This matches the product rule: **gacha/collab/Legend Rare units are available
+immediately; stage-earned characters such as SoL/Tower/event rewards are not.**
 
 ## Event unlock-only state
 
