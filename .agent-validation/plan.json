@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "steps": [
+    {
+      "name": "python-syntax",
+      "platform": "any",
+      "cwd": ".",
+      "timeout_seconds": 180,
+      "argv": [
+        "python",
+        "-m",
+        "compileall",
+        "-q",
+        "tools",
+        "tests"
+      ]
+    },
+    {
+      "name": "linux-tooling-tests",
+      "platform": "linux",
+      "cwd": ".",
+      "timeout_seconds": 1200,
+      "argv": [
+        "python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests",
+        "-v"
+      ]
+    },
+    {
+      "name": "windows-terminal-contract-tests",
+      "platform": "windows",
+      "cwd": ".",
+      "timeout_seconds": 300,
+      "argv": [
+        "python",
+        "-m",
+        "unittest",
+        "tests.test_agent_terminal_validation",
+        "tests.test_offline_max_bootstrap_runner",
+        "tests.test_offline_max_persistence_gate",
+        "tests.test_shipping_profile_parity",
+        "-v"
+      ]
+    },
+    {
+      "name": "powershell-static-parse",
+      "platform": "windows",
+      "cwd": ".",
+      "timeout_seconds": 180,
+      "argv": [
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "tools/agent_terminal/check_powershell_syntax.ps1",
+        "-Root",
+        "tools/base_mod"
+      ]
+    }
+  ]
+}

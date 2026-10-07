@@ -1,0 +1,45 @@
+name: Agent terminal validation
+
+on:
+  push:
+    branches:
+      - "jolly/**"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install tooling dependencies
+        run: python -m pip install -r requirements-tooling.txt
+      - name: Self-test terminal evidence capture
+        run: >-
+          python -m tools.agent_terminal.verify self-test
+          --report .agent-validation/reports/self-test-${{ runner.os }}.json
+      - name: Run committed validation plan
+        run: >-
+          python -m tools.agent_terminal.verify plan .agent-validation/plan.json
+          --report .agent-validation/reports/plan-${{ runner.os }}.json
+      - name: Upload validation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-terminal-${{ runner.os }}
+          path: .agent-validation/reports/
+          retention-days: 14
+          if-no-files-found: warn
