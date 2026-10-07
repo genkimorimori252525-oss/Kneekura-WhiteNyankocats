@@ -12,8 +12,9 @@ The main playable product is **にーくら大戦争**:
 - the player starts immediately after completing Empire of Cats (日本編) 1–3;
 - all valid Empire of Cats treasures are Superior;
 - Stories of Legend and later story progression remain genuinely uncompleted;
-- cats that are intended as stage/story/gacha rewards are not pre-granted merely
-  because their assets exist;
+- existing JP 15.7.1 non-stage-reward units (including gacha/collab/Legend Rare)
+  are pre-owned for convenience;
+- stage-earned characters remain locked until the player actually earns them;
 - non-SoL event content can be made available without marking it cleared;
 - the player does the playing, while Kneekura content packs define schedules,
   login campaigns, gacha pools and new stages.
@@ -37,23 +38,34 @@ Future (Into the Future) and Cats of the Cosmos chapters are not force-cleared.
 
 ### Progression reward truth
 
-Ownership is no longer "all guide-visible units".
+Ownership is no longer "all guide-visible units with no acquisition
+distinction", but it is still intentionally generous.
 
-Unit ownership is divided into acquisition classes:
+Exact JP 15.7.1 ownership rule:
 
-1. starting / EoC-earned units that should exist at the Post-EoC checkpoint;
-2. story-stage rewards (SoL / later story) — initially locked;
-3. event-stage rewards — initially locked unless deliberately granted by a
-   Kneekura season;
-4. gacha units — controlled by the future gacha system, not pre-owned;
-5. login/campaign units — controlled by login/content packs;
-6. hidden/test/regional rows — never granted by the generic profile.
+1. all guide-visible/playable units that are **not** stage rewards are pre-owned;
+2. story-stage rewards (SoL / later story) are initially locked;
+3. Tower/dojo-style and event-stage rewards are initially locked;
+4. all existing JP 15.7.1 gacha/collab-gacha units are pre-owned;
+5. all 18 existing Legend Rare units are pre-owned;
+6. hidden/test/regional rows are never granted generically;
+7. future/upstream/Kneekura-added units can use the later gacha/login/event
+   LiveOps providers without rewriting this historical acquisition rule.
 
 The exact JP 15.7.1 `drop_chara.csv` is the primary stage-reward source.
-Its first stage-drop namespace (1000-series) contains the familiar progression
-reward chain and is not to be blindly set to owned.
+A non-negative `stageDropCharaID` marks a guide-visible unit as stage-earned.
 
-This is intentionally different from the previous 835-unit MAX bootstrap.
+Version-pinned counts:
+
+- 835 eligible guide-visible/playable units;
+- 158 exact stage-reward units left unowned;
+- 677 pre-owned non-stage-reward units.
+
+Regression anchors include Madoka 289, Homura 290, Saber 363 and Hatsune Miku
+536 as pre-owned, plus all 18 Legend Rare units.
+
+This preserves the reason to clear SoL/Tower/event stages without forcing the
+player to reacquire the ordinary/collaboration gacha catalog.
 
 ### Economy assist
 
@@ -246,8 +258,8 @@ The original Battle Cats UI remains the preferred presentation layer.
 ## Immediate implementation order
 
 1. Post-EoC story + Superior treasure bootstrap.
-2. Acquisition-class manifest and removal of story/event/gacha reward cats from
-   the generic owned set.
+2. Acquisition-class manifest: pre-own all non-stage-reward units while
+   preserving exact story/Tower/event stage rewards for play.
 3. Non-SoL event unlock-only layer.
 4. Five-slot login scheduler.
 5. Kneekura signed content-channel manifest.
