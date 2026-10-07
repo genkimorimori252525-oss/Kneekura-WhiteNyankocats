@@ -75,8 +75,185 @@ def _i32_array(data: bytes, name: str) -> list[int]:
     return [_i32(data, start + index * 4) for index in range(length)]
 
 
-def verify_post_eoc_save(data: bytes, export_zip: Path) -> dict[str, Any]:
+def verify_post_eoc_runtime_core(data: bytes, export_zip: Path) -> dict[str, Any]:
+    """Verify the stable Post-EoC core after an original-game variable rewrite.
+
+    Exact JP 15.7.1 runtime research showed original-game growth begins after
+    the story/cat/event and early-resource regions checked here. This mode is
+    intentionally narrower than the exact candidate verifier but still proves
+    the playable progression contract rather than accepting size/hash alone.
+    """
+    stored_hash, expected_hash = _verify_jp_hash(data)
+    if len(data) <= EXPECTED_SIZE:
+        raise ValueError("runtime-core verification requires a grown SAVE_DATA")
+    if struct.unpack_from("<i", data, 0)[0] != EXPECTED_GAME_VERSION:
+        raise ValueError("unexpected game version")
+
+    failures: list[str] = []
+
+    for chapter in EOC_CHAPTERS:
+        progress = struct.unpack_from(
+            "<i", data, STORY_PROGRESS_OFFSET + chapter * 4
+        )[0]
+        if progress != EOC_STAGE_COUNT:
+            failures.append(f"EoC chapter {chapter} progress={progress}")
+        for stage in range(EOC_STAGE_COUNT):
+            clear_value = struct.unpack_from(
+                "<i",
+                data,
+                STORY_CLEAR_TIMES_OFFSET
+                + (chapter * STORY_CLEAR_SLOTS_PER_CHAPTER + stage) * 4,
+            )[0]
+            treasure_value = struct.unpack_from(
+                "<i",
+                data,
+                STORY_TREASURE_OFFSET
+                + (chapter * STORY_TREASURE_SLOTS_PER_CHAPTER + stage) * 4,
+            )[0]
+            if clear_value <= 0:
+                failures.append(f"EoC chapter {chapter} stage {stage} unclear")
+                break
+            if treasure_value != EOC_TREASURE_LEVEL:
+                failures.append(
+                    f"EoC chapter {chapter} stage {stage} treasure={treasure_value}"
+                )
+                break
+
+    for chapter in (4, 5, 6, 7, 8, 9):
+        progress = struct.unpack_from(
+            "<i", data, STORY_PROGRESS_OFFSET + chapter * 4
+        )[0]
+        if progress != 0:
+            failures.append(f"story chapter {chapter} progress={progress}")
+
+    unlocked = [
+        struct.unpack_from("<i", data, ARRAYS_I32["cat_unlocked"][0] + i * 4)[0]
+        for i in range(ARRAYS_I32["cat_unlocked"][1])
+    ]
+    seen = [
+        struct.unpack_from("<i", data, ARRAYS_I32["cat_gatya_seen"][0] + i * 4)[0]
+        for i in range(ARRAYS_I32["cat_gatya_seen"][1])
+    ]
+    actual_owned = {i for i, value in enumerate(unlocked) if value != 0}
+    actual_seen = {i for i, value in enumerate(seen) if value != 0}
+    expected_owned = set(POST_EOC_OWNED_IDS)
+    if actual_owned != expected_owned:
+        failures.append("Post-EoC owned cat IDs changed")
+    if actual_seen != expected_owned:
+        failures.append("Post-EoC gacha-seen IDs changed")
+
+    unit_drops = [
+        struct.unpack_from("<i", data, ARRAYS_I32["unit_drops"][0] + i * 4)[0]
+        for i in range(ARRAYS_I32["unit_drops"][1])
+    ]
+    if any(unit_drops):
+        failures.append("stage-drop reward ownership became nonzero")
+
+    event_ids, event_evidence = _derive_event_map_ids(export_zip)
+    expected_unlocks = {
+        EVENT_TYPE_SOL: {0},
+        EVENT_TYPE_NORMAL: set(event_ids[EVENT_TYPE_NORMAL]),
+        EVENT_TYPE_COLLAB: set(event_ids[EVENT_TYPE_COLLAB]),
+    }
+    event_summary: dict[str, Any] = {}
+    for event_type in (EVENT_TYPE_SOL, EVENT_TYPE_NORMAL, EVENT_TYPE_COLLAB):
+        selected_base = _event_type_block(
+            EVENT_SELECTED_STAGE_BASE, event_type, EVENT_STAR_CAPACITY
+        )
+        progress_base = _event_type_block(
+            EVENT_CLEAR_PROGRESS_BASE, event_type, EVENT_STAR_CAPACITY
+        )
+        stage_base = _event_type_block(
+            EVENT_STAGE_CLEAR_BASE,
+            event_type,
+            EVENT_STAR_CAPACITY * EVENT_STAGE_CAPACITY,
+        )
+        unlock_base = _event_type_block(
+            EVENT_UNLOCK_STATE_BASE, event_type, EVENT_STAR_CAPACITY
+        )
+        selected_nonzero = sum(
+            data[selected_base + i] != 0
+            for i in range(EVENT_MAP_CAPACITY * EVENT_STAR_CAPACITY)
+        )
+        progress_nonzero = sum(
+            data[progress_base + i] != 0
+            for i in range(EVENT_MAP_CAPACITY * EVENT_STAR_CAPACITY)
+        )
+        stage_nonzero = sum(
+            data[stage_base + i] != 0
+            for i in range(
+                EVENT_MAP_CAPACITY * EVENT_STAR_CAPACITY * EVENT_STAGE_CAPACITY
+            )
+        )
+        actual_unlocks = {
+            map_id
+            for map_id in range(EVENT_MAP_CAPACITY)
+            if data[unlock_base + map_id * EVENT_STAR_CAPACITY] != 0
+        }
+        later_star_unlocks = sum(
+            data[unlock_base + map_id * EVENT_STAR_CAPACITY + star] != 0
+            for map_id in range(EVENT_MAP_CAPACITY)
+            for star in range(1, EVENT_STAR_CAPACITY)
+        )
+        if actual_unlocks != expected_unlocks[event_type]:
+            failures.append(f"event type {event_type} unlock set changed")
+        if selected_nonzero or progress_nonzero or stage_nonzero or later_star_unlocks:
+            failures.append(f"event type {event_type} gained clear/progress state")
+        event_summary[str(event_type)] = {
+            "base_star_unlocked_count": len(actual_unlocks),
+            "selected_nonzero": selected_nonzero,
+            "clear_progress_nonzero": progress_nonzero,
+            "stage_clear_nonzero": stage_nonzero,
+            "later_star_unlock_nonzero": later_star_unlocks,
+        }
+
+    early_economy = {
+        "catfood": struct.unpack_from("<i", data, I32["catfood"])[0],
+        "xp": struct.unpack_from("<i", data, I32["xp"])[0],
+        "normal_tickets": struct.unpack_from("<i", data, I32["normal_tickets"])[0],
+        "rare_tickets": struct.unpack_from("<i", data, I32["rare_tickets"])[0],
+        "platinum_tickets": struct.unpack_from("<i", data, I32["platinum_tickets"])[0],
+    }
+    for key, value in early_economy.items():
+        if value != MAX_VALUES[key]:
+            failures.append(f"{key}={value} != {MAX_VALUES[key]}")
+
+    return {
+        "schema_version": 1,
+        "mode": "kneekura-post-eoc-verification",
+        "verification_level": "core-semantic-runtime-rewrite",
+        "layout_profile": "runtime-rewrite-unmapped",
+        "semantic_scope_complete": False,
+        "save_size": len(data),
+        "candidate_size": EXPECTED_SIZE,
+        "size_delta_from_candidate": len(data) - EXPECTED_SIZE,
+        "jp_salted_md5": stored_hash,
+        "jp_hash_valid": stored_hash == expected_hash,
+        "ownership": {
+            "owned_ids": sorted(actual_owned),
+            "owned_count": len(actual_owned),
+            "unit_drop_nonzero": sum(value != 0 for value in unit_drops),
+        },
+        "events": {
+            **event_evidence,
+            "types": event_summary,
+        },
+        "early_economy": early_economy,
+        "full_dynamic_semantic_verification": "pending-runtime-layout-map",
+        "failures": failures,
+        "passed": not failures,
+    }
+
+
+def verify_post_eoc_save(
+    data: bytes,
+    export_zip: Path,
+    *,
+    allow_runtime_rewrite: bool = False,
+) -> dict[str, Any]:
     if len(data) != EXPECTED_SIZE:
+        if allow_runtime_rewrite and len(data) > EXPECTED_SIZE:
+            return verify_post_eoc_runtime_core(data, export_zip)
         raise ValueError(f"unexpected Post-EoC SAVE_DATA size: {len(data)}")
 
     stored_hash, expected_hash = _verify_jp_hash(data)
@@ -304,6 +481,8 @@ def verify_post_eoc_save(data: bytes, export_zip: Path) -> dict[str, Any]:
         "schema_version": 1,
         "mode": "kneekura-post-eoc-verification",
         "verification_level": "full-semantic",
+        "layout_profile": "candidate",
+        "semantic_scope_complete": True,
         "save_size": len(data),
         "jp_salted_md5": stored_hash,
         "jp_hash_valid": stored_hash == expected_hash,
@@ -335,12 +514,18 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("save_data", type=Path)
     parser.add_argument("owned_export", type=Path)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--allow-runtime-rewrite",
+        action="store_true",
+        help="accept original-game grown saves using stable Post-EoC core semantics",
+    )
     args = parser.parse_args(argv)
 
     try:
         result = verify_post_eoc_save(
             args.save_data.read_bytes(),
             args.owned_export,
+            allow_runtime_rewrite=args.allow_runtime_rewrite,
         )
     except (OSError, ValueError, KeyError, json.JSONDecodeError) as exc:
         print(f"Post-EoC verification failed: {exc}", file=sys.stderr)
