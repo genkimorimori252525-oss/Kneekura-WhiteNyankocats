@@ -37,7 +37,7 @@ from tools.base_mod.build_post_eoc_save import (
     EVENT_TYPE_NORMAL,
     EVENT_TYPE_SOL,
     EVENT_UNLOCK_STATE_BASE,
-    POST_EOC_OWNED_IDS,
+    _derive_ownership_contract,
     STORY_CLEAR_SLOTS_PER_CHAPTER,
     STORY_CLEAR_TIMES_OFFSET,
     STORY_PROGRESS_OFFSET,
@@ -341,17 +341,28 @@ def verify_post_eoc_save(
     current_forms = _i32_array(data, "cat_current_form")
     unlocked_forms = _i32_array(data, "cat_unlocked_forms")
     fourth_forms = _i32_array(data, "cat_fourth_form")
-    expected_owned = set(POST_EOC_OWNED_IDS)
+    (
+        preowned_ids,
+        stage_reward_ids,
+        legend_rare_ids,
+        ownership_evidence,
+    ) = _derive_ownership_contract(export_zip)
+    expected_owned = set(preowned_ids)
 
     actual_owned = {index for index, value in enumerate(unlocked) if value != 0}
     actual_seen = {index for index, value in enumerate(seen) if value != 0}
     if actual_owned != expected_owned:
         failures.append(
-            f"owned cat ids mismatch: actual={sorted(actual_owned)} "
-            f"expected={sorted(expected_owned)}"
+            f"owned cat ids mismatch: actual_count={len(actual_owned)} "
+            f"expected_count={len(expected_owned)}"
         )
     if actual_seen != expected_owned:
         failures.append("gacha-seen IDs do not match Post-EoC ownership")
+    if not set(legend_rare_ids).issubset(actual_owned):
+        failures.append("one or more Legend Rare units are missing")
+    for required_id in (289, 290, 363, 536):
+        if required_id not in actual_owned:
+            failures.append(f"required collab/gacha unit {required_id} is missing")
     if any(current_forms) or any(unlocked_forms) or any(fourth_forms):
         failures.append("later cat forms were force-unlocked")
 
@@ -489,9 +500,12 @@ def verify_post_eoc_save(
         "story": story,
         "cleared_eoc_1": cleared_eoc_1,
         "ownership": {
+            **ownership_evidence,
             "owned_ids": sorted(actual_owned),
             "owned_count": len(actual_owned),
-            "required_ids": list(POST_EOC_OWNED_IDS),
+            "stage_reward_ids": stage_reward_ids,
+            "legend_rare_ids": legend_rare_ids,
+            "required_collab_ids": [289, 290, 363, 536],
             "unit_drop_nonzero": sum(value != 0 for value in unit_drops),
         },
         "events": {
