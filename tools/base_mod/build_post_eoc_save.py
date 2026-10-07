@@ -7,8 +7,8 @@ research profile:
 - Into the Future / Cats of the Cosmos remain untouched at zero progression;
 - Stories of Legend starts normally from its first map;
 - exact normal-event and collaboration maps are unlock-only, never pre-cleared;
-- only the basic nine Cats plus Valkyrie/Bahamut are pre-owned;
-- stage-drop/gacha/login reward ownership is left for actual gameplay/LiveOps;
+- all exact guide-visible/playable non-stage-reward units are pre-owned;
+- exact stage-reward units remain unowned for actual story/Tower/event play;
 - economy/material values retain the low-friction MAX research values.
 
 The resource layer reuses the independently verified MAX transformer. This file
