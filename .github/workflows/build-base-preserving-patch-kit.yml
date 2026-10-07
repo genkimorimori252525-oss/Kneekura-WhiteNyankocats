@@ -6,6 +6,7 @@ on:
       - "jolly/**"
     paths:
       - "tools/base_mod/**"
+      - "tools/liveops/**"
       - "tools/analyze_gacha_foundation.py"
       - "tools/analyze_login_bonus_foundation.py"
       - "native/kneekura-shim/**"
@@ -21,8 +22,12 @@ on:
       - "docs/architecture/phase-c-shipping-boundary.md"
       - "docs/architecture/phase-c-shipping-parity.md"
       - "docs/architecture/offline-local-profile-bootstrap.md"
+      - "docs/architecture/kneekura-post-eoc-liveops.md"
       - "docs/evidence/offline-profile-*"
+      - "docs/evidence/post-eoc-*"
+      - "docs/evidence/login-pool-*"
       - "docs/research/offline-profile-community-prior-art.md"
+      - "docs/research/failure-repair-history.md"
       - "docs/references/native-service-map-jp15.7.1.*"
       - "docs/references/hook-candidate-matrix-jp15.7.1.*"
       - "docs/evidence/myactivity-service-methods-jp15.7.1.json"
@@ -180,6 +185,12 @@ jobs:
           $source = Get-Content tools/base_mod/run_offline_max_persistence_gate.ps1 -Raw
           [void][scriptblock]::Create($source)
 
+      - name: Validate Post-EoC migration runner syntax
+        shell: pwsh
+        run: |
+          $source = Get-Content tools/base_mod/run_post_eoc_bootstrap.ps1 -Raw
+          [void][scriptblock]::Create($source)
+
       - name: Build Frida 17 Java-bridge trace bundle
         shell: bash
         run: |
@@ -204,6 +215,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p build/patch-kit/tools/base_mod
+          mkdir -p build/patch-kit/tools/liveops
           mkdir -p build/patch-kit/docs/architecture
           mkdir -p build/patch-kit/docs/references
           mkdir -p build/patch-kit/docs/evidence
@@ -212,12 +224,14 @@ jobs:
           mkdir -p build/patch-kit/bridge/java/stub/jp/co/ponos/battlecats
 
           cp -a tools/base_mod/*.py build/patch-kit/tools/base_mod/
+          cp -a tools/liveops/*.py build/patch-kit/tools/liveops/
           cp tools/base_mod/run_static_http_smoke.ps1 build/patch-kit/tools/base_mod/
           cp tools/base_mod/run_phase_c_final_smoke.ps1 build/patch-kit/tools/base_mod/
           cp tools/base_mod/run_offline_profile_probe.ps1 build/patch-kit/tools/base_mod/
           cp tools/base_mod/run_offline_max_bootstrap.ps1 build/patch-kit/tools/base_mod/
           cp tools/base_mod/run_offline_max_rollback.ps1 build/patch-kit/tools/base_mod/
           cp tools/base_mod/run_offline_max_persistence_gate.ps1 build/patch-kit/tools/base_mod/
+          cp tools/base_mod/run_post_eoc_bootstrap.ps1 build/patch-kit/tools/base_mod/
           cp tools/battlecats_pack.py build/patch-kit/tools/
           cp tools/battlecats_source.py build/patch-kit/tools/
           cp tools/analyze_gacha_foundation.py build/patch-kit/tools/
@@ -239,6 +253,7 @@ jobs:
           cp docs/architecture/phase-c-shipping-boundary.md build/patch-kit/docs/architecture/
           cp docs/architecture/phase-c-shipping-parity.md build/patch-kit/docs/architecture/
           cp docs/architecture/offline-local-profile-bootstrap.md build/patch-kit/docs/architecture/
+          cp docs/architecture/kneekura-post-eoc-liveops.md build/patch-kit/docs/architecture/
 
           cp docs/references/native-service-map-jp15.7.1.* build/patch-kit/docs/references/
           cp docs/references/hook-candidate-matrix-jp15.7.1.* build/patch-kit/docs/references/
@@ -256,8 +271,11 @@ jobs:
           cp docs/evidence/offline-profile-unit-selection-jp15.7.1.json build/patch-kit/docs/evidence/
           cp docs/evidence/offline-profile-device-baseline-probe-jp15.7.1.json build/patch-kit/docs/evidence/
           cp docs/evidence/offline-profile-static-map-jp15.7.1.* build/patch-kit/docs/evidence/
+          cp docs/evidence/post-eoc-static-proof-jp15.7.1.* build/patch-kit/docs/evidence/
+          cp docs/evidence/login-pool-jp15.7.1.* build/patch-kit/docs/evidence/
           cp docs/evidence/loginbg-019-server-manifest-corroboration.md build/patch-kit/docs/evidence/
           cp docs/research/offline-profile-community-prior-art.md build/patch-kit/docs/research/
+          cp docs/research/failure-repair-history.md build/patch-kit/docs/research/
 
           cp research/frida/* build/patch-kit/research/frida/
           cp build/frida-agent/trace_service_bridge.bundle.js \
@@ -316,6 +334,44 @@ jobs:
 
           Offline-profile read-only device probe:
             powershell -ExecutionPolicy Bypass -File .\tools\base_mod\run_offline_profile_probe.ps1
+
+          Kneekura Post-EoC mainline profile:
+            This is the current playable product path. It replaces the research
+            all-unit MAX profile with:
+              - Empire of Cats 1-3 complete
+              - 48/48 Superior treasures in each EoC chapter
+              - Future/Cosmos uncompleted
+              - Stories of Legend uncompleted
+              - only basic Cats + Valkyrie/Bahamut pre-owned
+              - exact normal/collab event maps unlock-only, never pre-cleared
+              - low-friction MAX economy/materials retained
+
+            Static-only build / verification (no device mutation):
+              powershell -ExecutionPolicy Bypass -File .\tools\base_mod\run_post_eoc_bootstrap.ps1
+
+            One-command migration:
+              powershell -ExecutionPolicy Bypass -File .\tools\base_mod\run_post_eoc_bootstrap.ps1 -Apply
+
+            The -Apply runner:
+              - backs up the currently playable SAVE_DATA first
+              - automatically finds and semantically verifies the clean pre-MAX
+                JP 15.7.1 baseline
+              - builds and fully verifies the Post-EoC candidate before mutation
+              - keeps an on-device rollback copy
+              - performs bounded original-UI launch + restart smoke
+              - rolls back automatically if persisted semantic verification fails
+              - never uninstalls and never uses pm clear
+
+            LiveOps foundations included:
+              - five-slot shuffle-bag login state machine
+              - exact JP 15.7.1 eligible login pool
+              - revision-1 offline-first content channel manifest
+
+            Important: the login scheduler and live event schedule provider are
+            foundations only in this kit. They are not yet connected to the
+            original Battle Cats login/event presentation runtime. The SAVE_DATA
+            unlock-only layer for normal/collab event maps is active in the
+            Post-EoC profile.
 
           Offline MAX one-time bootstrap (research package only):
             - accepts the JP 15.7.1 semantic clean-baseline family instead of
