@@ -39,6 +39,13 @@ class PostEocRunnerContractTest(unittest.TestCase):
         for forbidden in (" uninstall ", " pm clear ", " install-multiple ", " adb root "):
             self.assertNotIn(forbidden, f" {text} ")
 
+    def test_post_restart_accepts_original_game_runtime_rewrite(self):
+        text = RUNNER.read_text(encoding="utf-8")
+        self.assertIn("--allow-runtime-rewrite", text)
+        self.assertIn("post_restart_verification_level", text)
+        self.assertIn("post_restart_layout_profile", text)
+        self.assertIn("post_restart_semantic_scope_complete", text)
+
     def test_liveops_sidecars_are_prepared_but_not_overclaimed(self):
         text = RUNNER.read_text(encoding="utf-8")
         self.assertIn("KNEEKURA_CHANNEL.json", text)
