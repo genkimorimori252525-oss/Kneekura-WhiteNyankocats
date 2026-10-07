@@ -253,3 +253,129 @@ The original Battle Cats UI remains the preferred presentation layer.
 5. Kneekura signed content-channel manifest.
 6. Deferred gacha provider on that channel.
 7. Custom Kneekura stage packs.
+
+
+## Non-destructive evolution rules
+
+Kneekura content updates must not require deleting the player's save or
+restarting from a clean profile.
+
+Core rules:
+
+- existing SAVE_DATA is always treated as player-owned state;
+- new systems use additive sidecar state or versioned migrations where
+  possible;
+- a migration reads old state, creates a backup, writes a new revision and
+  validates it before promotion;
+- content updates never reset story clear counts, reward claims, login progress,
+  gacha history or custom-season history merely because the schema changed;
+- stable IDs are never recycled for unrelated content;
+- retired content is archived/hidden, not destructively removed from history;
+- every migration is idempotent and records its applied schema revision;
+- last-known-good content pack and pre-migration save remain rollback targets.
+
+A feature that can only be introduced by deleting SAVE_DATA is considered an
+architecture failure unless the underlying original game itself makes
+migration impossible.
+
+## Content / player-state separation
+
+Kneekura keeps four kinds of truth separate:
+
+1. **Base game data** — official JP assets, units, enemies and maps for the
+   anchored Battle Cats version.
+2. **Kneekura content data** — seasons, custom stages, event schedules, login
+   campaigns and gacha definitions.
+3. **Player progression state** — clears, claims, acquired units, pity/history,
+   medals and campaign progress.
+4. **Runtime cache** — derived indexes, downloaded art, temporary schedule
+   expansion and other rebuildable data.
+
+Only category 3 is irreplaceable player state. Categories 1, 2 and 4 may be
+updated/rebuilt without wiping progression.
+
+## Future authoring environment
+
+To make Jolly-authored stages fast and repeatable, stage design should be
+data-driven rather than hand-edited directly in SAVE_DATA.
+
+### Enemy Atlas
+
+Every official and Kneekura enemy should receive stable metadata tags such as:
+
+- trait / attribute;
+- movement speed;
+- attack range and effective reach;
+- single/area/multi-hit;
+- attack cycle and foreswing;
+- knockback count;
+- health / damage bands;
+- special effects;
+- target behavior;
+- spawn pressure;
+- role tags: wall, rusher, backliner, pusher, burst, attrition, disruptor,
+  boss, support, gimmick;
+- counterplay tags;
+- dangerous combinations with other roles.
+
+This is not meant to replace exact source values. The Atlas is an authoring
+index built from exact data, native behavior evidence and controlled gameplay
+observations.
+
+### Stage authoring model
+
+A Kneekura stage should be expressible as a small declarative definition:
+
+- stage identity and presentation;
+- enemy spawn timeline / money thresholds;
+- spawn limits and recurrence;
+- boss triggers;
+- stage rules / restrictions;
+- base HP / enemy magnification;
+- rewards and drop tables;
+- prerequisite / availability policy;
+- difficulty target and author notes.
+
+The authoring tool can then validate the stage before it reaches the player.
+
+### Validation and simulation
+
+Future tooling should be able to flag:
+
+- impossible/empty spawn schedules;
+- accidental infinite spawns;
+- unreachable rewards;
+- duplicate or missing IDs;
+- unsupported enemy/assets for the anchored game version;
+- suspicious difficulty spikes based on Enemy Atlas roles;
+- content-pack references that would break older saves.
+
+A lightweight simulator does not need to perfectly solve a Battle Cats stage.
+It only needs to help the author spot obvious composition/timing mistakes before
+device testing.
+
+## Update philosophy
+
+The project should prefer:
+
+```text
+old client + old save
+        ↓
+new signed content pack
+        ↓
+small migration if required
+        ↓
+same player history, more content
+```
+
+over:
+
+```text
+new feature
+   ↓
+delete save
+   ↓
+re-bootstrap everything
+```
+
+This is the architectural definition of flexibility for Kneekura.
