@@ -136,11 +136,27 @@ def verify_post_eoc_runtime_core(data: bytes, export_zip: Path) -> dict[str, Any
     ]
     actual_owned = {i for i, value in enumerate(unlocked) if value != 0}
     actual_seen = {i for i, value in enumerate(seen) if value != 0}
-    expected_owned = set(POST_EOC_OWNED_IDS)
+    (
+        preowned_ids,
+        stage_reward_ids,
+        legend_rare_ids,
+        ownership_evidence,
+    ) = _derive_ownership_contract(export_zip)
+    expected_owned = set(preowned_ids)
     if actual_owned != expected_owned:
-        failures.append("Post-EoC owned cat IDs changed")
+        failures.append(
+            f"Post-EoC owned cat IDs changed: "
+            f"actual_count={len(actual_owned)} expected_count={len(expected_owned)}"
+        )
     if actual_seen != expected_owned:
         failures.append("Post-EoC gacha-seen IDs changed")
+    if not set(legend_rare_ids).issubset(actual_owned):
+        failures.append("one or more Legend Rare units are missing after runtime rewrite")
+    for required_id in (289, 290, 363, 536):
+        if required_id not in actual_owned:
+            failures.append(
+                f"required collab/gacha unit {required_id} is missing after runtime rewrite"
+            )
 
     unit_drops = [
         struct.unpack_from("<i", data, ARRAYS_I32["unit_drops"][0] + i * 4)[0]
@@ -230,8 +246,11 @@ def verify_post_eoc_runtime_core(data: bytes, export_zip: Path) -> dict[str, Any
         "jp_salted_md5": stored_hash,
         "jp_hash_valid": stored_hash == expected_hash,
         "ownership": {
+            **ownership_evidence,
             "owned_ids": sorted(actual_owned),
             "owned_count": len(actual_owned),
+            "stage_reward_ids": stage_reward_ids,
+            "legend_rare_ids": legend_rare_ids,
             "unit_drop_nonzero": sum(value != 0 for value in unit_drops),
         },
         "events": {
