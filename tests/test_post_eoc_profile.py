@@ -53,6 +53,18 @@ class PostEocProfileContractTest(unittest.TestCase):
         self.assertIn("allow_runtime_rewrite", source)
         self.assertIn("pending-runtime-layout-map", source)
 
+    def test_runtime_rewrite_verifier_uses_derived_ownership(self):
+        text = (ROOT / "tools/base_mod/verify_post_eoc_save.py").read_text(
+            encoding="utf-8"
+        )
+        runtime = text.split("def verify_post_eoc_runtime_core", 1)[1].split(
+            "def verify_post_eoc_save", 1
+        )[0]
+        self.assertIn("_derive_ownership_contract(export_zip)", runtime)
+        self.assertIn("legend_rare_ids", runtime)
+        self.assertIn("required collab/gacha unit", runtime)
+        self.assertNotIn("POST_EOC_OWNED_IDS", runtime)
+
     def test_exact_static_evidence_matches_contract(self):
         evidence = json.loads(EVIDENCE.read_text(encoding="utf-8"))
         self.assertEqual(
