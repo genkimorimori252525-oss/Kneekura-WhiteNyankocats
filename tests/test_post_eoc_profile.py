@@ -41,6 +41,15 @@ class PostEocProfileContractTest(unittest.TestCase):
         self.assertEqual(post.EVENT_STAGE_CLEAR_BASE, 68450)
         self.assertEqual(post.EVENT_UNLOCK_STATE_BASE, 284450)
 
+    def test_runtime_rewrite_fallback_is_core_semantic(self):
+        source = (
+            ROOT / "tools/base_mod/verify_post_eoc_save.py"
+        ).read_text(encoding="utf-8")
+        self.assertIn("core-semantic-runtime-rewrite", source)
+        self.assertIn("runtime-rewrite-unmapped", source)
+        self.assertIn("allow_runtime_rewrite", source)
+        self.assertIn("pending-runtime-layout-map", source)
+
     def test_exact_static_evidence_matches_contract(self):
         evidence = json.loads(EVIDENCE.read_text(encoding="utf-8"))
         self.assertEqual(
