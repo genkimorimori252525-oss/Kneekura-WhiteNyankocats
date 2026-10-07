@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "anchor": "jp-15.7.1",
+  "source": {
+    "clean_baseline_sha256": "66ba4d8825cf270cca92c031141d19ea940d480a89113f3fe4602c3f3be4ebf3",
+    "owned_export_sha256": "38c3bbb8d2cf2101793c9462617d4293e19fc99588b6655fd40299fd61a0ef56"
+  },
+  "candidate": {
+    "size": 497580,
+    "sha256": "d13781c149a355618a26fc59ade91b0ca24b562370228f934282fae20308b641",
+    "jp_salted_md5": "05e86a26c32031c62356d44421bd950d",
+    "pinned_parser_reparse": true,
+    "pinned_parser_roundtrip_byte_identical": true,
+    "remaining_data_bytes": 332
+  },
+  "story": {
+    "eoc_chapters": [0,1,2],
+    "progress_each": 48,
+    "cleared_stages_each": 48,
+    "superior_treasures_each": 48,
+    "treasure_level": 3,
+    "future_cotc_progress_zero": true
+  },
+  "ownership": {
+    "preowned_ids": [0,1,2,3,4,5,6,7,8,24,25],
+    "preowned_count": 11,
+    "stage_drop_save_ids_nonzero": 0,
+    "global_835_unlock_removed": true
+  },
+  "events": {
+    "sol": {
+      "type": 0,
+      "base_star_unlocked_maps": 1,
+      "policy": "first-map-only / uncleared"
+    },
+    "normal": {
+      "type": 1,
+      "map_count": 436,
+      "id_range": [0,435],
+      "ids_sha256": "cbb9965e288efdc24096f5e771b3b55bfa8541b6a445db6fbe3bc120f4b41d82",
+      "policy": "unlock-only / clear_progress=0 / stage_clear=0"
+    },
+    "collab": {
+      "type": 2,
+      "map_count": 277,
+      "id_range": [0,276],
+      "ids_sha256": "d8ec8f9a21131568ac97c12e3ea7ae67911d00c93d2f5b455ac53fbb249d968d",
+      "policy": "unlock-only / clear_progress=0 / stage_clear=0"
+    }
+  },
+  "save_layout": {
+    "story_progress_offset": 1145,
+    "story_clear_times_offset": 1185,
+    "story_treasure_offset": 3225,
+    "event_selected_type0_offset": 24450,
+    "event_clear_progress_type0_offset": 34450,
+    "event_stage_clear_type0_offset": 68450,
+    "event_unlock_state_type0_offset": 284450,
+    "event_type_stride_selected_progress_unlock": 2000,
+    "event_type_stride_stage_clear": 24000
+  },
+  "economy": {
+    "inherits_low_friction_max_contract": true,
+    "talent_orb_types": 310,
+    "talent_orbs_each": 998
+  },
+  "research_boundary": {
+    "oracle": "BCSFE-Python 85fb94cbf00c6a74dbef58932610fb94ec8f7495",
+    "oracle_usage": "research-only parse/roundtrip and one-field differential",
+    "shipping_implementation": "independent offset/data implementation"
+  }
+}
