@@ -28,6 +28,7 @@ import sys
 from typing import Any
 
 from tools.battlecats_source import BattleCatsExport
+from tools.base_mod.build_offline_profile_unit_manifest import build_manifest
 from tools.base_mod.build_offline_max_save import (
     ARRAYS_I32,
     EXPORT_SHA256,
@@ -48,9 +49,15 @@ STORY_TREASURE_OFFSET = 3_225
 STORY_TREASURE_SLOTS_PER_CHAPTER = 49
 CLEARED_EOC_1_OFFSET = 120
 
-# Player starts with the nine normal Cats plus the two guaranteed EoC chapter
-# completion units (Valkyrie/Bahamut). Everything else is acquisition-gated.
-POST_EOC_OWNED_IDS = tuple(range(9)) + (24, 25)
+# Ownership is derived from exact JP 15.7.1 acquisition data:
+# all guide-visible/playable units are pre-owned EXCEPT characters whose exact
+# drop_chara.csv has a non-negative stageDropCharaID. This preserves stage
+# rewards (SoL/Tower/event/etc.) for actual play while retaining gacha/collab
+# gacha/Legend Rare ownership. Valkyrie/Bahamut are not stage-drop rows and are
+# therefore naturally retained by this rule.
+EXPECTED_STAGE_REWARD_VISIBLE = 158
+EXPECTED_PREOWNED_COUNT = 677
+EXPECTED_LEGEND_RARE_COUNT = 18
 
 EVENT_TYPE_COUNT = 5
 EVENT_MAP_CAPACITY = 500
@@ -75,6 +82,83 @@ def _write_i32(data: bytearray, offset: int, value: int) -> None:
 
 def _event_type_block(base: int, event_type: int, bytes_per_map: int) -> int:
     return base + event_type * EVENT_MAP_CAPACITY * bytes_per_map
+
+
+def _derive_ownership_contract(
+    export_zip: Path,
+) -> tuple[list[int], list[int], list[int], dict[str, Any]]:
+    manifest = build_manifest(export_zip, expected_sha256=EXPORT_SHA256)
+    eligible_units = manifest["eligible_units"]
+    eligible_ids = {int(item["asset_id"]) for item in eligible_units}
+
+    with BattleCatsExport(
+        export_zip,
+        region="jp",
+        expected_sha256=EXPORT_SHA256,
+    ) as source:
+        data_local = source.pack("DataLocal")
+        drop_payload, drop_provenance = data_local.read("drop_chara.csv")
+
+    stage_reward_ids: set[int] = set()
+    for row in drop_payload.decode("utf-8-sig", "replace").splitlines()[1:]:
+        cols = [cell.strip() for cell in row.split(",")]
+        if len(cols) < 3:
+            continue
+        try:
+            stage_id = int(cols[0])
+            chara_id = int(cols[2])
+        except ValueError:
+            continue
+        if stage_id >= 0 and chara_id in eligible_ids:
+            stage_reward_ids.add(chara_id)
+
+    preowned_ids = sorted(eligible_ids - stage_reward_ids)
+    stage_reward_ids_sorted = sorted(stage_reward_ids)
+    legend_rare_ids = sorted(
+        int(item["asset_id"])
+        for item in eligible_units
+        if int(item.get("rarity", -1)) == 5
+    )
+
+    if len(stage_reward_ids_sorted) != EXPECTED_STAGE_REWARD_VISIBLE:
+        raise ValueError(
+            "JP15.7.1 stage-reward unit count drifted: "
+            f"{len(stage_reward_ids_sorted)} != {EXPECTED_STAGE_REWARD_VISIBLE}"
+        )
+    if len(preowned_ids) != EXPECTED_PREOWNED_COUNT:
+        raise ValueError(
+            f"JP15.7.1 preowned unit count drifted: "
+            f"{len(preowned_ids)} != {EXPECTED_PREOWNED_COUNT}"
+        )
+    if len(legend_rare_ids) != EXPECTED_LEGEND_RARE_COUNT:
+        raise ValueError(
+            f"JP15.7.1 Legend Rare count drifted: "
+            f"{len(legend_rare_ids)} != {EXPECTED_LEGEND_RARE_COUNT}"
+        )
+    if not set(legend_rare_ids).issubset(preowned_ids):
+        raise ValueError("Legend Rare unit unexpectedly classified as stage reward")
+
+    # Exact regression anchors for important collab/gacha units.
+    for required_id in (289, 290, 363, 536):
+        if required_id not in preowned_ids:
+            raise ValueError(f"required collab/gacha unit {required_id} not preowned")
+
+    evidence = {
+        "eligible_count": len(eligible_ids),
+        "stage_reward_visible_count": len(stage_reward_ids_sorted),
+        "preowned_count": len(preowned_ids),
+        "stage_reward_ids_sha256": hashlib.sha256(
+            ",".join(map(str, stage_reward_ids_sorted)).encode("ascii")
+        ).hexdigest(),
+        "preowned_ids_sha256": hashlib.sha256(
+            ",".join(map(str, preowned_ids)).encode("ascii")
+        ).hexdigest(),
+        "legend_rare_count": len(legend_rare_ids),
+        "legend_rare_ids": legend_rare_ids,
+        "drop_chara_sha256": drop_provenance.payload_sha256,
+        "required_collab_ids": [289, 290, 363, 536],
+    }
+    return preowned_ids, stage_reward_ids_sorted, legend_rare_ids, evidence
 
 
 def _derive_event_map_ids(export_zip: Path) -> tuple[dict[int, list[int]], dict[str, Any]]:
@@ -216,17 +300,29 @@ def build_post_eoc_save(source: bytes, export_zip: Path) -> tuple[bytes, dict[st
 
     _write_i32(out, CLEARED_EOC_1_OFFSET, 1)
 
-    # Acquisition truth: no global 835-unit grant.
-    owned = set(POST_EOC_OWNED_IDS)
+    # Acquisition truth: own every eligible non-stage-reward unit.
+    preowned_ids, stage_reward_ids, legend_rare_ids, ownership_evidence = (
+        _derive_ownership_contract(export_zip)
+    )
+    owned = set(preowned_ids)
     for cat_id in range(ARRAYS_I32["cat_unlocked"][1]):
-        _write_i32(out, ARRAYS_I32["cat_unlocked"][0] + cat_id * 4, int(cat_id in owned))
-        _write_i32(out, ARRAYS_I32["cat_gatya_seen"][0] + cat_id * 4, int(cat_id in owned))
+        _write_i32(
+            out,
+            ARRAYS_I32["cat_unlocked"][0] + cat_id * 4,
+            int(cat_id in owned),
+        )
+        _write_i32(
+            out,
+            ARRAYS_I32["cat_gatya_seen"][0] + cat_id * 4,
+            int(cat_id in owned),
+        )
         _write_i32(out, ARRAYS_I32["cat_current_form"][0] + cat_id * 4, 0)
         _write_i32(out, ARRAYS_I32["cat_unlocked_forms"][0] + cat_id * 4, 0)
         _write_i32(out, ARRAYS_I32["cat_fourth_form"][0] + cat_id * 4, 0)
 
-    # Stage-drop ownership remains completely unclaimed. This covers SoL/event
-    # rewards and lets the original reward path grant them through play.
+    # Stage-drop ownership remains completely unclaimed. This covers SoL,
+    # Tower/dojo-style and event-stage rewards and lets the original reward path
+    # grant them through play.
     for save_id in range(ARRAYS_I32["unit_drops"][1]):
         _write_i32(out, ARRAYS_I32["unit_drops"][0] + save_id * 4, 0)
 
@@ -272,10 +368,12 @@ def build_post_eoc_save(source: bytes, export_zip: Path) -> tuple[bytes, dict[st
             "future_cotc_progress": 0,
         },
         "ownership": {
-            "preowned_ids": list(POST_EOC_OWNED_IDS),
-            "preowned_count": len(POST_EOC_OWNED_IDS),
+            **ownership_evidence,
+            "preowned_ids": preowned_ids,
+            "stage_reward_ids": stage_reward_ids,
+            "legend_rare_ids": legend_rare_ids,
             "stage_drop_save_ids_enabled": 0,
-            "all_other_units_acquisition_gated": True,
+            "policy": "all eligible non-stage-reward units owned",
         },
         "events": {
             **event_evidence,
