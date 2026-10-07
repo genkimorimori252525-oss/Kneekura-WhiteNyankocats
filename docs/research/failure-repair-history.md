@@ -187,3 +187,49 @@ These failures establish permanent project rules:
 6. a new feature must not require deleting player history;
 7. every new failure gets a root-cause entry plus an automated regression test
    where practical.
+
+
+---
+
+## 2026-10-07 — Post-EoC ownership was over-pruned to 11 units
+
+**Observed**
+
+The first Post-EoC implementation interpreted "leave progression-reward cats
+unowned" too broadly and pre-owned only the nine normal Cats plus
+Valkyrie/Bahamut. This incorrectly removed ordinary gacha, collaboration gacha,
+Madoka/Homura/Saber/Miku and Legend Rare units from the intended convenience
+profile.
+
+**Root cause**
+
+Acquisition classes were described conceptually, but the implementation used a
+small positive allow-list instead of deriving the *negative* set that should be
+withheld.
+
+**Repair**
+
+The ownership contract is now version-pinned from exact JP 15.7.1 data:
+
+- start with all 835 guide-visible/playable units;
+- parse exact `drop_chara.csv`;
+- any eligible unit with non-negative `stageDropCharaID` is classified as a
+  stage reward and left unowned;
+- all remaining eligible units are pre-owned.
+
+Exact JP 15.7.1 result:
+
+- 158 stage-reward units left unowned;
+- 677 non-stage-reward units pre-owned;
+- Madoka 289, Homura 290, Saber 363 and Hatsune Miku 536 are explicit
+  regression anchors;
+- all 18 Legend Rare units must be in the pre-owned set.
+
+The runtime-rewrite verifier uses the same derived ownership contract, avoiding
+a split between candidate and post-restart verification.
+
+**Regression rule**
+
+When the user says "everything except category X", derive and verify category X
+from exact acquisition data. Do not replace the complement with a hand-written
+small allow-list.
