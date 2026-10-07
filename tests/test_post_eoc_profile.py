@@ -19,15 +19,18 @@ class PostEocProfileContractTest(unittest.TestCase):
         self.assertEqual(post.STORY_TREASURE_OFFSET, 3225)
         self.assertEqual(post.CLEARED_EOC_1_OFFSET, 120)
 
-    def test_acquisition_contract_is_not_all_units(self):
-        self.assertEqual(post.POST_EOC_OWNED_IDS, tuple(range(9)) + (24, 25))
-        self.assertEqual(len(post.POST_EOC_OWNED_IDS), 11)
+    def test_acquisition_contract_is_non_stage_reward_owned(self):
+        self.assertEqual(post.EXPECTED_STAGE_REWARD_VISIBLE, 158)
+        self.assertEqual(post.EXPECTED_PREOWNED_COUNT, 677)
+        self.assertEqual(post.EXPECTED_LEGEND_RARE_COUNT, 18)
         source = (ROOT / "tools/base_mod/build_post_eoc_save.py").read_text(
             encoding="utf-8"
         )
-        self.assertIn("for cat_id in range(ARRAYS_I32", source)
+        self.assertIn("stageDropCharaID", source)
+        self.assertIn("required collab/gacha unit", source)
+        self.assertIn("Legend Rare unit unexpectedly classified", source)
         self.assertIn("for save_id in range(ARRAYS_I32", source)
-        self.assertNotIn("eligible_owned = 835", source)
+        self.assertNotIn("POST_EOC_OWNED_IDS", source)
 
     def test_event_unlock_only_layout_is_pinned(self):
         self.assertEqual(post.EVENT_TYPE_SOL, 0)
@@ -54,12 +57,15 @@ class PostEocProfileContractTest(unittest.TestCase):
         evidence = json.loads(EVIDENCE.read_text(encoding="utf-8"))
         self.assertEqual(
             evidence["candidate"]["sha256"],
-            "d13781c149a355618a26fc59ade91b0ca24b562370228f934282fae20308b641",
+            "ed4c7089af27181a13fd96e6dc16df6f02c8b4a23fcabbd9e888334ae81dde03",
         )
         self.assertTrue(evidence["candidate"]["pinned_parser_roundtrip_byte_identical"])
         self.assertEqual(evidence["story"]["progress_each"], 48)
         self.assertEqual(evidence["story"]["superior_treasures_each"], 48)
-        self.assertEqual(evidence["ownership"]["preowned_count"], 11)
+        self.assertEqual(evidence["ownership"]["preowned_count"], 677)
+        self.assertEqual(evidence["ownership"]["stage_reward_visible_count"], 158)
+        self.assertEqual(evidence["ownership"]["legend_rare_count"], 18)
+        self.assertIn(289, evidence["ownership"]["required_collab_ids"])
         self.assertEqual(evidence["ownership"]["stage_drop_save_ids_nonzero"], 0)
         self.assertEqual(evidence["events"]["normal"]["map_count"], 436)
         self.assertEqual(evidence["events"]["collab"]["map_count"], 277)
