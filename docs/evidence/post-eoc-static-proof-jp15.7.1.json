@@ -7,14 +7,18 @@
   },
   "candidate": {
     "size": 497580,
-    "sha256": "d13781c149a355618a26fc59ade91b0ca24b562370228f934282fae20308b641",
-    "jp_salted_md5": "05e86a26c32031c62356d44421bd950d",
+    "sha256": "ed4c7089af27181a13fd96e6dc16df6f02c8b4a23fcabbd9e888334ae81dde03",
+    "jp_salted_md5": "908db3c81636002e7baef9ad10567b7f",
     "pinned_parser_reparse": true,
     "pinned_parser_roundtrip_byte_identical": true,
     "remaining_data_bytes": 332
   },
   "story": {
-    "eoc_chapters": [0,1,2],
+    "eoc_chapters": [
+      0,
+      1,
+      2
+    ],
     "progress_each": 48,
     "cleared_stages_each": 48,
     "superior_treasures_each": 48,
@@ -22,10 +26,42 @@
     "future_cotc_progress_zero": true
   },
   "ownership": {
-    "preowned_ids": [0,1,2,3,4,5,6,7,8,24,25],
-    "preowned_count": 11,
+    "preowned_count": 677,
+    "stage_reward_visible_count": 158,
+    "stage_reward_ids_sha256": "ee79632ebc43b0bb660f8a67868f44e503d0d5b87c7ded1d10fd0a888817b7da",
+    "preowned_ids_sha256": "f474bc8ee823abb1ba492e02652c08f4b2694412e2615cbd082d2821138b118d",
     "stage_drop_save_ids_nonzero": 0,
-    "global_835_unlock_removed": true
+    "global_835_unlock_removed": true,
+    "policy": "all eligible non-stage-reward units owned",
+    "required_collab_ids": [
+      289,
+      290,
+      363,
+      536
+    ],
+    "legend_rare_count": 18,
+    "legend_rare_ids": [
+      448,
+      449,
+      450,
+      451,
+      455,
+      461,
+      463,
+      466,
+      478,
+      481,
+      493,
+      510,
+      544,
+      586,
+      731,
+      738,
+      815,
+      881
+    ],
+    "madoka_id_289_owned": true,
+    "all_legend_rares_owned": true
   },
   "events": {
     "sol": {
@@ -36,14 +72,20 @@
     "normal": {
       "type": 1,
       "map_count": 436,
-      "id_range": [0,435],
+      "id_range": [
+        0,
+        435
+      ],
       "ids_sha256": "cbb9965e288efdc24096f5e771b3b55bfa8541b6a445db6fbe3bc120f4b41d82",
       "policy": "unlock-only / clear_progress=0 / stage_clear=0"
     },
     "collab": {
       "type": 2,
       "map_count": 277,
-      "id_range": [0,276],
+      "id_range": [
+        0,
+        276
+      ],
       "ids_sha256": "d8ec8f9a21131568ac97c12e3ea7ae67911d00c93d2f5b455ac53fbb249d968d",
       "policy": "unlock-only / clear_progress=0 / stage_clear=0"
     }
