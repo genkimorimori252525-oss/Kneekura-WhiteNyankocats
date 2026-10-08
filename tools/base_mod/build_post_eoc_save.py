@@ -28,6 +28,7 @@ import sys
 from typing import Any
 
 from tools.battlecats_source import BattleCatsExport
+from tools.base_mod.unit_identifiers import IMPORTANT_COLLAB_ASSET_IDS
 from tools.base_mod.build_offline_profile_unit_manifest import build_manifest
 from tools.base_mod.build_offline_max_save import (
     ARRAYS_I32,
@@ -139,7 +140,7 @@ def _derive_ownership_contract(
         raise ValueError("Legend Rare unit unexpectedly classified as stage reward")
 
     # Exact regression anchors for important collab/gacha units.
-    for required_id in (289, 290, 363, 536):
+    for required_id in IMPORTANT_COLLAB_ASSET_IDS:
         if required_id not in preowned_ids:
             raise ValueError(f"required collab/gacha unit {required_id} not preowned")
 
@@ -156,7 +157,7 @@ def _derive_ownership_contract(
         "legend_rare_count": len(legend_rare_ids),
         "legend_rare_ids": legend_rare_ids,
         "drop_chara_sha256": drop_provenance.payload_sha256,
-        "required_collab_ids": [289, 290, 363, 536],
+        "required_collab_ids": list(IMPORTANT_COLLAB_ASSET_IDS),
     }
     return preowned_ids, stage_reward_ids_sorted, legend_rare_ids, evidence
 
