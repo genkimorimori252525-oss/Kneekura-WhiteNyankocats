@@ -17,7 +17,7 @@ The exact `unitbuy.csv` hard caps are preserved:
 - 11 eligible units have native cap **20**;
 - 8 eligible units have native cap **1**.
 
-So Madoka 289, Homura 290, Saber 363 and Hatsune Miku 536 can reach level 60,
+So Madoka (catalog No.289 / asset 288), Homura (No.290 / asset 289), Saber (No.363 / asset 362) and Hatsune Miku (No.536 / asset 535) can reach level 60,
 while units whose official JP15.7.1 data hard-caps at 50 remain at 50.
 
 ## SAVE_DATA field
