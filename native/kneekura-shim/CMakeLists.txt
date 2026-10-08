@@ -5,6 +5,7 @@ add_library(kneekura SHARED
     src/kneekura_shim.c
     src/kneekura_state.c
     src/kneekura_provider.c
+    src/kneekura_battle101.c
 )
 
 target_include_directories(kneekura

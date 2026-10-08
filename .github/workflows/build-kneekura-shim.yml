@@ -72,6 +72,7 @@ jobs:
           grep -F "kneekura_sidecar_save_atomic" /tmp/kneekura-symbols.txt
           grep -F "kneekura_clock_observe_epoch_day" /tmp/kneekura-symbols.txt
           grep -F "kneekura_provider_gacha_cost" /tmp/kneekura-symbols.txt
+          grep -F "kneekura_battle101_castle_hit" /tmp/kneekura-symbols.txt
           grep -F "kneekura_provider_stage_cat_food" /tmp/kneekura-symbols.txt
           grep -F "kneekura_provider_login_template_id" /tmp/kneekura-symbols.txt
 
@@ -97,6 +98,21 @@ jobs:
             native/kneekura-shim/tests/kneekura_state_test.c \
             -o /tmp/kneekura-state-enabled
           /tmp/kneekura-state-enabled
+
+      - name: Test KNEEKURA 1.01 combat policy both OFF and ON
+        shell: bash
+        run: |
+          set -euo pipefail
+          for MASK in 0ull 128ull; do
+            cc -std=c11 -Wall -Wextra -Werror \
+              -DKNEEKURA_DEFAULT_FEATURE_MASK=$MASK \
+              -Inative/kneekura-shim/include \
+              native/kneekura-shim/src/kneekura_shim.c \
+              native/kneekura-shim/src/kneekura_battle101.c \
+              native/kneekura-shim/tests/kneekura_battle101_test.c \
+              -o /tmp/kneekura-battle101-$MASK
+            /tmp/kneekura-battle101-$MASK
+          done
 
       - name: Test provider ABI disabled and enabled semantics
         shell: bash
