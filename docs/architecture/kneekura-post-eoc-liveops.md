@@ -61,8 +61,9 @@ Version-pinned counts:
 - 158 exact stage-reward units left unowned;
 - 677 pre-owned non-stage-reward units.
 
-Regression anchors include Madoka 289, Homura 290, Saber 363 and Hatsune Miku
-536 as pre-owned, plus all 18 Legend Rare units.
+Regression anchors include Madoka (catalog No.289 / asset ID 288), Homura
+(No.290 / asset 289), Saber (No.363 / asset 362) and Hatsune Miku
+(No.536 / asset 535) as pre-owned, plus all 18 Legend Rare units.
 
 This preserves the reason to clear SoL/Tower/event stages without forcing the
 player to reacquire the ordinary/collaboration gacha catalog.
