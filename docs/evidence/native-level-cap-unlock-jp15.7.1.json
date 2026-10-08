@@ -34,12 +34,30 @@
     "all_non_hash_changes_inside_max_upgrade_records": true
   },
   "regression_anchors": {
-    "289": {"native_cap": 60, "required_increment": 40},
-    "290": {"native_cap": 60, "required_increment": 40},
-    "363": {"native_cap": 60, "required_increment": 40},
-    "536": {"native_cap": 60, "required_increment": 40},
-    "448": {"native_cap": 50, "required_increment": 30},
-    "881": {"native_cap": 50, "required_increment": 30}
+    "288": {
+      "native_cap": 60,
+      "required_increment": 40
+    },
+    "289": {
+      "native_cap": 60,
+      "required_increment": 40
+    },
+    "362": {
+      "native_cap": 60,
+      "required_increment": 40
+    },
+    "448": {
+      "native_cap": 50,
+      "required_increment": 30
+    },
+    "535": {
+      "native_cap": 60,
+      "required_increment": 40
+    },
+    "881": {
+      "native_cap": 50,
+      "required_increment": 30
+    }
   },
   "non_destructive_boundary": {
     "current_levels": "untouched",
@@ -51,5 +69,12 @@
     "catseyes_used_history": "untouched",
     "plus_cap_increment": "preserved",
     "new_legend_clear_flags": "untouched"
-  }
+  },
+  "regression_catalog_numbers": {
+    "madoka": 289,
+    "homura": 290,
+    "saber": 363,
+    "hatsune_miku": 536
+  },
+  "catalog_to_asset_rule": "catalog_unit_no - 1"
 }
