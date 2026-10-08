@@ -38,13 +38,15 @@ class KneekuraBalanceContractTests(unittest.TestCase):
         spec = self.manifest["updates"]["UGOD-001"]
         self.assertEqual((spec["catalog_no"], spec["asset_id"], spec["form_index"]), (703, 702, 0))
         self.assertEqual((spec["original_form_name"], spec["next_form_name"]), ("ゴジラにゃんこ", "シン・ゴジラにゃんこ"))
+        self.assertEqual(spec["form_target_confirmation"], "USER_CONFIRMED_FIRST_FORM_2026-10-09")
         approved = spec["approved"]
         self.assertEqual(approved["attack_cycle_frames"], 15 * 30)
         self.assertEqual(approved["recharge_frames"], 500 * 30)
+        self.assertEqual(approved["level_reference"], 30)
         self.assertEqual(approved["production_cost_eoc2"], 9800)
-        self.assertEqual(approved["hit_attack_damage"], [400000] * 3)
+        self.assertEqual(approved["hit_attack_damage"], [50000] * 3)
         self.assertEqual(sum(approved["hit_attack_damage"]), approved["sequence_attack_damage"])
-        self.assertEqual(approved["sequence_attack_damage"], 1200000)
+        self.assertEqual(approved["sequence_attack_damage"], 150000)
         self.assertEqual(approved["attack_hit_frames"], [130, 170, 210])
         self.assertLess(max(approved["attack_hit_frames"]), approved["attack_cycle_frames"])
         self.assertEqual(approved["enemy_castle_damage_cap_per_sequence"], 1)
@@ -52,7 +54,7 @@ class KneekuraBalanceContractTests(unittest.TestCase):
     def test_castle_three_hits_deal_one_not_three(self) -> None:
         budget = self.manifest["updates"]["UGOD-001"]["approved"]["enemy_castle_damage_cap_per_sequence"]
         outcomes = []
-        for hit in [400000,400000,400000]:
+        for hit in [50000,50000,50000]:
             result = resolve_hit_damage(hit,is_castle=True,is_selected_godzilla_form=True,remaining_castle_budget=budget)
             outcomes.append(result.damage_to_target)
             budget = result.remaining_castle_budget
@@ -62,16 +64,16 @@ class KneekuraBalanceContractTests(unittest.TestCase):
         budget = 1
         outcomes = []
         for is_castle in [False,True,True]:
-            result = resolve_hit_damage(400000,is_castle=is_castle,is_selected_godzilla_form=True,remaining_castle_budget=budget)
+            result = resolve_hit_damage(50000,is_castle=is_castle,is_selected_godzilla_form=True,remaining_castle_budget=budget)
             outcomes.append(result.damage_to_target)
             budget = result.remaining_castle_budget
-        self.assertEqual(outcomes, [400000,1,0])
-        self.assertEqual(resolve_hit_damage(400000,is_castle=True,is_selected_godzilla_form=False,remaining_castle_budget=1).damage_to_target,400000)
+        self.assertEqual(outcomes, [50000,1,0])
+        self.assertEqual(resolve_hit_damage(50000,is_castle=True,is_selected_godzilla_form=False,remaining_castle_budget=1).damage_to_target,50000)
 
     def test_sequence_reset_and_invalid_budget(self) -> None:
-        first = resolve_hit_damage(400000,is_castle=True,is_selected_godzilla_form=True,remaining_castle_budget=1)
+        first = resolve_hit_damage(50000,is_castle=True,is_selected_godzilla_form=True,remaining_castle_budget=1)
         self.assertEqual(first.damage_to_target, 1)
-        next_attack = resolve_hit_damage(400000,is_castle=True,is_selected_godzilla_form=True,remaining_castle_budget=1)
+        next_attack = resolve_hit_damage(50000,is_castle=True,is_selected_godzilla_form=True,remaining_castle_budget=1)
         self.assertEqual(next_attack.damage_to_target, 1)
         with self.assertRaises(ValueError):
             resolve_hit_damage(-1,is_castle=True,is_selected_godzilla_form=True,remaining_castle_budget=1)

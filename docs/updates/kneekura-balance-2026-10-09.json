@@ -59,14 +59,15 @@
           170,
           210
         ],
-        "sequence_attack_damage": 1200000,
+        "sequence_attack_damage": 150000,
         "hit_attack_damage": [
-          400000,
-          400000,
-          400000
+          50000,
+          50000,
+          50000
         ],
         "enemy_castle_damage_cap_per_sequence": 1,
-        "damage_vs_enemies": "unrestricted_by_castle_cap"
+        "damage_vs_enemies": "unrestricted_by_castle_cap",
+        "level_reference": 30
       },
       "enemy_raw_reference": {
         "base_hp": 500,
@@ -83,13 +84,13 @@
         "original_castle_multiplier": 4
       },
       "open_gates": [
-        "Confirm form 0 ゴジラにゃんこ rather than form 1 シン・ゴジラにゃんこ is the visual/replacement target.",
-        "Choose level-scaling/reference-level treatment for exact 400000 per hit on a friendly unit.",
+        "Resolve exact 50000 damage per hit at Lv30 and determine native level-scaling above/below Lv30; do not silently round.",
         "Decide HP, traits, special abilities and other enemy-to-cat transfer fields not explicitly approved.",
         "Verify live original-scene hook can cap castle HP deduction at 1 across all three hit events.",
         "Source original on-device visuals from owner-owned assets without committing binaries."
       ],
-      "implementation_status": "NOT_IMPLEMENTED"
+      "implementation_status": "NOT_IMPLEMENTED",
+      "form_target_confirmation": "USER_CONFIRMED_FIRST_FORM_2026-10-09"
     }
   },
   "safety": {
@@ -98,5 +99,12 @@
     "write_to_original_apk_in_git": false,
     "requires_original_scene_device_proof": true,
     "may_mark_released": false
-  }
+  },
+  "change_history": [
+    {
+      "date": "2026-10-09",
+      "update": "UGOD-001",
+      "change": "Confirmed No.703 first form (index 0). Replaced previous 1,200,000 total / 400,000 x3 with EXACT Lv30 150,000 total / 50,000 x3. Attack period, costs, production time and castle-HP cap remain unchanged."
+    }
+  ]
 }

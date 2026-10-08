@@ -29,29 +29,33 @@ Identity: public No.289 = asset ID 288, `unit289.csv` row 2.
 
 **Accuracy gate:** Lv30 native stat = Lv1 raw attack × 17 in this dataset; 28,000 / 17 is non-integral. An ordinary integer CSV change would produce e.g. 27,999 rather than exactly 28,000. Do not claim an exact native 28,000 result without checking actual engine rounding or using a scoped runtime correction.
 
-## UGOD-001 — Godzilla-style replacement of player catalog No.703
+## UGOD-001 — Godzilla-style replacement of player catalog No.703 (CONFIRMED form 0)
 
-The owner's wording says “シン・ゴジラにゃんこの第1形態”; **the official No.703 first form is ゴジラにゃんこ (CSV row 0), while シン・ゴジラにゃんこ is the second form (CSV row 1)**. Until further clarification, index 0 is selected *only provisionally* from the explicit “第1形態” instruction, and no appearance or gameplay replacement is applied. Keep the second form unchanged.
+**User-confirmed target (2026-10-09):** official No.703 **first form = ゴジラにゃんこ**, `unit703.csv` form index **0** (SAVE/unitbuy asset 702). It is the only approved replacement target; the second form **シン・ゴジラにゃんこ** (index 1) remains unchanged. The supplied cropped Godzilla image is a local visual reference, not a Git asset or a claim of an implemented runtime texture.
 
-Enemy reference: enemy No.552 in `DataLocal/t_unit.csv` index 552, official un-magnified base attack 200 + 200 + 200 = 600, attack hit timing 130f/170f/210f, 425f cycle, 3,800 sensing range, LD 2,300–3,800, speed 3, KB 1, enemy base HP 500 and x4 castle damage. The user explicitly selects the stronger **1,200,000** stage-magnified attack *distribution*, NOT raw 600; do not accidentally copy the low default stats.
+Enemy source reference: enemy No.552 in `DataLocal/t_unit.csv` index 552, with raw 200 + 200 + 200 = 600 before stage magnification, strike timing 130f/170f/210f, 425f cycle, range 3,800, LD 2,300–3,800, speed 3, KB 1, raw HP 500 and x4 castle damage. These are **enemy reference values**, not an automatic approval to copy every stat (in particular 3,800 sensing, HP, LD, immunities, or enemy x4 castle modifier) onto the friendly cat.
 
-| Metric | User-approved target |
+| Metric | Latest user-approved target |
 | --- | ---: |
+| Replacement character and form | No.703, **ゴジラにゃんこ, form index 0 (confirmed)** |
+| Lv reference for approved attack | **Lv30** |
 | Cat production cost (EoC Ch.2) | **9,800** |
 | Cat recharge | **500s = 15,000f** |
 | Attack period (one full three-hit sequence) | **15s = 450f** |
-| Damage to ordinary enemy units, per sequence | **1,200,000 total** |
-| Hit 1 | **400,000** |
-| Hit 2 | **400,000** |
-| Hit 3 | **400,000** |
+| **Lv30** damage to ordinary enemy units, full 3-hit sequence | **150,000 total** |
+| **Lv30** hit 1 | **50,000** |
+| **Lv30** hit 2 | **50,000** |
+| **Lv30** hit 3 | **50,000** |
 | Strike timing from the original enemy | 130f, 170f, 210f |
-| Damage to enemy castle **across the full three-hit sequence** | **1 total maximum**, not 1 per hit |
+| Damage to enemy castle **across the entire 3-hit sequence** | **1 total maximum**, not 1 per hit |
 
-The castle rule is intentionally **target-aware**: regular enemy-unit hits remain 400,000 apiece. Against the enemy castle, the first landed castle hit in a particular attack sequence deals 1, and any later castle hits within that same sequence deal 0; this resets at the next attack sequence. It does not alter other cats, collaterally damage ordinary enemies, or change base defense. This is a post-target-classification and post-modifier **HP deduction** contract; do not implement it by setting the normal attack stat to 1, by applying an x4 castle modifier, or by treating three landed hits as 3 castle damage.
+**Revision log — 2026-10-09:** The former provisional **1,200,000 total / 400,000 × 3** proposal was explicitly rejected as too strong and **superseded** by Lv30 **150,000 total / 50,000 × 3**. The user also positively confirmed the **first form**; it is no longer provisional. Git history retains the prior design for provenance but it must never remain the active target.
 
-User-approved hit damage is exact in the contract; it is not yet assigned to a specific level-growth curve. Friendly No.703 originally uses integer Lv1 attack fields and Lv30 scales by 17: 400,000 / 17 is non-integral. Exact Lv30 400,000 each may require a narrow runtime correction. Also verify the game has no implicit min-1 HP deduction after an intended 0 castle damage hit.
+The castle rule remains **target-aware**: ordinary enemy-unit hits deal 50,000 apiece **at Lv30**, unless other explicitly verified engine modifiers apply. Against the enemy castle, the first landed castle hit in a given attack sequence deals 1, and later castle hits in that same 3-hit sequence deal **zero**; the castle budget resets to 1 at the start of the next attack sequence. This must be tracked **per deployed cat instance**, and must not reduce simultaneous damage to ordinary enemy units or affect other cats. Do not implement it by reducing the cat's own attack stat to 1, by using the original enemy's x4 castle multiplier, or by accidentally dealing 1 castle damage **on each strike**.
 
-**Still needing decisions and original-runtime verification:** whether to replace actual form 0 vs form 1, HP target and growth, Floating-only native traits and other ability transfer, exact reference level/scale, original sprites/effects availability, LD range and sensing behavior on the allied side, animations and native 450f cycle calibration. This file intentionally does **not** mark any of those unspecified gameplay changes approved.
+**Exact Lv30 damage caution:** native player unit attack data uses integer level-1 attack values; according to the JP15.7.1 baseline, Lv30 damage scales by 17. Since 50,000 / 17 is not integral, naïve raw 2,941 would yield **49,997** per hit at Lv30, not the approved 50,000. Actual engine rounding/multi-hit treatment must be verified, with the smallest scoped runtime correction if needed. Level growth outside Lv30 is **not yet specified** and must not be silently hard-coded at 50,000 forever.
+
+**Still pending (NOT approved from enemy reference):** HP and growth, attribute targeting, special abilities/immunities, movement speed, sensing and long-distance reach transfer, exact LD target checks on allied side, use of owner-held animation/sprite files, and original-scene 450f cycle/castle damage hook behavior. Numeric design approval does **not** mean APK integration or on-device success.
 
 Data provenance from the owner-supplied JP 15.7.1 APK (read-only extraction):
 - `DataLocal/unit703.csv` SHA-256 `8caeff21c1c02918da708d06095def423d05f9df14da63b741ac78994b57dbad`.
