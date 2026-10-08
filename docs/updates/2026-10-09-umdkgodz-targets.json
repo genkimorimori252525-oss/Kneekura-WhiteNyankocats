@@ -1,0 +1,197 @@
+{
+  "schema_version": 1,
+  "release_id": "KNEEKURA-BALANCE-2026-10-09",
+  "game_anchor": "JP 15.7.1",
+  "status": "DESIGN_ONLY_NOT_APPLIED",
+  "scope": "native-original-UI offline personal build",
+  "source_sha256": {
+    "DataLocal/unit289.csv": "e48bc212537fe7949c74527f0a8212874e8595fd9414f6d9bc2b7a1e3aee1a82",
+    "DataLocal/unit703.csv": "8caeff21c1c02918da708d06095def423d05f9df14da63b741ac78994b57dbad",
+    "DataLocal/t_unit.csv": "d4fe8661e39a8f489e7549f03b5de4020acb6d7f8560438bdbb9490ec2f8cb04"
+  },
+  "updates": {
+    "UMDK-001": {
+      "status": "APPROVED_NUMBERS_NOT_IMPLEMENTED",
+      "unit": {
+        "catalog_no": 289,
+        "asset_id": 288,
+        "form_index": 2,
+        "display_name": "アルティメットまどか",
+        "file": "unit289.csv"
+      },
+      "approved_at_level30": {
+        "base_hp": 55250,
+        "attack": 28000,
+        "standing_range": 750,
+        "ld_min_range": 450,
+        "ld_max_range": 800,
+        "deploy_cost_eoc_ch2": 4550,
+        "recharge_seconds": 155
+      },
+      "unchanged": {
+        "foreswing_frames": 72,
+        "attack_cycle_frames": 271,
+        "movement_speed": 20,
+        "knockbacks": 4,
+        "target_traits": [
+          "floating",
+          "zombie",
+          "relic"
+        ],
+        "abilities": [
+          "massive_damage",
+          "guaranteed_slow",
+          "zombie_killer",
+          "witch_killer",
+          "curse_immune"
+        ],
+        "other_forms": true,
+        "original_visuals": true,
+        "unique_death_animation": true,
+        "save_data": true
+      },
+      "pinned_original_raw": {
+        "lv1_attack": 1850,
+        "standing_range": 550,
+        "base_cost": 2900,
+        "recharge_field": 2200,
+        "ld_min_range": 450,
+        "ld_reach_width": 350
+      },
+      "simple_csv_mapping": {
+        "standing_range_column": 5,
+        "new_value": 750,
+        "recharge_field_column": 7,
+        "candidate_raw": 2452,
+        "expected_recharge_frames_under_reference_tech": 4650
+      },
+      "native_precision_gate": {
+        "lv30_attack_factor": 17,
+        "native_attack_below": {
+          "raw": 1647,
+          "lv30": 27999
+        },
+        "native_attack_above": {
+          "raw": 1648,
+          "lv30": 28016
+        },
+        "exact_28000_from_integer_raw_under_pinned_growth": false,
+        "cost_ch2_multiplier_numerator": 3,
+        "cost_ch2_multiplier_denominator": 2,
+        "exact_4550_from_integer_raw_before_rounding": false,
+        "cost_rounding_unverified": true,
+        "rule": "Do not silently substitute nearest raw values or report exact in-game numbers without proving the original runtime's semantics."
+      }
+    },
+    "GODZ-001": {
+      "status": "COST_AND_RECHARGE_APPROVED_REST_UNDECIDED_NOT_IMPLEMENTED",
+      "unit": {
+        "catalog_no": 703,
+        "asset_id": 702,
+        "form_index": 0,
+        "display_name_original": "ゴジラにゃんこ",
+        "other_form_index": 1,
+        "other_form_name": "シン・ゴジラにゃんこ",
+        "file": "unit703.csv"
+      },
+      "approved": {
+        "deploy_cost_eoc_ch2": 9800,
+        "recharge_seconds": 500
+      },
+      "reference_enemy": {
+        "catalog_enemy_no": 552,
+        "t_unit_row_index": 552,
+        "name_in_jp": "ゴジラ",
+        "name_in_en": "Shin Godzilla",
+        "trait": "traitless",
+        "base_hp": 500,
+        "base_attack_total": 600,
+        "three_hit_damage": [
+          200,
+          200,
+          200
+        ],
+        "hit_frames": [
+          130,
+          170,
+          210
+        ],
+        "standing_range": 3800,
+        "ld_min_range": 2300,
+        "ld_max_range": 3800,
+        "attack_cycle_frames": 425,
+        "movement_speed": 3,
+        "knockbacks": 1,
+        "area_attack": true,
+        "base_destroyer_multiplier": 4,
+        "immune_to": [
+          "knockback",
+          "freeze",
+          "slow",
+          "weaken"
+        ]
+      },
+      "candidate_recharge_raw_for_reference_tech": 7627,
+      "exact_9800_from_integer_raw_before_rounding": false,
+      "original_cat_form0": {
+        "lv30_hp": 5440,
+        "lv30_attack_total": 8160,
+        "standing_range": 310,
+        "base_cost_raw": 440,
+        "recharge_field_raw": 270
+      },
+      "stage_examples": [
+        {
+          "name": "謎の巨大生物現る",
+          "hp_pct": 100,
+          "attack_pct": 30,
+          "hp": 500,
+          "attack_total": 180
+        },
+        {
+          "name": "災害対策本部設置",
+          "hp_pct": 8000,
+          "attack_pct": 200000,
+          "hp": 40000,
+          "attack_total": 1200000
+        },
+        {
+          "name": "ネコによる最終決戦",
+          "hp_pct": 18600,
+          "attack_pct": 5000,
+          "hp": 93000,
+          "attack_total": 30000
+        },
+        {
+          "name": "最強の破壊神",
+          "hp_pct": 26000,
+          "attack_pct": 200000,
+          "hp": 130000,
+          "attack_total": 1200000
+        }
+      ],
+      "undecided": [
+        "which_enemy_stage_hp_attack_magnification_to_use",
+        "exact_player_unit_hp_attack",
+        "visual_asset_and_animation_binding",
+        "enemy_to_cat_ability_semantics",
+        "final_hit_timing"
+      ],
+      "protected": {
+        "other_forms": true,
+        "enemy_definition": true,
+        "stage_tables": true,
+        "save_data": true
+      },
+      "chosen_visual": "Owner-provided cropped Shin Godzilla image in chat, not uploaded into public repository."
+    }
+  },
+  "validation_gates": [
+    "No user APK or proprietary art in Git",
+    "No SAVE_DATA write",
+    "H01-safe DownloadLocal/native override before shipping",
+    "Static form-index/no-other-form diff",
+    "Original native UI and animation acceptance",
+    "Owner-device offline restart/rollback USER_GATE"
+  ]
+}
