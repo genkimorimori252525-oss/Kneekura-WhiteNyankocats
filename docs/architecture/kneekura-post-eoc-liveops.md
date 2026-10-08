@@ -391,3 +391,26 @@ re-bootstrap everything
 ```
 
 This is the architectural definition of flexibility for Kneekura.
+
+
+## Native level-cap convenience migration
+
+The Post-EoC profile may receive a non-destructive convenience migration that
+unlocks each eligible unit to its exact JP 15.7.1 native base-level hard cap
+without changing story progression.
+
+The requested convenience ceiling is 60, but official DataLocal remains the
+authority:
+
+- 323 eligible units are native level-60 units;
+- 493 are native level-50 units;
+- 11 are native level-20 units;
+- 8 are native level-1 units.
+
+The migration updates only each Cat's saved `max_upgrade_level.base` increment
+and the SAVE hash. Current levels, ownership, forms, stage progress, reward
+claims and Catseye-consumption history remain untouched.
+
+This specifically avoids the bad alternative of marking New/Uncanny Legend
+stages cleared merely to unlock a power-up UI condition. Progression truth and
+convenience unlocks remain separate.
