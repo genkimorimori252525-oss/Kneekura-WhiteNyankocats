@@ -14,7 +14,10 @@ from typing import Any
 TARGET_STEM = "702_f"  # confirmed cat No.703 first form ONLY.
 REQUIRED_MOTIONS = ("00", "01", "02", "03")
 # Discovery candidates ONLY. Do not assume enemy No.552 = a visual asset ID.
-ENEMY_STEM_CANDIDATES = ("550_e", "551_e", "552_e")
+# JP15.7.1 DataLocal/t_unit.csv reserves its first two rows; enemy row552
+# maps to visual asset 550_e. Historical owner/server metadata confirms
+# MNumberServer/550_e.png and WImageDataServer/550_e*. This anchor is exact.
+PINNED_ENEMY_STEM = "550_e"
 
 
 def required_names(stem: str) -> tuple[str, ...]:
@@ -35,7 +38,9 @@ def inspect_index(document: dict[str, Any], *, enemy_stem: str | None = None) ->
         by_name.setdefault(name, set()).add((source, family))
     if enemy_stem and any(s in enemy_stem for s in ("/", "\\", ".")):
         raise ValueError("enemy stem must be a simple filename stem")
-    candidates = (enemy_stem,) if enemy_stem else ENEMY_STEM_CANDIDATES
+    if enemy_stem is not None and enemy_stem != PINNED_ENEMY_STEM:
+        raise ValueError("JP15.7.1 enemy No.552 is pinned to 550_e")
+    candidates = (PINNED_ENEMY_STEM,)
     examined = []
     for stem in candidates:
         names = required_names(stem)
@@ -71,6 +76,7 @@ def inspect_index(document: dict[str, Any], *, enemy_stem: str | None = None) ->
         "mode": "godzilla-first-form-animation-metadata-gate",
         "status": state,
         "source_enemy_no": 552,
+        "source_mapping": "exact JP15.7.1 t_unit.csv reserved rows 0,1; row552 => 550_e",
         "source_enemy_stem_evidenced": selected,
         "source_candidates": examined,
         "target_catalog_no": 703,

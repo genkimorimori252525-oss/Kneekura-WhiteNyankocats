@@ -30,10 +30,10 @@ class GodzillaAnimationGateTests(unittest.TestCase):
         self.assertIsNone(report["source_enemy_stem_evidenced"])
         self.assertEqual(report["source_to_target_filenames_only_NOT_a_conversion"], {})
 
-    def test_two_candidates_fail_closed(self):
-        report = inspect_index(source_index("550_e", "552_e"))
-        self.assertEqual(report["status"], "AMBIGUOUS_ENEMY_RIG_SOURCE_FAIL_CLOSED")
-        self.assertEqual(report["source_to_target_filenames_only_NOT_a_conversion"], {})
+    def test_other_complete_candidates_do_not_override_exact_source_anchor(self):
+        report = inspect_index(source_index("550_e", "551_e", "552_e"))
+        self.assertEqual(report["source_enemy_stem_evidenced"], "550_e")
+        self.assertTrue(report["source_to_target_filenames_only_NOT_a_conversion"])
 
     def test_invalid_index_and_pathlike_stem_rejected(self):
         with self.assertRaises(ValueError):
@@ -43,9 +43,9 @@ class GodzillaAnimationGateTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             inspect_index({"schema_version": 1, "entries": [{"name": "550_e.png"}]})
 
-    def test_explicit_stem_only_succeeds_on_evidence(self):
-        report = inspect_index(source_index("550_e"), enemy_stem="551_e")
-        self.assertIsNone(report["source_enemy_stem_evidenced"])
+    def test_alternate_enemy_stem_is_rejected(self):
+        with self.assertRaises(ValueError):
+            inspect_index(source_index("550_e"), enemy_stem="551_e")
 
 
 if __name__ == "__main__":
