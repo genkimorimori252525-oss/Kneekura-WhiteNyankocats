@@ -233,3 +233,44 @@ a split between candidate and post-restart verification.
 When the user says "everything except category X", derive and verify category X
 from exact acquisition data. Do not replace the complement with a hand-written
 small allow-list.
+
+
+---
+
+## 2026-10-09 — catalog No.289 was confused with asset ID 289
+
+**Observed**
+
+Early acquisition/level-cap regressions labeled Madoka `289` directly as a
+SAVE_DATA cat-array index. In the exact JP 15.7.1 pack, Madoka is
+`unit289.csv` and has public/catalog No.289, but the zero-based SAVE_DATA
+and `unitbuy.csv` array index is **288**. ID 289 instead represents Homura
+(public No.290). Analogous off-by-one errors affected Saber (No.363 => asset
+362) and Hatsune Miku (No.536 => asset 535).
+
+**Impact boundary**
+
+The earlier Post-EoC profile's 677-unit acquisition selection is derived from
+all eligible `unitbuy.csv` asset indexes, so this mislabeled regression list
+did not change the actual generated 677-unit save. The native cap migration
+likewise reads the exact 0-based unitbuy rows for every eligible ID. However,
+a future per-unit balance patch using the wrong name/ID correspondence could
+have modified Homura instead of Madoka.
+
+**Repair**
+
+A central `tools/base_mod/unit_identifiers.py` contract now maps a public
+1-based catalog number to the 0-based asset/SAVE array ID and separately maps
+the public number to `unitNNN.csv`. Acquisition and level-cap regression
+anchors use the derived internal IDs. A dedicated unit test pins:
+
+- Madoka: No.289 => asset 288, `unit289.csv`;
+- Homura: No.290 => asset 289;
+- Saber: No.363 => asset 362;
+- Hatsune Miku: No.536 => asset 535.
+
+**Regression rule**
+
+No public unit number may be used as a raw SAVE_DATA array index without an
+explicit namespace conversion. Gameplay parameter filenames, public catalog
+numbers, and cat-array IDs must all state their numbering convention.
