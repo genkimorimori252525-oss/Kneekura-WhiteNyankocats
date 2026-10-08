@@ -67,7 +67,8 @@
         ],
         "enemy_castle_damage_cap_per_sequence": 1,
         "damage_vs_enemies": "unrestricted_by_castle_cap",
-        "level_reference": 30
+        "level_reference": 30,
+        "standing_range": 2950
       },
       "enemy_raw_reference": {
         "base_hp": 500,
@@ -85,7 +86,7 @@
       },
       "open_gates": [
         "Resolve exact 50000 damage per hit at Lv30 and determine native level-scaling above/below Lv30; do not silently round.",
-        "Decide HP, traits, special abilities and other enemy-to-cat transfer fields not explicitly approved.",
+        "Choose unapproved HP, LD hit min/max, attack traits and abilities independently: sensing range 2950 IS approved and should not remain pending.",
         "Verify live original-scene hook can cap castle HP deduction at 1 across all three hit events.",
         "Source original on-device visuals from owner-owned assets without committing binaries."
       ],
@@ -105,6 +106,19 @@
       "date": "2026-10-09",
       "update": "UGOD-001",
       "change": "Confirmed No.703 first form (index 0). Replaced previous 1,200,000 total / 400,000 x3 with EXACT Lv30 150,000 total / 50,000 x3. Attack period, costs, production time and castle-HP cap remain unchanged."
+    },
+    {
+      "date": "2026-10-09",
+      "update": "UGOD-001",
+      "change": "User approved 2950 standing/sensing range for confirmed Godzilla No703 first form; balance design incorporated in proposed Kneekura Update 1.01 together with native level caps and Ultimate Madoka. No Android/apply claim."
     }
-  ]
+  ],
+  "release_intent": "KNEEKURA UPDATE 1.01",
+  "release_status": "PREPARING_OFFLINE_OWNER_LOCAL_KIT_NOT_SHIPPED",
+  "level_cap_feature": {
+    "existing_runner": "tools/base_mod/run_level_cap_unlock.ps1",
+    "goal": "Preserve current SAVE_DATA and unlock eligible units up to native JP15.7.1 maxima (323 at 60, 493 at 50, 11 at 20, 8 at 1).",
+    "device_validation": "USER_GATE",
+    "apply_not_automatic": true
+  }
 }

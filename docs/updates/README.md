@@ -2,6 +2,7 @@
 
 Status: **USER-APPROVED NUMERIC DESIGN; NOT IMPLEMENTED; NOT RELEASED.**
 Updated: 2026-10-09 (JST).
+Delivery intent: **KNEEKURA UPDATE 1.01** including native Lv60-cap unlock, UMDK-001, UGOD-001. **NOT SHIPPED / DO NOT INSTALL AS RELEASE** until native battle hooks, original-game UI, same-signature and device gate pass.
 Machine-readable contract: [kneekura-balance-2026-10-09.json](kneekura-balance-2026-10-09.json).
 This release plan is additive to the existing offline, base-preserving Android project. It **must not** rebuild the owner's SAVE_DATA, unlock story stages, replace the original game UI, or introduce live PONOS networking. Proprietary PNG/model/animation, APK and saves are not checked into Git.
 
@@ -39,6 +40,7 @@ Enemy source reference: enemy No.552 in `DataLocal/t_unit.csv` index 552, with r
 | --- | ---: |
 | Replacement character and form | No.703, **ゴジラにゃんこ, form index 0 (confirmed)** |
 | Lv reference for approved attack | **Lv30** |
+| Standing/sensing range (user-approved 2026-10-09) | **2,950** |
 | Cat production cost (EoC Ch.2) | **9,800** |
 | Cat recharge | **500s = 15,000f** |
 | Attack period (one full three-hit sequence) | **15s = 450f** |
@@ -55,7 +57,7 @@ The castle rule remains **target-aware**: ordinary enemy-unit hits deal 50,000 a
 
 **Exact Lv30 damage caution:** native player unit attack data uses integer level-1 attack values; according to the JP15.7.1 baseline, Lv30 damage scales by 17. Since 50,000 / 17 is not integral, naïve raw 2,941 would yield **49,997** per hit at Lv30, not the approved 50,000. Actual engine rounding/multi-hit treatment must be verified, with the smallest scoped runtime correction if needed. Level growth outside Lv30 is **not yet specified** and must not be silently hard-coded at 50,000 forever.
 
-**Still pending (NOT approved from enemy reference):** HP and growth, attribute targeting, special abilities/immunities, movement speed, sensing and long-distance reach transfer, exact LD target checks on allied side, use of owner-held animation/sprite files, and original-scene 450f cycle/castle damage hook behavior. Numeric design approval does **not** mean APK integration or on-device success.
+**Still pending (NOT approved from enemy reference):** HP and growth, attribute targeting, special abilities/immunities, movement speed, long-distance hit minimum/maximum transfer, exact LD target checks on allied side, use of owner-held animation/sprite files, and original-scene 450f cycle/castle damage hook behavior. **Standing/sensing range 2,950 IS approved**, distinct from the enemy's 3,800 standing range. Numeric design approval does **not** mean APK integration or on-device success.
 
 Data provenance from the owner-supplied JP 15.7.1 APK (read-only extraction):
 - `DataLocal/unit703.csv` SHA-256 `8caeff21c1c02918da708d06095def423d05f9df14da63b741ac78994b57dbad`.

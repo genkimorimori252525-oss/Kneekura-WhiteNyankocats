@@ -21,6 +21,9 @@ class KneekuraBalanceContractTests(unittest.TestCase):
     def test_status_is_not_claimed_implemented_or_released(self) -> None:
         self.assertEqual(self.manifest["status"], "APPROVED_DESIGN_ONLY_NOT_APPLIED")
         self.assertFalse(self.manifest["safety"]["may_mark_released"])
+        self.assertEqual(self.manifest["release_intent"], "KNEEKURA UPDATE 1.01")
+        self.assertEqual(self.manifest["release_status"], "PREPARING_OFFLINE_OWNER_LOCAL_KIT_NOT_SHIPPED")
+        self.assertTrue(self.manifest["level_cap_feature"]["apply_not_automatic"])
         for spec in self.manifest["updates"].values():
             self.assertEqual(spec["implementation_status"], "NOT_IMPLEMENTED")
 
@@ -43,6 +46,7 @@ class KneekuraBalanceContractTests(unittest.TestCase):
         self.assertEqual(approved["attack_cycle_frames"], 15 * 30)
         self.assertEqual(approved["recharge_frames"], 500 * 30)
         self.assertEqual(approved["level_reference"], 30)
+        self.assertEqual(approved["standing_range"], 2950)
         self.assertEqual(approved["production_cost_eoc2"], 9800)
         self.assertEqual(approved["hit_attack_damage"], [50000] * 3)
         self.assertEqual(sum(approved["hit_attack_damage"]), approved["sequence_attack_damage"])

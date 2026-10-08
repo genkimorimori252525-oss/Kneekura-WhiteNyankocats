@@ -1,0 +1,28 @@
+# KNEEKURA Update 1.01 — delivery/readiness ledger (JP15.7.1)
+
+**Intent:** one offline, original-scene-preserving user update combining verified existing native level-cap unlocking, user-approved third-form Ultimate Madoka adjustment, and Godzilla No.703 first-form update. This document is a design/build-readiness ledger, **not proof of delivery or installation**.
+
+## User-approved changes
+
+| Unit / feature | Approved exact spec | Game/runtime status |
+|---|---|---|
+| Native level-cap unlock (existing) | 323 eligible -> max60; 493 -> max50; 11 -> max20; 8 -> max1, preserve player progress | Implementation exists, repo tests pass; owner-device USER_GATE for any new run |
+| No.289 / Ultimate Madoka, form2 | Lv30 attack **28,000**, sensing **750**, EoC2 cost **4,550**, recharge **155s/4650f**; preserve LD450–800, abilities and special death animation | Approved spec only; no installed override / user-device proof |
+| No.703 / Godzilla cat, **confirmed form0** | Lv30 **150,000** damage in three hits **50,000×3**, sensing **2,950**, EoC2 cost **9,800**, recharge **500s/15000f**, attack cycle **15s/450f**; enemy castle total **1 HP per whole attack sequence** | Approved spec only; no installed override / user-device proof |
+
+## Why 1.01 cannot honestly be called an installed update yet
+
+- The source `DataLocal/unit289.csv` row2 and `unit703.csv` row0 contain native **integer Lv1 attack values**. At Lv30 their direct 17× scale cannot represent 28,000 or each 50,000 exactly. Closest straightforward integer preview yields Madoka **27,999** and Godzilla **49,997×3 = 149,991**; runtime correction is required for exact user values. EoC2 requested costs also imply half-unit raw results, so UI-rounding needs actual engine proof.
+- The raw Godzilla attack-period candidate is near **449f** (not certified 450f) with the original friendly 41/65/90f hit animation. The enemy source 130/170/210f timing cannot simply be injected into a different friendly animation without verification/replacement.
+- **Target-specific enemy castle deduction** capped at a combined 1 HP across all three hits requires a proven live engine hook; a pure reference Python function is not this hook. No verified hook exists as of this planning revision.
+- A `DownloadLocal` overlay can preserve the original `DataLocal` pack (important because direct DataLocal changes caused H01), but static encryption/roundtrip proof does **not** prove original game's `unitNNN.csv` override precedence or native battle acceptance.
+- The user's locally chosen cropped Godzilla image is not yet a native game-compatible replacement animation/model. Original first form only may be replaced; second form is kept.
+- We have no physical owner Android device / matching personal keystore in this session. Installing a differently signed APK with uninstall/clear-data would violate the preserve-existing-save requirement.
+
+## Packaging contract
+
+An owner-local, source-only **1.01 preflight kit** can inspect the pinned export, generate isolated two-unit CSV and `DownloadLocal` overlay *candidates*, and call the existing native-level-cap runner only with deliberate explicit user action. This **must be labeled PREVIEW/NOT INSTALLABLE**; no automatic APK install or balance `-Apply` flag is allowed until original UI, H01, source SHA, native damage hook and rollback are verified.
+
+Release acceptance: strict per-form diff, exact Lv30 attacks, exact castle 1 total on every attack sequence, original visuals intact, no change to player SAVE_DATA except optional vetted level-cap migration, same-signer incremental Android installation, offline battle, original UI, forced stop/restart, verified rollback. Only then mark 1.01 RELEASED.
+
+Authoritative numeric spec: [kneekura-balance-2026-10-09.json](kneekura-balance-2026-10-09.json). Related [Issues #2](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/issues/2), [#3](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/issues/3), draft [PR #4](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/pull/4).
