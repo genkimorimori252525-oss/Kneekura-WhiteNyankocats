@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "anchor": "jp-15.7.1",
+  "save_contract": {
+    "game_version": 150700,
+    "max_upgrade_count_offset": 306330,
+    "max_upgrade_data_offset": 306334,
+    "record_size": 4,
+    "record_layout": "<HH little-endian: plus_increment, base_increment",
+    "record_count": 882,
+    "offset_stable_in_observed_runtime_rewrite_507164": true
+  },
+  "data_contract": {
+    "unitbuy_sha256": "bc1adab2fc6ad79f3b8198a8a4d40786756d586af846fdbdeccdbaec55226daf",
+    "original_base_max_column": 18,
+    "native_catseye_hard_max_column": 50,
+    "eligible_units": 835,
+    "requested_cap": 60,
+    "effective_target_distribution": {
+      "1": 8,
+      "20": 11,
+      "50": 493,
+      "60": 323
+    }
+  },
+  "migration_formula": "base_increment := max(existing, max(0, min(60, native_hard_max) - original_base_max))",
+  "clean_baseline_static_probe": {
+    "source_sha256": "66ba4d8825cf270cca92c031141d19ea940d480a89113f3fe4602c3f3be4ebf3",
+    "output_sha256": "132f31ecc8baf330b54473d07bd31047bd7c0ac2d360e2799fe1ccdf264aaf35",
+    "output_jp_salted_md5": "91878a897f41b3fb66828c0d6fb87868",
+    "eligible_records_considered": 835,
+    "changed_records_from_clean_zero_caps": 816,
+    "non_hash_changed_bytes": 816,
+    "all_non_hash_changes_inside_max_upgrade_records": true
+  },
+  "regression_anchors": {
+    "289": {"native_cap": 60, "required_increment": 40},
+    "290": {"native_cap": 60, "required_increment": 40},
+    "363": {"native_cap": 60, "required_increment": 40},
+    "536": {"native_cap": 60, "required_increment": 40},
+    "448": {"native_cap": 50, "required_increment": 30},
+    "881": {"native_cap": 50, "required_increment": 30}
+  },
+  "non_destructive_boundary": {
+    "current_levels": "untouched",
+    "ownership": "untouched",
+    "forms": "untouched",
+    "story_progress": "untouched",
+    "event_progress": "untouched",
+    "unit_drop_claims": "untouched",
+    "catseyes_used_history": "untouched",
+    "plus_cap_increment": "preserved",
+    "new_legend_clear_flags": "untouched"
+  }
+}
