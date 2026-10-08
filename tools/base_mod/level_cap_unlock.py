@@ -235,6 +235,7 @@ def apply_native_level_cap_unlock(
                 "after_base_increment": after_bases[cat_id],
             }
             for cat_id in (289, 290, 363, 536)
+            if cat_id in targets
         },
         "integrity": {
             "output_jp_hash_valid": True,
@@ -273,6 +274,8 @@ def verify_native_level_cap_unlock(
 
     examples = {}
     for cat_id in (289, 290, 363, 536):
+        if cat_id not in targets:
+            continue
         target = targets[cat_id]
         record_offset = MAX_UPGRADE_DATA_OFFSET + cat_id * MAX_UPGRADE_RECORD_SIZE
         base_increment = _read_u16(data, record_offset + 2)
