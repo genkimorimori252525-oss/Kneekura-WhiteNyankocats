@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "anchor": "JP 15.7.1",
+  "status": "APPROVED_DESIGN_ONLY_NOT_APPLIED",
+  "sources": {
+    "DataLocal/unit289.csv": {
+      "sha256": "e48bc212537fe7949c74527f0a8212874e8595fd9414f6d9bc2b7a1e3aee1a82"
+    },
+    "DataLocal/unit703.csv": {
+      "sha256": "8caeff21c1c02918da708d06095def423d05f9df14da63b741ac78994b57dbad"
+    },
+    "DataLocal/t_unit.csv": {
+      "sha256": "d4fe8661e39a8f489e7549f03b5de4020acb6d7f8560438bdbb9490ec2f8cb04"
+    }
+  },
+  "updates": {
+    "UMDK-001": {
+      "title": "Ultimate Madoka / third form",
+      "catalog_no": 289,
+      "asset_id": 288,
+      "unit_csv": "unit289.csv",
+      "form_index": 2,
+      "approved": {
+        "level_reference": 30,
+        "attack_damage": 28000,
+        "standing_range": 750,
+        "production_cost_eoc2": 4550,
+        "recharge_frames": 4650
+      },
+      "preserve": {
+        "hp_at_level30": 55250,
+        "ld_minimum": 450,
+        "ld_maximum": 800,
+        "attack_cycle_frames": 271,
+        "first_hit_frame": 72,
+        "move_speed": 20,
+        "knockback_count": 4,
+        "special_abilities": "unchanged",
+        "form0_and_form1": "unchanged",
+        "death_animation": "unchanged"
+      },
+      "implementation_status": "NOT_IMPLEMENTED"
+    },
+    "UGOD-001": {
+      "title": "Godzilla enemy-inspired cat / form 0 (catalog first form)",
+      "catalog_no": 703,
+      "asset_id": 702,
+      "unit_csv": "unit703.csv",
+      "form_index": 0,
+      "original_form_name": "ゴジラにゃんこ",
+      "next_form_name": "シン・ゴジラにゃんこ",
+      "source_enemy_id": 552,
+      "approved": {
+        "production_cost_eoc2": 9800,
+        "recharge_frames": 15000,
+        "attack_cycle_frames": 450,
+        "attack_hit_frames": [
+          130,
+          170,
+          210
+        ],
+        "sequence_attack_damage": 1200000,
+        "hit_attack_damage": [
+          400000,
+          400000,
+          400000
+        ],
+        "enemy_castle_damage_cap_per_sequence": 1,
+        "damage_vs_enemies": "unrestricted_by_castle_cap"
+      },
+      "enemy_raw_reference": {
+        "base_hp": 500,
+        "base_hit_attack_damage": [
+          200,
+          200,
+          200
+        ],
+        "range": 3800,
+        "ld_minimum": 2300,
+        "ld_maximum": 3800,
+        "speed": 3,
+        "knockback_count": 1,
+        "original_castle_multiplier": 4
+      },
+      "open_gates": [
+        "Confirm form 0 ゴジラにゃんこ rather than form 1 シン・ゴジラにゃんこ is the visual/replacement target.",
+        "Choose level-scaling/reference-level treatment for exact 400000 per hit on a friendly unit.",
+        "Decide HP, traits, special abilities and other enemy-to-cat transfer fields not explicitly approved.",
+        "Verify live original-scene hook can cap castle HP deduction at 1 across all three hit events.",
+        "Source original on-device visuals from owner-owned assets without committing binaries."
+      ],
+      "implementation_status": "NOT_IMPLEMENTED"
+    }
+  },
+  "safety": {
+    "modify_save_data": false,
+    "change_progress": false,
+    "write_to_original_apk_in_git": false,
+    "requires_original_scene_device_proof": true,
+    "may_mark_released": false
+  }
+}
