@@ -9,6 +9,7 @@ import struct
 import sys
 from typing import Any
 
+from tools.base_mod.unit_identifiers import IMPORTANT_COLLAB_ASSET_IDS
 from tools.base_mod.build_offline_max_save import (
     ARRAYS_I16,
     ARRAYS_I32,
@@ -152,7 +153,7 @@ def verify_post_eoc_runtime_core(data: bytes, export_zip: Path) -> dict[str, Any
         failures.append("Post-EoC gacha-seen IDs changed")
     if not set(legend_rare_ids).issubset(actual_owned):
         failures.append("one or more Legend Rare units are missing after runtime rewrite")
-    for required_id in (289, 290, 363, 536):
+    for required_id in IMPORTANT_COLLAB_ASSET_IDS:
         if required_id not in actual_owned:
             failures.append(
                 f"required collab/gacha unit {required_id} is missing after runtime rewrite"
@@ -379,7 +380,7 @@ def verify_post_eoc_save(
         failures.append("gacha-seen IDs do not match Post-EoC ownership")
     if not set(legend_rare_ids).issubset(actual_owned):
         failures.append("one or more Legend Rare units are missing")
-    for required_id in (289, 290, 363, 536):
+    for required_id in IMPORTANT_COLLAB_ASSET_IDS:
         if required_id not in actual_owned:
             failures.append(f"required collab/gacha unit {required_id} is missing")
     if any(current_forms) or any(unlocked_forms) or any(fourth_forms):
@@ -524,7 +525,7 @@ def verify_post_eoc_save(
             "owned_count": len(actual_owned),
             "stage_reward_ids": stage_reward_ids,
             "legend_rare_ids": legend_rare_ids,
-            "required_collab_ids": [289, 290, 363, 536],
+            "required_collab_ids": list(IMPORTANT_COLLAB_ASSET_IDS),
             "unit_drop_nonzero": sum(value != 0 for value in unit_drops),
         },
         "events": {
