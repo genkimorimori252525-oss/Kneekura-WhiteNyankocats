@@ -34,10 +34,10 @@
     "global_835_unlock_removed": true,
     "policy": "all eligible non-stage-reward units owned",
     "required_collab_ids": [
+      288,
       289,
-      290,
-      363,
-      536
+      362,
+      535
     ],
     "legend_rare_count": 18,
     "legend_rare_ids": [
@@ -60,8 +60,14 @@
       815,
       881
     ],
-    "madoka_id_289_owned": true,
-    "all_legend_rares_owned": true
+    "all_legend_rares_owned": true,
+    "madoka_asset_id_288_owned": true,
+    "required_collab_catalog_numbers": [
+      289,
+      290,
+      363,
+      536
+    ]
   },
   "events": {
     "sol": {
