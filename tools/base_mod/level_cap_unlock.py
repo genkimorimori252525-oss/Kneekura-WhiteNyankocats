@@ -34,6 +34,7 @@ import sys
 from typing import Any
 
 from tools.battlecats_source import BattleCatsExport
+from tools.base_mod.unit_identifiers import IMPORTANT_COLLAB_ASSET_IDS
 from tools.base_mod.build_offline_max_save import (
     EXPORT_SHA256,
     _rewrite_hash,
@@ -122,7 +123,7 @@ def _derive_targets(export_zip: Path) -> tuple[dict[int, dict[str, int]], dict[s
         )
 
     # Important user-facing regression anchors.
-    for required_id in (289, 290, 363, 536):
+    for required_id in IMPORTANT_COLLAB_ASSET_IDS:
         target = targets.get(required_id)
         if target is None or target["effective_target"] != 60:
             raise ValueError(
@@ -135,7 +136,7 @@ def _derive_targets(export_zip: Path) -> tuple[dict[int, dict[str, int]], dict[s
         "effective_target_distribution": dict(sorted(requested_distribution.items())),
         "native_hard_cap_distribution": dict(sorted(native_distribution.items())),
         "unitbuy_sha256": provenance.payload_sha256,
-        "required_level60_ids": [289, 290, 363, 536],
+        "required_level60_ids": list(IMPORTANT_COLLAB_ASSET_IDS),
     }
     return targets, evidence
 
@@ -234,7 +235,7 @@ def apply_native_level_cap_unlock(
                 "before_base_increment": before_bases[cat_id],
                 "after_base_increment": after_bases[cat_id],
             }
-            for cat_id in (289, 290, 363, 536)
+            for cat_id in IMPORTANT_COLLAB_ASSET_IDS
             if cat_id in targets
         },
         "integrity": {
@@ -273,7 +274,7 @@ def verify_native_level_cap_unlock(
             satisfied += 1
 
     examples = {}
-    for cat_id in (289, 290, 363, 536):
+    for cat_id in IMPORTANT_COLLAB_ASSET_IDS:
         if cat_id not in targets:
             continue
         target = targets[cat_id]
