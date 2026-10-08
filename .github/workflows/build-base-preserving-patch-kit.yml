@@ -26,6 +26,7 @@ on:
       - "docs/evidence/offline-profile-*"
       - "docs/evidence/post-eoc-*"
       - "docs/evidence/login-pool-*"
+      - "docs/evidence/native-level-cap-*"
       - "docs/research/offline-profile-community-prior-art.md"
       - "docs/research/failure-repair-history.md"
       - "docs/references/native-service-map-jp15.7.1.*"
@@ -191,6 +192,12 @@ jobs:
           $source = Get-Content tools/base_mod/run_post_eoc_bootstrap.ps1 -Raw
           [void][scriptblock]::Create($source)
 
+      - name: Validate native level-cap migration runner syntax
+        shell: pwsh
+        run: |
+          $source = Get-Content tools/base_mod/run_level_cap_unlock.ps1 -Raw
+          [void][scriptblock]::Create($source)
+
       - name: Build Frida 17 Java-bridge trace bundle
         shell: bash
         run: |
@@ -232,6 +239,7 @@ jobs:
           cp tools/base_mod/run_offline_max_rollback.ps1 build/patch-kit/tools/base_mod/
           cp tools/base_mod/run_offline_max_persistence_gate.ps1 build/patch-kit/tools/base_mod/
           cp tools/base_mod/run_post_eoc_bootstrap.ps1 build/patch-kit/tools/base_mod/
+          cp tools/base_mod/run_level_cap_unlock.ps1 build/patch-kit/tools/base_mod/
           cp tools/battlecats_pack.py build/patch-kit/tools/
           cp tools/battlecats_source.py build/patch-kit/tools/
           cp tools/analyze_gacha_foundation.py build/patch-kit/tools/
@@ -273,6 +281,7 @@ jobs:
           cp docs/evidence/offline-profile-static-map-jp15.7.1.* build/patch-kit/docs/evidence/
           cp docs/evidence/post-eoc-static-proof-jp15.7.1.* build/patch-kit/docs/evidence/
           cp docs/evidence/login-pool-jp15.7.1.* build/patch-kit/docs/evidence/
+          cp docs/evidence/native-level-cap-unlock-jp15.7.1.* build/patch-kit/docs/evidence/
           cp docs/evidence/loginbg-019-server-manifest-corroboration.md build/patch-kit/docs/evidence/
           cp docs/research/offline-profile-community-prior-art.md build/patch-kit/docs/research/
           cp docs/research/failure-repair-history.md build/patch-kit/docs/research/
@@ -374,6 +383,30 @@ jobs:
             original Battle Cats login/event presentation runtime. The SAVE_DATA
             unlock-only layer for normal/collab event maps is active in the
             Post-EoC profile.
+
+          Native level-cap convenience migration:
+            This is additive and works on the current SAVE_DATA; it does not
+            re-bootstrap or clear Legend progress.
+
+            Static-only preview:
+              powershell -ExecutionPolicy Bypass -File .\tools\base_mod\run_level_cap_unlock.ps1
+
+            Apply:
+              powershell -ExecutionPolicy Bypass -File .\tools\base_mod\run_level_cap_unlock.ps1 -Apply
+
+            Exact JP 15.7.1 native caps are preserved:
+              - 323 eligible units can reach Lv60
+              - 493 eligible units are native Lv50
+              - 11 eligible units are native Lv20
+              - 8 eligible units are native Lv1
+
+            Madoka 289, Homura 290, Saber 363 and Hatsune Miku 536 are
+            regression anchors for the Lv60-capable group.
+
+            The migration changes only max_upgrade_level.base metadata plus the
+            SAVE hash. Current levels, ownership, forms, stage progress,
+            unit-drop claims and Catseye-consumption history are untouched.
+            It keeps an exact pre-migration rollback copy on-device.
 
           Offline MAX one-time bootstrap (research package only):
             - accepts the JP 15.7.1 semantic clean-baseline family instead of
