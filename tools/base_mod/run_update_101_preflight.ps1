@@ -46,15 +46,20 @@ if ($CheckLevelCaps -or $ApplyLevelCaps) {
     if ([string]::IsNullOrWhiteSpace($Package)) {
         throw "Specify -Package with your existing Kneekura app ID before any device operation"
     }
-    $options = @("-OwnedExport", $exportPath, "-OutDir", (Join-Path $outputPath "level-cap"), "-Package", $Package)
-    if ($Device) { $options += @("-Device", $Device) }
+    # PowerShell hashtable splatting passes each value as a genuinely named parameter.
+    $runnerArgs = @{
+        OwnedExport = $exportPath
+        OutDir = (Join-Path $outputPath "level-cap")
+        Package = $Package
+    }
+    if ($Device) { $runnerArgs["Device"] = $Device }
     if ($ApplyLevelCaps) {
         # Delegated ONLY to the previously validated existing migration runner:
         # exact backup, candidate verification, original-UI restart, rollback.
-        $options += "-Apply"
+        $runnerArgs["Apply"] = $true
         Write-Host "Applying ONLY the existing level-cap migration to $Package..."
     } else { Write-Host "Checking ONLY existing level-cap migration; no SAVE_DATA write..." }
-    & $levelCapRunner @options
+    & $levelCapRunner @runnerArgs
     if ($LASTEXITCODE -ne 0) { throw "Native level-cap runner failed" }
 }
 
