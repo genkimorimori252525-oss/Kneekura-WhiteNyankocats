@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "id": "kneekura-madoka-official-baseline-jp15.7.1",
+  "status": "research-baseline-not-applied",
+  "game_anchor": "jp-15.7.1",
+  "unit": {
+    "display_no": 289,
+    "internal_zero_based_id": 288,
+    "local_entry": "unit289.csv",
+    "form_index": 2,
+    "form_name": "アルティメットまどか",
+    "rarity": "超激レア",
+    "first_form": "鹿目まどか",
+    "second_form": "まどか＆ネコ",
+    "third_form": "アルティメットまどか",
+    "form_count": 3,
+    "original_unitbuy_cap": 60,
+    "talents_defined_in_skill_acquisition": false
+  },
+  "data_receipts": {
+    "unit289_csv_sha256": "e48bc212537fe7949c74527f0a8212874e8595fd9414f6d9bc2b7a1e3aee1a82",
+    "unitbuy_csv_sha256": "bc1adab2fc6ad79f3b8198a8a4d40786756d586af846fdbdeccdbaec55226daf",
+    "skill_acquisition_sha256": "866788d7ecb6a8c821086ed0f876fc5b294054799b1dfdd83db935513899b1c9",
+    "inner_installpack_crc_verified": true,
+    "outer_zip_central_directory_verified": false
+  },
+  "raw_third_form": {
+    "hp_at_level1": 3250,
+    "attack_at_level1": 1850,
+    "knockbacks": 4,
+    "speed": 20,
+    "standing_range": 550,
+    "cost_raw": 2900,
+    "foreswing_frames": 72,
+    "slow_chance_pct": 100,
+    "slow_frames": 90,
+    "long_distance_min": 450,
+    "long_distance_width": 350
+  },
+  "official_form_stats": {
+    "level30": {
+      "hp": 55250,
+      "attack": 31450,
+      "dps": 3482
+    },
+    "level40": {
+      "hp": 71500,
+      "attack": 40700,
+      "dps": 4506
+    },
+    "level50": {
+      "hp": 87750,
+      "attack": 49950,
+      "dps": 5530
+    },
+    "level60": {
+      "hp": 104000,
+      "attack": 59200,
+      "dps": 6554
+    }
+  },
+  "timing": {
+    "attack_cycle_frames": 271,
+    "attack_foreswing_frames": 72,
+    "recharge_frames_db": 4146
+  },
+  "original_abilities": {
+    "targets": [
+      "floating",
+      "zombie",
+      "ancient"
+    ],
+    "massive_damage": true,
+    "massive_damage_multiplier": "3-4 depending on applicable treasure",
+    "slow_probability_percent": 100,
+    "slow_frames_base": 90,
+    "slow_frames_treasure": 108,
+    "zombie_killer": true,
+    "witch_killer": true,
+    "witch_killer_damage_factor": 5,
+    "witch_killer_damage_taken_factor": 0.1,
+    "ancient_curse_immune": true,
+    "long_distance_area": [
+      450,
+      800
+    ],
+    "unique_death_animation": true
+  },
+  "previous_form_level30": {
+    "hp": 43350,
+    "attack": 28050,
+    "dps": 3463,
+    "attack_cycle_frames": 243,
+    "foreswing_frames": 44
+  },
+  "design_status": {
+    "balance_patch_chosen": false,
+    "game_data_modified": false,
+    "save_data_modified": false
+  },
+  "corroboration": [
+    "https://battlecats-db.com/unit/289.html",
+    "https://wikiwiki.jp/bccharadata/鹿目まどか",
+    "https://game8.jp/battlecats/666055"
+  ]
+}
