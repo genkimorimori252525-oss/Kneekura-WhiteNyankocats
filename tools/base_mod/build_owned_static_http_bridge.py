@@ -1,0 +1,230 @@
+"""Build an owned JP 15.7.1 Frida-free static HTTP bridge split set.
+
+Pipeline:
+  exact owner export
+  -> inert Kneekura shim bootstrap
+  -> package flavor separation
+  -> flavor MyActivity subclass + classes5.dex
+  -> re-align/re-sign
+  -> static bridge parity audit
+
+The optional backup replay is build-time gated. Feature-OFF still uses the
+subclass, but every request calls the exact original super.newHttpRequest.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
+import shutil
+
+from tools.base_mod.extract_owned_splits import (
+    EXPECTED_EXPORT_SHA256,
+    extract_owned_splits,
+)
+from tools.base_mod.inject_shim import patch_split_set as inject_kneekura_shim
+from tools.base_mod.package_flavor import (
+    FLAVOR_PACKAGES,
+    patch_split_set as apply_package_flavor,
+)
+from tools.base_mod.inject_java_http_bridge import (
+    build_bridge_dex,
+    inject_bridge_split_set,
+)
+from tools.base_mod.repack import baseline_resign
+from tools.base_mod.verify_static_http_bridge import verify_static_http_bridge
+
+
+def build_owned_static_http_bridge(
+    export_zip: Path,
+    *,
+    flavor: str,
+    shim: Path,
+    keystore: Path,
+    alias: str,
+    storepass: str,
+    output_dir: Path,
+    enable_backup_offline_replay: bool = False,
+    keypass: str | None = None,
+    zipalign: str | None = None,
+    apksigner: str | None = None,
+    javac: str | None = None,
+    d8: str | None = None,
+    android_jar: str | None = None,
+    root: Path = Path("."),
+) -> dict:
+    if flavor not in FLAVOR_PACKAGES:
+        raise ValueError(f"unknown flavor: {flavor}")
+
+    export_zip = export_zip.resolve()
+    shim = shim.resolve()
+    keystore = keystore.resolve()
+    output_dir = output_dir.resolve()
+    root = root.resolve()
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    work = output_dir / ".static-http-work"
+    if work.exists():
+        shutil.rmtree(work)
+    work.mkdir(parents=True)
+
+    original = work / "original-splits"
+    bootstrap = work / "bootstrap-splits"
+    flavored = work / "flavored-splits"
+    bridged = work / "bridged-splits"
+    bridge_dex = work / "kneekura-http-bridge.dex"
+    signed = output_dir / f"{flavor}-static-http-signed-splits"
+    if signed.exists():
+        shutil.rmtree(signed)
+
+    source_ledger = extract_owned_splits(export_zip, original)
+    bootstrap_ledger = inject_kneekura_shim(
+        original,
+        bootstrap,
+        shim,
+    )
+    flavor_ledger = apply_package_flavor(
+        bootstrap,
+        flavored,
+        flavor=flavor,
+        research_native_extraction=False,
+    )
+    bridge_build = build_bridge_dex(
+        flavor=flavor,
+        enabled=enable_backup_offline_replay,
+        output=bridge_dex,
+        javac=javac,
+        d8=d8,
+        android_jar=android_jar,
+        root=root,
+    )
+    bridge_ledger = inject_bridge_split_set(
+        flavored,
+        bridged,
+        flavor=flavor,
+        bridge_dex_path=bridge_dex,
+    )
+
+    signing_ledger = baseline_resign(
+        bridged,
+        signed,
+        keystore=keystore,
+        alias=alias,
+        storepass=storepass,
+        keypass=keypass,
+        zipalign=zipalign,
+        apksigner=apksigner,
+        source_export_sha256=EXPECTED_EXPORT_SHA256,
+    )
+
+    parity = verify_static_http_bridge(
+        original,
+        signed,
+        flavor=flavor,
+        replay_enabled=enable_backup_offline_replay,
+    )
+
+    ledgers = {
+        "source-split-ledger.json": source_ledger,
+        "bootstrap-patch-ledger.json": bootstrap_ledger,
+        "package-patch-ledger.json": flavor_ledger,
+        "http-bridge-build-ledger.json": bridge_build,
+        "http-bridge-ledger.json": bridge_ledger,
+        "parity-report.json": parity,
+    }
+    for name, payload in ledgers.items():
+        (signed / name).write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+
+    package_name = FLAVOR_PACKAGES[flavor]
+    launcher = package_name + ".MyActivity"
+    instructions = f"""Kneekura JP 15.7.1 Frida-free static HTTP bridge
+
+Flavor: {flavor}
+Package: {package_name}
+Launcher: {launcher}
+Backup offline replay enabled: {str(enable_backup_offline_replay).lower()}
+
+This build contains NO Frida Gadget.
+
+Install every APK together:
+  adb install-multiple --no-streaming -r *.apk
+
+Launch:
+  adb shell am start -n {package_name}/{launcher}
+
+Behavior contract:
+- exact observed backup GET family is locally replayed only when enabled;
+- unrecognized requests call super.newHttpRequest unchanged;
+- build-time feature OFF calls super.newHttpRequest for every request;
+- original MyActivity remains the superclass and original UI/lifecycle host.
+
+Final device smoke should be performed only after repository parity is green.
+"""
+    (signed / "INSTALL-STATIC-HTTP.txt").write_text(
+        instructions,
+        encoding="utf-8",
+    )
+
+    shutil.rmtree(work)
+    return {
+        "schema_version": 1,
+        "mode": "owned-static-http-bridge",
+        "flavor": flavor,
+        "package": package_name,
+        "launcher": launcher,
+        "backup_offline_replay_enabled": enable_backup_offline_replay,
+        "source_export_sha256": EXPECTED_EXPORT_SHA256,
+        "signed_split_dir": str(signed),
+        "signer_certificate_sha256": signing_ledger[
+            "signer_certificate_sha256"
+        ],
+        "static_parity": parity,
+    }
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("export_zip", type=Path)
+    parser.add_argument("--flavor", choices=sorted(FLAVOR_PACKAGES), required=True)
+    parser.add_argument("--shim", required=True, type=Path)
+    parser.add_argument("--keystore", required=True, type=Path)
+    parser.add_argument("--alias", required=True)
+    parser.add_argument("--storepass", required=True)
+    parser.add_argument("--keypass")
+    parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--enable-backup-offline-replay", action="store_true")
+    parser.add_argument("--zipalign")
+    parser.add_argument("--apksigner")
+    parser.add_argument("--javac")
+    parser.add_argument("--d8")
+    parser.add_argument("--android-jar")
+    parser.add_argument("--root", type=Path, default=Path("."))
+    args = parser.parse_args()
+
+    result = build_owned_static_http_bridge(
+        args.export_zip,
+        flavor=args.flavor,
+        shim=args.shim,
+        keystore=args.keystore,
+        alias=args.alias,
+        storepass=args.storepass,
+        keypass=args.keypass,
+        output_dir=args.output,
+        enable_backup_offline_replay=args.enable_backup_offline_replay,
+        zipalign=args.zipalign,
+        apksigner=args.apksigner,
+        javac=args.javac,
+        d8=args.d8,
+        android_jar=args.android_jar,
+        root=args.root,
+    )
+    print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

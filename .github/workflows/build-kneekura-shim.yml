@@ -1,0 +1,140 @@
+name: Build Kneekura native shim
+
+on:
+  push:
+    branches:
+      - "jolly/**"
+    paths:
+      - "native/kneekura-shim/**"
+      - "tools/base_mod/inject_shim.py"
+      - "tools/base_mod/elf_anchor.py"
+      - "requirements-patching.txt"
+      - "tests/test_native_shim_inject.py"
+      - "tests/test_native_shim_source.py"
+      - "tests/test_native_sidecar_contract.py"
+      - "tests/test_native_provider_abi.py"
+      - "tests/test_login_provider_anchor.py"
+      - ".github/workflows/build-kneekura-shim.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install patching dependencies
+        run: python -m pip install -r requirements-patching.txt
+
+      - name: Install Android NDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER="$(command -v sdkmanager)"
+          fi
+          "$SDKMANAGER" "ndk;27.2.12479018"
+
+      - name: Build inert ARM64 shim
+        shell: bash
+        run: |
+          set -euo pipefail
+          NDK="$ANDROID_HOME/ndk/27.2.12479018"
+          cmake -S native/kneekura-shim -B build/kneekura-shim \
+            -DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI=arm64-v8a \
+            -DANDROID_PLATFORM=android-29 \
+            -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/kneekura-shim --parallel
+          test -f build/kneekura-shim/libkneekura.so
+
+      - name: Verify shim ABI and default-off contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          SHIM="build/kneekura-shim/libkneekura.so"
+          file "$SHIM"
+          readelf -h "$SHIM"
+          readelf -d "$SHIM"
+          readelf -Ws "$SHIM" | tee /tmp/kneekura-symbols.txt
+          grep -F "kneekura_shim_abi_version" /tmp/kneekura-symbols.txt
+          grep -F "kneekura_feature_mask" /tmp/kneekura-symbols.txt
+          grep -F "kneekura_target_native_sha256" /tmp/kneekura-symbols.txt
+          grep -F "kneekura_sidecar_save_atomic" /tmp/kneekura-symbols.txt
+          grep -F "kneekura_clock_observe_epoch_day" /tmp/kneekura-symbols.txt
+          grep -F "kneekura_provider_gacha_cost" /tmp/kneekura-symbols.txt
+          grep -F "kneekura_provider_stage_cat_food" /tmp/kneekura-symbols.txt
+          grep -F "kneekura_provider_login_template_id" /tmp/kneekura-symbols.txt
+
+      - name: Test portable Clock Sidecar Profile core
+        shell: bash
+        run: |
+          set -euo pipefail
+          cc -std=c11 -Wall -Wextra -Werror \
+            -Inative/kneekura-shim/include \
+            native/kneekura-shim/src/kneekura_shim.c \
+            native/kneekura-shim/src/kneekura_state.c \
+            native/kneekura-shim/src/kneekura_provider.c \
+            native/kneekura-shim/tests/kneekura_state_test.c \
+            -o /tmp/kneekura-state-inert
+          /tmp/kneekura-state-inert
+
+          cc -std=c11 -Wall -Wextra -Werror \
+            -DKNEEKURA_DEFAULT_FEATURE_MASK=1ull \
+            -Inative/kneekura-shim/include \
+            native/kneekura-shim/src/kneekura_shim.c \
+            native/kneekura-shim/src/kneekura_state.c \
+            native/kneekura-shim/src/kneekura_provider.c \
+            native/kneekura-shim/tests/kneekura_state_test.c \
+            -o /tmp/kneekura-state-enabled
+          /tmp/kneekura-state-enabled
+
+      - name: Test provider ABI disabled and enabled semantics
+        shell: bash
+        run: |
+          set -euo pipefail
+          cc -std=c11 -Wall -Wextra -Werror \
+            -Inative/kneekura-shim/include \
+            native/kneekura-shim/src/kneekura_shim.c \
+            native/kneekura-shim/src/kneekura_state.c \
+            native/kneekura-shim/src/kneekura_provider.c \
+            native/kneekura-shim/tests/kneekura_provider_test.c \
+            -o /tmp/kneekura-provider-inert
+          /tmp/kneekura-provider-inert
+
+          cc -std=c11 -Wall -Wextra -Werror \
+            -DKNEEKURA_DEFAULT_FEATURE_MASK=127ull \
+            -Inative/kneekura-shim/include \
+            native/kneekura-shim/src/kneekura_shim.c \
+            native/kneekura-shim/src/kneekura_state.c \
+            native/kneekura-shim/src/kneekura_provider.c \
+            native/kneekura-shim/tests/kneekura_provider_test.c \
+            -o /tmp/kneekura-provider-enabled
+          /tmp/kneekura-provider-enabled
+
+      - name: Audit shim for network or dynamic hook imports
+        run: |
+          python -m tools.base_mod.audit_shim_imports \
+            build/kneekura-shim/libkneekura.so \
+            --output build/kneekura-shim/shim-import-audit.json
+
+      - name: Test native dependency injection helper
+        run: python -m unittest tests.test_native_shim_inject tests.test_native_shim_source tests.test_native_sidecar_contract tests.test_native_provider_abi tests.test_login_provider_anchor tests.test_shim_import_audit -v
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kneekura-arm64-bootstrap-shim
+          path: |
+            build/kneekura-shim/libkneekura.so
+            build/kneekura-shim/shim-import-audit.json
+          if-no-files-found: error
+          retention-days: 30

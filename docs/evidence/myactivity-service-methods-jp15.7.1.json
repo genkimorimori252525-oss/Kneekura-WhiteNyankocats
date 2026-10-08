@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "anchor": {
+    "package": "jp.co.ponos.battlecats",
+    "version": "15.7.1",
+    "base_apk_sha256": "60e5e9df891b7be487abc4590fb3ca2e98218225efedbe4ba26b39dc10ce5c9a",
+    "dex": "classes4.dex",
+    "class_descriptor": "Ljp/co/ponos/battlecats/MyActivity;"
+  },
+  "methods": [
+    {
+      "name": "createDefaults",
+      "kind": "virtual",
+      "access_flags": "0x1",
+      "code_off": "0x45fe1c",
+      "return": "Ljava/lang/String;",
+      "parameters": [],
+      "registers_size": 4,
+      "ins_size": 1,
+      "outs_size": 2,
+      "tries_size": 1,
+      "debug_info_off": "0x47eda0",
+      "insns_size": 54,
+      "insns_sha256": "33cd1335dc4ec1be1d64931d83c5974eb1cf746c1269e0eb87f10ca9b925b16a",
+      "code_header_insns_sha256": "adadba178c7d86653d81452c17c458fe873a8bb5b2f463fe6bc74af938ec09b8"
+    },
+    {
+      "name": "isNetworkAvailable",
+      "kind": "virtual",
+      "access_flags": "0x1",
+      "code_off": "0x45eb20",
+      "return": "Z",
+      "parameters": [],
+      "registers_size": 2,
+      "ins_size": 1,
+      "outs_size": 2,
+      "tries_size": 0,
+      "debug_info_off": "0x47eda0",
+      "insns_size": 24,
+      "insns_sha256": "536588a2c61fbf437769573b7581cd31433144a2b1355ccb4e5ec71d6c2e4bd4",
+      "code_header_insns_sha256": "2e0ea922d783ed5145018a69fd7ed59a72722239067148d4e5ab986849e9ed1e"
+    },
+    {
+      "name": "newHttpRequest",
+      "kind": "virtual",
+      "access_flags": "0x1",
+      "code_off": "0x45fc58",
+      "return": "I",
+      "parameters": [
+        "Ljava/lang/String;",
+        "Ljava/lang/String;",
+        "F",
+        "Ljava/util/HashMap;",
+        "Ljava/nio/ByteBuffer;",
+        "[Ljava/lang/String;",
+        "Z",
+        "Z"
+      ],
+      "registers_size": 17,
+      "ins_size": 9,
+      "outs_size": 8,
+      "tries_size": 1,
+      "debug_info_off": "0x481bf9",
+      "insns_size": 53,
+      "insns_sha256": "14f896e5b42b8e5b8ab50f756bdc79ad44614325eb153ab99ffcdafb98c70a80",
+      "code_header_insns_sha256": "5d5f0e5abe0a390902c519299f67ad582ad3780668e755b4c8b1fd6207f7bb2d"
+    },
+    {
+      "name": "newResponse",
+      "kind": "direct-static-native",
+      "access_flags": "0x109",
+      "code_off": "0x0",
+      "return": "V",
+      "parameters": [
+        "I",
+        "I",
+        "Ljava/lang/String;",
+        "Ljava/lang/String;",
+        "Ljava/nio/ByteBuffer;",
+        "Z"
+      ]
+    },
+    {
+      "name": "onResponseCodeHeaders",
+      "kind": "direct-static-native",
+      "access_flags": "0x109",
+      "code_off": "0x0",
+      "return": "V",
+      "parameters": [
+        "I",
+        "I",
+        "Ljava/lang/String;",
+        "Ljava/lang/String;"
+      ]
+    },
+    {
+      "name": "onResponseData",
+      "kind": "direct-static-native",
+      "access_flags": "0x109",
+      "code_off": "0x0",
+      "return": "V",
+      "parameters": [
+        "I",
+        "Ljava/nio/ByteBuffer;"
+      ]
+    },
+    {
+      "name": "onResponseFinish",
+      "kind": "direct-static-native",
+      "access_flags": "0x109",
+      "code_off": "0x0",
+      "return": "V",
+      "parameters": [
+        "I",
+        "Z"
+      ]
+    }
+  ],
+  "interpretation": [
+    "newHttpRequest and isNetworkAvailable are original Java instance methods with code bodies in classes4.dex.",
+    "newResponse/onResponse* are public static native declarations whose implementation is provided by libnative-lib.so JNI exports.",
+    "The request/response bridge therefore crosses Java at a compact, exact class boundary without requiring UI replacement.",
+    "newHttpRequest/isNetworkAvailable/createDefaults now also carry exact code-item instruction hashes, so any future static Java bridge patch can fail closed if the anchored DEX method body drifts."
+  ]
+}

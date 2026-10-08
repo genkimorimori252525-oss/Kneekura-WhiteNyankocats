@@ -1,0 +1,188 @@
+{
+  "schema_version": 1,
+  "captured_on": "2026-10-07",
+  "anchor": "jp-15.7.1",
+  "baseline": {
+    "size": 496340,
+    "sha256": "cad00e84f3d64910b623b8a89b57ae1a37e8947554f4b418f50efa1c6bdc1d3c",
+    "jp_salted_md5": "3552ae85c3fde366d413360d27fdb76e",
+    "game_version": 150700
+  },
+  "parser_oracle": {
+    "project": "fieryhenry/BCSFE-Python",
+    "pinned_commit": "85fb94cbf00c6a74dbef58932610fb94ec8f7495",
+    "license": "GPL-3.0-or-later",
+    "usage": "research-only differential oracle; no source copied into shipping/runtime implementation",
+    "baseline_parse": true,
+    "baseline_roundtrip_byte_identical": true,
+    "baseline_roundtrip_diff_bytes": 0,
+    "baseline_roundtrip_sha256": "cad00e84f3d64910b623b8a89b57ae1a37e8947554f4b418f50efa1c6bdc1d3c",
+    "remaining_data_bytes": 332
+  },
+  "exact_field_map": {
+    "scalars_i32": {
+      "catfood": 7,
+      "xp": 75,
+      "tutorial_state": 79,
+      "korea_superior_treasure_state": 87,
+      "ui6": 111,
+      "story_chapter0_progress": 1145,
+      "story_chapter0_stage0_clear": 1185,
+      "menu_unlock_equip": 19049,
+      "new_dialog_1": 19145,
+      "new_dialog_5": 19161,
+      "normal_tickets": 19839,
+      "rare_tickets": 19843,
+      "platinum_tickets": 398140,
+      "np": 451687,
+      "legend_tickets": 483481,
+      "platinum_shards": 483703,
+      "hundred_million_ticket": 495780,
+      "engineers": 399146
+    },
+    "scalars_i16": {
+      "leadership": 451697
+    },
+    "arrays_i32": {
+      "cat_unlocked": {
+        "count_offset": 8397,
+        "count": 882,
+        "data_offset": 8401
+      },
+      "cat_current_form": {
+        "count_offset": 15461,
+        "count": 882,
+        "data_offset": 15465
+      },
+      "battle_items": {
+        "count": 6,
+        "data_offset": 19113
+      },
+      "cat_gatya_seen": {
+        "count_offset": 19847,
+        "count": 882,
+        "data_offset": 19851
+      },
+      "unit_drops": {
+        "count_offset": 294602,
+        "count": 400,
+        "data_offset": 294606
+      },
+      "cat_unlocked_forms": {
+        "count_offset": 310318,
+        "count": 882,
+        "data_offset": 310322
+      },
+      "catfruit_and_behemoth_materials": {
+        "count_offset": 385880,
+        "count": 29,
+        "data_offset": 385884
+      },
+      "cat_fourth_form": {
+        "count_offset": 386000,
+        "count": 882,
+        "data_offset": 386004
+      },
+      "catseyes": {
+        "count_offset": 393064,
+        "count": 6,
+        "data_offset": 393068
+      },
+      "catamins": {
+        "count_offset": 393092,
+        "count": 3,
+        "data_offset": 393096
+      },
+      "base_materials": {
+        "count_offset": 399065,
+        "count": 16,
+        "data_offset": 399069
+      },
+      "event_lucky_tickets": {
+        "count_offset": 439772,
+        "count": 55,
+        "data_offset": 439776
+      },
+      "treasure_chests": {
+        "count_u8_offset": 495796,
+        "count": 42,
+        "data_offset": 495797
+      }
+    },
+    "arrays_i16": {
+      "labyrinth_medals": {
+        "count_u8_offset": 484927,
+        "count": 4,
+        "data_offset": 484928
+      }
+    },
+    "talent_orbs": {
+      "count_offset_i16": 483324,
+      "data_offset": 483326,
+      "record": "i16 id + i16 count",
+      "exact_type_count": 310,
+      "value_each": 998,
+      "inserted_bytes": 1240
+    }
+  },
+  "unit_bootstrap": {
+    "eligible_unit_count": 835,
+    "excluded_unit_count": 47,
+    "unit_drop_save_ids_enabled": 255,
+    "drop_chara_sha256": "91928cca3e2b7586440d8447220255733adcb48aabba8fcfcc240572e41214e0",
+    "current_form": 0,
+    "unlocked_forms": 0,
+    "fourth_form": 0,
+    "gatya_seen": 1,
+    "owned": 1,
+    "talent_orb_exact_type_count": 310,
+    "equipmentlist_sha256": "da6340b98ee605687f2225ec5a0b8b1f3109e2b801107fed4773cdfe7b419ca2",
+    "engineer_exact_max": 5,
+    "castle_custom_limit_sha256": "16712ce9fa88f344526db29307bde142260508211ad151b89f97c4e1dd73c739"
+  },
+  "candidate": {
+    "size": 497580,
+    "sha256": "0f5cbdadf2536f05af7748f7696ca93233dfb01d80dfe98a17da0fd5e6cf65e7",
+    "jp_salted_md5": "808f172a858b6ea3c686168a51cbe0c7",
+    "parser_reparse": true,
+    "roundtrip_byte_identical": true,
+    "raw_offset_transform_matches_parser_oracle_byte_for_byte": true,
+    "variable_length_inserted_bytes": 1240,
+    "remaining_data_bytes_after_reparse": 332
+  },
+  "candidate_values": {
+    "catfood": 45000,
+    "xp": 99999999,
+    "normal_tickets": 2999,
+    "rare_tickets": 299,
+    "platinum_tickets": 9,
+    "legend_tickets": 4,
+    "platinum_shards": 9,
+    "np": 9999,
+    "leadership": 9999,
+    "hundred_million_ticket": 9999,
+    "battle_items_each": 9999,
+    "catfruit_and_behemoth_materials_each": 998,
+    "catseyes_each": 9999,
+    "catamins_each": 9999,
+    "base_materials_each": 9999,
+    "event_lucky_tickets_each": 9999,
+    "labyrinth_medals_each": 9999,
+    "treasure_chests_each": 9999,
+    "talent_orb_types": 310,
+    "talent_orbs_each": 998,
+    "engineers": 5
+  },
+  "cap_evidence": {
+    "xp": "exact-native-confirmed clamp",
+    "other_values": "current community/editor policy candidates, parser-safe and storage-width-safe on exact JP 15.7.1; not promoted to exact native caps",
+    "platinum_shards": "9 when Platinum Tickets are already at their 9-ticket cap, matching the editor's dependent shard maximum formula",
+    "talent_orbs": "310 exact JP 15.7.1 equipmentlist.json IDs, each at the current editor/storage-safe cap 998",
+    "engineers": "exact DataLocal CastleCustomLimit.csv maximum = 5"
+  },
+  "mutation_status": {
+    "device_written": false,
+    "candidate_generated_off_device": true,
+    "baseline_source_unchanged": true
+  }
+}

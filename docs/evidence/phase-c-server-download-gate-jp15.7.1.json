@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "anchor": {
+    "game_version": "15.7.1",
+    "export_sha256": "38c3bbb8d2cf2101793c9462617d4293e19fc99588b6655fd40299fd61a0ef56"
+  },
+  "observation": {
+    "owner_device_screen": "additional game-data download",
+    "displayed_size_family": "615 MB",
+    "rare_gacha_ui_reached": false
+  },
+  "exact_download_contract": {
+    "lane_count": 35,
+    "archive_bytes": 645599537,
+    "archive_mib": 615.6916971206665,
+    "archive_mb_decimal": 645.599537,
+    "fresh_export_shared_files_count": 0,
+    "lane_archive_sizes": [
+      34058334, 37971925, 37969262, 9264374, 20389362,
+      32502942, 10210453, 39877381, 22770649, 18650304,
+      9967869, 27606109, 24058225, 22176854, 12846580,
+      17616019, 12673749, 7054629, 14958447, 7959192,
+      8888131, 5794867, 11857092, 9329243, 22714140,
+      13206404, 19667505, 11325052, 7760406, 7171594,
+      5802652, 6515811, 6624589, 72992457, 15366935
+    ],
+    "native_lane_versions": [
+      5, 5, 5, 7000000, 7, 5, 5, 7000001, 1, 7000000,
+      7010000, 8070001, 9000003, 9040000, 9090000, 10000001,
+      10030000, 10030001, 10090000, 10090001, 11010000, 11010001,
+      11050000, 11090000, 12060000, 12060001, 13040000, 13070000,
+      13070001, 14020000, 14040000, 14040001, 14050000, 14060000,
+      15040000
+    ],
+    "lane_34_url_shape": "https://nyanko-assets.ponosgames.com/iphone/battlecats/download/battlecats_150400_34_00.zip",
+    "lane_34_archive_bytes": 15366935
+  },
+  "conclusion": {
+    "classification": "original_server_asset_bootstrap_gate",
+    "matches_observed_615_mib_prompt": true,
+    "gacha_schedule_inference_allowed": false,
+    "reason": "The exact 35 original download tables sum to 615.6917 MiB and the fresh isolated export contains no preseeded app files. The prior appended_banner_visible=false result occurred before the Rare Gacha UI was reached and therefore cannot establish a gacha visibility-schedule failure."
+  },
+  "preservation_path": {
+    "acquisition": "unchanged original Battle Cats downloader",
+    "research_only_storage_redirect": "getFilesDir() -> app-specific external files directory",
+    "personal_practice_storage_redirect": false,
+    "root_required": false,
+    "custom_downloader_added": false
+  }
+}

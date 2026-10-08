@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "anchor": {
+    "game_version": "15.7.1",
+    "export_sha256": "38c3bbb8d2cf2101793c9462617d4293e19fc99588b6655fd40299fd61a0ef56",
+    "source_family": "DataLocal"
+  },
+  "derivation": {
+    "tool": "tools/base_mod/super_gacha_data_prototype.py",
+    "mode": "deterministic-auto-safe-pool",
+    "auto_pool_size": 3,
+    "banner_on_override": 1
+  },
+  "proof_set": {
+    "new_set_id": 1089,
+    "clone_option_set": 49,
+    "cloned_option_semantics": {
+      "banner_on": 1,
+      "item_id_ticket": 21,
+      "anime_id": 0,
+      "btn_cut_id": 0,
+      "series_id": 11,
+      "menu_cut_id": 1,
+      "chara_id": -1,
+      "wait_maanim_on": 0,
+      "img_id": -1
+    },
+    "unit_ids": [
+      {
+        "unit_id": 37,
+        "rarity_id": 2,
+        "rarity": "rare"
+      },
+      {
+        "unit_id": 30,
+        "rarity_id": 3,
+        "rarity": "super_rare"
+      },
+      {
+        "unit_id": 34,
+        "rarity_id": 4,
+        "rarity": "uber_rare"
+      }
+    ]
+  },
+  "gates": {
+    "all_units_present_in_exact_local_r1_union": true,
+    "explicit_excluded_unit_ids": [
+      673
+    ],
+    "original_rows_replaced": false,
+    "r2_empty": true,
+    "r3_empty": true,
+    "rarity_probability_vector_defined": false,
+    "visibility_schedule_defined": false
+  },
+  "interpretation": "Exact owned JP 15.7.1 data deterministically yields append-only set 1089 with one local R1-backed Rare, Super Rare and Uber Rare representative. This proves the data construction target only; original-scene visibility, draw probability and acquisition/save behavior remain separate runtime gates."
+}

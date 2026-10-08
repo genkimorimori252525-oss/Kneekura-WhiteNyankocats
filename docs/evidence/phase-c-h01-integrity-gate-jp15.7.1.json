@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "anchor": {
+    "game_version": "15.7.1",
+    "export_sha256": "38c3bbb8d2cf2101793c9462617d4293e19fc99588b6655fd40299fd61a0ef56"
+  },
+  "owner_device_observation": {
+    "server_bootstrap_completed": true,
+    "h01_seen_immediately_after_bootstrap": true,
+    "rare_gacha_ui_reached": false,
+    "proof_build_modified_datalocal": true
+  },
+  "corroboration": {
+    "historical_modder": {
+      "repository": "dukart913/Battle-Cats-Game-Modder",
+      "claim": "pack/list MD5 verification is associated with Data Read Error H01"
+    },
+    "modern_overlay_exporter": {
+      "repository": "omochikaeri15/Battle-Cats-Complete",
+      "commit": "5a5096c8fa75f837d3e9a314e8fd4ce4813ec811",
+      "path": "kore/src/domains/mods/export/apk.rs",
+      "strategy": "pack modded game files into DownloadLocal"
+    }
+  },
+  "remediation": {
+    "native_md5_bypass": false,
+    "datalocal_byte_identical_required": true,
+    "downloadlocal_overlay": true,
+    "overlay_entries": [
+      "GatyaDataSetR1.csv",
+      "GatyaDataSetR2.csv",
+      "GatyaDataSetR3.csv",
+      "GatyaData_Option_SetR.tsv"
+    ],
+    "preserve_existing_downloadlocal_entries": true
+  },
+  "conclusion": "The direct DataLocal rewrite is retired from the runtime proof. The next owner-device build uses only an append-only DownloadLocal overlay and retains the original integrity check."
+}

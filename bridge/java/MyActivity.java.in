@@ -1,0 +1,216 @@
+package __KNEEKURA_PACKAGE__;
+
+import android.opengl.GLSurfaceView;
+
+import java.io.File;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.net.URL;
+import java.nio.ByteBuffer;
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * Exact JP 15.7.1 preservation-first HTTP bridge.
+ *
+ * This class deliberately subclasses the original Battle Cats MyActivity.
+ * All original UI/lifecycle behavior is inherited unchanged. Only the observed
+ * backup-service request family can be locally replayed, and only when the
+ * build-time feature gate is enabled. Every other request calls super exactly.
+ */
+public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
+    private static final boolean ENABLE_BACKUP_OFFLINE_REPLAY = __KNEEKURA_ENABLE_BACKUP_REPLAY__;
+    private static final boolean DEBUG_RESEARCH_LOG = __KNEEKURA_DEBUG_LOG__;
+    private static final boolean USE_EXTERNAL_FILES_DIR = __KNEEKURA_USE_EXTERNAL_FILES_DIR__;
+
+    private static final String BACKUP_SCHEME = "https";
+    private static final String BACKUP_HOST = "nyanko-backups.ponosgames.com";
+    private static final String BACKUP_PATH = "/";
+
+    private static volatile ReflectionCache reflectionCache;
+
+    private static final class ReflectionCache {
+        final Field nextRequestHandle;
+        final Field requestHandles;
+        final Field glView;
+        final Constructor<?> requestConstructor;
+
+        ReflectionCache() throws Exception {
+            Class<?> base = jp.co.ponos.battlecats.MyActivity.class;
+
+            nextRequestHandle = base.getDeclaredField("mNextRequestHandle");
+            nextRequestHandle.setAccessible(true);
+
+            requestHandles = base.getDeclaredField("mRequestHandles");
+            requestHandles.setAccessible(true);
+
+            glView = base.getDeclaredField("mGLView");
+            glView.setAccessible(true);
+
+            Class<?> requestClass = Class.forName("a32");
+            requestConstructor = requestClass.getDeclaredConstructor(
+                    int.class,
+                    String.class,
+                    URL.class,
+                    float.class,
+                    HashMap.class,
+                    ByteBuffer.class,
+                    String[].class
+            );
+            requestConstructor.setAccessible(true);
+        }
+    }
+
+    private static void debugResearch(String message) {
+        if (DEBUG_RESEARCH_LOG) {
+            android.util.Log.i("KNEEKURA_STATIC_HTTP", message);
+        }
+    }
+
+    @Override
+    public File getFilesDir() {
+        if (!USE_EXTERNAL_FILES_DIR) {
+            return super.getFilesDir();
+        }
+        File external = super.getExternalFilesDir(null);
+        if (external == null) {
+            return super.getFilesDir();
+        }
+        if (!external.exists()) {
+            external.mkdirs();
+        }
+        debugResearch("external-files-dir active");
+        return external;
+    }
+
+    private static ReflectionCache reflectionCache() throws Exception {
+        ReflectionCache cache = reflectionCache;
+        if (cache != null) {
+            return cache;
+        }
+        synchronized (MyActivity.class) {
+            cache = reflectionCache;
+            if (cache == null) {
+                cache = new ReflectionCache();
+                reflectionCache = cache;
+            }
+            return cache;
+        }
+    }
+
+    private static boolean isExactBackupRequest(
+            String method,
+            String requestUrl,
+            float timeout,
+            HashMap<?, ?> headers,
+            ByteBuffer body,
+            String[] strings,
+            boolean flag1,
+            boolean flag2) {
+        if (!ENABLE_BACKUP_OFFLINE_REPLAY) {
+            return false;
+        }
+        if (!"GET".equals(method) || Float.compare(timeout, 10.0f) != 0) {
+            return false;
+        }
+        if (headers == null || !headers.isEmpty() || body != null) {
+            return false;
+        }
+        if (strings == null || strings.length != 0 || flag1 || flag2) {
+            return false;
+        }
+
+        try {
+            URL parsed = new URL(requestUrl);
+            return BACKUP_SCHEME.equals(parsed.getProtocol())
+                    && BACKUP_HOST.equals(parsed.getHost())
+                    && BACKUP_PATH.equals(parsed.getPath())
+                    && parsed.getQuery() != null
+                    && parsed.getPort() == -1
+                    && parsed.getUserInfo() == null
+                    && parsed.getRef() == null;
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
+    @Override
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    public int newHttpRequest(
+            String method,
+            String requestUrl,
+            float timeout,
+            HashMap headers,
+            ByteBuffer body,
+            String[] strings,
+            boolean flag1,
+            boolean flag2) {
+        if (!isExactBackupRequest(
+                method,
+                requestUrl,
+                timeout,
+                headers,
+                body,
+                strings,
+                flag1,
+                flag2)) {
+            return super.newHttpRequest(
+                    method,
+                    requestUrl,
+                    timeout,
+                    headers,
+                    body,
+                    strings,
+                    flag1,
+                    flag2);
+        }
+
+        try {
+            final ReflectionCache cache = reflectionCache();
+            final int requestId = cache.nextRequestHandle.getInt(this);
+            cache.nextRequestHandle.setInt(this, requestId + 1);
+
+            final URL parsedUrl = new URL(requestUrl);
+            final Object request = cache.requestConstructor.newInstance(
+                    requestId,
+                    method,
+                    parsedUrl,
+                    timeout,
+                    headers,
+                    body,
+                    strings);
+
+            final Map requestMap = (Map) cache.requestHandles.get(this);
+            requestMap.put(Integer.valueOf(requestId), request);
+
+            final GLSurfaceView view = (GLSurfaceView) cache.glView.get(this);
+            view.queueEvent(new Runnable() {
+                @Override
+                public void run() {
+                    jp.co.ponos.battlecats.MyActivity.newResponse(
+                            requestId,
+                            0,
+                            requestUrl,
+                            "{}",
+                            null,
+                            true);
+                }
+            });
+            debugResearch("backup-local-replay requestId=" + requestId);
+            return requestId;
+        } catch (Throwable ignored) {
+            debugResearch("backup-local-replay fallback-to-original");
+            // Fail closed: any unexpected reflection/runtime drift returns to
+            // the exact original JP 15.7.1 implementation.
+            return super.newHttpRequest(
+                    method,
+                    requestUrl,
+                    timeout,
+                    headers,
+                    body,
+                    strings,
+                    flag1,
+                    flag2);
+        }
+    }
+}

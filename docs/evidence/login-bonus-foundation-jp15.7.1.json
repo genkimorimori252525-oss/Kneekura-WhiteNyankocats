@@ -1,0 +1,214 @@
+{
+  "schema_version": 1,
+  "anchor": {
+    "game_version": "15.7.1",
+    "version_code": 1507010,
+    "export_sha256": "38c3bbb8d2cf2101793c9462617d4293e19fc99588b6655fd40299fd61a0ef56",
+    "source_family": "DataLocal"
+  },
+  "files": {
+    "DailyLoginEventData.csv": {
+      "size": 26201,
+      "sha256": "1ebe0534959984622316b0d4ebd0f2dc86b10b86be31107dee4d3c83902680dd",
+      "line_count": 159
+    },
+    "DailyLoginEventGrade.json": {
+      "size": 1334,
+      "sha256": "513b4ec4f7b7847a8af4afccfa74fa8df53501426d437fa9d34d0017c26b3e89",
+      "line_count": 76
+    },
+    "StampData.csv": {
+      "size": 413,
+      "sha256": "7005a4ac4ecabe13f2abc94202bae1982d3365ad909655cdcddee134d1d86525",
+      "line_count": 31
+    }
+  },
+  "standard_stamp": {
+    "file": "StampData.csv",
+    "row_count": 31,
+    "separate_from_comeback_template": true
+  },
+  "comeback_template": {
+    "event_id": 949,
+    "header_cells": [
+      949,
+      901,
+      255,
+      0,
+      0,
+      19,
+      0
+    ],
+    "day_count": 7,
+    "days": [
+      {
+        "day": 1,
+        "group_value": 21,
+        "rewards": [
+          {
+            "kind": 0,
+            "item_index": 21,
+            "item_name": "レアチケット",
+            "amount": 1
+          },
+          {
+            "kind": 0,
+            "item_index": 20,
+            "item_name": "にゃんこチケット",
+            "amount": 3
+          }
+        ]
+      },
+      {
+        "day": 2,
+        "group_value": 939,
+        "rewards": [
+          {
+            "kind": 0,
+            "item_index": 6,
+            "item_name": "ＸＰ",
+            "amount": 1000000
+          },
+          {
+            "kind": 0,
+            "item_index": 20,
+            "item_name": "にゃんこチケット",
+            "amount": 3
+          }
+        ]
+      },
+      {
+        "day": 3,
+        "group_value": 20,
+        "rewards": [
+          {
+            "kind": 0,
+            "item_index": 20,
+            "item_name": "にゃんこチケット",
+            "amount": 3
+          }
+        ]
+      },
+      {
+        "day": 4,
+        "group_value": 20,
+        "rewards": [
+          {
+            "kind": 0,
+            "item_index": 20,
+            "item_name": "にゃんこチケット",
+            "amount": 3
+          }
+        ]
+      },
+      {
+        "day": 5,
+        "group_value": 939,
+        "rewards": [
+          {
+            "kind": 0,
+            "item_index": 6,
+            "item_name": "ＸＰ",
+            "amount": 1000000
+          },
+          {
+            "kind": 0,
+            "item_index": 20,
+            "item_name": "にゃんこチケット",
+            "amount": 3
+          }
+        ]
+      },
+      {
+        "day": 6,
+        "group_value": 20,
+        "rewards": [
+          {
+            "kind": 0,
+            "item_index": 20,
+            "item_name": "にゃんこチケット",
+            "amount": 3
+          }
+        ]
+      },
+      {
+        "day": 7,
+        "group_value": 938,
+        "rewards": [
+          {
+            "kind": 0,
+            "item_index": 21,
+            "item_name": "レアチケット",
+            "amount": 2
+          },
+          {
+            "kind": 0,
+            "item_index": 20,
+            "item_name": "にゃんこチケット",
+            "amount": 3
+          }
+        ]
+      }
+    ],
+    "totals": {
+      "ＸＰ": 2000000,
+      "にゃんこチケット": 21,
+      "レアチケット": 3
+    },
+    "item_namespace": {
+      "source": "Gatyaitembuy.csv row index (header excluded)",
+      "item_6": "ＸＰ",
+      "item_20": "にゃんこチケット",
+      "item_21": "レアチケット"
+    },
+    "confidence": "high",
+    "confidence_reason": [
+      "Exact local row 949 is seven days.",
+      "Its resolved rewards have the distinctive 21 Cat Ticket + 3 Rare Ticket comeback signature.",
+      "Player-facing 2026 comeback guides independently describe the same seven-day Cat Ticket/Rare Ticket pattern.",
+      "Public guides disagree on current XP total, so community XP quantities are not used to override exact local data."
+    ]
+  },
+  "login_background": {
+    "background_id": 19,
+    "expected_asset": "loginbg_019.png",
+    "current_x_manifest_observation": {
+      "source": "current-x",
+      "family": "XImageServer",
+      "name": "loginbg_019.png",
+      "observed_in_generated_server_manifest_index": true
+    }
+  },
+  "grade_data": {
+    "ids": [
+      35052,
+      35053,
+      35054,
+      35055,
+      35056,
+      35057
+    ],
+    "grades": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "condition_parameter_prefix": 268,
+    "relation_to_template_949": "not proven; keep separate until runtime selection logic is traced"
+  },
+  "approved_kneekura_policy": {
+    "local_template_id": 949,
+    "cycle_length": 7,
+    "after_day_7": "next eligible local day wraps to day 1",
+    "backward_clock": "no new claim",
+    "large_forward_jump": "one next claim only",
+    "live_override_precedence": [
+      "exact imported server override if runtime provenance is proven",
+      "exact JP 15.7.1 local template 949",
+      "community values only as reconnaissance, never silent replacement"
+    ]
+  }
+}

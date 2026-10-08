@@ -1,0 +1,42 @@
+name: Prepare pinned BCSFE research source
+
+on:
+  push:
+    branches:
+      - "jolly/**"
+    paths:
+      - ".github/workflows/prepare-bcsfe-research-source.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Clone pinned public BCSFE source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --filter=blob:none https://github.com/fieryhenry/BCSFE-Python.git bcsfe
+          cd bcsfe
+          git checkout 85fb94cbf00c6a74dbef58932610fb94ec8f7495
+          test "$(git rev-parse HEAD)" = "85fb94cbf00c6a74dbef58932610fb94ec8f7495"
+
+      - name: Prepare research-only source bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          cp -a bcsfe/src out/src
+          cp bcsfe/LICENSE out/LICENSE
+          cp bcsfe/README.md out/README.md
+          printf '%s\n' 85fb94cbf00c6a74dbef58932610fb94ec8f7495 > out/PINNED-COMMIT.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bcsfe-pinned-research-source
+          path: out
+          retention-days: 1

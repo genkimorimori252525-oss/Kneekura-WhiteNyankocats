@@ -1,0 +1,67 @@
+from pathlib import Path
+import unittest
+
+
+ROOT = Path(__file__).resolve().parents[1]
+PERSISTENCE = ROOT / "tools/base_mod/run_offline_max_persistence_gate.ps1"
+VERIFIER = ROOT / "tools/base_mod/verify_offline_max_save.py"
+
+
+class OfflineMaxPersistenceGateTest(unittest.TestCase):
+    def test_runner_uses_only_install_r_and_never_uninstall(self):
+        raw = PERSISTENCE.read_text(encoding="utf-8")
+        text = " ".join(raw.lower().split())
+        self.assertIn('"install-multiple"', raw)
+        self.assertIn('"--no-streaming"', raw)
+        self.assertIn('"-r"', raw)
+        self.assertNotIn(" uninstall ", f" {text} ")
+        self.assertNotIn(" pm clear ", f" {text} ")
+
+    def test_runner_stages_apks_under_ascii_only_path(self):
+        text = PERSISTENCE.read_text(encoding="utf-8")
+        self.assertIn("KneekuraAdbStage", text)
+        self.assertIn("ASCII adb staging", text)
+        self.assertIn("$stagedApks", text)
+        self.assertIn("Staged APK hash mismatch", text)
+        self.assertIn("$installArgs = @(\"-s\", $deviceId, \"install-multiple\", \"--no-streaming\", \"-r\") + $stagedApks", text)
+        self.assertNotIn("+ $apks", text)
+
+    def test_runner_captures_native_adb_stderr_without_terminating_early(self):
+        text = PERSISTENCE.read_text(encoding="utf-8")
+        self.assertIn('$ErrorActionPreference = "Continue"', text)
+        self.assertIn("$installExitCode = $LASTEXITCODE", text)
+        self.assertIn("install_exit_code=", text)
+
+    def test_prefix_only_verification_result_does_not_require_layout_property(self):
+        text = PERSISTENCE.read_text(encoding="utf-8")
+        self.assertIn("function Get-OptionalProperty", text)
+        self.assertIn("pre_install_semantic_scope_complete", text)
+        self.assertIn("post_install_semantic_scope_complete", text)
+        self.assertIn("full_semantic_persistence_verified", text)
+        self.assertIn("passed-stable-prefix-only", text)
+
+    def test_runner_requires_sentinel_and_verifies_before_and_after(self):
+        text = PERSISTENCE.read_text(encoding="utf-8")
+        self.assertIn("KNEEKURA_OFFLINE_MAX_BOOTSTRAP.json", text)
+        self.assertGreaterEqual(text.count("verify_offline_max_save"), 2)
+        self.assertIn("pre-install-r-SAVE_DATA", text)
+        self.assertIn("post-install-r-SAVE_DATA", text)
+        self.assertIn("offline-max-persistence-gate-result.json", text)
+        self.assertIn("offline-max-persistence-gate.log", text)
+        self.assertIn("Restore-PreUpgradeSave", text)
+
+    def test_persistence_gate_allows_original_game_rewrite_layout(self):
+        text = PERSISTENCE.read_text(encoding="utf-8")
+        self.assertGreaterEqual(text.count("--allow-runtime-rewrite"), 2)
+        self.assertIn("pre_install_layout_profile", text)
+        self.assertIn("post_install_layout_profile", text)
+
+    def test_verifier_is_read_only(self):
+        text = VERIFIER.read_text(encoding="utf-8")
+        self.assertIn("without modifying the file", text)
+        self.assertNotIn("write_bytes(", text)
+        self.assertIn('"passed": not failures', text)
+
+
+if __name__ == "__main__":
+    unittest.main()

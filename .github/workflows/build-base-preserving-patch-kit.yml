@@ -1,0 +1,526 @@
+name: Build base-preserving patch kit
+
+on:
+  push:
+    branches:
+      - "jolly/**"
+    paths:
+      - "tools/base_mod/**"
+      - "tools/liveops/**"
+      - "tools/analyze_gacha_foundation.py"
+      - "tools/analyze_login_bonus_foundation.py"
+      - "native/kneekura-shim/**"
+      - "bridge/**"
+      - "docs/architecture/base-preserving-boot-smoke.md"
+      - "docs/architecture/package-flavor-contract.md"
+      - "docs/architecture/design-philosophy.md"
+      - "docs/architecture/phase-c-hook-handoff.md"
+      - "docs/architecture/phase-c-device-trace-runbook.md"
+      - "docs/architecture/phase-c-static-http-bridge.md"
+      - "docs/architecture/phase-c-research-preflight.md"
+      - "docs/architecture/phase-c-gacha-original-ui-proof.md"
+      - "docs/architecture/phase-c-shipping-boundary.md"
+      - "docs/architecture/phase-c-shipping-parity.md"
+      - "docs/architecture/offline-local-profile-bootstrap.md"
+      - "docs/architecture/kneekura-post-eoc-liveops.md"
+      - "docs/evidence/offline-profile-*"
+      - "docs/evidence/post-eoc-*"
+      - "docs/evidence/login-pool-*"
+      - "docs/evidence/native-level-cap-*"
+      - "docs/research/offline-profile-community-prior-art.md"
+      - "docs/research/failure-repair-history.md"
+      - "docs/references/native-service-map-jp15.7.1.*"
+      - "docs/references/hook-candidate-matrix-jp15.7.1.*"
+      - "docs/evidence/myactivity-service-methods-jp15.7.1.json"
+      - "docs/evidence/original-login-gacha-runtime-anchors-jp15.7.1.*"
+      - "docs/evidence/login-bonus-foundation-jp15.7.1.*"
+      - "docs/evidence/super-kneekura-gacha-foundation-jp15.7.1.*"
+      - "docs/evidence/phase-c-gacha-ui-proof-jp15.7.1.*"
+      - "docs/evidence/phase-c-server-download-gate-jp15.7.1.*"
+      - "docs/evidence/phase-c-h01-integrity-gate-jp15.7.1.*"
+      - "docs/evidence/loginbg-019-server-manifest-corroboration.md"
+      - "research/frida/**"
+      - "requirements-patching.txt"
+      - ".github/workflows/build-base-preserving-patch-kit.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Install patching dependencies
+        run: python -m pip install -r requirements-patching.txt
+
+      - name: Install Android build dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER="$(command -v sdkmanager)"
+          fi
+
+          ok=0
+          for attempt in 1 2 3; do
+            if "$SDKMANAGER" \
+              "ndk;27.2.12479018" \
+              "platforms;android-35" \
+              "build-tools;35.0.0"; then
+              ok=1
+              break
+            fi
+            echo "sdkmanager attempt $attempt failed; clearing transient caches before retry" >&2
+            rm -rf "$HOME/.android/cache" "$ANDROID_HOME/.temp" || true
+            sleep $((attempt * 2))
+          done
+          if [ "$ok" -ne 1 ]; then
+            echo "Android SDK dependency installation failed after 3 attempts" >&2
+            exit 1
+          fi
+
+      - name: Build inert ARM64 shim
+        shell: bash
+        run: |
+          set -euo pipefail
+          NDK="$ANDROID_HOME/ndk/27.2.12479018"
+          cmake -S native/kneekura-shim -B build/shim \
+            -DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI=arm64-v8a \
+            -DANDROID_PLATFORM=android-29 \
+            -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/shim --parallel
+
+      - name: Compile Frida-free static Java HTTP bridge
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/static-http
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          from tools.base_mod.inject_java_http_bridge import build_bridge_dex
+
+          android_jar = Path(os.environ["ANDROID_HOME"]) / "platforms/android-35/android.jar"
+          d8 = Path(os.environ["ANDROID_HOME"]) / "build-tools/35.0.0/d8"
+
+          builds = [
+              ("research", False, False, "research-off.dex"),
+              ("research", True, False, "research-on.dex"),
+              ("research", True, True, "research-gacha-external-files.dex"),
+              ("personal", True, False, "personal-on.dex"),
+              ("practice", True, False, "practice-on.dex"),
+          ]
+          for flavor, enabled, external_files, name in builds:
+              output = Path("build/static-http") / name
+              result = build_bridge_dex(
+                  flavor=flavor,
+                  enabled=enabled,
+                  output=output,
+                  d8=str(d8),
+                  android_jar=str(android_jar),
+                  root=Path("."),
+                  use_external_files_dir=external_files,
+              )
+              assert result["dex_size"] > 0
+              assert result["use_external_files_dir"] is external_files
+              payload = output.read_bytes()
+              if flavor in {"personal", "practice"}:
+                  assert b"KNEEKURA_STATIC_HTTP" not in payload
+                  assert b"jp.kn.trace.battlecats" not in payload
+          PY
+
+      - name: Audit shipping research boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m tools.base_mod.verify_shipping_boundary             --root .             --output build/shipping-boundary-repository.json
+
+      - name: Validate Windows smoke runner syntax
+        shell: pwsh
+        run: |
+          $source = Get-Content tools/base_mod/run_static_http_smoke.ps1 -Raw
+          [void][scriptblock]::Create($source)
+
+      - name: Validate final Phase-C smoke runner syntax
+        shell: pwsh
+        run: |
+          $source = Get-Content tools/base_mod/run_phase_c_final_smoke.ps1 -Raw
+          [void][scriptblock]::Create($source)
+
+      - name: Validate offline-profile probe syntax
+        shell: pwsh
+        run: |
+          $source = Get-Content tools/base_mod/run_offline_profile_probe.ps1 -Raw
+          [void][scriptblock]::Create($source)
+
+      - name: Validate offline MAX bootstrap runner syntax
+        shell: pwsh
+        run: |
+          $source = Get-Content tools/base_mod/run_offline_max_bootstrap.ps1 -Raw
+          [void][scriptblock]::Create($source)
+          $source = Get-Content tools/base_mod/run_offline_max_rollback.ps1 -Raw
+          [void][scriptblock]::Create($source)
+
+      - name: Validate offline MAX persistence runner syntax
+        shell: pwsh
+        run: |
+          $source = Get-Content tools/base_mod/run_offline_max_persistence_gate.ps1 -Raw
+          [void][scriptblock]::Create($source)
+
+      - name: Validate Post-EoC migration runner syntax
+        shell: pwsh
+        run: |
+          $source = Get-Content tools/base_mod/run_post_eoc_bootstrap.ps1 -Raw
+          [void][scriptblock]::Create($source)
+
+      - name: Validate native level-cap migration runner syntax
+        shell: pwsh
+        run: |
+          $source = Get-Content tools/base_mod/run_level_cap_unlock.ps1 -Raw
+          [void][scriptblock]::Create($source)
+
+      - name: Build Frida 17 Java-bridge trace bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --package-lock=false \
+            frida-compile@19.1.0 \
+            frida-java-bridge@7.0.13
+          mkdir -p build/frida-agent
+          npx frida-compile \
+            research/frida/trace_service_bridge.js \
+            -o build/frida-agent/trace_service_bridge.bundle.js
+          npx frida-compile \
+            research/frida/replay_backup_offline.js \
+            -o build/frida-agent/replay_backup_offline.bundle.js
+          test -s build/frida-agent/trace_service_bridge.bundle.js
+          test -s build/frida-agent/replay_backup_offline.bundle.js
+          grep -q 'KNEEKURA_TRACE ' build/frida-agent/trace_service_bridge.bundle.js
+          grep -q 'KNEEKURA_REPLAY ' build/frida-agent/replay_backup_offline.bundle.js
+
+      - name: Assemble source-free local build kit
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/patch-kit/tools/base_mod
+          mkdir -p build/patch-kit/tools/liveops
+          mkdir -p build/patch-kit/docs/architecture
+          mkdir -p build/patch-kit/docs/references
+          mkdir -p build/patch-kit/docs/evidence
+          mkdir -p build/patch-kit/docs/research
+          mkdir -p build/patch-kit/research/frida
+          mkdir -p build/patch-kit/bridge/java/stub/jp/co/ponos/battlecats
+
+          cp -a tools/base_mod/*.py build/patch-kit/tools/base_mod/
+          cp -a tools/liveops/*.py build/patch-kit/tools/liveops/
+          cp tools/base_mod/run_static_http_smoke.ps1 build/patch-kit/tools/base_mod/
+          cp tools/base_mod/run_phase_c_final_smoke.ps1 build/patch-kit/tools/base_mod/
+          cp tools/base_mod/run_offline_profile_probe.ps1 build/patch-kit/tools/base_mod/
+          cp tools/base_mod/run_offline_max_bootstrap.ps1 build/patch-kit/tools/base_mod/
+          cp tools/base_mod/run_offline_max_rollback.ps1 build/patch-kit/tools/base_mod/
+          cp tools/base_mod/run_offline_max_persistence_gate.ps1 build/patch-kit/tools/base_mod/
+          cp tools/base_mod/run_post_eoc_bootstrap.ps1 build/patch-kit/tools/base_mod/
+          cp tools/base_mod/run_level_cap_unlock.ps1 build/patch-kit/tools/base_mod/
+          cp tools/battlecats_pack.py build/patch-kit/tools/
+          cp tools/battlecats_source.py build/patch-kit/tools/
+          cp tools/analyze_gacha_foundation.py build/patch-kit/tools/
+          cp tools/analyze_login_bonus_foundation.py build/patch-kit/tools/
+          cp requirements-patching.txt build/patch-kit/
+          cp build/shim/libkneekura.so build/patch-kit/
+
+          cp bridge/java/MyActivity.java.in build/patch-kit/bridge/java/
+          cp bridge/java/stub/jp/co/ponos/battlecats/MyActivity.java             build/patch-kit/bridge/java/stub/jp/co/ponos/battlecats/
+
+          cp docs/architecture/base-preserving-boot-smoke.md build/patch-kit/docs/architecture/
+          cp docs/architecture/package-flavor-contract.md build/patch-kit/docs/architecture/
+          cp docs/architecture/design-philosophy.md build/patch-kit/docs/architecture/
+          cp docs/architecture/phase-c-hook-handoff.md build/patch-kit/docs/architecture/
+          cp docs/architecture/phase-c-device-trace-runbook.md build/patch-kit/docs/architecture/
+          cp docs/architecture/phase-c-static-http-bridge.md build/patch-kit/docs/architecture/
+          cp docs/architecture/phase-c-research-preflight.md build/patch-kit/docs/architecture/
+          cp docs/architecture/phase-c-gacha-original-ui-proof.md build/patch-kit/docs/architecture/
+          cp docs/architecture/phase-c-shipping-boundary.md build/patch-kit/docs/architecture/
+          cp docs/architecture/phase-c-shipping-parity.md build/patch-kit/docs/architecture/
+          cp docs/architecture/offline-local-profile-bootstrap.md build/patch-kit/docs/architecture/
+          cp docs/architecture/kneekura-post-eoc-liveops.md build/patch-kit/docs/architecture/
+
+          cp docs/references/native-service-map-jp15.7.1.* build/patch-kit/docs/references/
+          cp docs/references/hook-candidate-matrix-jp15.7.1.* build/patch-kit/docs/references/
+
+          cp docs/evidence/myactivity-service-methods-jp15.7.1.json build/patch-kit/docs/evidence/
+          cp docs/evidence/myactivity-http-transport-jp15.7.1.* build/patch-kit/docs/evidence/
+          cp docs/evidence/original-login-gacha-runtime-anchors-jp15.7.1.* build/patch-kit/docs/evidence/
+          cp docs/evidence/login-bonus-foundation-jp15.7.1.* build/patch-kit/docs/evidence/
+          cp docs/evidence/super-kneekura-gacha-foundation-jp15.7.1.* build/patch-kit/docs/evidence/
+          cp docs/evidence/phase-c-gacha-ui-proof-jp15.7.1.* build/patch-kit/docs/evidence/
+          cp docs/evidence/phase-c-server-download-gate-jp15.7.1.* build/patch-kit/docs/evidence/
+          cp docs/evidence/phase-c-h01-integrity-gate-jp15.7.1.* build/patch-kit/docs/evidence/
+          cp docs/evidence/offline-profile-save-roundtrip-jp15.7.1.* build/patch-kit/docs/evidence/
+          cp docs/evidence/offline-profile-runtime-rewrite-jp15.7.1.* build/patch-kit/docs/evidence/
+          cp docs/evidence/offline-profile-unit-selection-jp15.7.1.json build/patch-kit/docs/evidence/
+          cp docs/evidence/offline-profile-device-baseline-probe-jp15.7.1.json build/patch-kit/docs/evidence/
+          cp docs/evidence/offline-profile-static-map-jp15.7.1.* build/patch-kit/docs/evidence/
+          cp docs/evidence/post-eoc-static-proof-jp15.7.1.* build/patch-kit/docs/evidence/
+          cp docs/evidence/login-pool-jp15.7.1.* build/patch-kit/docs/evidence/
+          cp docs/evidence/native-level-cap-unlock-jp15.7.1.* build/patch-kit/docs/evidence/
+          cp docs/evidence/loginbg-019-server-manifest-corroboration.md build/patch-kit/docs/evidence/
+          cp docs/research/offline-profile-community-prior-art.md build/patch-kit/docs/research/
+          cp docs/research/failure-repair-history.md build/patch-kit/docs/research/
+
+          cp research/frida/* build/patch-kit/research/frida/
+          cp build/frida-agent/trace_service_bridge.bundle.js \
+            build/patch-kit/research/frida/
+          cp build/frida-agent/replay_backup_offline.bundle.js \
+            build/patch-kit/research/frida/
+
+          python -m tools.base_mod.phase_c_preflight \
+            --root build/patch-kit \
+            --output build/patch-kit/phase-c-preflight.json
+
+          cat > build/patch-kit/README-FIRST.txt <<'EOF'
+          Kneekura base-preserving JP 15.7.1 patch kit
+
+          This artifact contains NO Battle Cats APK or proprietary game payload.
+          Supply your own exact nyanko_battlecats_2026-10-06.zip.
+
+          Prerequisites on the build PC:
+            - Python 3.12+
+            - Java 17 / keytool
+            - Android SDK build-tools (zipalign + apksigner)
+            - pip install -r requirements-patching.txt
+
+          Generate a stable local signing key ONCE:
+            python -m tools.base_mod.keygen private/kneekura.p12 --storepass YOUR_PASSWORD
+
+          Personal MAX boot smoke:
+            python -m tools.base_mod.build_owned_boot_smoke \
+              /path/to/nyanko_battlecats_2026-10-06.zip \
+              --flavor personal \
+              --shim libkneekura.so \
+              --keystore private/kneekura.p12 \
+              --alias kneekura \
+              --storepass YOUR_PASSWORD \
+              --output out
+
+          Practice Clean boot smoke:
+            change --flavor personal to --flavor practice.
+
+          Disposable Phase-C research package:
+            package = jp.kn.trace.battlecats
+
+          Phase-C trace compatibility:
+            - Frida 17.x: use the bundled
+              research/frida/trace_service_bridge.bundle.js
+            - research-only selective backup offline replay:
+              research/frida/replay_backup_offline.bundle.js
+            - Frida 16.7.19: the raw trace_service_bridge.js also works because
+              the Java bridge is built into the pre-17 runtime
+            - prefer the bundled agent for current Frida 17.x Gadget
+
+          Offline-profile static unit manifest:
+            python -m tools.base_mod.build_offline_profile_unit_manifest \
+              /path/to/nyanko_battlecats_2026-10-06.zip \
+              --output offline-profile-unit-manifest.json
+
+          Offline-profile read-only device probe:
+            powershell -ExecutionPolicy Bypass -File .\tools\base_mod\run_offline_profile_probe.ps1
+
+          Kneekura Post-EoC mainline profile:
+            This is the current playable product path. It replaces the research
+            all-unit MAX profile with:
+              - Empire of Cats 1-3 complete
+              - 48/48 Superior treasures in each EoC chapter
+              - Future/Cosmos uncompleted
+              - Stories of Legend uncompleted
+              - 677 exact non-stage-reward units pre-owned
+              - Madoka/Homura/Saber/Miku and all 18 Legend Rare retained
+              - 158 exact stage-reward units left unowned for actual progression
+              - exact normal/collab event maps unlock-only, never pre-cleared
+              - low-friction MAX economy/materials retained
+
+            Static-only build / verification (no device mutation):
+              powershell -ExecutionPolicy Bypass -File .\tools\base_mod\run_post_eoc_bootstrap.ps1
+
+            One-command migration:
+              powershell -ExecutionPolicy Bypass -File .\tools\base_mod\run_post_eoc_bootstrap.ps1 -Apply
+
+            The -Apply runner:
+              - backs up the currently playable SAVE_DATA first
+              - automatically finds and semantically verifies the clean pre-MAX
+                JP 15.7.1 baseline
+              - builds and fully verifies the Post-EoC candidate before mutation
+              - keeps an on-device rollback copy
+              - performs bounded original-UI launch + restart smoke
+              - rolls back automatically if persisted semantic verification fails
+              - never uninstalls and never uses pm clear
+
+            LiveOps foundations included:
+              - five-slot shuffle-bag login state machine
+              - exact JP 15.7.1 eligible login pool
+              - revision-1 offline-first content channel manifest
+
+            Important: the login scheduler and live event schedule provider are
+            foundations only in this kit. They are not yet connected to the
+            original Battle Cats login/event presentation runtime. The SAVE_DATA
+            unlock-only layer for normal/collab event maps is active in the
+            Post-EoC profile.
+
+          Native level-cap convenience migration:
+            This is additive and works on the current SAVE_DATA; it does not
+            re-bootstrap or clear Legend progress.
+
+            Static-only preview:
+              powershell -ExecutionPolicy Bypass -File .\tools\base_mod\run_level_cap_unlock.ps1
+
+            Apply:
+              powershell -ExecutionPolicy Bypass -File .\tools\base_mod\run_level_cap_unlock.ps1 -Apply
+
+            Exact JP 15.7.1 native caps are preserved:
+              - 323 eligible units can reach Lv60
+              - 493 eligible units are native Lv50
+              - 11 eligible units are native Lv20
+              - 8 eligible units are native Lv1
+
+            Madoka 289, Homura 290, Saber 363 and Hatsune Miku 536 are
+            regression anchors for the Lv60-capable group.
+
+            The migration changes only max_upgrade_level.base metadata plus the
+            SAVE hash. Current levels, ownership, forms, stage progress,
+            unit-drop claims and Catseye-consumption history are untouched.
+            It keeps an exact pre-migration rollback copy on-device.
+
+          Offline MAX one-time bootstrap (research package only):
+            - accepts the JP 15.7.1 semantic clean-baseline family instead of
+              pinning one volatile SHA-256; valid salted-MD5, version, layout
+              counts and first-form safety gates must still pass.
+            - final candidate includes 835 eligible cats at first form, all
+              configured MAX resources, all 310 exact JP 15.7.1 Talent Orb types
+              at 998 each, and the exact engineer maximum of 5.
+            1. Disable Wi-Fi and mobile data on the Android device.
+            2. Run:
+               powershell -ExecutionPolicy Bypass -File .\tools\base_mod\run_offline_max_bootstrap.ps1
+            3. The runner pulls an exact pre-apply rollback copy, builds the
+               pinned candidate, verifies staged/installed SHA-256, checks the
+               original UI twice, and writes a sentinel so later progress is
+               never overwritten by the bootstrap.
+
+          Offline MAX rollback:
+            powershell -ExecutionPolicy Bypass -File .\tools\base_mod\run_offline_max_rollback.ps1
+
+          Original-game SAVE_DATA normalization:
+            - the 497,580-byte candidate is accepted by the original game;
+            - a normal restart rewrites it to a valid 507,174-byte form;
+            - this 9,594-byte growth is mapped and fully verified, not treated
+              as corruption.
+
+          Offline MAX install-r persistence gate:
+            after the one-time bootstrap passes, keep network disabled and run:
+            powershell -ExecutionPolicy Bypass -File .\tools\base_mod\run_offline_max_persistence_gate.ps1
+
+            The gate verifies MAX state before install-r, performs the same-signature
+            six-split install-multiple -r without uninstall, checks the original UI,
+            verifies the post-install SAVE_DATA semantically, and records:
+              offline-max-persistence-out\offline-max-persistence-gate-result.json
+              offline-max-persistence-out\offline-max-persistence-gate.log
+
+          Supply your AArch64 libfrida-gadget.so, then build:
+            python -m tools.base_mod.build_owned_research_trace \
+              /path/to/nyanko_battlecats_2026-10-06.zip \
+              --shim libkneekura.so \
+              --frida-gadget /path/to/libfrida-gadget.so \
+              --trace-script research/frida/trace_service_bridge.bundle.js \
+              --keystore private/kneekura.p12 \
+              --alias kneekura \
+              --storepass YOUR_PASSWORD \
+              --output research-out
+
+          One-command final owner-device smoke (Windows PowerShell):
+            powershell -ExecutionPolicy Bypass -File tools/base_mod/run_static_http_smoke.ps1
+
+          Frida-free static HTTP bridge proof:
+            python -m tools.base_mod.build_owned_static_http_bridge               /path/to/nyanko_battlecats_2026-10-06.zip               --flavor research               --shim libkneekura.so               --keystore private/kneekura.p12               --alias kneekura               --storepass YOUR_PASSWORD               --enable-backup-offline-replay               --output static-http-out
+
+          This static bridge injects a flavor MyActivity subclass as classes5.dex.
+          Exact unrecognized requests and feature-OFF call super.newHttpRequest.
+          It contains no Frida runtime.
+
+          The research builder never downloads Frida and is separate from the
+          Personal/Practice product paths. TRACE-INSTRUCTIONS.txt and
+          docs/architecture/phase-c-device-trace-runbook.md explain the
+          normal/airplane observation runs and trace summarizer.
+
+          research/frida/trace_service_bridge.js is observation-only and must
+          never ship in Personal or Practice.
+
+          The generated signed-splits directory includes parity evidence.
+
+          Current Phase-C status:
+            - original HTTP lifecycle observed on-device
+            - Frida-free static backup replay promoted and device-smoke PASS
+            - unknown requests / feature OFF preserve super.newHttpRequest
+            - set 1089 proof now uses DownloadLocal overlay; built-in
+              DataLocal.list/.pack remain byte-identical to avoid H01 integrity
+              failures
+            - the observed 615 MB screen is classified as the original 35-lane
+              server-asset bootstrap (645,599,537 bytes / 615.69 MiB)
+            - gacha schedule inference is deferred until the original Rare
+              Gacha UI is actually reached
+
+          Repository preflight:
+            python -m tools.base_mod.phase_c_preflight               --root .               --output phase-c-preflight.json
+
+          Final Phase-C shipping + original-UI smoke (Windows PowerShell):
+            powershell -ExecutionPolicy Bypass -File tools/base_mod/run_phase_c_final_smoke.ps1
+
+          This single runner:
+            - builds and audits Personal feature-OFF shipping profile
+            - builds and audits Practice feature-OFF shipping profile
+            - proves Frida/research payloads are absent from both
+            - builds exact append-only Rare Gacha set 1089
+            - installs/updates the isolated research proof without uninstalling
+            - keeps Personal/Practice storage behavior unchanged
+            - redirects getFilesDir only in the isolated research gacha proof
+              so the unchanged original downloader can populate an ADB-visible
+              app-specific cache
+            - classifies the 615 MiB gate separately from gacha scheduling
+            - after the one-time original download, performs one manual original
+              Rare Gacha visibility check without drawing
+
+          Build the tiny original-UI Rare Gacha data proof:
+            python -m tools.base_mod.build_owned_gacha_ui_proof               /path/to/nyanko_battlecats_2026-10-06.zip               --shim libkneekura.so               --keystore private/kneekura.p12               --alias kneekura               --storepass YOUR_PASSWORD               --output gacha-ui-proof-out
+
+          The proof appends set 1089 through DownloadLocal, preserves
+          DataLocal.list/.pack byte-identically, clones one existing BannerON
+          row, defines no new rate vector, does not bypass native pack/list
+          integrity checks, and leaves the live visibility schedule unresolved.
+
+          Do not expand gacha/event behavior beyond the preflight gates until
+          one tiny original-format data proof is visible in the unchanged
+          Battle Cats UI.
+          EOF
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kneekura-base-preserving-jp15.7.1-patch-kit
+          path: build/patch-kit/
+          if-no-files-found: error
+          retention-days: 30

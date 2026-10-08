@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "anchor": "jp-15.7.1",
+  "source": {
+    "file": "DailyLoginEventData.csv",
+    "sha256": "1ebe0534959984622316b0d4ebd0f2dc86b10b86be31107dee4d3c83902680dd",
+    "row_count": 159
+  },
+  "eligibility_policy": {
+    "min_days": 6,
+    "nonempty_reward_each_day": true,
+    "exclude_reward_kind_minus_one": true,
+    "note": "one-day/system-like rows remain excluded until individually classified"
+  },
+  "eligible_count": 106,
+  "eligible_ids_sha256": "01be0f23d8f8b196755eb28d9765e2e8fd7d7ddb02a66ae72d3df2d647a4bbe0",
+  "eligible_ids": [
+    901,903,905,906,907,909,916,918,919,924,928,930,931,932,933,934,
+    935,936,937,938,939,940,941,942,943,944,945,946,948,949,950,951,
+    952,953,954,955,956,957,958,959,960,961,962,963,964,965,966,967,
+    969,970,971,972,973,974,975,976,978,979,980,981,984,993,994,
+    35002,35003,35004,35005,35008,35009,35010,35011,35012,35013,
+    35014,35015,35016,35017,35018,35020,35021,35022,35023,35024,
+    35025,35028,35029,35033,35034,35036,35037,35038,35039,35040,
+    35041,35042,35043,35044,35045,35046,35047,35048,35049,35050,
+    35051,35058,35059
+  ],
+  "scheduler": {
+    "active_slots": 5,
+    "selection": "shuffle-bag",
+    "same_day": "no second claim",
+    "clock_rollback": "no claim",
+    "large_forward_jump": "one stamp only",
+    "replacement": "one completed campaign replaced; replacement starts next local day"
+  },
+  "runtime_status": "state-machine complete; original login UI provider not yet connected"
+}
