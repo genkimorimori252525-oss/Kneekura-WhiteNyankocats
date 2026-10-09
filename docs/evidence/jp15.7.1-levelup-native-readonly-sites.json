@@ -67,10 +67,22 @@
     "branch_target": "0x4e3238",
     "falls_through_to": "0x4e3070",
     "meaning_of_comparison": "UNDETERMINED",
-    "actual_upgrade_limit_getter": "NOT_FOUND"
+    "actual_upgrade_limit_getter": "NOT_FOUND",
+    "value_callee": "0x9cbf94",
+    "value_callee_opcodes": {
+      "caller_bl": "0x9413a3cd",
+      "decoder_bl": "0x940031df",
+      "mov_50000": "0x52986a08",
+      "and_low16": "0x12003c09",
+      "cmp_50000": "0x6b08013f",
+      "csel_clamp": "0x1a883120"
+    },
+    "value_decoder": "0x9d8718",
+    "value_expression": "min((decoded_32bit & 0xffff), 50000)",
+    "value_semantic_meaning": "UNKNOWN: original game stores a bytewise XOR-encoded value; value=1 selects first level-max popup; NOT yet proven per-unit level cap"
   },
   "source_code_tool": "tools/base_mod/trace_original_levelup_native.py",
-  "next_verified_code_task": "Follow original call hierarchy/backwards data-flow for return value w0 feeding 0x4e3068, identify the real per-unit level-cap getter from unitbuy.csv + independent player state, then prepare a narrowly scoped original-engine adapter; no trial original SAVE reinstallation.",
+  "next_verified_code_task": "Backtrace original encoded field feeding 0x9cbf94/decoder0x9d8718 and identify the real *unit-specific* Lv60/50/20/1 upgrade cap, spending & persistence interface. Do not patch this popup selector as if it were the cap calculator.",
   "release_status": {
     "original_ui_level_cap_patch_attached": false,
     "level_purchase_action_attached": false,
