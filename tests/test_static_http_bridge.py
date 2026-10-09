@@ -262,11 +262,189 @@ class StaticHttpBridgeTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
         self.assertEqual(BRIDGE_DEX_ENTRY, "classes5.dex")
         self.assertIn("patch_equal_length_strings", injector)
-        self.assertIn('"true" if flavor == "research" else "false"', injector)
+        self.assertIn('"true" if flavor in ("research", "local-research") else "false"', injector)
         self.assertIn("{ORIGINAL_LAUNCHER: launcher}", injector)
         self.assertIn("use_external_files_dir: bool = False", injector)
         self.assertIn("__KNEEKURA_USE_EXTERNAL_FILES_DIR__", injector)
         self.assertNotIn("patch_exact_dex_string(", injector)
+
+    def test_local_research_flavor_preserves_original_native_file_root(self) -> None:
+        template = (ROOT / "bridge/java/MyActivity.java.in").read_text(encoding="utf-8")
+        self.assertEqual(FLAVOR_PACKAGES["local-research"], "jp.kn.local.battlecats")
+        rendered = render_bridge_source(
+            template, flavor="local-research", enabled=False
+        )
+        self.assertIn(
+            "private static final boolean LOCAL_RESEARCH_FRESH_ROOT =\n            true;",
+            rendered,
+        )
+        self.assertIn(
+            "private static final boolean LOCAL_RESEARCH_DENY_HTTP =\n            true;",
+            rendered,
+        )
+        self.assertIn(
+            "private static final boolean ISOLATE_ORIGINAL_NATIVE_FILES_DIR =\n            false;",
+            rendered,
+        )
+        self.assertIn("return root;", rendered)
+        self.assertIn("unowned prior SAVE_DATA in local research package", rendered)
+        self.assertIn("original local research HTTP disabled", rendered)
+        self.assertNotIn("__KNEEKURA_", rendered)
+        for invalid in (
+            {"enabled": True},
+            {"use_external_files_dir": True},
+            {"isolate_original_native_files_dir": True},
+        ):
+            with self.subTest(kwargs=invalid):
+                with self.assertRaisesRegex(ValueError, "must keep original files root"):
+                    render_bridge_source(
+                        template, flavor="local-research", enabled=False, **invalid
+                    ) if "enabled" not in invalid else render_bridge_source(
+                        template, flavor="local-research", **invalid
+                    )
+
+    def test_local_research_java_executes_virgin_and_rejects_saved_data_and_http(self) -> None:
+        """Java executes actual ORIGINAL MyActivity subclass, not a fake cat UI."""
+        import shutil
+        import subprocess
+        import tempfile
+        import os
+
+        javac, java = shutil.which("javac"), shutil.which("java")
+        if not (javac and java):
+            self.skipTest("Java compiler/runtime unavailable")
+        original = (ROOT / "bridge/java/MyActivity.java.in").read_text(encoding="utf-8")
+        source = render_bridge_source(
+            original, flavor="local-research", enabled=False
+        )
+        stubs = {
+            "android/opengl/GLSurfaceView.java": (
+                "package android.opengl; public class GLSurfaceView {"
+                "public void queueEvent(Runnable task) {task.run();}}"
+            ),
+            "android/util/Log.java": (
+                "package android.util; public class Log {"
+                "public static int i(String tag,String message) {return 0;}}"
+            ),
+            "jp/co/ponos/battlecats/MyActivity.java": """
+                package jp.co.ponos.battlecats;
+                import java.io.File;
+                import java.nio.ByteBuffer;
+                import java.util.HashMap;
+                public class MyActivity {
+                    public File getFilesDir() {
+                        return new File(System.getProperty("bc.localDir"));
+                    }
+                    public File getExternalFilesDir(String type) {
+                        throw new AssertionError("external files root must never run");
+                    }
+                    public int newHttpRequest(
+                        String method, String url, float timeout,
+                        HashMap headers, ByteBuffer body, String[] values,
+                        boolean first, boolean second) {
+                        throw new AssertionError("online super HTTP must never run");
+                    }
+                    public static void newResponse(
+                        int id, int code, String url, String body,
+                        Object data, boolean done) {}
+                }
+            """,
+            "jp/kn/local/battlecats/MyActivity.java": source,
+            "Harness.java": """
+                import jp.kn.local.battlecats.MyActivity;
+                import java.util.HashMap;
+                public class Harness {
+                    public static void main(String[] args) throws Exception {
+                        MyActivity activity = new MyActivity();
+                        try {
+                            System.out.println("ROOT=" + activity.getFilesDir().getCanonicalPath());
+                        } catch (IllegalStateException rejected) {
+                            System.out.println("ROOT=BLOCKED");
+                        }
+                        try {
+                            activity.newHttpRequest(
+                                "GET", "https://example.invalid", 10.0f,
+                                new HashMap(), null, new String[0], false, false
+                            );
+                            System.out.println("HTTP=LEAK");
+                        } catch (IllegalStateException blocked) {
+                            System.out.println("HTTP=BLOCKED");
+                        }
+                    }
+                }
+            """,
+        }
+        with tempfile.TemporaryDirectory(prefix="kneekura-virgin-original-") as tmp:
+            base = Path(tmp)
+            compile_root = base / "src"
+            class_dir = base / "classes"
+            class_dir.mkdir()
+            sources = []
+            for filename, body in stubs.items():
+                path = compile_root / filename
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(body, encoding="utf-8")
+                sources.append(str(path))
+            result = subprocess.run(
+                [javac, "-source", "8", "-target", "8", "-d", str(class_dir),
+                 *sources], text=True, capture_output=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            official_root = base / "ponos-app-data"
+            official_root.mkdir()
+            (official_root / "SAVE_DATA").write_bytes(b"PROTECTED_ORIGINAL")
+            local_root = base / "new-local-original-app"
+            local_root.mkdir()
+
+            def run_host():
+                return subprocess.run(
+                    [java, "-cp", str(class_dir),
+                     "-Dbc.localDir=" + str(local_root), "Harness"],
+                    text=True, capture_output=True,
+                )
+
+            first = run_host()
+            self.assertEqual(first.returncode, 0, first.stderr)
+            self.assertIn("ROOT=" + str(local_root.resolve()), first.stdout)
+            self.assertIn("HTTP=BLOCKED", first.stdout)
+            marker = local_root / ".kneekura-virgin-local-jp15-7-1"
+            self.assertTrue(marker.is_file())
+            self.assertEqual(marker.stat().st_size, 0)
+            self.assertFalse((local_root / "SAVE_DATA").exists())
+            self.assertEqual((official_root / "SAVE_DATA").read_bytes(),
+                             b"PROTECTED_ORIGINAL")
+
+            (local_root / "SAVE_DATA").write_bytes(b"NEW_LOCAL_GAME_SAVE_FIXTURE")
+            resumed = run_host()
+            self.assertIn("ROOT=" + str(local_root.resolve()), resumed.stdout)
+            self.assertEqual((local_root / "SAVE_DATA").read_bytes(),
+                             b"NEW_LOCAL_GAME_SAVE_FIXTURE")
+            marker.unlink()
+            refused = run_host()
+            self.assertIn("ROOT=BLOCKED", refused.stdout)
+            self.assertFalse(marker.exists())
+            (local_root / "SAVE_DATA").unlink()
+            for name in ("SAVE_DATA4", "SAVE_DATA8"):
+                with self.subTest(name=name):
+                    (local_root / name).write_bytes(b"UNOWNED")
+                    refused = run_host()
+                    self.assertIn("ROOT=BLOCKED", refused.stdout)
+                    (local_root / name).unlink()
+            marker.write_bytes(b"CORRUPTED")
+            corrupted = run_host()
+            self.assertIn("ROOT=BLOCKED", corrupted.stdout)
+            marker.unlink()
+            if hasattr(os, "symlink"):
+                outside = base / "outside"
+                outside.write_bytes(b"SYMLINK_MARKER")
+                try:
+                    os.symlink(outside, marker)
+                except OSError:
+                    pass
+                else:
+                    refused = run_host()
+                    self.assertIn("ROOT=BLOCKED", refused.stdout)
+                    marker.unlink()
 
     def test_original_owner_builder_rejects_nonresearch_private_save_mode(self) -> None:
         from tools.base_mod.build_owned_static_http_bridge import (
