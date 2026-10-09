@@ -47,6 +47,7 @@ def build_owned_static_http_bridge(
     output_dir: Path,
     enable_backup_offline_replay: bool = False,
     research_isolate_original_native_files_dir: bool = False,
+    research_deny_internet: bool = False,
     keypass: str | None = None,
     zipalign: str | None = None,
     apksigner: str | None = None,
@@ -59,6 +60,12 @@ def build_owned_static_http_bridge(
         raise ValueError(f"unknown flavor: {flavor}")
     if research_isolate_original_native_files_dir and flavor != "research":
         raise ValueError("original native files research isolation requires research flavor")
+    if research_deny_internet and (
+        flavor != "research" or not research_isolate_original_native_files_dir
+    ):
+        raise ValueError(
+            "original no-INTERNET research requires research flavor AND private file root"
+        )
 
     export_zip = export_zip.resolve()
     shim = shim.resolve()
@@ -108,6 +115,7 @@ def build_owned_static_http_bridge(
         bridged,
         flavor=flavor,
         bridge_dex_path=bridge_dex,
+        research_deny_internet=research_deny_internet,
     )
 
     signing_ledger = baseline_resign(
@@ -127,6 +135,7 @@ def build_owned_static_http_bridge(
         signed,
         flavor=flavor,
         replay_enabled=enable_backup_offline_replay,
+        research_deny_internet=research_deny_internet,
     )
 
     ledgers = {
@@ -152,8 +161,12 @@ Package: {package_name}
 Launcher: {launcher}
 Backup offline replay enabled: {str(enable_backup_offline_replay).lower()}
 Original native file root isolation (RESEARCH ONLY): {str(research_isolate_original_native_files_dir).lower()}
+INTERNET permission removal (RESEARCH ONLY): {str(research_deny_internet).lower()}
 
-This build contains NO Frida Gadget.\nThis is a research-only, network-capable original native host: the file-root\noption DOES NOT certify a fresh independent SAVE, game boot, or zero network.
+This build contains NO Frida Gadget.
+The original HTTP fallback, native code and SDK initializers remain.
+This file-root/no-INTERNET permission experiment DOES NOT certify an independent
+SAVE, original game boot, all IPC/SDK egress, or full zero-network gameplay.
 
 Install every APK together:
   adb install-multiple --no-streaming -r *.apk
@@ -183,6 +196,7 @@ Final device smoke should be performed only after repository parity is green.
         "launcher": launcher,
         "backup_offline_replay_enabled": enable_backup_offline_replay,
         "research_original_native_files_dir_isolation": research_isolate_original_native_files_dir,
+        "research_no_internet_manifest": research_deny_internet,
         "original_independent_local_save_verified": False,
         "original_zero_network_verified": False,
         "source_export_sha256": EXPECTED_EXPORT_SHA256,
@@ -210,6 +224,11 @@ def main() -> int:
         action="store_true",
         help="Research only: original Activity.getFilesDir private root; not offline gameplay",
     )
+    parser.add_argument(
+        "--research-no-internet-permission",
+        action="store_true",
+        help="Original research host only; requires original native files isolation, NOT product zero-egress",
+    )
     parser.add_argument("--zipalign")
     parser.add_argument("--apksigner")
     parser.add_argument("--javac")
@@ -229,6 +248,7 @@ def main() -> int:
         output_dir=args.output,
         enable_backup_offline_replay=args.enable_backup_offline_replay,
         research_isolate_original_native_files_dir=args.research_isolate_original_native_files_dir,
+        research_deny_internet=args.research_no_internet_permission,
         zipalign=args.zipalign,
         apksigner=args.apksigner,
         javac=args.javac,
