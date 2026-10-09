@@ -43,11 +43,18 @@ CUES = {
     "max_level_popup_second": "drop_popup_chara_levelmax2",
     "potential_skill_max": "potential_skill_MaxLevel",
     "recommended_levelup_table": "Recommended_levelup.csv",
+    "original_save_file": "SAVE_DATA",
+    "original_save4_file": "SAVE_DATA4",
+    "original_save8_file": "SAVE_DATA8",
 }
 
 # Proven direct ADRP+ADD disassembly sites from *this exact native SHA only*.
 EXPECTED_ANCHORS = {
     "unit_data_file": {0x8A2C60},
+    # Direct filename xrefs do NOT identify the durable serializer/writer.
+    "original_save_file": {0x71C984, 0x74B13C, 0x8B43D0, 0x8B9FDC, 0x8C5334},
+    "original_save4_file": {0x7EDD54, 0x8BA0B0, 0x8C1D30},
+    "original_save8_file": {0x748E00, 0x74AD74, 0x74AF48},
     "catseye_screen_resource": {0x942B64},
     "max_level_popup_first": {0x4E3070},
     "max_level_popup_second": {0x4E3238},
@@ -613,6 +620,7 @@ def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict
         "notes": [
             "unitbuy.csv column18 is XOR-decoded to the original 256-byte-per-unit native table; separate unitlevel.csv and unitexp.csv plain 80-byte rows must not be confused",
             "CatsEyeLevelUp and levelmax popups are original-game native code location leads",
+            "Original SAVE_DATA/SAVE_DATA4/SAVE_DATA8 filename xrefs are entrypoint leads ONLY, not proof of durable save writer or acceptable independent local authority",
             "Further control-flow and original-game UI behavior must be verified before patching",
         ],
         "original_assets_written_to_repo": False,
