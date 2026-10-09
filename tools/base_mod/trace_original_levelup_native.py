@@ -890,6 +890,170 @@ def _original_cap_increment_item_transaction(elf: bytes) -> dict[str, Any]:
     }
 
 
+
+# Original successful XP purchase is NOT an unrelated menu action: source CFG
+# has TWO conditional witnesses from current-level +1 at 0x8583b8 to native
+# SAVE_DATA wrapper 0x8b9fc8. This is source control-flow only; it does NOT
+# establish all paths always save, filesystem fsync, or offline profile support.
+ORIGINAL_XP_TO_SAVE_DISPATCH_ANCHORS = {
+    0x858390: 0x940600D5,  # XP decrement recorded
+    0x8583B8: 0x9405CF25,  # current base level +1
+    0x858450: 0x54000480,  # b.eq split
+    0x858484: 0x54009BC0,  # b.eq -> 0x8597fc
+    0x858534: 0x540099E1,  # b.ne alternate route
+    0x85853C: 0x140004F1,  # unconditional -> 0x859900
+    0x859850: 0x1400007B,  # original path A -> 0x859a3c
+    0x859900: 0xA94AA3E9,  # shared post-upgrade UI
+    0x859994: 0x34006CE9,  # cbz -> 0x85a730
+    0x8599C8: 0x540003A0,  # b.eq -> 0x859a3c
+    0x859A38: 0x14000343,  # b -> 0x85a744
+    0x859A3C: 0xAA1303E0,  # mov x0,x19 game context
+    0x859A40: 0x94018162,  # BL original SAVE_DATA
+    0x85A730: 0x52800149,  # original path B prelude
+    0x85A744: 0xAA1303E0,  # mov x0,x19 game context
+    0x85A748: 0x94017E20,  # BL original SAVE_DATA
+}
+
+def _original_arm64_cfg_successors(elf: bytes, pc: int) -> tuple[int, ...]:
+    """Minimal direct AArch64 CFG edge decoder for pinned original .text.
+
+    BL/BLR are modeled as return-to-next, not as proof that called functions
+    terminate or always return. Unknown UDF, direct BR/RET and BRK are
+    conservative terminal instructions. Never include outside .text as graph.
+    """
+    word = _u32(elf, pc)
+    if word == 0 or word == 0xD4200000:
+        return ()
+    if word & 0xFFFFFC1F in (0xD65F0000, 0xD61F0000):
+        return ()  # RET or indirect BR
+    if word & 0xFC000000 == 0x14000000:  # B
+        return (pc + _sign_extend(word & 0x03FFFFFF, 26) * 4,)
+    if word & 0xFF000010 == 0x54000000:  # B.cond
+        return (pc + _sign_extend((word >> 5) & 0x7FFFF, 19) * 4, pc + 4)
+    if word & 0x7E000000 == 0x34000000:  # CBZ/CBNZ
+        return (pc + _sign_extend((word >> 5) & 0x7FFFF, 19) * 4, pc + 4)
+    if word & 0x7E000000 == 0x36000000:  # TBZ/TBNZ
+        return (pc + _sign_extend((word >> 5) & 0x3FFF, 14) * 4, pc + 4)
+    return (pc + 4,)
+
+
+def _original_arm64_cfg_witness(
+    elf: bytes,
+    start: int,
+    end: int,
+    source: int,
+    target: int,
+    *,
+    max_nodes: int = 20000,
+) -> list[int]:
+    """Return a bounded DIRECT control-flow witness or [].
+
+    The path is syntactic and conditional; feasible runtime values, dynamic
+    callbacks and persistent storage still need original-device verification.
+    """
+    from collections import deque
+    if (not isinstance(elf, bytes) or any(type(n) is not int for n in
+            (start, end, source, target, max_nodes))
+        or any(n % 4 != 0 for n in (start, end, source, target))
+        or not (0 <= start <= source < end <= len(elf))
+        or not (start <= target < end)
+        or not (0 < max_nodes <= 50000)):
+        raise LevelUpNativeTraceError("invalid original native bounded control-flow range")
+    parent: dict[int, int | None] = {source: None}
+    todo = deque([source])
+    examined = 0
+    while todo:
+        pc = todo.popleft()
+        examined += 1
+        if examined > max_nodes:
+            raise LevelUpNativeTraceError("original native bounded CFG traversal limit exceeded")
+        if pc == target:
+            path = []
+            at: int | None = pc
+            while at is not None:
+                path.append(at)
+                at = parent[at]
+            return list(reversed(path))
+        for next_pc in _original_arm64_cfg_successors(elf, pc):
+            if start <= next_pc < end and next_pc not in parent:
+                parent[next_pc] = pc
+                todo.append(next_pc)
+    return []
+
+
+def _original_normal_xp_purchase_save_routes(elf: bytes) -> dict[str, Any]:
+    """Prove two CONDITIONAL original normal XP purchase -> SAVE_DATA paths.
+
+    Not proof of saving on every purchase branch, successful file flush,
+    game save acceptance, initial local profile or network isolation.
+    """
+    if len(elf) < 0x8B9FCC:
+        raise LevelUpNativeTraceError("original purchase save-dispatch ELF bounds drifted")
+    for at, word in ORIGINAL_XP_TO_SAVE_DISPATCH_ANCHORS.items():
+        if _u32(elf, at) != word:
+            raise LevelUpNativeTraceError(
+                f"original XP purchase-to-save branch opcode drifted at {_hex(at)}"
+            )
+    for at, target in (
+        (0x858390, 0x9D86E4),
+        (0x8583B8, 0x9CC04C),
+        (0x859A40, 0x8B9FC8),
+        (0x85A748, 0x8B9FC8),
+    ):
+        if _decode_relative_bl(elf, at) != target:
+            raise LevelUpNativeTraceError(
+                f"original XP purchase-to-save direct BL target drifted at {_hex(at)}"
+            )
+    routes = {}
+    source_region_start, source_region_end = 0x850000, 0x85B000
+    prelude = _original_arm64_cfg_witness(
+        elf, source_region_start, source_region_end, 0x858390, 0x8583B8
+    )
+    if not prelude:
+        raise LevelUpNativeTraceError("original XP debit no longer reaches level increment")
+    expected_branch_witnesses = {
+        0x859A40: (
+            (0x858450, 0x858454), (0x858484, 0x8597FC),
+            (0x859850, 0x859A3C),
+        ),
+        0x85A748: (
+            (0x858450, 0x8584E0), (0x858534, 0x858538),
+            (0x85853C, 0x859900), (0x859994, 0x85A730),
+        ),
+    }
+    for save_callsite, expected_decisions in expected_branch_witnesses.items():
+        witness = _original_arm64_cfg_witness(
+            elf, source_region_start, source_region_end, 0x8583B8, save_callsite
+        )
+        decisions = tuple((a, b) for a, b in zip(witness, witness[1:])
+                          if len(_original_arm64_cfg_successors(elf, a)) > 1
+                          or b != a + 4)
+        if not witness or any(x not in decisions for x in expected_decisions):
+            raise LevelUpNativeTraceError(
+                f"original XP purchase-to-save conditional route drifted at {_hex(save_callsite)}"
+            )
+        routes[_hex(save_callsite)] = {
+            "original_save_target": "0x8b9fc8",
+            "witness_instruction_count": len(witness),
+            "conditional_or_jump_edges": [
+                {"from": _hex(a), "to": _hex(b)} for a, b in decisions
+            ],
+        }
+    return {
+        "status": "ORIGINAL_NATIVE_XP_PURCHASE_TO_SAVE_CONDITIONAL_CFG_PROVEN",
+        "source_xp_debit": "0x858390 -> 0x9d86e4",
+        "native_current_level_increment": "0x8583b8 -> 0x9cc04c",
+        "xp_debit_reaches_level_increment": True,
+        "conditional_save_routes": routes,
+        "all_successful_upgrade_paths_save_proven": False,
+        "runtime_branch_values_or_reachability_proven": False,
+        "original_disk_durable_flush_proven": False,
+        "fresh_independent_zero_network_save_connected": False,
+        "original_game_lv60_screen_and_reboot_verified": False,
+        "binary_mutated_or_user_save_modified": False,
+    }
+
+
 def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict:
     digest = sha256(elf).hexdigest()
     if digest != expected_sha or expected_sha != NATIVE_SHA256:
@@ -942,6 +1106,7 @@ def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict
         "original_save_data_serialization": _original_save_data_serialization(elf),
         "original_save_restore_flow": _original_save_restore_flow(elf),
         "original_cap_increment_item_transaction": _original_cap_increment_item_transaction(elf),
+        "original_normal_xp_purchase_save_routes": _original_normal_xp_purchase_save_routes(elf),
         "native_original_game_upgrader_getter_identified": True,
         "native_original_game_upgrade_purchase_hook_verified": False,
         "unit_cap_purchase_hook_attached": False,
