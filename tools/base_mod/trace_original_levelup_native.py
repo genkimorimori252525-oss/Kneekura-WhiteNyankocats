@@ -116,6 +116,45 @@ def direct_adrp_add_refs(
     return references
 
 
+def _decode_relative_bl(elf: bytes, address: int) -> int:
+    instruction = _u32(elf, address)
+    if instruction & 0xFC000000 != 0x94000000:
+        raise LevelUpNativeTraceError("expected direct ARM64 BL, not a pointer guess")
+    displacement = _sign_extend(instruction & 0x03FFFFFF, 26) * 4
+    return address + displacement
+
+
+def _popup_value_call_chain(elf: bytes) -> dict:
+    """Confirm original level-max popup compares an OBFUSCATED count.
+
+    Original 0x9cbf94 calls byte-wise XOR decoder 0x9d8718, masks the
+    decoded integer's low 16 bits, clamps to 50,000, and returns the value.
+    That is NOT proof it is a per-unit allowed level (60/50/20/1).
+    """
+    if _decode_relative_bl(elf, 0x4E3060) != 0x9CBF94:
+        raise LevelUpNativeTraceError("levelmax popup value callee drifted")
+    if _decode_relative_bl(elf, 0x9CBF9C) != 0x9D8718:
+        raise LevelUpNativeTraceError("popup value decode callee drifted")
+    expected = {
+        0x9CBFA0: 0x52986A08,  # mov w8,#0xc350 (=50000)
+        0x9CBFA4: 0x12003C09,  # and w9,w0,#0xffff
+        0x9CBFA8: 0x6B08013F,  # cmp w9,w8
+        0x9CBFAC: 0x1A883120,  # csel w0,w9,w8,lo
+    }
+    if any(_u32(elf, where) != word for where, word in expected.items()):
+        raise LevelUpNativeTraceError("popup value clamp calculation drifted")
+    return {
+        "caller": "0x4e3060",
+        "value_reader": "0x9cbf94",
+        "decoder": "0x9d8718",
+        "return_expression": "min((decoded_32bit & 0xffff), 50000)",
+        "comparison_at": "0x4e3068",
+        "compared_to": 1,
+        "original_level_cap_getter_proven": False,
+        "uncertainty": "Returned 0/1+ value selects popup variant, but meaning of decoded field remains unresolved",
+    }
+
+
 def _levelmax_popup_branch(elf: bytes) -> dict:
     """Exact JP UI branch between two original level-max popup strings.
 
@@ -190,6 +229,7 @@ def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict
         "evidence_type": "AARCH64_DIRECT_STRING_XREF_ONLY",
         "references": refs,
         "levelmax_popup_branch_candidate": _levelmax_popup_branch(elf),
+        "levelmax_popup_value_call_chain": _popup_value_call_chain(elf),
         "native_original_game_upgrader_getter_identified": False,
         "unit_cap_purchase_hook_attached": False,
         "scope": "READ_ONLY_EXACT_OWNER_SOURCE",
