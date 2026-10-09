@@ -21,11 +21,16 @@ if (-not (Test-Path -LiteralPath (Join-Path $repo 'tools/base_mod') -PathType Co
     throw '既存の「にーくらにゃんこ」フォルダのルートで上書き展開してな。'
 }
 $expectedFiles = @{
-    'INSTALL-ALPHA.ps1' = 'fe32e0b9010449fd8ea747521d215ff052b59a3f4dae8cdd263698ba755250f6'
+    'INSTALL-ALPHA.ps1' = 'a2f6f8f011275296340fcaec15e49eb498e0f4bd77096ce92ad8d5ee59c08bc4'
+    'resolve_java_keytool.ps1' = 'd36f57ce928807fde46738ab64ad1f61e7b651118c08821842ffe3835b3b18f0'
     'independent-alpha.apk' = '9fc91ad09da1f242669404b86abbb53030aca133206f27c2cfb501a443a9ec3b'
 }
 foreach ($item in $expectedFiles.GetEnumerator()) {
-    $file = Join-Path $bundleDir $item.Key
+    $file = if ($item.Key -eq 'resolve_java_keytool.ps1') {
+        Join-Path $PSScriptRoot $item.Key
+    } else {
+        Join-Path $bundleDir $item.Key
+    }
     if (-not (Test-Path -LiteralPath $file -PathType Leaf)) {
         throw "必要な配布ファイルが欠けている: $file"
     }
