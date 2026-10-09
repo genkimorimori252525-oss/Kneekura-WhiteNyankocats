@@ -5,7 +5,7 @@
   "owner_export_sha256": "38c3bbb8d2cf2101793c9462617d4293e19fc99588b6655fd40299fd61a0ef56",
   "native_sha256": "333d2974ab2ff881fd70087fd62dea7d12d82addbc55cab2f2a675ad67e3a7e2",
   "file": "split_config.arm64_v8a.apk::lib/arm64-v8a/libnative-lib.so",
-  "method": "AArch64 ADRP plus ADD immediate xref and conditional branch literal decoding; direct static disassembly; no original-game execution",
+  "method": "AArch64 ADRP plus ADD immediate xref and conditional branch literal decoding; direct static disassembly; no original-game execution; exact original unitbuy.csv column18 parse/store and 882-row loop pinned",
   "string_xrefs": [
     {
       "cue": "unitbuy.csv",
@@ -82,12 +82,31 @@
     "value_semantic_meaning": "UNKNOWN: original game stores a bytewise XOR-encoded value; value=1 selects first level-max popup; NOT yet proven per-unit level cap"
   },
   "source_code_tool": "tools/base_mod/trace_original_levelup_native.py",
-  "next_verified_code_task": "Backtrace original encoded field feeding 0x9cbf94/decoder0x9d8718 and identify the real *unit-specific* Lv60/50/20/1 upgrade cap, spending & persistence interface. Do not patch this popup selector as if it were the cap calculator.",
+  "next_verified_code_task": "Trace consumers of game_context+0x44fd0c+asset_id*0x50 and the per-unit max_upgrade_levels increments in real upgrade purchase/save path; connect only once offline original host and original UI are verified",
   "release_status": {
     "original_ui_level_cap_patch_attached": false,
     "level_purchase_action_attached": false,
     "real_original_game_verified": false,
     "full_offline_game_verified": false
   },
-  "restrictions": "No full proprietary data, disassembly dumps, source APK, original SAVE_DATA, private signing keys or bypass code committed; this is metadata only."
+  "restrictions": "No full proprietary data, disassembly dumps, source APK, original SAVE_DATA, private signing keys or bypass code committed; this is metadata only.",
+  "unitbuy_native_base_cap_table": {
+    "source": "owned JP15.7.1 libnative-lib.so, read only verified 2026-10-09",
+    "source_csv": "unitbuy.csv",
+    "loader_entry": "0x8a2c0c",
+    "unitbuy_filename_xref": "0x8a2c60/0x8a2c64",
+    "context_pointer": "entry x0 -> x19, x10=x19+0x44f000, x22=x10+0xcec",
+    "native_row_count": 882,
+    "native_row_stride_bytes": 80,
+    "original_base_max_col_zero_based": 18,
+    "original_col18_fetch_call": "0x8a2eb4 -> 0x363afc",
+    "original_col18_write": "0x8a2eb8: str w0,[x22,#0x20]",
+    "original_col18_native_address": "game_context + 0x44fd0c + cat_asset_id*0x50",
+    "source_verification": "exact pinned opcodes, BL target and loop back edge validated",
+    "downstream_UI_reader": "UNKNOWN",
+    "purchase_and_save_writer": "UNKNOWN",
+    "catseye_usage": "UNKNOWN",
+    "hook_active": false,
+    "caveat": "Proven original loader-to-memory table seam; NOT proof of a safe Lv60 purchase or offline original host"
+  }
 }
