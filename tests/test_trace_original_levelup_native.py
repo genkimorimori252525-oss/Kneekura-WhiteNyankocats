@@ -9,8 +9,9 @@ import struct
 import unittest
 
 from tools.base_mod.trace_original_levelup_native import (
-    CUES, EXPECTED_ANCHORS, NATIVE_SHA256, LevelUpNativeTraceError,
-    _levelmax_popup_branch,
+    CUES, EXPECTED_ANCHORS, NATIVE_SHA256, UNITBUY_BASE_CAP_LOAD_ANCHORS,
+    LevelUpNativeTraceError,
+    _unitbuy_original_base_cap_loader, _levelmax_popup_branch,
     _popup_value_call_chain,
     direct_adrp_add_refs, trace_exact_native,
 )
@@ -104,6 +105,43 @@ class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
         struct.pack_into("<I", blob, 0x9CBFA0, 0x52986A09)
         with self.assertRaises(LevelUpNativeTraceError):
             _popup_value_call_chain(bytes(blob))
+
+
+    def test_original_unitbuy_col18_is_stored_into_per_cat_native_ram(self):
+        # A compact synthetic instruction fixture; never commit original ELF.
+        blob = bytearray(0x8A2ED8)
+        blob[0x1AB9A3:0x1AB9AF] = b"unitbuy.csv\x00"
+        for address, opcode in UNITBUY_BASE_CAP_LOAD_ANCHORS.items():
+            struct.pack_into("<I", blob, address, opcode)
+        found = _unitbuy_original_base_cap_loader(bytes(blob))
+        self.assertEqual(found["column_index_zero_based"], 18)
+        self.assertEqual(found["column_parser_target"], "0x363afc")
+        self.assertEqual(found["first_row_value_offset_from_context"], "0x44fd0c")
+        self.assertEqual(found["row_stride_bytes"], 80)
+        self.assertEqual(found["row_count"], 882)
+        self.assertFalse(found["levelup_ui_getter_identified"])
+        self.assertFalse(found["upgrade_purchase_or_xp_debit_identified"])
+        self.assertFalse(found["offline_original_save_attached"])
+
+        # A store-site change must be treated as binary/version drift.
+        blob[0x8A2EB8] ^= 1
+        with self.assertRaisesRegex(LevelUpNativeTraceError, "opcode drifted"):
+            _unitbuy_original_base_cap_loader(bytes(blob))
+
+    def test_original_unitbuy_loader_rejects_wrong_row_stride_and_source(self):
+        blob = bytearray(0x8A2ED8)
+        blob[0x1AB9A3:0x1AB9AF] = b"unitbuy.csv\x00"
+        for address, opcode in UNITBUY_BASE_CAP_LOAD_ANCHORS.items():
+            struct.pack_into("<I", blob, address, opcode)
+        struct.pack_into("<I", blob, 0x8A2ED0, 0x910102D6)
+        with self.assertRaises(LevelUpNativeTraceError):
+            _unitbuy_original_base_cap_loader(bytes(blob))
+        struct.pack_into(
+            "<I", blob, 0x8A2ED0, UNITBUY_BASE_CAP_LOAD_ANCHORS[0x8A2ED0]
+        )
+        blob[0x1AB9A3] = ord("x")
+        with self.assertRaisesRegex(LevelUpNativeTraceError, "string drifted"):
+            _unitbuy_original_base_cap_loader(bytes(blob))
 
     def test_real_game_original_upgrader_cues_are_not_fabricated_hooks(self):
         self.assertEqual(len(NATIVE_SHA256), 64)
