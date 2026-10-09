@@ -82,7 +82,7 @@
     "value_semantic_meaning": "UNKNOWN: original game stores a bytewise XOR-encoded value; value=1 selects first level-max popup; NOT yet proven per-unit level cap"
   },
   "source_code_tool": "tools/base_mod/trace_original_levelup_native.py",
-  "next_verified_code_task": "Original runtime save reader/writer and JNI getFilesDir root are identified; use research-only isolated original-game app-private folder to prove real SAVED file path and required content; then implement independent zero-egress local authority at original native gameplay bridge. Avoid incorrectly treating path isolation as full save architecture.",
+  "next_verified_code_task": "Source save read/write->getFilesDir JNI is pinned. Next implement and test original-game first-run local state initialization with no official save/account plus research original engine boot when INTERNET permission is absent; prove real save path and restart, then actual one-cat Lv60 upgrade/XP/CatsEye and combat. SDK/IPC egress must be audited separately.",
   "release_status": {
     "original_ui_level_cap_patch_attached": false,
     "level_purchase_action_attached": false,
@@ -376,7 +376,7 @@
     "source_rodata_at": "0x1905a5",
     "source_literal": "getFilesDir",
     "source_adrp_add": "0x45aa3c / 0x45aa40",
-    "assumption": "Original native JNI references Activity.getFilesDir; evidence does NOT prove the SAVE_DATA reader/writer obtains that exact path at runtime.",
+    "assumption": "SUPERSEDED: exact original SAVE_DATA reader AND writer both reach the same getFilesDir JNI thunk in the pinned ARM64 source; installed original-Activity Java override invocation and actual device file paths remain unverified",
     "actual_patch_location": "bridge/java/MyActivity.java.in::getFilesDir",
     "java_builder": "tools/base_mod/inject_java_http_bridge.py::render_bridge_source",
     "only_enabled_for": "explicit research flavor, build-time option --research-isolate-original-native-files-dir",
@@ -391,6 +391,83 @@
     "unit_test": "tests/test_static_http_bridge.py includes real javac/java execution with original Activity compile-stub; tests real private folder, no original SAVE copied, reentry and symlink escape.",
     "level60_product_acceptance": false,
     "versioned_original_binary_modified": false,
-    "next_code_change": "Run original native engine save/open against isolated root only after zero-egress app boundary and required local asset import are verified. Implement independent versioned player-save provider mapping XP/current/cap fields and prove UI, battle, restart; do not import rejected original SAVE."
-  }
+    "next_code_change": "Run original native engine save/open against isolated root only after zero-egress app boundary and required local asset import are verified. Implement independent versioned player-save provider mapping XP/current/cap fields and prove UI, battle, restart; do not import rejected original SAVE.",
+    "source_to_native_save_io_static_proven": true
+  },
+  "original_save_to_android_jni_root": {
+    "source_sha256": "333d2974ab2ff881fd70087fd62dea7d12d82addbc55cab2f2a675ad67e3a7e2",
+    "evidence": "owner-owned exact JP15.7.1 libnative-lib.so, read-only AArch64 12 instruction checks",
+    "reader_calls": [
+      "0x8b4404 BL -> 0x35d620",
+      "0x35d6b0 BL -> 0x42cde8",
+      "0x42cde8 B -> 0x45a9f4"
+    ],
+    "writer_calls": [
+      "0x8b46fc BL -> 0x35e410",
+      "0x35e510 BL -> 0x42cde8",
+      "0x42cde8 B -> 0x45a9f4"
+    ],
+    "filename_builder": [
+      "read 0x35d6c0 BL -> 0x31a104",
+      "write 0x35e520 BL -> 0x31a104"
+    ],
+    "get_files_dir_literal_address": "0x1905a5",
+    "get_files_dir_adrp_add": "0x45aa3c/0x45aa40",
+    "virtual_jni_invocation": "0x45abb4",
+    "verification": "two real original SAVE_DATA file IO wrappers share JNI getFilesDir thunk (more than a string reference)",
+    "original_android_subclass_override_invoked_on_device": false,
+    "real_SAVE_DATA_written_to_isolated_folder_on_device": false,
+    "independent_player_save_schema_connected": false,
+    "full_zero_egress_passed": false
+  },
+  "original_research_manifest_network_permission_quarantine": {
+    "original_base_apk_manifest_sha256": "21d93803f3a3d439088ee0f3e7430cc01ed90fc3b2f1c318c536d12c436b45de",
+    "original_base_manifest_bytes": 53256,
+    "research_candidate_manifest_bytes": 53176,
+    "stripped_exact_node": "<uses-permission android:name='android.permission.INTERNET'>",
+    "stripped_node_bytes": 80,
+    "research_manifest_candidate_sha256": "1bedc546f2154e442a6711d7425c1328966f08fbe107c6330d5825ae9e7c382e",
+    "split_check": "only base.apk manifest includes INTERNET literal in owner six-split JP15.7.1 export; other five split manifests have no matching literal",
+    "patcher": "tools/base_mod/binary_axml.py::remove_exact_uses_permission",
+    "builder": "tools/base_mod/build_owned_static_http_bridge.py --research-no-internet-permission --research-isolate-original-native-files-dir",
+    "approval": "RESEARCH_ONLY_OPT_IN_NOT_ON_OWNER_DEVICE",
+    "original_unmodified": true,
+    "old_player_save_unmodified": true,
+    "third_party_sdk_components_disabled": false,
+    "original_super_http_fallthrough_eliminated": false,
+    "independent_local_gameplay_state_bootstrapped": false,
+    "zero_egress_or_original_UI_runtime_verified": false
+  },
+  "selected_prior_art": [
+    {
+      "name": "TBCML",
+      "url": "https://github.com/fieryhenry/tbcml",
+      "adoption": "Source-family pack/list and original-APK preservation hints; version-pin and verify against owner original; no API/online downloads required",
+      "boundary": "GitHub archived in 2025; source info only, no remote dependence"
+    },
+    {
+      "name": "BCSFE-Python",
+      "url": "https://github.com/fieryhenry/BCSFE-Python",
+      "adoption": "Per-version typed save fields and read/write semantic checks as reference",
+      "boundary": "Do not import restricted original SAVE_DATA or use official transfer/account/unban functions; GPL source not copied"
+    },
+    {
+      "name": "Battle Cats Game Modder",
+      "url": "https://github.com/dukart913/Battle-Cats-Game-Modder",
+      "adoption": "Reference original pack/list/DownloadLocal consistency",
+      "boundary": "Do NOT use reported H01/integrity bypass"
+    },
+    {
+      "name": "BCU_Android",
+      "url": "https://github.com/battlecatsultimate/BCU_Android",
+      "adoption": "Future animation/unit-data comparison only",
+      "boundary": "Independent BCU is not acceptable original-game runtime substitute"
+    },
+    {
+      "name": "Android ContextWrapper",
+      "url": "https://developer.android.com/reference/android/content/ContextWrapper",
+      "adoption": "getFilesDir is app-private storage and relative paths matter",
+      "boundary": "Overridden JNI/SDK/offline runtime still requires physical verification"
+    }
+  ]
 }
