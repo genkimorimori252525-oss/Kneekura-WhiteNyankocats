@@ -2360,16 +2360,25 @@ def _original_download_batch_tsv_installed_local_coverage(
 
 
 
-def _additional_owner_list_coverage(extra_list_dir: Path, *, known_original_families: set[str] | None = None) -> dict[str, Any]:
+def _additional_owner_list_coverage(
+    extra_list_dir: Path, *,
+    known_original_families: set[str] | None = None,
+    verify_paired_pack_tsv_payloads: bool = False,
+) -> dict[str, Any]:
     """Scan *owner-supplied* additional encrypted .list manifests, read only.
 
-    Does not load .pack payloads, contact servers, extract unrelated original
-    assets or imply that named entries have valid/locally installed content.
-    This optional extra-data provenance step is disabled unless explicitly
-    passed by the operator and never alters the owner-supplied archive.
+    Default: scan encrypted .list NAMES ONLY, never read .pack bytes.
+    Explicit paired-pack mode: seek and AES-decode ONLY selected matching
+    download_0..34.tsv payloads from paired original *.pack files; emit
+    hashes/lengths, NOT original plaintext. It never contacts services,
+    modifies owner files, or claims original native game accepted the TSVs.
     """
     import re
-    from tools.battlecats_pack import parse_manifest
+    from tools.battlecats_pack import (
+        parse_manifest, _ascii_md5_prefix_key, _unpad_pkcs7,
+        _require_block_multiple,
+    )
+    from Crypto.Cipher import AES
 
     if extra_list_dir.is_symlink() or not extra_list_dir.is_dir():
         raise LevelUpNativeTraceError("owned additional .list directory unavailable or symlink")
@@ -2382,6 +2391,7 @@ def _additional_owner_list_coverage(extra_list_dir: Path, *, known_original_fami
     expected = {f"download_{index}.tsv" for index in range(35)}
     families: dict[str, Any] = {}
     present: set[str] = set()
+    decrypted_tsvs: set[str] = set()
     observed_normalized: set[str] = set()
     for path in manifests:
         if (path.is_symlink() or not path.is_file()
@@ -2408,12 +2418,56 @@ def _additional_owner_list_coverage(extra_list_dir: Path, *, known_original_fami
         count, entries = parse_manifest(raw)
         matches = sorted({entry.name for entry in entries} & expected)
         present.update(matches)
+        payload_metadata: dict[str, Any] = {}
+        if verify_paired_pack_tsv_payloads and matches:
+            # Skip EVERY unrelated pack and ciphertext range. The caller
+            # explicitly owns both pair members and opts in to this mode.
+            packed = extra_list_dir / f"{path.stem}.pack"
+            if packed.is_symlink() or not packed.is_file():
+                raise LevelUpNativeTraceError(
+                    "owned additional Server .pack pair missing or unsafe"
+                )
+            total_pack_size = packed.stat().st_size
+            index = {row.name: row for row in entries}
+            with packed.open("rb") as owned_pack:
+                for filename in matches:
+                    row = index[filename]
+                    if (row.offset < 0 or row.size <= 0
+                        or row.size > 32 * 1024 * 1024
+                        or row.offset + row.size > total_pack_size):
+                        raise LevelUpNativeTraceError(
+                            "owned additional TSV ciphertext span invalid"
+                        )
+                    owned_pack.seek(row.offset)
+                    encrypted = owned_pack.read(row.size)
+                    if len(encrypted) != row.size:
+                        raise LevelUpNativeTraceError(
+                            "owned additional TSV ciphertext unexpectedly truncated"
+                        )
+                    _require_block_multiple(
+                        encrypted, f"{path.stem}/{filename}"
+                    )
+                    payload = _unpad_pkcs7(
+                        AES.new(
+                            _ascii_md5_prefix_key("battlecats"),
+                            AES.MODE_ECB,
+                        ).decrypt(encrypted)
+                    )
+                    payload_metadata[filename] = {
+                        "decrypted_payload_bytes": len(payload),
+                        "decrypted_payload_sha256": sha256(payload).hexdigest(),
+                        "source_ciphertext_bytes": len(encrypted),
+                    }
+                    decrypted_tsvs.add(filename)
         families[path.stem] = {
             "manifest_bytes": len(raw),
             "encrypted_manifest_sha256": sha256(raw).hexdigest(),
             "declared_entries": count,
             "matched_native_download_tsv_filenames": matches,
-            "linked_pack_payloads_checked": False,
+            "linked_pack_payloads_checked": bool(
+                verify_paired_pack_tsv_payloads and matches
+            ),
+            "targeted_decrypted_tsv_payloads": payload_metadata,
         }
     return {
         "status": "OWNER_ADDITIONAL_ENCRYPTED_LIST_NAMES_ONLY",
@@ -2424,14 +2478,26 @@ def _additional_owner_list_coverage(extra_list_dir: Path, *, known_original_fami
         "missing_download_batch_tsv_names": sorted(expected - present),
         "all_35_tsv_names_listed": present == expected,
         "families": families,
+        "paired_pack_payload_check_explicitly_requested": verify_paired_pack_tsv_payloads,
+        "download_tsv_payloads_decrypted": sorted(decrypted_tsvs),
+        "all_35_payloads_decrypted_from_owner_paired_packs": decrypted_tsvs == expected,
         "all_35_tsv_content_bytes_present_and_valid": False,
+        "original_native_tsv_semantics_accepted": False,
         "native_registry_92_entries_cover_names": False,
         "original_game_offline_first_boot_and_Lv60_verified": False,
         "original_owner_files_modified": False,
     }
 
 
-def trace_from_owner_export(owner_zip: Path, *, extra_list_dir: Path | None = None) -> dict:
+def trace_from_owner_export(
+    owner_zip: Path, *,
+    extra_list_dir: Path | None = None,
+    verify_owner_extra_pack_tsv_payloads: bool = False,
+) -> dict:
+    if verify_owner_extra_pack_tsv_payloads and extra_list_dir is None:
+        raise LevelUpNativeTraceError(
+            "owner extra .pack verification requires explicit extra .list directory"
+        )
     if sha256(owner_zip.read_bytes()).hexdigest() != SOURCE_EXPORT_SHA256:
         raise LevelUpNativeTraceError("owner export SHA256 differs from pinned JP15.7.1")
     with ZipFile(owner_zip) as z:
@@ -2455,6 +2521,7 @@ def trace_from_owner_export(owner_zip: Path, *, extra_list_dir: Path | None = No
                 known_original_families=set(
                     report["original_registered_server_family_catalog"]["original_server_family_stems"]
                 ),
+                verify_paired_pack_tsv_payloads=verify_owner_extra_pack_tsv_payloads,
             )
         )
     return report
@@ -2463,13 +2530,21 @@ def trace_from_owner_export(owner_zip: Path, *, extra_list_dir: Path | None = No
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--owned-export", type=Path, required=True)
-    parser.add_argument("--owner-extra-list-dir", type=Path, help="Optional private owner .list manifests only, no .pack bytes or network access")
+    parser.add_argument("--owner-extra-list-dir", type=Path, help="Optional private owner encrypted Server .list manifests")
+    parser.add_argument(
+        "--verify-owner-extra-pack-tsv-payloads", action="store_true",
+        help="Explicit owner-only read: decrypt and hash matching download_*.tsv from paired .pack without returning plaintext",
+    )
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args(argv)
     if args.output.suffix.lower() != ".json":
         parser.error("--output must end in .json")
     try:
-        receipt = trace_from_owner_export(args.owned_export, extra_list_dir=args.owner_extra_list_dir)
+        receipt = trace_from_owner_export(
+            args.owned_export,
+            extra_list_dir=args.owner_extra_list_dir,
+            verify_owner_extra_pack_tsv_payloads=args.verify_owner_extra_pack_tsv_payloads,
+        )
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(
             json.dumps(receipt, ensure_ascii=False, sort_keys=True, indent=2) + "\n",
