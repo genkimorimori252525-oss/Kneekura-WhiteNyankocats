@@ -147,33 +147,30 @@ def _find_android_jar(explicit: str | None = None) -> Path:
     return max(candidates, key=api_key).resolve()
 
 
-def build_bridge_dex(
+def render_bridge_source(
+    template: str,
     *,
     flavor: str,
     enabled: bool,
-    output: Path,
-    javac: str | None = None,
-    d8: str | None = None,
-    android_jar: str | None = None,
-    root: Path = Path("."),
     use_external_files_dir: bool = False,
     isolate_original_native_files_dir: bool = False,
-) -> dict:
+) -> str:
+    """Render the ORIGINAL MyActivity subclass, rejecting unsafe file modes.
+
+    This function performs no Java compilation, APK modification, networking
+    or player-save I/O. A separate research flavor is mandatory for this
+    original-engine file-root experiment. All shipping callers default OFF.
+    """
     package_name = FLAVOR_PACKAGES.get(flavor)
     if package_name is None:
         raise ValueError(f"unknown flavor: {flavor!r}")
-
     if isolate_original_native_files_dir and flavor != "research":
         raise ValueError("original-game native file isolation requires research flavor")
     if isolate_original_native_files_dir and use_external_files_dir:
         raise ValueError("original-game native file isolation conflicts with external files")
-
     launcher = package_name + ".MyActivity"
     if len(launcher.encode("utf-8")) != len(ORIGINAL_LAUNCHER.encode("utf-8")):
         raise ValueError("bridge launcher must preserve original encoded length")
-
-    root = root.resolve()
-    template = (root / BRIDGE_TEMPLATE).read_text(encoding="utf-8")
     rendered = (
         template.replace("__KNEEKURA_PACKAGE__", package_name)
         .replace(
@@ -195,6 +192,34 @@ def build_bridge_dex(
     )
     if "__KNEEKURA_" in rendered:
         raise ValueError("bridge template contains unresolved placeholders")
+    return rendered
+
+
+def build_bridge_dex(
+    *,
+    flavor: str,
+    enabled: bool,
+    output: Path,
+    javac: str | None = None,
+    d8: str | None = None,
+    android_jar: str | None = None,
+    root: Path = Path("."),
+    use_external_files_dir: bool = False,
+    isolate_original_native_files_dir: bool = False,
+) -> dict:
+    package_name = FLAVOR_PACKAGES.get(flavor)
+    if package_name is None:
+        raise ValueError(f"unknown flavor: {flavor!r}")
+    launcher = package_name + ".MyActivity"
+    root = root.resolve()
+    template = (root / BRIDGE_TEMPLATE).read_text(encoding="utf-8")
+    rendered = render_bridge_source(
+        template,
+        flavor=flavor,
+        enabled=enabled,
+        use_external_files_dir=use_external_files_dir,
+        isolate_original_native_files_dir=isolate_original_native_files_dir,
+    )
 
     javac_bin = _find_executable("javac", javac)
     d8_bin = _find_d8(d8)
