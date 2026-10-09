@@ -1392,6 +1392,70 @@ def _original_save_read_worker(elf: bytes) -> dict[str, Any]:
     }
 
 
+
+# Exact original private native .rela.dyn entries from the JP15.7.1 ELF.
+# These are **code pointers to virtual methods**, not runtime call traces.
+# In particular, the vtable does NOT prove that original appInit invokes the
+# worker on a first launch, and a status bit is not a fresh SAVE generator.
+ORIGINAL_WORKER_STATUS_VTABLE = {
+    0xAEFB48: 0x492D40,  # async worker launch
+    0xAEFB50: 0x4930A4,  # worker progress
+    0xAEFB58: 0x4930B8,  # worker success/failure status
+}
+ORIGINAL_WORKER_STATUS_ANCHORS = {
+    0x4930D8: 0x39402008,  # ldrb w8,[x0,#8] (success flag)
+    0x4930DC: 0x34000268,  # cbz success -> inspect failure byte
+    0x4930FC: 0x3940266A,  # ldrb w10,[x19,#9]
+    0x493104: 0x7A400940,  # conditional compare failure bit
+    0x493108: 0x1A9F07E0,  # selected status result
+    0x493128: 0x39402660,  # ldrb w0,[x19,#9] direct failed status
+}
+ORIGINAL_RELA_DYN_OFFSET = 0x9D2A8
+ORIGINAL_RELA_DYN_COUNT = 24964
+ORIGINAL_RELA_DYN_ENTRY_SIZE = 24
+
+
+def _original_save_worker_virtual_status(elf: bytes) -> dict[str, Any]:
+    """Verify which ORIGINAL async worker method reads successful/failed bits.
+
+    ELF RELATIVE relocation is an independently pinned static data link.
+    This is not evidence of first-launch invocation or valid SAVE production.
+    """
+    end = ORIGINAL_RELA_DYN_OFFSET + ORIGINAL_RELA_DYN_COUNT * ORIGINAL_RELA_DYN_ENTRY_SIZE
+    if len(elf) < end:
+        raise LevelUpNativeTraceError("original worker vtable ELF relocation table missing")
+    for pc, expected in ORIGINAL_WORKER_STATUS_ANCHORS.items():
+        if _u32(elf, pc) != expected:
+            raise LevelUpNativeTraceError(
+                f"original worker status method opcode drifted at {_hex(pc)}"
+            )
+    matches: dict[int, int] = {}
+    for offset in range(ORIGINAL_RELA_DYN_OFFSET, end, ORIGINAL_RELA_DYN_ENTRY_SIZE):
+        ptr_slot, info, addend = struct.unpack_from("<QQq", elf, offset)
+        if ptr_slot not in ORIGINAL_WORKER_STATUS_VTABLE:
+            continue
+        if info != 0x403 or ptr_slot in matches:
+            raise LevelUpNativeTraceError("original worker status vtable relocation type/duplicate drifted")
+        matches[ptr_slot] = addend
+    if matches != ORIGINAL_WORKER_STATUS_VTABLE:
+        raise LevelUpNativeTraceError("original worker virtual slot/target drifted")
+    return {
+        "status": "ORIGINAL_ASYNC_SAVE_WORKER_STATUS_VTABLE_PINNED",
+        "vtable_entries": {
+            _hex(slot): _hex(target)
+            for slot, target in sorted(matches.items())
+        },
+        "worker_progress_virtual_method": "0x4930a4",
+        "worker_status_virtual_method": "0x4930b8",
+        "status_checks_success_byte": "0x4930d8 LDRB worker_state+8",
+        "status_checks_failure_byte": "0x4930fc and 0x493128 LDRB worker_state+9",
+        "missing_save_can_flag_worker_failure": True,
+        "first_run_game_creation_proven": False,
+        "first_launch_dispatch_reachable_proven": False,
+        "any_native_or_save_bytes_modified": False,
+    }
+
+
 def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict:
     digest = sha256(elf).hexdigest()
     if digest != expected_sha or expected_sha != NATIVE_SHA256:
@@ -1449,6 +1513,7 @@ def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict
         "original_save_jni_files_root": _original_save_jni_files_root(elf),
         "original_missing_save_read_path": _original_missing_save_read_path(elf),
         "original_save_read_worker": _original_save_read_worker(elf),
+        "original_save_worker_virtual_status": _original_save_worker_virtual_status(elf),
         "native_original_game_upgrader_getter_identified": True,
         "native_original_game_upgrade_purchase_hook_verified": False,
         "original_native_conditional_xp_purchase_to_save_calls_proven": True,
