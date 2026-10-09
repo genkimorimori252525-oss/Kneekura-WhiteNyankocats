@@ -29,6 +29,14 @@ the repository validation harness before handing terminal commands to a human.
    in `docs/research/failure-repair-history.md`, with a regression check where
    practical.
 
+## P0 full-local product safety gate (2026-10-09)
+
+- **Zero external egress is a release requirement, not a future feature flag.** A build with `android.permission.INTERNET`, original `super.newHttpRequest(...)` fallthrough, unvetted analytics/advertising SDK initializers or untested native transport must not be called complete offline.
+- **No modified official SAVE_DATA as the local game's authority.** The redesigned game must own a separate versioned local schema and must not rely on original account/inquiry tokens, client/server legality flags or official-save checks.
+- Run the read-only `tools/base_mod/audit_offline_egress.py` against owner source/artifacts. Its findings reflect capability, **not proof that data was sent or that a ban was server-enforced**. A static clean result does not replace first-run device egress/IPC testing.
+- Any requirement to preserve original UI or native loader is subordinate to the hard offline contract. Where that contract fails, investigate independent local host rather than bypassing a restriction dialog or reconnecting edited saves to official services.
+- [Authoritative investigation/architecture reset](docs/architecture/2026-10-09-complete-local-offline-audit.md), [tracker issue #5](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/issues/5). No owner screenshot/account metadata in public GitHub.
+
 ## Standard commands
 
 Harness self-test:
