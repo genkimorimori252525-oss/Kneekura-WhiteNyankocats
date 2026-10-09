@@ -1,6 +1,6 @@
 # Kneekura WhiteNyankocats — Base-Preserving Android Mod Design
 
-> **Reclassified 2026-10-09:** the original-game host described below is a **research/compatibility candidate, not a demonstrated fully offline product**. The previously preferred original network fallback and original SAVE_DATA format do not meet the new [zero-egress/local-authority P0 contract](2026-10-09-complete-local-offline-audit.md). Preserve the UI only when the entire binary passes network and save-independence gates; otherwise choose an independent offline host. Do not certify or install original-host builds as fully local based on existing parity/CI tests.
+> **2026-10-09 OWNER DECISION (product requirement; supersedes reclassification language):** The owner wants the **real Battle Cats game experience**, not a Battle Cats-like clone. Original JP15.7.1 base preservation remains the default research target wherever full offline isolation can be proven. If the original engine cannot be isolated safely, a separate engine is allowed only as a **compatibility research path**; it must achieve verified original UI/battle/animation/contents/gacha/progression parity and owner approval before it could qualify as the requested product. The standalone Java Stage Fidelity Alpha is NOT the product. Strict zero egress + source fidelity are both compulsory. [PRODUCT_IDENTITY.md](../../PRODUCT_IDENTITY.md), [release criteria](product-identity-gates.json).
 
 
 Status: proposed current architecture after the 2026-10-06 direction correction.
