@@ -1,5 +1,7 @@
 # Kneekura WhiteNyankocats — Current Design
 
+> **Owner-reconfirmed product identity, 2026-10-09:** The intended game is the genuine **Battle Cats experience**, not any lookalike standalone Java Android game. The existing `app/` is a **technical verification harness ONLY**, never a replacement. The original JP15.7.1 engine/scenes/content remain the first research target, subject to strict verified zero-egress/local save. Any independently rebuilt engine must meet verified original graphics/UI/battle/animation/stage/gacha fidelity and owner acceptance before it can count as product. [PRODUCT_IDENTITY.md](../../PRODUCT_IDENTITY.md) is highest authority; [release gates](product-identity-gates.json) prohibit claiming otherwise.
+
 Status: compatibility-first architecture; product direction corrected 2026-10-06.
 
 ## Product identity
