@@ -20,7 +20,10 @@ import subprocess
 import tempfile
 import zipfile
 
-from tools.base_mod.binary_axml import patch_equal_length_strings, string_values
+from tools.base_mod.binary_axml import (
+    patch_equal_length_strings, remove_exact_uses_permission, string_values,
+)
+from tools.base_mod.audit_offline_egress import manifest_components
 from tools.base_mod.package_flavor import (
     FLAVOR_PACKAGES,
     ORIGINAL_PACKAGE,
@@ -210,6 +213,8 @@ def build_bridge_dex(
     package_name = FLAVOR_PACKAGES.get(flavor)
     if package_name is None:
         raise ValueError(f"unknown flavor: {flavor!r}")
+    if research_deny_internet and flavor != "research":
+        raise ValueError("original INTERNET quarantine is research flavor only")
     launcher = package_name + ".MyActivity"
     root = root.resolve()
     template = (root / BRIDGE_TEMPLATE).read_text(encoding="utf-8")
@@ -311,6 +316,7 @@ def _rewrite_base(
     *,
     launcher: str,
     bridge_dex: bytes,
+    research_deny_internet: bool = False,
 ) -> dict:
     with zipfile.ZipFile(source, "r") as src:
         if BRIDGE_DEX_ENTRY in src.namelist():
@@ -325,6 +331,19 @@ def _rewrite_base(
                 f"expected one original launcher string, got "
                 f"{counts.get(ORIGINAL_LAUNCHER)}"
             )
+        offline_permission_receipt = None
+        if research_deny_internet:
+            original_perms = manifest_components(manifest)["declared_permissions"]
+            if "android.permission.INTERNET" not in original_perms:
+                raise ValueError("original pinned APK lost expected INTERNET declaration")
+            patched_manifest, offline_permission_receipt = remove_exact_uses_permission(
+                patched_manifest, "android.permission.INTERNET"
+            )
+            remaining = manifest_components(patched_manifest)["declared_permissions"]
+            if "android.permission.INTERNET" in remaining:
+                raise ValueError("original research manifest still grants INTERNET")
+            if sorted(x for x in original_perms if x != "android.permission.INTERNET") != sorted(remaining):
+                raise ValueError("research original APK removed an unrelated permission")
 
         values = string_values(patched_manifest)
         if launcher not in values:
@@ -363,6 +382,9 @@ def _rewrite_base(
     return {
         "changed_entries": ["AndroidManifest.xml"],
         "added_entries": [BRIDGE_DEX_ENTRY],
+        "research_no_internet_manifest": research_deny_internet,
+        "exact_permission_removal": offline_permission_receipt,
+        "zero_egress_device_verified": False,
     }
 
 
@@ -372,6 +394,7 @@ def inject_bridge_split_set(
     *,
     flavor: str,
     bridge_dex_path: Path,
+    research_deny_internet: bool = False,
 ) -> dict:
     package_name = FLAVOR_PACKAGES.get(flavor)
     if package_name is None:
@@ -402,6 +425,7 @@ def inject_bridge_split_set(
                 target,
                 launcher=launcher,
                 bridge_dex=bridge_dex,
+                research_deny_internet=research_deny_internet,
             )
         else:
             shutil.copy2(source, target)
@@ -426,6 +450,9 @@ def inject_bridge_split_set(
         "launcher": launcher,
         "bridge_dex_entry": BRIDGE_DEX_ENTRY,
         "bridge_dex_sha256": sha256_file(bridge_dex_path),
+        "research_no_internet_manifest": research_deny_internet,
+        "network_egress_certified": False,
+        "original_game_first_boot_offline_verified": False,
         "splits": rows,
     }
     (output_dir / "http-bridge-ledger.json").write_text(
@@ -447,6 +474,11 @@ def main() -> int:
     parser.add_argument("--android-jar")
     parser.add_argument("--root", type=Path, default=Path("."))
     parser.add_argument("--use-external-files-dir", action="store_true")
+    parser.add_argument(
+        "--research-no-internet-permission",
+        action="store_true",
+        help="Research original host only; removes manifest INTERNET, NOT a zero-egress certificate",
+    )
     parser.add_argument(
         "--research-isolate-original-native-files-dir",
         action="store_true",
@@ -478,6 +510,7 @@ def main() -> int:
         output,
         flavor=args.flavor,
         bridge_dex_path=bridge_dex.resolve(),
+        research_deny_internet=args.research_no_internet_permission,
     )
     if build_ledger is not None:
         ledger["bridge_build"] = build_ledger
