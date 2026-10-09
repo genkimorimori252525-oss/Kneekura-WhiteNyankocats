@@ -54,6 +54,18 @@ class OperatorRevisionDiffTests(unittest.TestCase):
                          ["kneekura:notice:prototype"])
         self.assertTrue(report["requires_operator_review"])
 
+    def test_revision_only_or_publication_flag_still_needs_review(self):
+        before, after = original(), original()
+        after["revision"] = 2
+        report = review_update(before, after)
+        self.assertTrue(report["requires_operator_review"])
+        self.assertFalse(report["publication_status_changed"])
+        after["status"] = "published"
+        report = review_update(before, after)
+        self.assertTrue(report["requires_operator_review"])
+        self.assertTrue(report["publication_status_changed"])
+        self.assertFalse(report["released"])  # Android release remains a separate gate
+
     def test_retirement_requires_removing_dependent_schedule(self):
         before, after = original(), original()
         after["revision"] = 2
