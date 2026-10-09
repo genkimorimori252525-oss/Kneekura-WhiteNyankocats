@@ -5,7 +5,7 @@
   "owner_export_sha256": "38c3bbb8d2cf2101793c9462617d4293e19fc99588b6655fd40299fd61a0ef56",
   "native_sha256": "333d2974ab2ff881fd70087fd62dea7d12d82addbc55cab2f2a675ad67e3a7e2",
   "file": "split_config.arm64_v8a.apk::lib/arm64-v8a/libnative-lib.so",
-  "method": "AArch64 ADRP plus ADD immediate xref and conditional branch literal decoding; direct static disassembly; no original-game execution; exact original unitbuy.csv column18 parse/store and 882-row loop pinned",
+  "method": "Exact AArch64 string/ADRP+ADD, explicit CSV opener call target, parsed column store, XOR encode, 882-row/63-field loops, and original boot caller (no runtime execution or mutation)",
   "string_xrefs": [
     {
       "cue": "unitbuy.csv",
@@ -82,7 +82,7 @@
     "value_semantic_meaning": "UNKNOWN: original game stores a bytewise XOR-encoded value; value=1 selects first level-max popup; NOT yet proven per-unit level cap"
   },
   "source_code_tool": "tools/base_mod/trace_original_levelup_native.py",
-  "next_verified_code_task": "Trace consumers of game_context+0x44fd0c+asset_id*0x50 and the per-unit max_upgrade_levels increments in real upgrade purchase/save path; connect only once offline original host and original UI are verified",
+  "next_verified_code_task": "Follow consumers of XOR-decoded unitbuy.csv column18 at native context+0x4b0a8+asset_index*0x100, identify actual per-cat cap calculation and UI purchase + CatsEye/XP + new local save writer without editing owner original SAVE.",
   "release_status": {
     "original_ui_level_cap_patch_attached": false,
     "level_purchase_action_attached": false,
@@ -90,23 +90,46 @@
     "full_offline_game_verified": false
   },
   "restrictions": "No full proprietary data, disassembly dumps, source APK, original SAVE_DATA, private signing keys or bypass code committed; this is metadata only.",
-  "unitbuy_native_base_cap_table": {
-    "source": "owned JP15.7.1 libnative-lib.so, read only verified 2026-10-09",
-    "source_csv": "unitbuy.csv",
-    "loader_entry": "0x8a2c0c",
-    "unitbuy_filename_xref": "0x8a2c60/0x8a2c64",
-    "context_pointer": "entry x0 -> x19, x10=x19+0x44f000, x22=x10+0xcec",
-    "native_row_count": 882,
-    "native_row_stride_bytes": 80,
-    "original_base_max_col_zero_based": 18,
-    "original_col18_fetch_call": "0x8a2eb4 -> 0x363afc",
-    "original_col18_write": "0x8a2eb8: str w0,[x22,#0x20]",
-    "original_col18_native_address": "game_context + 0x44fd0c + cat_asset_id*0x50",
-    "source_verification": "exact pinned opcodes, BL target and loop back edge validated",
-    "downstream_UI_reader": "UNKNOWN",
-    "purchase_and_save_writer": "UNKNOWN",
-    "catseye_usage": "UNKNOWN",
-    "hook_active": false,
-    "caveat": "Proven original loader-to-memory table seam; NOT proof of a safe Lv60 purchase or offline original host"
+  "unit_native_source_table_sequence": {
+    "provenance": "owner's exact JP15.7.1 ARM64 libnative-lib.so, read only opcode/string/single caller verification",
+    "original_startup_caller": "0x9c598c -> 0x8a2c0c",
+    "source_file_sequence": [
+      {
+        "file": "unitbuy.csv",
+        "rodata": "0x1ab9a3",
+        "load": "0x8a2c88",
+        "row_count": 882,
+        "fields_per_row": 63,
+        "stride_bytes": 256,
+        "loader_storage": "XOR of 4 parsed bytes with per-row last 4-byte key",
+        "column18_encoded_ram": "context+0x4b0a8+asset_index*0x100",
+        "effective_cap_getter": "NOT_FOUND"
+      },
+      {
+        "file": "unitlevel.csv",
+        "rodata": "0x19294e",
+        "load": "0x8a2d6c",
+        "row_count": 882,
+        "stride_bytes": 80,
+        "col18_reader": "0x8a2eb4",
+        "col18_plain_store": "0x8a2eb8",
+        "col18_ram": "context+0x44fd0c+asset_index*0x50"
+      },
+      {
+        "file": "unitexp.csv",
+        "rodata": "0x19b5be",
+        "load": "0x8a2f18",
+        "row_count": 882,
+        "stride_bytes": 80,
+        "col18_reader": "0x8a3060",
+        "col18_plain_store": "0x8a3064",
+        "col18_ram": "context+0x4610ac+asset_index*0x50"
+      }
+    ],
+    "follow_on_per_unit_initializer": "0x9c599c -> 0x8a31b0",
+    "proof_boundary": "These are verified READ + RAM storage seams only. Meaning and consumers of source fields, original upgrade purchase UI, effective cap, CatsEye/XP consumption, save writer and safe offline game host are UNVERIFIED.",
+    "original_game_lv60_purchase_passed": false,
+    "full_local_save_connected": false,
+    "correction_note": "Prior 0x8a2eb4/0x8a2eb8 was mislabeled as unitbuy.csv col18; exact original code switches to unitlevel.csv immediately before this loop. Corrected after inspecting file switch at 0x8a2d38/0x8a2d6c. The real unitbuy col18 writes via XOR loop at 0x8a2cd4..0x8a2d1c."
   }
 }
