@@ -117,7 +117,7 @@ class StaticHttpBridgeTests(unittest.TestCase):
             encoding="utf-8"
         )
         self.assertIn("the original native app may expect additional local assets", original)
-        self.assertIn("does not implement a network-free game", original)
+        self.assertIn("nor implements a network-free game", original)
         self.assertIn("original native private save root unavailable", original)
         self.assertIn('isolate_original_native_files_dir: bool = False', injector)
         self.assertIn('"original_native_gameplay_persistence_verified": False', injector)
