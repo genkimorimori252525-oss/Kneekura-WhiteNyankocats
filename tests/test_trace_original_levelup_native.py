@@ -857,7 +857,7 @@ class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
         self.assertIn("DownloadBatchTask", result["rtti"])
         self.assertEqual(result["rtti_relocation"], "0xafe0e0 -> 0x1db616")
         self.assertEqual(result["typeinfo_relocation"], "0xafe0a8 -> 0xafe0d8")
-        self.assertFalse(result["network_transport_called"])
+        self.assertFalse(result["network_transport_call_proven"])
         self.assertFalse(result["remote_data_required_proven"])
         self.assertFalse(result["615mb_additional_assets_locally_available_proven"])
         self.assertFalse(result["task_is_new_game_save_generator_proven"])
