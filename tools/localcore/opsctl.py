@@ -22,6 +22,12 @@ def windows_in_range(pack: dict, start_date: str, days: int) -> list[dict]:
         raise LiveOpsError("calendar preview is limited to 1–90 days")
     first = datetime.combine(_date(start_date), time(0, 0), tzinfo=JST)
     stop = first + timedelta(days=days)
+    # A recurring window can cross season boundaries; never project a
+    # published/live appearance outside the season's approved date range.
+    first = max(first, _local_timestamp(pack["season"]["start"]))
+    stop = min(stop, _local_timestamp(pack["season"]["end"]))
+    if first >= stop:
+        return []
     content = {
         kind: {item["id"]: item for item in pack["catalog"][kind]}
         for kind in KINDS
