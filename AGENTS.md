@@ -46,6 +46,16 @@ the repository validation harness before handing terminal commands to a human.
 - Unit/stage assets and owner game archives stay under private local storage, not in public GitHub. GitHub is authoring/review/version history only; player imports approved content locally.
 - Current `ops/seasons/2026-autumn-prototype.json` is a **test/draft**, not a 2026 release or verified PONOS calendar. `tools/localcore/ops_calendar.py`, `login_rotation.py`, and `mission_cycles.py` are offline reference code until Android integration passes strict zero-egress Issue #5 and LiveOps Issue #6.
 
+## Operator-announcement editorial contract (2026-10-09)
+
+- The owner wants the familiar **base top-right i button → notices** flow. Jolly authors all Kneekura-specific news as part of the operating duties. See `docs/architecture/kneekura-offline-notices.md`.
+- Every new season, playable event/gacha/stage, balance patch, maintenance or bug fix needs accurately dated notice in `catalog.notice` with a local `schedule` window, or a recorded reason why no player news is appropriate.
+- Do not claim unfinished stages, unsigned patches or fictitious PONOS calendars shipped. `ops/seasons/2026-autumn-prototype.json` is DRAFT.
+- Notices require Japanese editorial category, title, body, JST publication date, optional pinned flag; no ads, personal identifiers, account sync, external URLs or remotely fetched images.
+- Preview authored notices using `python -m tools.localcore.opsctl notices --pack ops/seasons/2026-autumn-prototype.json --at 2026-10-09T10:30:00+09:00`; verify immutable content IDs, ready flag, revision and signing before publication.
+- Independent Android `MainActivity` has an i button opening `NoticeActivity`: 3 bundled introductory articles are shown until a separately trusted signed LiveOps content pack is imported. This is NOT the original PONOS WebView and not a final full base scene.
+- Content updates must not alter independent player SAVE, stage clears, inventory or gacha draws. Signed content validity and actual game functionality require different release gates.
+
 ## Standard commands
 
 Harness self-test:
