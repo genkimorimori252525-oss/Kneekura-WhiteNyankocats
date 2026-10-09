@@ -25,6 +25,7 @@ from tools.base_mod.trace_original_levelup_native import (
     ORIGINAL_APP_LAUNCH_RESULT_ANCHORS,
     ORIGINAL_APP_LAUNCH_TARGET_SCENE_ENTRY_ANCHORS,
     ORIGINAL_SCENE97_DOWNLOAD_BATCH_ANCHORS,
+    ORIGINAL_DOWNLOAD_TSV_FILE_RESOLVER_ANCHORS,
     JP15_7_1_ORIGINAL_LOCAL_LIST_COUNTS,
     ORIGINAL_SCENE97_DOWNLOAD_BATCH_RELOCS, ORIGINAL_DOWNLOAD_BATCH_RTTI,
     ORIGINAL_RELA_DYN_OFFSET, ORIGINAL_RELA_DYN_COUNT,
@@ -40,6 +41,7 @@ from tools.base_mod.trace_original_levelup_native import (
     _original_app_launch_result_scene_dispatch,
     _original_app_launch_target_scene_entries,
     _original_scene97_download_batch_task,
+    _original_download_tsv_file_source_resolver,
     _original_download_batch_tsv_installed_local_coverage,
     _original_arm64_cfg_successors, _original_arm64_cfg_witness,
     _original_arm64_cfg_all_direct_paths_hit_save,
@@ -174,6 +176,16 @@ def _synthetic_scene97_download_task_fixture() -> bytearray:
         struct.pack_into("<QQq", blob, ORIGINAL_RELA_DYN_OFFSET + idx*24,
                          slot, 0x403, dest)
     return blob
+
+
+
+def _synthetic_tsv_source_resolver_fixture() -> bytearray:
+    """Exact minimal native site opcodes, not the private owned ELF bytes."""
+    payload = bytearray(0x73CAB4)
+    payload[0x1A8C27:0x1A8C2B] = b"snd\x00"
+    for address, opcode in ORIGINAL_DOWNLOAD_TSV_FILE_RESOLVER_ANCHORS.items():
+        struct.pack_into("<I", payload, address, opcode)
+    return payload
 
 
 class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
@@ -926,6 +938,52 @@ class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
                 {"DataLocal": source["DataLocal"]},
                 require_exact_owner_counts=False,
             )
+
+
+    def test_native_original_tsv_resolver_indexes_source_before_getfilesdir(self):
+        result = _original_download_tsv_file_source_resolver(
+            bytes(_synthetic_tsv_source_resolver_fixture())
+        )
+        self.assertEqual(
+            result["status"],
+            "ORIGINAL_DOWNLOAD_BATCH_TSV_SOURCE_INDEX_AND_JNI_FILES_ROOT_VERIFIED",
+        )
+        self.assertEqual(result["original_lookup"], "0x73caa8 -> 0x320be0")
+        self.assertEqual(result["source_index_query"], "0x320c34 -> 0x321138")
+        self.assertEqual(
+            result["missing_source_index_branch"],
+            "0x320c38 TBZ -> 0x320f30",
+        )
+        self.assertEqual(
+            result["shared_android_files_dir"],
+            "0x320c40 -> 0x42cde8 (getFilesDir JNI thunk)",
+        )
+        self.assertEqual(result["observed_return_value_constants"], [-1, 0, 1])
+        self.assertEqual(result["audio_only_suffixes"], [".caf", ".ogg"])
+        self.assertFalse(result["download_tsv_audio_extension"])
+        self.assertFalse(result["loose_tsv_in_files_dir_satisfies_source_index_proven"])
+        self.assertFalse(result["actual_original_35_asset_files_resolved_successfully"])
+        self.assertFalse(result["direct_real_network_request_from_resolver_proven"])
+        self.assertFalse(result["original_offline_gameplay_Lv60_verified"])
+
+    def test_original_native_tsv_source_resolver_opcode_or_root_drift_fails(self):
+        exact = _synthetic_tsv_source_resolver_fixture()
+        for pc in (
+            0x73CA9C, 0x73CAA8, 0x73CAB0,
+            0x320C34, 0x320C38, 0x320C40, 0x320C48,
+            0x320C98, 0x320CA8, 0x320E24, 0x320E28,
+            0x320E68, 0x320E6C, 0x320E88, 0x320F34, 0x320F48,
+        ):
+            changed = bytearray(exact)
+            changed[pc] ^= 1
+            with self.subTest(address=hex(pc)):
+                with self.assertRaises(LevelUpNativeTraceError):
+                    _original_download_tsv_file_source_resolver(bytes(changed))
+        bad_audio_string = bytearray(exact)
+        bad_audio_string[0x1A8C27] = ord("x")
+        with self.assertRaisesRegex(LevelUpNativeTraceError, "prefix literal drifted"):
+            _original_download_tsv_file_source_resolver(bytes(bad_audio_string))
+
 
     def test_real_game_original_upgrader_cues_are_not_fabricated_hooks(self):
         self.assertEqual(len(NATIVE_SHA256), 64)
