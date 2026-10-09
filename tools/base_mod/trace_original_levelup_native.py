@@ -2237,7 +2237,74 @@ def _original_download_batch_tsv_installed_local_coverage(
     }
 
 
-def trace_from_owner_export(owner_zip: Path) -> dict:
+
+def _additional_owner_list_coverage(extra_list_dir: Path) -> dict[str, Any]:
+    """Scan *owner-supplied* additional encrypted .list manifests, read only.
+
+    Does not load .pack payloads, contact servers, extract unrelated original
+    assets or imply that named entries have valid/locally installed content.
+    This optional extra-data provenance step is disabled unless explicitly
+    passed by the operator and never alters the owner-supplied archive.
+    """
+    import re
+    from tools.battlecats_pack import parse_manifest
+
+    if extra_list_dir.is_symlink() or not extra_list_dir.is_dir():
+        raise LevelUpNativeTraceError("owned additional .list directory unavailable or symlink")
+    source_files = sorted(extra_list_dir.iterdir(), key=lambda x: x.name.casefold())
+    manifests = [file for file in source_files if file.name.endswith(".list")]
+    if not manifests or len(manifests) > 64:
+        raise LevelUpNativeTraceError(
+            "owned additional .list directory must contain 1..64 encrypted manifests"
+        )
+    expected = {f"download_{index}.tsv" for index in range(35)}
+    families: dict[str, Any] = {}
+    present: set[str] = set()
+    observed_normalized: set[str] = set()
+    for path in manifests:
+        if (path.is_symlink() or not path.is_file()
+            or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*\.list", path.name)):
+            raise LevelUpNativeTraceError(
+                "owned additional .list path not a regular safe family name"
+            )
+        normalized = path.name.casefold()
+        if normalized in observed_normalized:
+            raise LevelUpNativeTraceError(
+                "duplicate owned additional .list family name"
+            )
+        observed_normalized.add(normalized)
+        if path.stat().st_size > 4 * 1024 * 1024:
+            raise LevelUpNativeTraceError(
+                "owned additional encrypted .list too large"
+            )
+        raw = path.read_bytes()
+        count, entries = parse_manifest(raw)
+        matches = sorted({entry.name for entry in entries} & expected)
+        present.update(matches)
+        families[path.stem] = {
+            "manifest_bytes": len(raw),
+            "encrypted_manifest_sha256": sha256(raw).hexdigest(),
+            "declared_entries": count,
+            "matched_native_download_tsv_filenames": matches,
+            "linked_pack_payloads_checked": False,
+        }
+    return {
+        "status": "OWNER_ADDITIONAL_ENCRYPTED_LIST_NAMES_ONLY",
+        "source": "explicit extra owner-supplied directory; never downloaded automatically",
+        "family_count": len(families),
+        "total_declared_entries": sum(v["declared_entries"] for v in families.values()),
+        "matched_download_batch_tsv_names": sorted(present),
+        "missing_download_batch_tsv_names": sorted(expected - present),
+        "all_35_tsv_names_listed": present == expected,
+        "families": families,
+        "all_35_tsv_content_bytes_present_and_valid": False,
+        "native_registry_92_entries_cover_names": False,
+        "original_game_offline_first_boot_and_Lv60_verified": False,
+        "original_owner_files_modified": False,
+    }
+
+
+def trace_from_owner_export(owner_zip: Path, *, extra_list_dir: Path | None = None) -> dict:
     if sha256(owner_zip.read_bytes()).hexdigest() != SOURCE_EXPORT_SHA256:
         raise LevelUpNativeTraceError("owner export SHA256 differs from pinned JP15.7.1")
     with ZipFile(owner_zip) as z:
@@ -2254,18 +2321,23 @@ def trace_from_owner_export(owner_zip: Path) -> dict:
     report["original_download_batch_bundled_local_tsv_coverage"] = (
         _original_download_batch_tsv_installed_local_coverage(source_manifests)
     )
+    if extra_list_dir is not None:
+        report["owner_additional_encrypted_list_tsv_coverage"] = (
+            _additional_owner_list_coverage(extra_list_dir)
+        )
     return report
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--owned-export", type=Path, required=True)
+    parser.add_argument("--owner-extra-list-dir", type=Path, help="Optional private owner .list manifests only, no .pack bytes or network access")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args(argv)
     if args.output.suffix.lower() != ".json":
         parser.error("--output must end in .json")
     try:
-        receipt = trace_from_owner_export(args.owned_export)
+        receipt = trace_from_owner_export(args.owned_export, extra_list_dir=args.owner_extra_list_dir)
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(
             json.dumps(receipt, ensure_ascii=False, sort_keys=True, indent=2) + "\n",
