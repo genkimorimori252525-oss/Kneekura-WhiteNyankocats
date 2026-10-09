@@ -29,7 +29,6 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
     private static final boolean ISOLATE_ORIGINAL_NATIVE_FILES_DIR =
             __KNEEKURA_ISOLATE_ORIGINAL_NATIVE_FILES_DIR__;
     private static final String ORIGINAL_NATIVE_FILES_LEAF = "kneekura-native-jp15-7-1";
-    private static volatile File originalNativeFilesDirectory;
 
     private static final String BACKUP_SCHEME = "https";
     private static final String BACKUP_HOST = "nyanko-backups.ponosgames.com";
@@ -91,31 +90,29 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
             if (USE_EXTERNAL_FILES_DIR) {
                 throw new IllegalStateException("conflicting original save directory modes");
             }
-            File known = originalNativeFilesDirectory;
-            if (known != null && known.isDirectory()) {
-                return known;
+            // Never cache an unchecked path: a later symlink replacement must
+            // not escape the original app-private storage boundary.
+            File base = super.getFilesDir();
+            if (base == null || !base.isDirectory()) {
+                throw new IllegalStateException("original app-private files directory unavailable");
             }
-            synchronized (MyActivity.class) {
-                File base = super.getFilesDir();
-                if (base == null || !base.isDirectory()) {
-                    throw new IllegalStateException("original app-private files directory unavailable");
+            File directory = new File(base, ORIGINAL_NATIVE_FILES_LEAF);
+            try {
+                String trusted = base.getCanonicalPath() + File.separator;
+                if (!directory.getCanonicalPath().startsWith(trusted)) {
+                    throw new IllegalStateException("original native private save root escaped");
                 }
-                File directory = new File(base, ORIGINAL_NATIVE_FILES_LEAF);
-                try {
-                    String trusted = base.getCanonicalPath() + File.separator;
-                    if (!directory.getCanonicalPath().startsWith(trusted)) {
-                        throw new IllegalStateException("original native private save root escaped");
-                    }
-                    if (!directory.isDirectory() && (!directory.mkdirs() || !directory.isDirectory())) {
-                        throw new IllegalStateException("original native private save root unavailable");
-                    }
-                } catch (IOException error) {
-                    throw new IllegalStateException("original native private save root unresolved", error);
+                if (!directory.isDirectory() && (!directory.mkdirs() || !directory.isDirectory())) {
+                    throw new IllegalStateException("original native private save root unavailable");
                 }
-                originalNativeFilesDirectory = directory;
-                debugResearch("original-native-private-files-root active");
-                return directory;
+                if (!directory.getCanonicalPath().startsWith(trusted)) {
+                    throw new IllegalStateException("original native private save root changed during creation");
+                }
+            } catch (IOException error) {
+                throw new IllegalStateException("original native private save root unresolved", error);
             }
+            debugResearch("original-native-private-files-root active");
+            return directory;
         }
         if (!USE_EXTERNAL_FILES_DIR) {
             return super.getFilesDir();
