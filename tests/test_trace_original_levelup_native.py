@@ -20,13 +20,16 @@ from tools.base_mod.trace_original_levelup_native import (
     ORIGINAL_SAVE_JNI_FILE_ROOT_ANCHORS,
     ORIGINAL_MISSING_SAVE_ANCHORS,
     ORIGINAL_SAVE_READ_WORKER_ANCHORS,
+    ORIGINAL_WORKER_STATUS_VTABLE, ORIGINAL_WORKER_STATUS_ANCHORS,
+    ORIGINAL_RELA_DYN_OFFSET, ORIGINAL_RELA_DYN_COUNT,
+    ORIGINAL_RELA_DYN_ENTRY_SIZE,
     LevelUpNativeTraceError,
     _original_unit_data_loader, _original_effective_level_cap_getter,
     _original_upgrade_purchase_flow, _original_save_data_serialization,
     _original_save_restore_flow, _original_cap_increment_item_transaction,
     _original_normal_xp_purchase_save_routes,
     _original_save_jni_files_root, _original_missing_save_read_path,
-    _original_save_read_worker,
+    _original_save_read_worker, _original_save_worker_virtual_status,
     _original_arm64_cfg_successors, _original_arm64_cfg_witness,
     _original_arm64_cfg_all_direct_paths_hit_save,
     _levelmax_popup_branch,
@@ -95,6 +98,21 @@ def _synthetic_original_jni_file_root_fixture() -> bytearray:
     for pc, opcode in ORIGINAL_SAVE_JNI_FILE_ROOT_ANCHORS.items():
         struct.pack_into("<I", payload, pc, opcode)
     return payload
+
+
+
+def _synthetic_worker_status_fixture() -> bytearray:
+    # Exposes no original native executable or owner player SAVE: a handful of
+    # exact opcodes, plus three synthetic ELF RELATIVE relocation entries only.
+    file_length = max(0x49312C, ORIGINAL_RELA_DYN_OFFSET +
+                      ORIGINAL_RELA_DYN_COUNT * ORIGINAL_RELA_DYN_ENTRY_SIZE)
+    data = bytearray(file_length)
+    for at, opcode in ORIGINAL_WORKER_STATUS_ANCHORS.items():
+        struct.pack_into("<I", data, at, opcode)
+    for idx, (slot, target) in enumerate(ORIGINAL_WORKER_STATUS_VTABLE.items()):
+        struct.pack_into("<QQq", data, ORIGINAL_RELA_DYN_OFFSET + idx * 24,
+                         slot, 0x403, target)
+    return data
 
 
 class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
@@ -612,6 +630,46 @@ class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
             with self.subTest(where=hex(pc)):
                 with self.assertRaises(LevelUpNativeTraceError):
                     _original_save_read_worker(bytes(broken))
+
+    def test_original_save_worker_virtual_status_consumes_distinct_state_flags(self):
+        result = _original_save_worker_virtual_status(
+            bytes(_synthetic_worker_status_fixture())
+        )
+        self.assertEqual(
+            result["vtable_entries"],
+            {"0xaefb48": "0x492d40",
+             "0xaefb50": "0x4930a4",
+             "0xaefb58": "0x4930b8"},
+        )
+        self.assertIn("worker_state+8", result["status_checks_success_byte"])
+        self.assertIn("worker_state+9", result["status_checks_failure_byte"])
+        self.assertFalse(result["first_run_game_creation_proven"])
+        self.assertFalse(result["first_launch_dispatch_reachable_proven"])
+
+    def test_original_save_worker_virtual_status_rejects_wrong_relocations(self):
+        baseline = _synthetic_worker_status_fixture()
+        for opcode_pc in (0x4930D8, 0x4930FC, 0x493128):
+            broken = bytearray(baseline)
+            broken[opcode_pc] ^= 1
+            with self.subTest(opcode=hex(opcode_pc)):
+                with self.assertRaisesRegex(LevelUpNativeTraceError, "opcode drifted"):
+                    _original_save_worker_virtual_status(bytes(broken))
+        for index, fault in (
+            (0, "wrong destination"),
+            (1, "wrong relocation type"),
+            (2, "duplicate slot"),
+        ):
+            broken = bytearray(baseline)
+            at = ORIGINAL_RELA_DYN_OFFSET + index * 24
+            if index == 0:
+                struct.pack_into("<Q", broken, at + 16, 0x4930A4)
+            elif index == 1:
+                struct.pack_into("<Q", broken, at + 8, 0x402)
+            else:
+                struct.pack_into("<Q", broken, at, 0xAEFB50)
+            with self.subTest(fault=fault):
+                with self.assertRaises(LevelUpNativeTraceError):
+                    _original_save_worker_virtual_status(bytes(broken))
 
     def test_real_game_original_upgrader_cues_are_not_fabricated_hooks(self):
         self.assertEqual(len(NATIVE_SHA256), 64)
