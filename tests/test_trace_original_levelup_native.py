@@ -518,6 +518,8 @@ class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
             EXPECTED_ANCHORS["catseye_screen_resource"], {0x942B64}
         )
         self.assertEqual(CUES["unit_data_file"], "unitbuy.csv")
+        self.assertEqual(CUES["native_activity_files_dir"], "getFilesDir")
+        self.assertEqual(EXPECTED_ANCHORS["native_activity_files_dir"], {0x45AA3C})
         self.assertEqual(CUES["original_save_file"], "SAVE_DATA")
         self.assertEqual(
             EXPECTED_ANCHORS["original_save_file"],
