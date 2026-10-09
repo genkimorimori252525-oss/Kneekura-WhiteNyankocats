@@ -4,6 +4,9 @@ import android.content.Context;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
@@ -61,8 +64,58 @@ final class LocalNoticeRepository {
 
     static List<Notice> current(Context context) throws Exception {
         JSONObject pack = LocalOpsStore.loadCurrentPack(context);
-        if (pack == null) return Collections.emptyList();
+        if (pack == null) return bundled(context, ZonedDateTime.now(JST));
         return fromPack(pack, ZonedDateTime.now(JST));
+    }
+
+    /** APK-bundled welcome news is available even before any external pack. */
+    static List<Notice> bundled(Context context, ZonedDateTime now) throws Exception {
+        ByteArrayOutputStream sink = new ByteArrayOutputStream();
+        try (InputStream input = context.getAssets().open("kneekura-notices-bootstrap.json")) {
+            byte[] buffer = new byte[8192];
+            int n;
+            while ((n = input.read(buffer)) != -1) {
+                if (sink.size() + n > 64 * 1024) {
+                    throw new IllegalArgumentException("Bundled notice feed is too large");
+                }
+                sink.write(buffer, 0, n);
+            }
+        }
+        JSONObject document = new JSONObject(
+                new String(sink.toByteArray(), StandardCharsets.UTF_8));
+        if (document.getInt("schema_version") != 1 ||
+                !"kneekura-bundled-local".equals(document.getString("source"))) {
+            throw new IllegalArgumentException("Not a Kneekura bundled notice file");
+        }
+        JSONArray items = document.getJSONArray("notices");
+        if (items.length() > MAX_NOTICES) {
+            throw new IllegalArgumentException("Too many bundled notices");
+        }
+        ZonedDateTime jstNow = now.withZoneSameInstant(JST);
+        List<Notice> list = new ArrayList<>();
+        for (int i = 0; i < items.length(); i++) {
+            JSONObject item = items.getJSONObject(i);
+            String id = item.getString("id");
+            String category = item.getString("category");
+            String title = item.getString("title");
+            String body = item.getString("body");
+            ZonedDateTime publication = parseDate(item.getString("published_at"));
+            ZonedDateTime expiry = parseDate(item.getString("expires_at"));
+            if (!id.startsWith("kneekura:notice:") || !validCategory(category) ||
+                    title.isEmpty() || title.length() > 140 ||
+                    body.isEmpty() || body.length() > MAX_BODY_CHARS ||
+                    containsRemoteMarkup(body) || containsRemoteMarkup(title) ||
+                    jstNow.isBefore(publication) || !jstNow.isBefore(expiry)) {
+                continue;
+            }
+            list.add(new Notice(id, category, title,
+                    publication.format(DISPLAY_DAY), body,
+                    item.optBoolean("pinned", false), publication, 0));
+        }
+        list.sort(Comparator.comparing((Notice n) -> !n.pinned)
+                .thenComparing((Notice n) -> n.publishedAt, Comparator.reverseOrder())
+                .thenComparing(n -> n.id));
+        return list;
     }
 
     /** Pure evaluator; now can be supplied by future unit/device tests. */
