@@ -436,6 +436,127 @@ def _original_effective_level_cap_getter(elf: bytes) -> dict[str, Any]:
     }
 
 
+
+# Real original JP15.7.1 level purchase vertical slice. Both XP spending and
+# native CURRENT level increment are in the 0x8581fc -> 0x8583b8 path.
+# These are not a hook or proof of local persistence. In particular, the
+# CURRENT level record (context+0x47ba4+cat*8) is distinct from the UNLOCK
+# cap increment (context+0x3ad80c+cat*8) consumed at 0x53b2bc/0x53be0c.
+ORIGINAL_UPGRADE_PURCHASE_ANCHORS = {
+    0x53BE0C: 0xA9BA7BFD,  # cap-eligibility predicate entry
+    0x53BE34: 0x91411C08,  # context + 0x47000
+    0x53BE38: 0x93407E74,  # cat index
+    0x53BE3C: 0x912E9108,  # +0xba4: CURRENT level stored (8 byte/cat)
+    0x53BE40: 0x8B160100,  # current-level pointer
+    0x53BE44: 0x94124078,  # read current base-level upper16
+    0x53BE48: 0x11000415,  # next level
+    0x53BE98: 0x914EB408,  # +0x3ad000 (MAX upgrade increment)
+    0x53BE9C: 0x91203108,  # +0x80c (max upgrade increment record)
+    0x53BEA0: 0x8B160100,  # saved increment pointer
+    0x53BEA4: 0x94124060,  # read cap increment upper16
+    0x53BEB0: 0x0B000108,  # base cap + saved increment
+    0x53BF08: 0x97F83763,  # min(allowed, native hard cap)
+    0x53BF0C: 0x6B0002BF,  # compare next level with effective cap
+    0x53BF10: 0x540004EA,  # B.GE -> separate cap cases
+    0x53C1C4: 0x52800020,  # eligibility predicate true
+    0x53C1CC: 0x2A1F03E0,  # eligibility predicate false
+    0x8581F8: 0x94004AEA,  # resolve selected cat
+    0x8581FC: 0x97F38F04,  # predicate check
+    0x858200: 0x36007260,  # TBZ fail => other UI path
+    0x858208: 0x91411E6A,  # x10=context+0x47000
+    0x858210: 0x912E9158,  # x24=context+0x47ba4
+    0x858224: 0x8B20CF00,  # current-level record x0
+    0x85822C: 0x9405CF7E,  # read upper16 current base level
+    0x858364: 0x940014BD,  # XP price adjustment/calculation
+    0x858368: 0x5298771A,  # w26 = 0xc3b8
+    0x858370: 0x8B1A0260,  # XP wallet at context+0xc3b8
+    0x858374: 0x940600E9,  # read encoded XP
+    0x858378: 0x6B14001F,  # compare available XP and cost
+    0x85837C: 0x54008A2B,  # B.LT -> cannot afford
+    0x858384: 0x940600E5,  # read XP again for purchase
+    0x858388: 0x4B140001,  # XP balance minus XP cost
+    0x858390: 0x940600D5,  # write reduced encoded XP balance
+    0x8583AC: 0xF94053F8,  # current-level array base from stack
+    0x8583B0: 0x52800021,  # increment by 1
+    0x8583B4: 0x8B20CF00,  # record at base+cat_index*8
+    0x8583B8: 0x9405CF25,  # increment encoded CURRENT upper16
+    0x8583D8: 0x97F130C5,  # post-purchase effect, not save proof
+    0x8583E0: 0x97F1319C,  # post-purchase effect, not save proof
+    0x85DB74: 0x914EB548,  # different max-cap-increment code path
+    0x85DB78: 0x52800021,  # increment cap high16 by 1
+    0x85DB7C: 0x91203100,  # x0 at context+0x3ad80c+cat*8
+    0x85DB80: 0x9405B933,  # adds cap increment, NOT CURRENT level
+}
+
+
+def _original_upgrade_purchase_flow(elf: bytes) -> dict[str, Any]:
+    """Prove original level-up predicate -> XP debit -> current level +1.
+
+    This does NOT prove how the offline first-run player state is initialized,
+    when/where native game state is durably saved, or whether the owned game
+    can actually boot zero-egress. No account restrictions or saves are altered.
+    """
+    if len(elf) < 0x85DB84:
+        raise LevelUpNativeTraceError("original level upgrade purchase code out of bounds")
+    for pc, opcode in ORIGINAL_UPGRADE_PURCHASE_ANCHORS.items():
+        if _u32(elf, pc) != opcode:
+            raise LevelUpNativeTraceError(
+                f"original level upgrade purchase opcode drifted at {_hex(pc)}"
+            )
+    for pc, target in {
+        0x53BE44: 0x9CC024,  # current-level upper16
+        0x53BEA4: 0x9CC024,  # max-upgrade increment upper16
+        0x53BF08: 0x349C94,  # cap minimum
+        0x8581F8: 0x86ADA0,  # selected cat resolver
+        0x8581FC: 0x53BE0C,  # per-cat cap eligibility
+        0x85822C: 0x9CC024,  # current-level read
+        0x858364: 0x85D658,  # XP price multiplier
+        0x858374: 0x9D8718,  # encoded XP read
+        0x858384: 0x9D8718,  # encoded XP re-read
+        0x858390: 0x9D86E4,  # XP debit write
+        0x8583B8: 0x9CC04C,  # CURRENT level upper16 increment
+        0x85DB80: 0x9CC04C,  # MAX upgrade cap increment elsewhere
+    }.items():
+        if _decode_relative_bl(elf, pc) != target:
+            raise LevelUpNativeTraceError(
+                f"original level upgrade purchase BL drifted at {_hex(pc)}"
+            )
+    # The TBZ and B.LT must still route *around* the XP and level writes.
+    tbz_word = _u32(elf, 0x858200)
+    if tbz_word & 0x7F000000 != 0x36000000 or (tbz_word >> 19) & 31 != 0:
+        raise LevelUpNativeTraceError("original level cap predicate branch changed")
+    tbz_imm14 = _sign_extend((tbz_word >> 5) & 0x3FFF, 14) * 4
+    if 0x858200 + tbz_imm14 != 0x85904C:
+        raise LevelUpNativeTraceError("original level cap-fail branch target changed")
+    xp_branch = _u32(elf, 0x85837C)
+    if xp_branch & 0xFF00001F != 0x5400000B:
+        raise LevelUpNativeTraceError("original XP affordability branch changed")
+    xp_displacement = _sign_extend((xp_branch >> 5) & 0x7FFFF, 19) * 4
+    if 0x85837C + xp_displacement != 0x8594C0:
+        raise LevelUpNativeTraceError("original XP insufficient branch target changed")
+    return {
+        "status": "VERIFIED_ORIGINAL_NATIVE_LEVEL_PURCHASE_PATH",
+        "selected_unit_resolver": "0x8581f8 -> 0x86ada0",
+        "cap_eligibility_predicate": "0x8581fc -> 0x53be0c",
+        "eligibility_cap_math": "next_current_base_level compared with min(unitbuy_col18+max_upgrade_saved_increment, unitbuy_col50), plus original additional conditions",
+        "cannot_upgrade_branch": "0x858200 TBZ -> 0x85904c",
+        "max_cap_increment_record": "context+0x3ad80c+asset_index*8",
+        "max_cap_increment_separate_write_lead": "0x85db80 -> 0x9cc04c; surrounding source/reward semantics NOT VERIFIED",
+        "current_level_record": "context+0x47ba4+asset_index*8",
+        "xp_wallet_record": "context+0xc3b8",
+        "xp_cost_adjuster": "0x858364 -> 0x85d658",
+        "xp_affordability_branch": "0x85837c B.LT -> 0x8594c0",
+        "xp_debit": "0x858390 -> 0x9d86e4; new_xp=old_xp-cost",
+        "current_level_increment": "0x8583b8 -> 0x9cc04c; upper16 current base+1",
+        "post_purchase_effects": ["0x8583d8 -> 0x4a46ec", "0x8583e0 -> 0x4a4a50"],
+        "save_writer_proven": False,
+        "cats_eye_consume_proven": False,
+        "offline_owned_game_boot_proven": False,
+        "native_purchase_patch_attached": False,
+        "original_device_upgrade_passed": False,
+    }
+
+
 def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict:
     digest = sha256(elf).hexdigest()
     if digest != expected_sha or expected_sha != NATIVE_SHA256:
@@ -484,6 +605,7 @@ def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict
         "levelmax_popup_value_call_chain": _popup_value_call_chain(elf),
         "original_unit_data_loader": _original_unit_data_loader(elf),
         "original_effective_level_cap_getter": _original_effective_level_cap_getter(elf),
+        "original_upgrade_purchase_flow": _original_upgrade_purchase_flow(elf),
         "native_original_game_upgrader_getter_identified": True,
         "native_original_game_upgrade_purchase_hook_verified": False,
         "unit_cap_purchase_hook_attached": False,
