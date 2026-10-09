@@ -54,7 +54,7 @@ def windows_in_range(pack: dict, start_date: str, days: int) -> list[dict]:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("validate", "preview", "calendar"))
+    parser.add_argument("command", choices=("validate", "preview", "calendar", "notices"))
     parser.add_argument("--pack", type=Path, required=True)
     parser.add_argument("--at", help="ISO timestamp with timezone for preview")
     parser.add_argument("--from-date", help="JST YYYY-MM-DD for calendar")
@@ -73,6 +73,14 @@ def main(argv: list[str] | None = None) -> int:
             if not args.at:
                 raise LiveOpsError("--at is required for preview")
             report["snapshot"] = active_at(pack, _local_timestamp(args.at))
+        elif args.command == "notices":
+            if not args.at:
+                raise LiveOpsError("--at is required for notices")
+            # Author can preview draft articles, but that does not publish them.
+            from tools.localcore.notice_feed import notice_feed
+            report["notices"] = notice_feed(
+                pack, _local_timestamp(args.at), allow_draft_preview=True
+            )
         elif args.command == "calendar":
             if not args.from_date:
                 raise LiveOpsError("--from-date is required for calendar")
