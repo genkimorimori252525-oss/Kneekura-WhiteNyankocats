@@ -63,6 +63,15 @@ def audit(path: Path) -> dict:
         raise UnsafeRelease("missing one-command install or JDK runtime preflight")
     if "Join-Path $env:JAVA_HOME" in nested or "Join-Path $env:JAVA_HOME" in helper:
         raise UnsafeRelease("NULL JAVA_HOME regression is present")
+    # Actual owner error 2026-10-09: PowerShell variable names are
+    # case-insensitive; assigning $home collides with readonly $HOME.
+    # This must be blocked in THE EXPORTED ZIP, not only repo helper source.
+    reserved = ("home", "host", "pid", "pshome", "pwd", "profile")
+    for label, ps_text in (("outer", outer), ("inner", nested), ("JDK helper", helper)):
+        for name in reserved:
+            if re.search(r"(?i)\\$" + name + r"\\b\\s*(?:=(?!=)|\\+=|-=)", ps_text):
+                raise UnsafeRelease("PowerShell readonly reserved variable assignment in " + label + ": " + name)
+
     if any(s in nested.lower() for s in ("adb uninstall", "pm clear", "rm -rf")):
         raise UnsafeRelease("destructive command in signed installer")
     manifest = json.loads(files[INSTALL_MANIFEST])
