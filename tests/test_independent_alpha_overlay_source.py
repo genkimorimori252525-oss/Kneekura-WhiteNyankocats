@@ -39,13 +39,13 @@ class FamiliarOverlayUpdateTests(unittest.TestCase):
         self.assertTrue(helper.read_bytes().startswith(bytes((0xEF, 0xBB, 0xBF))))
         source = helper.read_text(encoding="utf-8-sig")
         self.assertIn("function Resolve-JavaKeytool", source)
-        self.assertIn("Get-Command -Name $commandName -CommandType Application", source)
+        self.assertIn("Get-Command -Name $name -CommandType Application", source)
         self.assertIn("[string]::IsNullOrWhiteSpace($root)", source)
         self.assertNotIn("Join-Path $env:JAVA_HOME", source)
         self.assertIn("throw 'Java keytool.exe not found", source)
         wrapper = WRAPPER.read_text(encoding="utf-8-sig")
         self.assertIn("a2f6f8f011275296340fcaec15e49eb498e0f4bd77096ce92ad8d5ee59c08bc4", wrapper)
-        self.assertIn("d36f57ce928807fde46738ab64ad1f61e7b651118c08821842ffe3835b3b18f0", wrapper)
+        self.assertIn("6f9ab5a9164f9ce1005c9cb961cc2e1c61bfc13b24cd29ba74c9fd44d9fbedbf", wrapper)
         self.assertNotIn("fe32e0b9010449fd8ea747521d215ff052b59a3f4dae8cdd263698ba755250f6", wrapper)
 
     def test_refuses_destructive_or_original_save_operations(self):
