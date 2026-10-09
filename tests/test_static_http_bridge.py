@@ -324,7 +324,8 @@ class StaticHttpBridgeTests(unittest.TestCase):
             ),
             "android/util/Log.java": (
                 "package android.util; public class Log {"
-                "public static int i(String tag,String message) {return 0;}}"
+                "public static int i(String tag,String message) {"
+                "System.out.println(\"TRACE=\"+message); return 0;}}"
             ),
             "jp/co/ponos/battlecats/MyActivity.java": """
                 package jp.co.ponos.battlecats;
@@ -407,6 +408,11 @@ class StaticHttpBridgeTests(unittest.TestCase):
             self.assertEqual(first.returncode, 0, first.stderr)
             self.assertIn("ROOT=" + str(local_root.resolve()), first.stdout)
             self.assertIn("HTTP=BLOCKED", first.stdout)
+            self.assertIn(
+                "TRACE=original-save-presence-v1 SAVE_DATA=absent"
+                " SAVE_DATA4=absent SAVE_DATA8=absent", first.stdout
+            )
+            self.assertNotIn("PROTECTED_ORIGINAL", first.stdout)
             marker = local_root / ".kneekura-virgin-local-jp15-7-1"
             self.assertTrue(marker.is_file())
             self.assertEqual(marker.stat().st_size, 0)
@@ -417,13 +423,35 @@ class StaticHttpBridgeTests(unittest.TestCase):
             (local_root / "SAVE_DATA").write_bytes(b"NEW_LOCAL_GAME_SAVE_FIXTURE")
             resumed = run_host()
             self.assertIn("ROOT=" + str(local_root.resolve()), resumed.stdout)
+            self.assertIn(
+                "TRACE=original-save-presence-v1 SAVE_DATA=present:"
+                + str(len(b"NEW_LOCAL_GAME_SAVE_FIXTURE")), resumed.stdout
+            )
+            self.assertNotIn("NEW_LOCAL_GAME_SAVE_FIXTURE", resumed.stdout)
             self.assertEqual((local_root / "SAVE_DATA").read_bytes(),
                              b"NEW_LOCAL_GAME_SAVE_FIXTURE")
+            if hasattr(os, "symlink"):
+                (local_root / "SAVE_DATA").unlink()
+                outside_file = base / "out-of-app-data"
+                outside_file.write_bytes(b"PRIVATE_EXTERNAL_FILE")
+                try:
+                    os.symlink(outside_file, local_root / "SAVE_DATA")
+                except OSError:
+                    pass
+                else:
+                    escaped = run_host()
+                    self.assertIn("SAVE_DATA=unsafe", escaped.stdout)
+                    self.assertNotIn("PRIVATE_EXTERNAL_FILE", escaped.stdout)
+                    (local_root / "SAVE_DATA").unlink()
+            else:
+                (local_root / "SAVE_DATA").unlink()
+            # Do not remove a symlink twice; prior fixture is no longer present.
             marker.unlink()
             refused = run_host()
             self.assertIn("ROOT=BLOCKED", refused.stdout)
             self.assertFalse(marker.exists())
-            (local_root / "SAVE_DATA").unlink()
+            if (local_root / "SAVE_DATA").exists():
+                (local_root / "SAVE_DATA").unlink()
             for name in ("SAVE_DATA4", "SAVE_DATA8"):
                 with self.subTest(name=name):
                     (local_root / name).write_bytes(b"UNOWNED")
