@@ -37,6 +37,15 @@ the repository validation harness before handing terminal commands to a human.
 - Any requirement to preserve original UI or native loader is subordinate to the hard offline contract. Where that contract fails, investigate independent local host rather than bypassing a restriction dialog or reconnecting edited saves to official services.
 - [Authoritative investigation/architecture reset](docs/architecture/2026-10-09-complete-local-offline-audit.md), [tracker issue #5](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/issues/5). No owner screenshot/account metadata in public GitHub.
 
+## Jolly offline operations / LiveOps management (2026-10-09)
+
+- Before building another event/gacha/stage/login/mission schedule, read `docs/architecture/kneekura-offline-operations-charter.md` **and** previous `docs/architecture/kneekura-post-eoc-liveops.md`; preserve the five-slot login bag and stage-available-vs-cleared separation.
+- Author versioned operator data only in `ops/seasons/` with stable local IDs and JST times; validate with `python -m tools.localcore.opsctl validate --pack ...` and calendar preview before GitHub review.
+- `draft` and catalog `ready=false` are strictly non-playable. Neither a schedule listing nor a stamp/mission claim intent may grant a reward, clear a stage, or mutate player state. Rewards require an independent atomic, idempotent local save transaction.
+- No official live PONOS date/odds/collab claim without verified source. No advertising, analytics, paid transactions, cloud accounts, game-to-GitHub network polling or online leaderboards in Kneekura.
+- Unit/stage assets and owner game archives stay under private local storage, not in public GitHub. GitHub is authoring/review/version history only; player imports approved content locally.
+- Current `ops/seasons/2026-autumn-prototype.json` is a **test/draft**, not a 2026 release or verified PONOS calendar. `tools/localcore/ops_calendar.py`, `login_rotation.py`, and `mission_cycles.py` are offline reference code until Android integration passes strict zero-egress Issue #5 and LiveOps Issue #6.
+
 ## Standard commands
 
 Harness self-test:
