@@ -445,7 +445,13 @@ class StaticHttpBridgeTests(unittest.TestCase):
                     (local_root / "SAVE_DATA").unlink()
             else:
                 (local_root / "SAVE_DATA").unlink()
-            # Do not remove a symlink twice; prior fixture is no longer present.
+            # The provenance guard must refuse a pre-existing local SAVE
+            # when its origin marker is missing. Restore a LOCAL fixture
+            # after the symlink-escape test before removing that marker.
+            local_save = local_root / "SAVE_DATA"
+            if local_save.is_symlink():
+                local_save.unlink()
+            local_save.write_bytes(b"NEW_LOCAL_GAME_SAVE_FIXTURE")
             marker.unlink()
             refused = run_host()
             self.assertIn("ROOT=BLOCKED", refused.stdout)
