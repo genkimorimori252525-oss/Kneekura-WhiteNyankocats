@@ -124,7 +124,7 @@ def _validate_rule(rule: Any, season_start: datetime, season_end: datetime) -> N
     elif mode in ("daily", "weekly", "monthly"):
         first = _date(rule.get("valid_from"))
         last = _date(rule.get("valid_until"))
-        if not (season_start.date() <= first < last <= season_end.date() + timedelta(days=1)):
+        if not (season_start.date() <= first < last <= season_end.date()):
             raise LiveOpsError("recurrence outside declared season")
         _time(rule.get("from_time"))
         _time(rule.get("to_time"))
@@ -231,22 +231,23 @@ def validate_pack(pack: Any) -> dict:
                 raise LiveOpsError("malformed local requirement")
         _validate_rule(entry.get("rule"), season_start, season_end)
 
-    # Equal-priority overlaps in a display slot cause silent/random banners.
-    # Sample each interval boundary across the bounded (<1 year) season.
-    in_slot: dict[tuple[str, str], list[tuple[datetime, datetime, int, str]]] = {}
+    # Sweep sorted intervals per (kind,slot,priority) in O(n log n).
+    # Two distinct authors must never claim the same display slot with an
+    # equal-priority overlapping window; larger priorities explicitly win.
+    in_slot: dict[tuple[str, str, int], list[tuple[datetime, datetime, str]]] = {}
     for entry in schedule:
-        key = (entry["kind"], entry["slot"])
-        in_slot.setdefault(key, [])
+        key = (entry["kind"], entry["slot"], entry["priority"])
+        rows = in_slot.setdefault(key, [])
         for begin, end in _rule_intervals(entry["rule"], season_start, season_end):
-            in_slot[key].append((begin, end, entry["priority"], entry["id"]))
+            rows.append((begin, end, entry["id"]))
     for entries in in_slot.values():
-        entries.sort(key=lambda item: (item[0], item[1], item[3]))
-        for i, (a, b, p, eid) in enumerate(entries):
-            for aa, bb, pp, other in entries[i+1:]:
-                if aa >= b:
-                    break
-                if eid != other and p == pp and a < bb and aa < b:
-                    raise LiveOpsError("ambiguous same-priority overlapping display slot")
+        latest_end = None
+        latest_id = None
+        for begin, end, eid in sorted(entries, key=lambda x: (x[0], x[1], x[2])):
+            if latest_end is not None and begin < latest_end and eid != latest_id:
+                raise LiveOpsError("ambiguous same-priority overlapping display slot")
+            if latest_end is None or end > latest_end:
+                latest_end, latest_id = end, eid
     return pack
 
 
