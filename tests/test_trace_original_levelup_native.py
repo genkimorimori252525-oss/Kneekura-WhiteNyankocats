@@ -26,6 +26,7 @@ from tools.base_mod.trace_original_levelup_native import (
     ORIGINAL_APP_LAUNCH_TARGET_SCENE_ENTRY_ANCHORS,
     ORIGINAL_SCENE97_DOWNLOAD_BATCH_ANCHORS,
     ORIGINAL_DOWNLOAD_TSV_FILE_RESOLVER_ANCHORS,
+    ORIGINAL_RESOURCE_REGISTRY_NATIVE_ANCHORS,
     JP15_7_1_ORIGINAL_LOCAL_LIST_COUNTS,
     ORIGINAL_SCENE97_DOWNLOAD_BATCH_RELOCS, ORIGINAL_DOWNLOAD_BATCH_RTTI,
     ORIGINAL_RELA_DYN_OFFSET, ORIGINAL_RELA_DYN_COUNT,
@@ -42,6 +43,7 @@ from tools.base_mod.trace_original_levelup_native import (
     _original_app_launch_target_scene_entries,
     _original_scene97_download_batch_task,
     _original_download_tsv_file_source_resolver,
+    _original_download_tsv_resource_registration_chain,
     _original_download_batch_tsv_installed_local_coverage,
     _original_arm64_cfg_successors, _original_arm64_cfg_witness,
     _original_arm64_cfg_all_direct_paths_hit_save,
@@ -984,6 +986,56 @@ class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
         with self.assertRaisesRegex(LevelUpNativeTraceError, "prefix literal drifted"):
             _original_download_tsv_file_source_resolver(bytes(bad_audio_string))
 
+
+
+    def test_original_tsv_name_resolves_through_registered_resource_map(self):
+        # Only 29 original opcode words are used, no original executable or
+        # game assets. This verifies a different, original registry-backed
+        # path from a guessed loose-file/provider-only shortcut.
+        blob = bytearray(0x741B94)
+        for pc, opcode in ORIGINAL_RESOURCE_REGISTRY_NATIVE_ANCHORS.items():
+            struct.pack_into("<I", blob, pc, opcode)
+        result = _original_download_tsv_resource_registration_chain(bytes(blob))
+        self.assertEqual(
+            result["status"],
+            "ORIGINAL_NATIVE_NAMED_RESOURCE_REGISTRY_CONSUMER_AND_92_ROW_PRODUCER",
+        )
+        self.assertIn("0x321138 -> 0x364950", result["download_tsv_call_chain"])
+        self.assertEqual(
+            result["registered_resource_lookup"],
+            "0x364980 -> 0x34d014; 0x364990 -> 0x34d8e4",
+        )
+        self.assertEqual(
+            result["reader_no_registered_resource"],
+            "0x321190 TBZ -> 0x321278",
+        )
+        self.assertIn("count92", result["registry_registration_loop"])
+        self.assertIn("stride48", result["registry_registration_loop"])
+        self.assertEqual(
+            _original_arm64_cfg_successors(bytes(blob), 0x741B90),
+            (0x741B74, 0x741B94),
+        )
+        self.assertFalse(result["all_35_download_tsv_registered_proven"])
+        self.assertFalse(result["92_registry_names_enumerated_proven"])
+        self.assertFalse(result["registry_initialized_before_offline_scene97_proven"])
+        self.assertFalse(result["loose_original_app_files_dir_tsv_accepted_proven"])
+        self.assertFalse(result["independent_fresh_local_profile_attached"])
+        self.assertFalse(result["original_device_offline_gameplay_Lv60_verified"])
+
+    def test_original_tsv_resource_registry_registration_and_parser_drift_fails(self):
+        fixture = bytearray(0x741B94)
+        for pc, opcode in ORIGINAL_RESOURCE_REGISTRY_NATIVE_ANCHORS.items():
+            struct.pack_into("<I", fixture, pc, opcode)
+        for pc in (0x321138, 0x321188, 0x321190, 0x3211A4,
+                   0x3211E8, 0x364980, 0x364990, 0x3649F8,
+                   0x34D014, 0x34D0F4, 0x741B6C, 0x741B70,
+                   0x741B74, 0x741B84, 0x741B88, 0x741B8C,
+                   0x741B90, 0x71C6F4, 0x71C748):
+            corrupted = bytearray(fixture)
+            corrupted[pc] ^= 1
+            with self.subTest(site=hex(pc)):
+                with self.assertRaises(LevelUpNativeTraceError):
+                    _original_download_tsv_resource_registration_chain(bytes(corrupted))
 
     def test_real_game_original_upgrader_cues_are_not_fabricated_hooks(self):
         self.assertEqual(len(NATIVE_SHA256), 64)
