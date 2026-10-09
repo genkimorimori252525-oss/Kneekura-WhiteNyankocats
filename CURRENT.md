@@ -28,6 +28,8 @@
 | まどか | `docs/updates/manifests/update-1.01.json` の `madoka`、`tools/base_mod/prepare_update_manifest.py`、`native/kneekura-shim/src/kneekura_battle101.c`、本家実ダメージ・攻撃/演出接点 |
 | シン・ゴジラ移植 | 同1.01 JSONの `godzilla`/source_assets、`tools/base_mod/collect_update_101_server_assets.py`、`kneekura_battle101.c`、所有者privateの `550_e` 元素材/味方 `702_f` |
 | 完全オフライン | `docs/evidence/jp15.7.1-offline-egress-static-receipt.json`、`docs/references/native-service-map-jp15.7.1.md`、`docs/architecture/2026-10-09-complete-local-offline-audit.md`（**証拠**として）、`bridge/java/MyActivity.java.in` |
+| MAX資源・育成/アイテム | `docs/updates/manifests/full-max-start-jp15.7.1.json`、`tools/base_mod/build_offline_max_save.py::MAX_VALUES`、`tools/localcore/full_max_resources.py`（**ローカルセーブ実装、元のゲームUIへの接続は未了**） |
+| iボタン/運営予定表 | `tools/localcore/ops_calendar.py`、`notice_feed.py`、`login_rotation.py`、`ops/seasons/2026-autumn-prototype.json`、`docs/architecture/kneekura-offline-notices.md` |
 | 共通の配布/再発防止 | `docs/research/failure-repair-history.md`、`AGENTS.md` のWindows部分（**ゲームが実装できた後だけ** owner ZIPを発行） |
 
 ## 旧設計を読む場合の明確な区別
@@ -42,11 +44,15 @@
 
 **未列挙の設計書は、リンクが関連タスクから求められるまで** `REFERENCE_ONLY`。ファイル名が`current`、`final`、`approved`であっても、本書を上書きできない。
 
-## 現在のスプリントは4機能「だけ」
+## 4つの中核実装＋2つの必須横断仕様（削除不可）
 
 **LEVEL** 公式データ内のLv60/50/20/1キャップを本家育成/実戦で使う。**MADOKA** 原作第3形態のLv30実攻撃28,000/感知750/費用4,550/再生産155秒。**GODZILLA** ゴジラにゃんこ第1形態（敵シン・ゴジラrig転用）のLv30三連撃50,000×3/2950/9800/500秒/城への一連撃最大1。**OFFLINE** 原作ゲーム体験のままサーバー/広告SDK/公式SAVE依存なし。
 
-**日本編1〜3章＋未来編1章クリア/最高のお宝**は共通の既定初期値。先に新しい運営UIや独立Androidゲームを作らない。
+**初期状態はこれまでどおり資源もMAX（ユーザー再確認）**：XP 99,999,999、ネコカン45,000（旧研究エディタ採用値／ゲーム内部上限は要確認）、NP9,999、各種チケット、マタタビ、キャッツアイ、ネコビタン、統率力回復アイテム、城素材、本能玉等の**研究版全20カテゴリ**。唯一の数量原本は `docs/updates/manifests/full-max-start-jp15.7.1.json`（以前の `build_offline_max_save.py::MAX_VALUES` を再利用）。新規ローカルセーブには初回MAX、既存セーブは非破壊で一度だけ加算移行し、使用後は毎回勝手に補充しない。原作の育成/所持品UIへ実接続できるまでは完了扱いにしない。
+
+**ジョリーがPONOSに代わり運営する業務も必須（今回改めて確定）**：本家基地**右上i**からジョリーのお知らせ（日時・カテゴリ・本文）を読む、ガチャと排出内容の更新、限定/曜日/月次ステージ、イベント、ログイン5枠循環、ミッションと報酬、育成イベントの倍率・お知らせ・変更履歴。既存 `ops/seasons/`, `tools/localcore/ops_calendar.py`, `notice_feed.py`, `login_rotation.py`, `docs/architecture/kneekura-offline-operations-charter.md`, `kneekura-offline-notices.md` を**継続**。現在は運営データと試作のi画面が存在するが、原作ゲームの基地/ガチャ/ステージ/UI連動は未実装。**Stage Fidelity Alphaでiが表示できたことは本家での完成を意味しない**。
+
+**日本編1〜3章＋未来編1章クリア/最高のお宝**も共通の既定初期値。現在の中核工程はLEVEL→MADOKA→GODZILLA、OFFLINEを並行。**MAXはLEVEL/保存・育成経路の一部、運営業務はOFFLINE/本家UIとの統合の一部として実装**し、どちらも最終受入れから除外しない。別ゲームや新しい運営UIハーネスを作り直す仕事へ逸れない。
 
 ## 実装上の厳禁
 
