@@ -1,6 +1,9 @@
 # IMPLEMENTATION ROADMAP — にーくら大戦争の本家互換「実装」計画（2026-10-09）
 
 **Status: CURRENT / EXECUTE, NOT ANOTHER FOUNDATION DESIGN.**
+**進捗は一か所だけ：** [親Issue #11](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/issues/11)。実装Issueは **[#12 LEVEL](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/issues/12) → [#13 MADOKA](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/issues/13) → [#14 GODZILLA](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/issues/14)**。**[#15 OFFLINE](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/issues/15)** は全期間並行。次のAIは最初に#12の原作育成画面のコード差分を書く。ここを増やすより、実ゲームへ接続する。
+
+
 **入口:** [CURRENT.md](../../CURRENT.md) → 本書 → 該当タスクの一次コード/証拠だけを読む。
 **最上位不変条件:** [PRODUCT_IDENTITY.md](../../PRODUCT_IDENTITY.md)。本家「にゃんこ大戦争」のゲーム体験を維持すること + 外部通信ゼロ。この両方を満たさない独立Alphaは製品ではない。
 
