@@ -10,6 +10,7 @@ import unittest
 
 from tools.base_mod.trace_original_levelup_native import (
     CUES, EXPECTED_ANCHORS, NATIVE_SHA256, UNITBUY_BASE_CAP_LOAD_ANCHORS,
+    UNITBUY_BOOT_CALLSITE_ANCHORS,
     LevelUpNativeTraceError,
     _unitbuy_original_base_cap_loader, _levelmax_popup_branch,
     _popup_value_call_chain,
@@ -109,13 +110,17 @@ class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
 
     def test_original_unitbuy_col18_is_stored_into_per_cat_native_ram(self):
         # A compact synthetic instruction fixture; never commit original ELF.
-        blob = bytearray(0x8A2ED8)
+        blob = bytearray(0x9C59AC)
         blob[0x1AB9A3:0x1AB9AF] = b"unitbuy.csv\x00"
-        for address, opcode in UNITBUY_BASE_CAP_LOAD_ANCHORS.items():
+        for address, opcode in {
+            **UNITBUY_BASE_CAP_LOAD_ANCHORS,
+            **UNITBUY_BOOT_CALLSITE_ANCHORS,
+        }.items():
             struct.pack_into("<I", blob, address, opcode)
         found = _unitbuy_original_base_cap_loader(bytes(blob))
         self.assertEqual(found["column_index_zero_based"], 18)
         self.assertEqual(found["column_parser_target"], "0x363afc")
+        self.assertEqual(found["original_startup_caller"], "0x9c598c -> 0x8a2c0c")
         self.assertEqual(found["first_row_value_offset_from_context"], "0x44fd0c")
         self.assertEqual(found["row_stride_bytes"], 80)
         self.assertEqual(found["row_count"], 882)
@@ -128,10 +133,28 @@ class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
         with self.assertRaisesRegex(LevelUpNativeTraceError, "opcode drifted"):
             _unitbuy_original_base_cap_loader(bytes(blob))
 
-    def test_original_unitbuy_loader_rejects_wrong_row_stride_and_source(self):
-        blob = bytearray(0x8A2ED8)
+    def test_original_boot_caller_must_reach_exact_882_unit_loader(self):
+        blob = bytearray(0x9C59AC)
         blob[0x1AB9A3:0x1AB9AF] = b"unitbuy.csv\x00"
-        for address, opcode in UNITBUY_BASE_CAP_LOAD_ANCHORS.items():
+        for at, opcode in {
+            **UNITBUY_BASE_CAP_LOAD_ANCHORS,
+            **UNITBUY_BOOT_CALLSITE_ANCHORS,
+        }.items():
+            struct.pack_into("<I", blob, at, opcode)
+        self.assertEqual(
+            _unitbuy_original_base_cap_loader(bytes(blob))["row_count"], 882
+        )
+        blob[0x9C598C] ^= 1
+        with self.assertRaisesRegex(LevelUpNativeTraceError, "startup callsite drifted"):
+            _unitbuy_original_base_cap_loader(bytes(blob))
+
+    def test_original_unitbuy_loader_rejects_wrong_row_stride_and_source(self):
+        blob = bytearray(0x9C59AC)
+        blob[0x1AB9A3:0x1AB9AF] = b"unitbuy.csv\x00"
+        for address, opcode in {
+            **UNITBUY_BASE_CAP_LOAD_ANCHORS,
+            **UNITBUY_BOOT_CALLSITE_ANCHORS,
+        }.items():
             struct.pack_into("<I", blob, address, opcode)
         struct.pack_into("<I", blob, 0x8A2ED0, 0x910102D6)
         with self.assertRaises(LevelUpNativeTraceError):
