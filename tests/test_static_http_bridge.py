@@ -84,7 +84,9 @@ class StaticHttpBridgeTests(unittest.TestCase):
         self.assertIn("new File(base, ORIGINAL_NATIVE_FILES_LEAF)", research)
         self.assertIn("base.getCanonicalPath() + File.separator", research)
         self.assertIn("directory.getCanonicalPath().startsWith(trusted)", research)
-        self.assertIn("originalNativeFilesDirectory = directory", research)
+        self.assertIn("return directory;", research)
+        self.assertNotIn("originalNativeFilesDirectory", research)
+        self.assertIn("original native private save root changed during creation", research)
         self.assertIn("throw new IllegalStateException", research)
         self.assertIn("getCanonicalPath()", research)
         self.assertNotIn("mkdirs() || !directory.isDirectory()", original.split(
