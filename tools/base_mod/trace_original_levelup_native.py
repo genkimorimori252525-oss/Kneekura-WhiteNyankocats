@@ -1822,7 +1822,7 @@ def _original_scene97_download_batch_task(elf: bytes) -> dict[str, Any]:
         "rtti_relocation": "0xafe0e0 -> 0x1db616",
         "typeinfo_relocation": "0xafe0a8 -> 0xafe0d8",
         "vtable_entry_count_pinned": 3,
-        "network_transport_called": False,
+        "network_transport_call_proven": False,
         "remote_data_required_proven": False,
         "615mb_additional_assets_locally_available_proven": False,
         "task_is_new_game_save_generator_proven": False,
