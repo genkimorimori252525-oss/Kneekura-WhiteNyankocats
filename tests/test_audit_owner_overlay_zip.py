@@ -21,6 +21,10 @@ def make_bundle(root: Path, *, mutation: str = "") -> Path:
     helper = "\ufefffunction Resolve-JavaKeytool { return 'C:\\\\JDK\\\\bin\\\\keytool.exe' }\n"
     if mutation == "null_java_home":
         installer += "$keypath = Join-Path $env:JAVA_HOME 'bin\\\\keytool.exe'\n"
+    if mutation == "readonly_home":
+        helper += "$home = 'C:/java'\n"
+    if mutation == "readonly_host":
+        helper += "$HOST = 'invalid'\n"
     if mutation == "destructive":
         installer += "adb uninstall jp.kneekura.whitenyankocats\n"
     if mutation == "no_bom":
@@ -71,7 +75,8 @@ class OwnerZipRegressionTests(unittest.TestCase):
 
     def test_known_user_failure_modes_rejected_before_distribution(self):
         for mode in ("null_java_home", "no_bom", "destructive",
-                     "stale_checksum", "missing_helper"):
+                     "stale_checksum", "missing_helper",
+                     "readonly_home", "readonly_host"):
             with self.subTest(mode=mode), tempfile.TemporaryDirectory() as root:
                 with self.assertRaises(UnsafeRelease):
                     audit(make_bundle(Path(root), mutation=mode))
