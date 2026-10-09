@@ -178,5 +178,34 @@
     "independent_zero_egress_gameplay_save_attached": false,
     "original_game_upgrade_to_60_verified": false,
     "next_code_target": "Map original game persistence + valid local account-free progression into native purchase path without touching restricted PONOS SAVE_DATA; preserve exact original XP and Catseye economics"
+  },
+  "original_save_data_file_xrefs": {
+    "source_binary": "SHA256 333d2974ab2ff881fd70087fd62dea7d12d82addbc55cab2f2a675ad67e3a7e2",
+    "source_method": "exact original ELF ADRP+ADD refs to NUL-terminated filenames",
+    "names": {
+      "SAVE_DATA": [
+        "0x71c984",
+        "0x74b13c",
+        "0x8b43d0",
+        "0x8b9fdc",
+        "0x8c5334"
+      ],
+      "SAVE_DATA4": [
+        "0x7edd54",
+        "0x8ba0b0",
+        "0x8c1d30"
+      ],
+      "SAVE_DATA8": [
+        "0x748e00",
+        "0x74ad74",
+        "0x74af48"
+      ]
+    },
+    "scope": "VERIFIED_EXACT_FILE_NAME_REFERENCE_SITES_ONLY",
+    "access_mode_at_each_site": "UNVERIFIED",
+    "original_save_writer_identified": false,
+    "role_in_upgrade_purchase_persistence_identified": false,
+    "original_file_bytes_committed": false,
+    "next": "Trace write/serialization and reload path and correlate original 0x8583b8 level increment with durable persistence; then adapt to independent local authority."
   }
 }
