@@ -21,9 +21,9 @@ if (-not (Test-Path -LiteralPath (Join-Path $repo 'tools/base_mod') -PathType Co
     throw '既存の「にーくらにゃんこ」フォルダのルートで上書き展開してな。'
 }
 $expectedFiles = @{
-    'INSTALL-ALPHA.ps1' = 'a2f6f8f011275296340fcaec15e49eb498e0f4bd77096ce92ad8d5ee59c08bc4'
+    'INSTALL-ALPHA.ps1' = 'b7302c34b18f705bab5c374935572f250ce9e221ba400dfcc522ba7fa76186ec'
     'resolve_java_keytool.ps1' = 'd3f7f6c1af84690a444887d0b5dbeb85e3b4b4679cb31abcb7a47ae431472ac7'
-    'independent-alpha.apk' = '9fc91ad09da1f242669404b86abbb53030aca133206f27c2cfb501a443a9ec3b'
+    'independent-alpha.apk' = '491bf95fe1f494460c280ef1c253ccd25a303bfc31b5dd916f23564d4e30c3c1'
 }
 foreach ($item in $expectedFiles.GetEnumerator()) {
     $file = if ($item.Key -eq 'resolve_java_keytool.ps1') {
@@ -44,7 +44,7 @@ if (-not (Test-Path -LiteralPath $manifest -PathType Leaf)) {
 }
 $info = Get-Content -LiteralPath $manifest -Raw -Encoding UTF8 | ConvertFrom-Json
 if (($info.app_id -ne 'jp.kneekura.whitenyankocats') -or
-    ($info.source_commit -ne '2ffd09feac9ececc674765fc35d60b603efa5059')) {
+    ($info.source_commit -ne '433e7d684b27f2d27e3b2250103521f996a4f5b9')) {
     throw '想定と異なる独立Android版や。導入を中止する。'
 }
 
