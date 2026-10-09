@@ -47,6 +47,17 @@ class OfflineOpsCliSmokeTests(unittest.TestCase):
         self.assertTrue(all(w["end"] <= "2026-12-01T00:00:00+09:00" for w in clip))
         self.assertTrue(all(w["start"] < w["end"] for w in clip))
 
+    def test_notice_draft_preview_matches_scheduled_items_without_releasing(self):
+        result = run("notices", "--pack", str(PACK),
+                     "--at", "2026-10-09T10:30:00+09:00")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        report = json.loads(result.stdout)
+        self.assertEqual(report["notices"]["status"], "DRAFT_PREVIEW_ONLY")
+        self.assertEqual(len(report["notices"]["news"]), 3)
+        self.assertEqual(report["notices"]["network_requests"], 0)
+        self.assertTrue(all(article["body"] for article in report["notices"]["news"]))
+        self.assertEqual(report["save_mutations"], 0)
+
     def test_calendar_range_and_fail_closed_invalid_pack(self):
         result = run("calendar", "--pack", str(PACK),
                      "--from-date", "2026-10-09", "--days", "14")
