@@ -334,6 +334,106 @@ def _original_unit_data_loader(elf: bytes) -> dict[str, Any]:
     }
 
 
+
+# Native CAP GETTER with exact source column readers, save increment and min()
+# verified from owner-owned exact JP15.7.1 AArch64 source.
+ORIGINAL_EFFECTIVE_CAP_GETTER_ANCHORS = {
+    0x53B2BC: 0xA9BB7BFD,  # getter entry
+    0x53B2D4: 0x2A0003F3,  # asset index in w19
+    0x53B2D8: 0x94078313,  # original game context getter
+    0x53B2E0: 0x93787E74,  # index * 256
+    0x53B2E4: 0x72A00095,  # context + 0x4b060
+    0x53B2E8: 0x8B150008,
+    0x53B2EC: 0x8B140108,
+    0x53B2F0: 0x39412109,  # unitbuy decoded col18 byte at +0x48
+    0x53B2F4: 0x3943F10A,  # XOR key at +0xfc
+    0x53B2F8: 0x3941250B,  # col18 second byte
+    0x53B300: 0x3941290D,  # col18 third byte
+    0x53B308: 0x39412D0F,  # col18 fourth byte
+    0x53B30C: 0x3943FD08,  # XOR key byte4
+    0x53B310: 0x4A090156,  # XOR decoded low byte
+    0x53B314: 0x4A0B0197,
+    0x53B318: 0x4A0D01D8,
+    0x53B31C: 0x4A0F0119,
+    0x53B320: 0x94078301,  # context getter
+    0x53B324: 0x8B33CC08,  # per-cat saved upgrade record index * 8
+    0x53B328: 0x914EB508,  # + 0x3ad000
+    0x53B32C: 0x91203100,  # + 0x80c
+    0x53B330: 0x9412433D,  # original encoded high16 save increment
+    0x53B334: 0x2A1722C8,  # assemble decoded unitbuy col18
+    0x53B338: 0x2A184108,
+    0x53B33C: 0x0B000108,  # base level + decoded saved increment
+    0x53B340: 0x0B196113,
+    0x53B350: 0x8B150108,  # same unitbuy per-cat row
+    0x53B354: 0x8B140108,
+    0x53B358: 0x39432909,  # unitbuy col50 third byte (+0xca)
+    0x53B380: 0x3943210A,  # unitbuy col50 first byte (+0xc8)
+    0x53B394: 0x2A080121,  # col50 -> w1
+    0x53B3AC: 0x17F83A3A,  # tail B original min(w0,w1)
+    0x349C94: 0x6B01001F,  # cmp w0, w1
+    0x349C98: 0x1A81B000,  # csel w0,w0,w1,lt
+    0x349C9C: 0xD65F03C0,  # ret
+    0x821904: 0x97F4666E,  # original UI-side cap getter caller
+    0x82190C: 0x940AD79D,  # std::to_string(int) after cap getter
+}
+ORIGINAL_CAP_GETTER_LEVEL_LABEL = (0x193486, b"level\x00")
+
+
+def _original_effective_level_cap_getter(elf: bytes) -> dict[str, Any]:
+    """Original *cap computation* FOUND, purchase and local SAVE still unknown.
+
+    The getter at 0x53b2bc returns min(unitbuy col18 + saved increment,
+    unitbuy col50) through the exact original min-int function at 0x349c94.
+    The only exact direct BL caller found so far is 0x821904; it then calls
+    std::to_string(int) and has original 'level' string nearby. This is an
+    exact source-level UI text lead, NOT proof the purchase button is hooked.
+    """
+    if len(elf) < 0x821918:
+        raise LevelUpNativeTraceError("original cap getter/caller bounds drifted")
+    where, label = ORIGINAL_CAP_GETTER_LEVEL_LABEL
+    if elf[where:where + len(label)] != label:
+        raise LevelUpNativeTraceError("original level UI label string drifted")
+    for pc, opcode in ORIGINAL_EFFECTIVE_CAP_GETTER_ANCHORS.items():
+        if _u32(elf, pc) != opcode:
+            raise LevelUpNativeTraceError(
+                f"original effective cap getter opcode drifted at {_hex(pc)}"
+            )
+    direct_calls = {
+        0x53B2D8: 0x71BF24, 0x53B320: 0x71BF24,
+        0x53B330: 0x9CC024, 0x53B344: 0x71BF24,
+        0x821904: 0x53B2BC, 0x82190C: 0xAD7780,
+    }
+    for pc, target in direct_calls.items():
+        if _decode_relative_bl(elf, pc) != target:
+            raise LevelUpNativeTraceError(
+                f"original cap getter/caller BL target drifted at {_hex(pc)}"
+            )
+    b_opcode = _u32(elf, 0x53B3AC)
+    if b_opcode & 0xFC000000 != 0x14000000:
+        raise LevelUpNativeTraceError("cap getter min tail is not a direct B")
+    delta = _sign_extend(b_opcode & 0x03FFFFFF, 26) * 4
+    if 0x53B3AC + delta != 0x349C94:
+        raise LevelUpNativeTraceError("cap getter min-int target drifted")
+    return {
+        "status": "VERIFIED_ORIGINAL_NATIVE_PER_UNIT_CAP_COMPUTATION",
+        "getter_entry": "0x53b2bc",
+        "asset_index_input": "w0",
+        "source_base_cap": "unitbuy.csv zero-based col18 (XOR decoded)",
+        "base_cap_native_offset": "game_context+0x4b0a8+asset_index*0x100",
+        "saved_increment_record": "game_context+0x3ad80c+asset_index*8",
+        "saved_increment_read": "0x53b330 -> 0x9cc024 (decoded upper 16 bits)",
+        "source_hard_cap": "unitbuy.csv zero-based col50 (XOR decoded)",
+        "hard_cap_native_offset": "game_context+0x4b128+asset_index*0x100",
+        "min_function": "0x53b3ac -> 0x349c94",
+        "formula": "min(unitbuy_col18 + decoded_saved_base_increment, unitbuy_col50)",
+        "verified_original_caller": "0x821904 -> 0x53b2bc",
+        "caller_continuation": "0x82190c -> std::to_string(int), original 'level' text nearby",
+        "upgrade_button_purchase_caller_identified": False,
+        "xp_or_catseye_debit_identified": False,
+        "original_game_zero_egress_local_save_attached": False,
+    }
+
+
 def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict:
     digest = sha256(elf).hexdigest()
     if digest != expected_sha or expected_sha != NATIVE_SHA256:
@@ -381,7 +481,9 @@ def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict
         "levelmax_popup_branch_candidate": _levelmax_popup_branch(elf),
         "levelmax_popup_value_call_chain": _popup_value_call_chain(elf),
         "original_unit_data_loader": _original_unit_data_loader(elf),
-        "native_original_game_upgrader_getter_identified": False,
+        "original_effective_level_cap_getter": _original_effective_level_cap_getter(elf),
+        "native_original_game_upgrader_getter_identified": True,
+        "native_original_game_upgrade_purchase_hook_verified": False,
         "unit_cap_purchase_hook_attached": False,
         "scope": "READ_ONLY_EXACT_OWNER_SOURCE",
         "notes": [
