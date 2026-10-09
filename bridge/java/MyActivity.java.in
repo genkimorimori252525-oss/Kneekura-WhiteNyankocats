@@ -45,6 +45,11 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
     };
 
 
+    // Debug-only metadata: no SAVE_DATA bytes or account identifiers are read.
+    // Used solely to witness whether the ORIGINAL native host created a new
+    // local SAVE file between getFilesDir calls/restarts.
+    private static volatile String lastLocalSavePresence;
+
     private static final String BACKUP_SCHEME = "https";
     private static final String BACKUP_HOST = "nyanko-backups.ponosgames.com";
     private static final String BACKUP_PATH = "/";
@@ -99,6 +104,31 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
      * under getFilesDir. This method alone neither seeds a fresh gameplay
      * state nor implements a network-free game or independent player authority.
      */
+    private static void probeLocalGameSaveFiles(File root) {
+        if (!LOCAL_RESEARCH_FRESH_ROOT || !DEBUG_RESEARCH_LOG) {
+            return;
+        }
+        // File metadata only. No original save content, inquiry code, token,
+        // resource/account data or absolute filesystem path is recorded.
+        StringBuilder status = new StringBuilder("original-save-presence-v1");
+        for (String filename : FORBIDDEN_PREEXISTING_SAVES) {
+            File candidate = new File(root, filename);
+            if (candidate.isFile()) {
+                status.append(" ").append(filename).append("=present:");
+                status.append(candidate.length());
+            } else {
+                status.append(" ").append(filename).append("=absent");
+            }
+        }
+        String snapshot = status.toString();
+        synchronized (MyActivity.class) {
+            if (!snapshot.equals(lastLocalSavePresence)) {
+                lastLocalSavePresence = snapshot;
+                debugResearch(snapshot);
+            }
+        }
+    }
+
     private File newLocalOriginalGameRoot() {
         // The local-research PACKAGE ALREADY has its own Android app-data root.
         // Its first observed use must not silently reuse a previous experiment's
@@ -141,6 +171,7 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
             } catch (IOException error) {
                 throw new IllegalStateException("original local research origin root unavailable", error);
             }
+            probeLocalGameSaveFiles(root);
             debugResearch("original-local-fresh-package-root active");
             return root;
         }
