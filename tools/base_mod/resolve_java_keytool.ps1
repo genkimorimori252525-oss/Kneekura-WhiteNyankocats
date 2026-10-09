@@ -1,9 +1,11 @@
-﻿# Owner-safe Java JDK resolver. Source through the Windows PowerShell 5.1 installer.
-# Never touch ADB, APKs, player SAVE or the filesystem other than file discovery.
+﻿# Kneekura: source this helper from the *nested owner installer*.
+# It must work in Windows PowerShell 5.1 even when JAVA_HOME is not defined.
+# Running this helper has no ADB, APK install, or SAVE_DATA side effects.
 function Resolve-JavaKeytool {
     [CmdletBinding()]
     param()
 
+    # Installed JDK tools may already be on PATH; do not assume JAVA_HOME.
     foreach ($name in @('keytool.exe', 'keytool')) {
         $found = Get-Command -Name $name -CommandType Application -ErrorAction SilentlyContinue
         if ($found -and -not [string]::IsNullOrWhiteSpace($found.Source) -and
@@ -11,6 +13,7 @@ function Resolve-JavaKeytool {
             return $found.Source
         }
     }
+
     $candidates = New-Object 'System.Collections.Generic.List[string]'
     foreach ($name in @('JAVA_HOME', 'JDK_HOME')) {
         $home = [Environment]::GetEnvironmentVariable($name)
@@ -30,8 +33,8 @@ function Resolve-JavaKeytool {
     foreach ($variable in @('ProgramFiles', 'ProgramFiles(x86)')) {
         $home = [Environment]::GetEnvironmentVariable($variable)
         if (-not [string]::IsNullOrWhiteSpace($home)) {
-            foreach ($segment in @('Java', 'Eclipse Adoptium', 'Microsoft', 'Zulu')) {
-                $roots.Add((Join-Path -Path $home -ChildPath $segment))
+            foreach ($branch in @('Java', 'Eclipse Adoptium', 'Microsoft', 'Zulu')) {
+                $roots.Add((Join-Path -Path $home -ChildPath $branch))
             }
             $roots.Add((Join-Path -Path $home -ChildPath 'Android\Android Studio\jbr'))
         }
