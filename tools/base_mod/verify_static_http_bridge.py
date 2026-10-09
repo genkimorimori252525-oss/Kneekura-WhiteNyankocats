@@ -8,6 +8,7 @@ from pathlib import Path
 import zipfile
 
 from tools.base_mod.binary_axml import string_values
+from tools.base_mod.audit_offline_egress import manifest_components
 from tools.base_mod.dex_methods import defined_methods
 from tools.base_mod.inject_java_http_bridge import BRIDGE_DEX_ENTRY
 from tools.base_mod.inject_shim import NATIVE_ENTRY, SHIM_ENTRY, SHIM_SONAME
@@ -73,12 +74,15 @@ def verify_static_http_bridge(
     *,
     flavor: str,
     replay_enabled: bool,
+    research_deny_internet: bool = False,
     allow_datalocal_patch: bool = False,
     allow_downloadlocal_patch: bool = False,
 ) -> dict:
     package_name = FLAVOR_PACKAGES.get(flavor)
     if package_name is None:
         raise ValueError(f"unknown flavor: {flavor!r}")
+    if research_deny_internet and flavor != "research":
+        raise ValueError("original no-INTERNET bridge validation requires research flavor")
 
     bridge_launcher = package_name + ".MyActivity"
     bridge_descriptor = "L" + package_name.replace(".", "/") + "/MyActivity;"
@@ -205,6 +209,23 @@ def verify_static_http_bridge(
             raise ValueError("bridge launcher missing from final manifest")
         if ORIGINAL_LAUNCHER in manifest_values:
             raise ValueError("original launcher remained active in bridge manifest")
+        source_perms = manifest_components(
+            original_base.read("AndroidManifest.xml")
+        )["declared_permissions"]
+        actual_perms = manifest_components(
+            final_base.read("AndroidManifest.xml")
+        )["declared_permissions"]
+        expected_perms = sorted(
+            name for name in source_perms
+            if not (research_deny_internet and name == "android.permission.INTERNET")
+        )
+        if actual_perms != expected_perms:
+            raise ValueError("original bridge INTERNET research permission delta drifted")
+        if research_deny_internet:
+            if "android.permission.INTERNET" not in source_perms:
+                raise ValueError("pinned original manifest did not declare INTERNET")
+            if "android.permission.INTERNET" in actual_perms:
+                raise ValueError("research bridge still requests android.permission.INTERNET")
 
         final_classes4 = final_base.read("classes4.dex")
         final_original_method = _new_http_method(
@@ -277,6 +298,11 @@ def verify_static_http_bridge(
         "offline_fallback_anchor_preserved": True,
         "original_scene_activity_subclassed": True,
         "unknown_request_super_fallthrough": True,
+        "research_no_internet_manifest": research_deny_internet,
+        "source_INTERNET_permission": True,
+        "final_INTERNET_permission": not research_deny_internet,
+        "third_party_sdk_ipc_egress_audited": False,
+        "original_game_zero_egress_proven": False,
         "shim_dependency_present": True,
         "frida_absent": True,
         "datalocal_patch_allowed": allow_datalocal_patch,
@@ -291,6 +317,7 @@ def main() -> int:
     parser.add_argument("modified_dir", type=Path)
     parser.add_argument("--flavor", required=True, choices=sorted(FLAVOR_PACKAGES))
     parser.add_argument("--replay-enabled", action="store_true")
+    parser.add_argument("--research-no-internet-permission", action="store_true")
     parser.add_argument("--allow-datalocal-patch", action="store_true")
     parser.add_argument("--allow-downloadlocal-patch", action="store_true")
     parser.add_argument("--output", type=Path)
@@ -301,6 +328,7 @@ def main() -> int:
         args.modified_dir.resolve(),
         flavor=args.flavor,
         replay_enabled=args.replay_enabled,
+        research_deny_internet=args.research_no_internet_permission,
         allow_datalocal_patch=args.allow_datalocal_patch,
         allow_downloadlocal_patch=args.allow_downloadlocal_patch,
     )
