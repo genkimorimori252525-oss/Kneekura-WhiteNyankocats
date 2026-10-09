@@ -15,10 +15,11 @@ from tools.base_mod.trace_original_levelup_native import (
     ORIGINAL_UPGRADE_PURCHASE_ANCHORS,
     ORIGINAL_NATIVE_SAVE_SERIALIZATION_ANCHORS,
     ORIGINAL_NATIVE_SAVE_RESTORE_ANCHORS,
+    ORIGINAL_CAP_INCREMENT_ITEM_TRANSACTION_ANCHORS,
     LevelUpNativeTraceError,
     _original_unit_data_loader, _original_effective_level_cap_getter,
     _original_upgrade_purchase_flow, _original_save_data_serialization,
-    _original_save_restore_flow,
+    _original_save_restore_flow, _original_cap_increment_item_transaction,
     _levelmax_popup_branch,
     _popup_value_call_chain,
     direct_adrp_add_refs, trace_exact_native,
@@ -346,6 +347,37 @@ class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
         wrong_name[0x191955] = ord("x")
         with self.assertRaisesRegex(LevelUpNativeTraceError, "bounds/name"):
             _original_save_restore_flow(bytes(wrong_name))
+
+    def test_original_cap_increment_debits_material_before_saving(self):
+        blob = bytearray(0x85DC2C)
+        for at, word in ORIGINAL_CAP_INCREMENT_ITEM_TRANSACTION_ANCHORS.items():
+            struct.pack_into("<I", blob, at, word)
+        data = _original_cap_increment_item_transaction(bytes(blob))
+        self.assertEqual(
+            data["max_upgrade_increment"],
+            "0x85db78 +1; 0x85db80 -> 0x9cc04c, per cat context+0x3ad80c+cat*8"
+        )
+        self.assertIn("neg required", data["negative_material_delta"])
+        self.assertIn("0x85dc28 -> 0x5eed58", data["debit_loop"])
+        self.assertEqual(data["save_called_after_increment"], "0x85db88 -> 0x8b9fc8")
+        self.assertFalse(data["original_catseye_material_subtypes_verified"])
+        self.assertFalse(data["original_save_file_fsync_and_restart_proven"])
+        self.assertFalse(data["offline_independent_game_integrated"])
+
+    def test_cap_increment_save_and_resource_drift_is_rejected(self):
+        source = bytearray(0x85DC2C)
+        for at, opcode in ORIGINAL_CAP_INCREMENT_ITEM_TRANSACTION_ANCHORS.items():
+            struct.pack_into("<I", source, at, opcode)
+        for at in (0x85DA04, 0x85DA14, 0x85DA1C, 0x85DABC,
+                   0x85DAC4, 0x85DB50, 0x85DB78, 0x85DB80,
+                   0x85DB88, 0x85DC1C, 0x85DC28):
+            trial = bytearray(source)
+            trial[at] ^= 1
+            with self.subTest(address=hex(at)):
+                with self.assertRaisesRegex(
+                    LevelUpNativeTraceError, "transaction opcode drifted"
+                ):
+                    _original_cap_increment_item_transaction(bytes(trial))
 
     def test_real_game_original_upgrader_cues_are_not_fabricated_hooks(self):
         self.assertEqual(len(NATIVE_SHA256), 64)
