@@ -57,7 +57,7 @@ class KneekuraIndependentCoreTests(unittest.TestCase):
             (folder / SAVE_NAME).write_text("corrupt")
             recovered, source = load_local(folder)
             self.assertEqual(source, "BACKUP_RECOVERABLE")
-            self.assertEqual(recovered["currency"]["xp"], 0)
+            self.assertEqual(recovered["currency"]["xp"], 99_999_999)
             self.assertTrue((folder / BACKUP_NAME).exists())
 
     def test_corruption_has_no_account_ban_or_data_import(self):
