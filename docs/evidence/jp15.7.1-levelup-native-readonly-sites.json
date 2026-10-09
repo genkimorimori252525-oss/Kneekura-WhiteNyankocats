@@ -82,7 +82,7 @@
     "value_semantic_meaning": "UNKNOWN: original game stores a bytewise XOR-encoded value; value=1 selects first level-max popup; NOT yet proven per-unit level cap"
   },
   "source_code_tool": "tools/base_mod/trace_original_levelup_native.py",
-  "next_verified_code_task": "Identify which original app lifecycle/UI dispatch constructs and runs save loader worker 0x492b80 and where its success/failure status vtable 0x4930b8 is consumed; distinguish normal virgin first boot from import/recovery. Use source-native and research-only save-presence debug probe to show whether real original engine itself creates local SAVE_DATA on an isolated device, then bind independent no-account local player authority and test original Lv60, XP/CatsEyes, reboot.",
+  "next_verified_code_task": "Original scene 101's SAVE_DATA existence probe and AppLaunchLoad construction are now exact-source-proven. Follow original 0x7231cc lifecycle caller and separate scene 4 (reader failure) to discover native virgin player-state constructor. If source lacks an account-free initializer, implement a narrowly scoped original-game local authority before attempting Lv60; validate real original game screens/XP/debit/reboot and native SDK/IPC zero egress on an isolated research device.",
   "release_status": {
     "original_ui_level_cap_patch_attached": false,
     "level_purchase_action_attached": false,
@@ -96,7 +96,10 @@
     "original_native_fresh_profile_full_offline_verified": false,
     "original_native_level60_real_ui_passed": false,
     "original_game_virgin_player_initialization_proven": false,
-    "original_device_boot_after_missing_SAVE_verified": false
+    "original_device_boot_after_missing_SAVE_verified": false,
+    "original_native_scene_101_save_presence_to_AppLaunchLoad_confirmed": true,
+    "original_native_virgin_player_profile_created": false,
+    "original_game_zero_egress_battlecats_passed": false
   },
   "restrictions": "No full proprietary data, disassembly dumps, source APK, original SAVE_DATA, private signing keys or bypass code committed; this is metadata only.",
   "unit_native_source_table_sequence": {
@@ -563,5 +566,26 @@
     "correction": "Prior evidence referred to 0x9bb764 as original startup SAVE reader. It is concretely called from the verified async worker; a mandatory FIRST-BOOT callsite and native new-game behavior remain UNVERIFIED. Do not patch this worker as a universal initializer.",
     "test_module": "tests/test_trace_original_levelup_native.py",
     "script": "tools/base_mod/trace_original_levelup_native.py"
+  },
+  "original_app_launch_save_probe_scene_101": {
+    "source_binary_sha256": "333d2974ab2ff881fd70087fd62dea7d12d82addbc55cab2f2a675ad67e3a7e2",
+    "proof": "original read-only ELF 32/32 exact instruction words; 5/5 direct call targets; original native literal+RTTI; bounded conditional CFG witness",
+    "original_scene_dispatcher": "0x71c408 (requested scene in w1, stores scene ID into game_context+0x3480)",
+    "scene_101_caller": "0x7231c8 mov w1,#101; 0x7231cc bl 0x71c408",
+    "dispatch_check": "0x71c6e4 cmp w8,#101; 0x71c6e8 b.ne to a different scene handling path",
+    "save_probe": "0x71c984/0x71c988 -> original literal SAVE_DATA at 0x191955; 0x71c9b0 bl 0x35d620",
+    "file_status_branch": "0x71c9c8 tbz w20,bit0 -> 0x71d208 conditional absent-SAVE path",
+    "scene_creation": "0x71d2e8 alloc 0x70 wrapper, 0x71d30c bl 0x4926f8, context+0x3c40b0 shared scene ptr",
+    "native_class_proof": "0x492730/0x492734 initialize vtable 0xaefb38; RTTI string 13AppLaunchLoad at 0x1c507d",
+    "read_failure_scene_4_separate": "0x8b4528 sets w1=4; 0x8b452c calls same scene dispatcher 0x71c408; case 4 branch at 0x71c5b4 -> 0x71cc40",
+    "first_run_obligation_proven": false,
+    "no_save_scene101_is_successful_new_player_creation": false,
+    "virgin_runtime_hook_attached": false,
+    "independent_local_state_generated": false,
+    "actual_original_native_render_or_restart_tested": false,
+    "zero_external_egress_verified": false,
+    "native_script": "tools/base_mod/trace_original_levelup_native.py::_original_app_launch_scene_from_save_presence",
+    "regression": "tests/test_trace_original_levelup_native.py",
+    "original_assets_or_save_modified": false
   }
 }
