@@ -2,6 +2,10 @@
 
 **ACTIVE / 初めてのセッションでもこのファイルから始める。** どの開発エージェントも設計書を片っ端から読んで「本当の原則」を探してはいけない。設計の下位文書は実装時の参照資料であり、プロダクトを変更する権限を持たない。
 
+## 現在の作業位置
+
+**[親Issue #11 — 実装進捗](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/issues/11)** が唯一の「いま何をしているか」の入口。**直近の次のコード差分は [#12 LEVEL — 本家育成画面のレベル上限](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/issues/12)**。**[#15 OFFLINE — 元ゲーム保持＋通信ゼロ](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/issues/15)** は同時進行。次に **[#13 MADOKA](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/issues/13)**、**[#14 GODZILLA](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/issues/14)**。この順序・実装担当のために新しい基本計画を作らない。
+
 ## 原則の優先順位（不一致ならこの表で決定）
 
 | 優先 | 原本 | 説明と変更権限 |
