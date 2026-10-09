@@ -1791,7 +1791,7 @@ def _original_scene97_download_batch_task(elf: bytes) -> dict[str, Any]:
     external network request was made or that the 615MB offline assets exist.
     """
     end = ORIGINAL_RELA_DYN_OFFSET + ORIGINAL_RELA_DYN_COUNT * ORIGINAL_RELA_DYN_ENTRY_SIZE
-    if len(elf) < max(0x73C9FC, 0x1DB616 + len(ORIGINAL_DOWNLOAD_BATCH_RTTI), end):
+    if len(elf) < max(0x73CAB4, 0x1DB616 + len(ORIGINAL_DOWNLOAD_BATCH_RTTI), end):
         raise LevelUpNativeTraceError("original DownloadBatchTask native/RTTI source truncated")
     if (elf[0x1DB616:0x1DB616+len(ORIGINAL_DOWNLOAD_BATCH_RTTI)]
         != ORIGINAL_DOWNLOAD_BATCH_RTTI):
