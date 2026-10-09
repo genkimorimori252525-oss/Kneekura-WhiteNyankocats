@@ -213,8 +213,6 @@ def build_bridge_dex(
     package_name = FLAVOR_PACKAGES.get(flavor)
     if package_name is None:
         raise ValueError(f"unknown flavor: {flavor!r}")
-    if research_deny_internet and flavor != "research":
-        raise ValueError("original INTERNET quarantine is research flavor only")
     launcher = package_name + ".MyActivity"
     root = root.resolve()
     template = (root / BRIDGE_TEMPLATE).read_text(encoding="utf-8")
@@ -399,6 +397,8 @@ def inject_bridge_split_set(
     package_name = FLAVOR_PACKAGES.get(flavor)
     if package_name is None:
         raise ValueError(f"unknown flavor: {flavor!r}")
+    if research_deny_internet and flavor != "research":
+        raise ValueError("original INTERNET quarantine is research flavor only")
     launcher = package_name + ".MyActivity"
 
     missing = [
