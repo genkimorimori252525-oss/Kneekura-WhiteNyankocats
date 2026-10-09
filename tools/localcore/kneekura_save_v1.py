@@ -30,7 +30,7 @@ def fresh_profile(now_ms: int, *, cap: int = 100, seconds_per_point: int = 60,
             or not 1 <= seconds_per_point <= 86400
             or energy_mode not in ("timed", "unlimited")):
         raise LocalSaveError("invalid local profile initialization")
-    return {
+    initial = {
         "schema": SCHEMA, "revision": 1,
         "energy": {"amount": cap, "cap": cap, "mode": energy_mode,
                    "seconds_per_point": seconds_per_point,
@@ -39,6 +39,10 @@ def fresh_profile(now_ms: int, *, cap: int = 100, seconds_per_point: int = 60,
         "unlocked_units": [], "cleared_stages": [],
         "local_events": {}, "local_gacha": {},
     }
+    # The story ledger is local and separate from stage reward/drop history.
+    # It never imports the rejected PONOS SAVE_DATA.
+    from tools.localcore.story_checkpoint import apply_story_checkpoint
+    return apply_story_checkpoint(initial)
 
 
 def validate(profile: dict) -> None:
