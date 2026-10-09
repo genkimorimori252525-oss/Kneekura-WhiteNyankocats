@@ -82,7 +82,7 @@
     "value_semantic_meaning": "UNKNOWN: original game stores a bytewise XOR-encoded value; value=1 selects first level-max popup; NOT yet proven per-unit level cap"
   },
   "source_code_tool": "tools/base_mod/trace_original_levelup_native.py",
-  "next_verified_code_task": "Prove when the original normal XP purchase (0x858390/0x8583b8) triggers SAVE_DATA, and classify original storage backend/atomic disk commit; then integrate offline-only fresh independent player save with original scene/upgrade UI; perform actual Lv60+material+XP/reboot test.",
+  "next_verified_code_task": "Determine whether every successful original normal-XP purchase must reach the save wrapper and whether writer completion actually commits durable local data; then integrate original UI/player-state with an independent offline-only profile. Do not change original restricted SAVE_DATA.",
   "release_status": {
     "original_ui_level_cap_patch_attached": false,
     "level_purchase_action_attached": false,
@@ -91,7 +91,8 @@
     "original_native_effective_cap_formula_proven": true,
     "original_native_upgrade_purchase_cap_and_xp_semantics_proven": true,
     "original_native_item_debit_cap_plus_one_and_save_call_proven": true,
-    "original_native_save_reload_field_map_proven": true
+    "original_native_save_reload_field_map_proven": true,
+    "original_native_normal_xp_purchase_to_save_conditional_routes_proven": true
   },
   "restrictions": "No full proprietary data, disassembly dumps, source APK, original SAVE_DATA, private signing keys or bypass code committed; this is metadata only.",
   "unit_native_source_table_sequence": {
@@ -276,5 +277,69 @@
     "item_sufficiency_atomicity_verified": false,
     "connected_offline_runtime": false,
     "note": "Proven original native material-debit/cap-increment/save-call control-flow seam, NOT a hook or offline-game/Android success. Normal XP purchase save-trigger path is separate and still unproven."
+  },
+  "original_xp_purchase_to_save_control_flow": {
+    "source_sha256": "333d2974ab2ff881fd70087fd62dea7d12d82addbc55cab2f2a675ad67e3a7e2",
+    "source_version": "JP15.7.1 user-owned exact ARM64 native binary",
+    "verification_method": "read-only exact SHA, AArch64 instruction words and bounded conditional CFG witness; no device or player SAVE modification",
+    "result": "TWO_CONDITIONAL_NATIVE_CONTROL_FLOW_WITNESSES_FROM_SUCCESSFUL_XP_DEBIT_AND_LEVEL_ADD_TO_SAVE_DATA",
+    "xp_balance_write": "0x858390 -> 0x9d86e4",
+    "current_level_increment": "0x8583b8 -> 0x9cc04c",
+    "common_save_handler": "0x8b9fc8 -> 0x8b46b0",
+    "witness_routes": [
+      {
+        "save_callsite": "0x859a40",
+        "source_pc": "0x8583b8",
+        "witness_steps": 76,
+        "branches": [
+          [
+            "0x858450",
+            "0x858454"
+          ],
+          [
+            "0x858484",
+            "0x8597fc"
+          ],
+          [
+            "0x859850",
+            "0x859a3c"
+          ]
+        ]
+      },
+      {
+        "save_callsite": "0x85a748",
+        "source_pc": "0x8583b8",
+        "witness_steps": 108,
+        "branches": [
+          [
+            "0x858450",
+            "0x8584e0"
+          ],
+          [
+            "0x858534",
+            "0x858538"
+          ],
+          [
+            "0x85853c",
+            "0x859900"
+          ],
+          [
+            "0x859994",
+            "0x85a730"
+          ]
+        ]
+      }
+    ],
+    "possible_abstract_conditions": "original branching can reach save after normal XP level increment",
+    "all_successful_purchases_save_proven": false,
+    "actual_runtime_condition_feasibility_proven": false,
+    "original_file_fsync_or_crash_atomicity_proven": false,
+    "local_account_free_save_implemented": false,
+    "zero_egress_original_game_boot_verified": false,
+    "lv60_real_screen_and_reboot_verified": false,
+    "code": "tools/base_mod/trace_original_levelup_native.py::_original_normal_xp_purchase_save_routes",
+    "tests": "tests/test_trace_original_levelup_native.py",
+    "preserved_original_binary": true,
+    "protected_content_committed": false
   }
 }
