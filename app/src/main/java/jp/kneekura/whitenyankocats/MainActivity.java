@@ -25,6 +25,7 @@ import java.util.Map;
 
 public final class MainActivity extends Activity {
     private static final int REQUEST_EXPORT_ZIP = 1401;
+    private static final int REQUEST_OPERATOR_PUBLIC_KEY = 1403;
 
     private enum Mode {
         UNITS,
@@ -39,6 +40,7 @@ public final class MainActivity extends Activity {
     private Mode mode = Mode.STAGES;
     private TextView statusText;
     private TextView resourceText;
+    private TextView operationsText;
     private ArrayAdapter<String> adapter;
     private ProgressBar progressBar;
     private EditText searchBox;
@@ -80,6 +82,28 @@ public final class MainActivity extends Activity {
         importButton.setOnClickListener(v -> chooseExportZip());
         controls.addView(importButton);
 
+        Button updateButton = new Button(this);
+        updateButton.setText("運営更新");
+        updateButton.setOnClickListener(v -> chooseOperatorUpdate());
+        updateButton.setOnLongClickListener(v -> {
+            new AlertDialog.Builder(this)
+                    .setTitle("運営データを戻す")
+                    .setMessage("一つ前の運営データに戻すで。キャラ・ステージのクリア履歴、所持品には触れへん。")
+                    .setPositiveButton("戻す", (dialog, which) -> {
+                        try {
+                            String message = LocalOpsStore.rollback(this);
+                            refreshLocalOpsInfo();
+                            new AlertDialog.Builder(this).setMessage(message)
+                                    .setPositiveButton("OK", null).show();
+                        } catch (Exception error) {
+                            showOpsError(error);
+                        }
+                    })
+                    .setNegativeButton("やめる", null).show();
+            return true;
+        });
+        controls.addView(updateButton);
+
         Button stagesButton = new Button(this);
         stagesButton.setText("全ステージ");
         stagesButton.setOnClickListener(v -> {
@@ -110,6 +134,13 @@ public final class MainActivity extends Activity {
         controls.addView(progressBar, new LinearLayout.LayoutParams(dp(34), dp(34)));
 
         root.addView(controls);
+
+        operationsText = new TextView(this);
+        operationsText.setTextSize(13);
+        operationsText.setTextColor(Color.rgb(36, 76, 62));
+        operationsText.setPadding(dp(3), dp(2), dp(3), dp(2));
+        root.addView(operationsText);
+        refreshLocalOpsInfo();
 
         searchBox = new EditText(this);
         searchBox.setHint("マップ名 / ステージ名 / 種別 / IDで検索");
@@ -199,9 +230,148 @@ public final class MainActivity extends Activity {
         startActivityForResult(intent, REQUEST_EXPORT_ZIP);
     }
 
+    private void refreshLocalOpsInfo() {
+        if (operationsText == null) return;
+        try {
+            LocalOpsStore.Status state = LocalOpsStore.current(this);
+            String label = state == null ? "運営データ: 未導入" :
+                    "運営データ v" + state.revision + "（署名検証済み・完全ローカル）";
+            operationsText.setText(label + " ／「運営更新」でZIP選択、長押しで前版復元");
+        } catch (Exception error) {
+            operationsText.setText("運営データ確認エラー: " + error.getMessage());
+        }
+    }
+
+    private void chooseOperatorUpdate() {
+        if (!LocalOpsTrust.paired(this)) {
+            new AlertDialog.Builder(this)
+                    .setTitle("初回のみ：運営公開鍵を登録")
+                    .setMessage("にーくら更新の署名を確認するため、PC側で発行した「jolly-ops-public.pem」を一度だけ選んでな。秘密鍵はスマホへ渡さへん。")
+                    .setPositiveButton("公開鍵を選ぶ", (dialog, which) -> {
+                        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                        intent.addCategory(Intent.CATEGORY_OPENABLE);
+                        intent.setType("*/*");
+                        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                        startActivityForResult(intent, REQUEST_OPERATOR_PUBLIC_KEY);
+                    })
+                    .setNegativeButton("あとで", null).show();
+            return;
+        }
+        OfflineUpdatePicker.open(this);
+    }
+
+    private void showOpsError(Exception error) {
+        new AlertDialog.Builder(this)
+                .setTitle("運営データの取込みを中止")
+                .setMessage(error.getClass().getSimpleName() + ": " + error.getMessage())
+                .setPositiveButton("OK", null)
+                .show();
+    }
+
+    private void receivedOperatorKey(Intent data) {
+        Uri uri = data.getData();
+        if (uri == null) return;
+        setBusy(true, "公開鍵を読み込んでいます");
+        new Thread(() -> {
+            try {
+                byte[] candidate = LocalOpsTrust.candidateFromUri(this, uri);
+                String fingerprint = LocalOpsTrust.fingerprint(candidate);
+                runOnUiThread(() -> {
+                    setBusy(false, "公開鍵を確認してください");
+                    new AlertDialog.Builder(this)
+                            .setTitle("この公開鍵を信頼する？（初回だけ）")
+                            .setMessage("PCで生成した公開鍵のSHA-256と同じか確認してな。\n\n" + fingerprint +
+                                    "\n\n異なる鍵なら「やめる」を押す。")
+                            .setPositiveButton("一致したので登録", (dialog, which) -> {
+                                try {
+                                    LocalOpsTrust.pinOnce(this, candidate);
+                                    refreshLocalOpsInfo();
+                                    new AlertDialog.Builder(this)
+                                            .setMessage("公開鍵を登録したで。次からは「運営更新」を押してZIPを選ぶだけや。")
+                                            .setPositiveButton("OK", null).show();
+                                } catch (Exception error) {
+                                    showOpsError(error);
+                                }
+                            })
+                            .setNegativeButton("やめる", null).show();
+                });
+            } catch (Exception error) {
+                runOnUiThread(() -> {
+                    setBusy(false, "公開鍵を登録できません");
+                    showOpsError(error);
+                });
+            }
+        }, "kneekura-offline-public-key").start();
+    }
+
+    private void receivedContentBundle(Intent data) {
+        setBusy(true, "署名付き更新ZIPを検証しています");
+        new Thread(() -> {
+            java.io.File staged = null;
+            try {
+                staged = OfflineUpdatePicker.stageFromResult(
+                        this, OfflineUpdatePicker.REQUEST_CONTENT_UPDATE,
+                        RESULT_OK, data
+                );
+                byte[] trusted = LocalOpsTrust.trustedKey(this);
+                LocalOpsBundleVerifier.Verified verified =
+                        LocalOpsBundleVerifier.verify(staged, trusted);
+                final java.io.File selected = staged;
+                runOnUiThread(() -> {
+                    setBusy(false, "署名検証成功");
+                    new AlertDialog.Builder(this)
+                            .setTitle("にーくら運営更新 v" + verified.revision)
+                            .setMessage("署名・ハッシュ・形式を確認したで。運営予定表だけを更新する。\n"
+                                    + "戦闘やガチャへの反映は、各機能のAndroid連携が必要や。\n\n"
+                                    + "端末の元ゲームやプレイヤーデータには触れへん。")
+                            .setPositiveButton("適用", (dialog, which) -> {
+                                setBusy(true, "運営データを保存しています");
+                                new Thread(() -> {
+                                    try {
+                                        String message = LocalOpsStore.importVerified(this, verified);
+                                        runOnUiThread(() -> {
+                                            setBusy(false, message);
+                                            refreshLocalOpsInfo();
+                                            new AlertDialog.Builder(this).setMessage(message)
+                                                    .setPositiveButton("OK", null).show();
+                                        });
+                                    } catch (Exception error) {
+                                        runOnUiThread(() -> {
+                                            setBusy(false, "更新を取り消しました");
+                                            showOpsError(error);
+                                        });
+                                    } finally {
+                                        selected.delete();
+                                    }
+                                }, "kneekura-offline-content-commit").start();
+                            })
+                            .setNegativeButton("やめる", (dialog, which) -> selected.delete())
+                            .setOnCancelListener(dialog -> selected.delete())
+                            .show();
+                });
+            } catch (Exception error) {
+                if (staged != null) staged.delete();
+                runOnUiThread(() -> {
+                    setBusy(false, "検証に失敗しました。運営データは変更しません");
+                    showOpsError(error);
+                });
+            }
+        }, "kneekura-offline-content-check").start();
+    }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if (resultCode == RESULT_OK && data != null) {
+            if (requestCode == REQUEST_OPERATOR_PUBLIC_KEY) {
+                receivedOperatorKey(data);
+                return;
+            }
+            if (requestCode == OfflineUpdatePicker.REQUEST_CONTENT_UPDATE) {
+                receivedContentBundle(data);
+                return;
+            }
+        }
         if (requestCode != REQUEST_EXPORT_ZIP || resultCode != RESULT_OK || data == null) {
             return;
         }
