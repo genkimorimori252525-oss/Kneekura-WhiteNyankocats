@@ -82,7 +82,7 @@
     "value_semantic_meaning": "UNKNOWN: original game stores a bytewise XOR-encoded value; value=1 selects first level-max popup; NOT yet proven per-unit level cap"
   },
   "source_code_tool": "tools/base_mod/trace_original_levelup_native.py",
-  "next_verified_code_task": "Trace original DownloadBatchTask 0x320be0 source-descriptor parser 0x321138 and how it is populated by local archives, connect owner-provided additional server pack inventory to exact 35 downloadable TSV names in the real JP native registry without network, then prove original account-free first-run new SAVE/Level60 in actual original scene 101/97/104. No publisher SAVE or H01/BAN bypass.",
+  "next_verified_code_task": "Native original 92 Server .list/.pack families now cataloged and linked by one original runtime table initializer, and 92-row registration loop + named-resource parser pinned. Next audit OWNER-SUPPLIED additional MNumberServer/WImageDataServer/etc encrypted .list manifests (and paired payload validity privately), then prove original native per-TSV key registration at scene97 before any real offline first boot. User export here has no additional Server .list/.pack; do not infer 35 TSVs are available. Separately locate first-run no-account original SAVE initializer and implement original Lv60+MAX/reload/battle with no SDK/IPC egress.",
   "release_status": {
     "original_ui_level_cap_patch_attached": false,
     "level_purchase_action_attached": false,
@@ -109,7 +109,11 @@
     "original_whole_offline_native_gameplay_tested": false,
     "original_download_tsv_source_lookup_to_shared_getFilesDir_proven": true,
     "original_download_tsv_35_items_resolved_on_device": false,
-    "original_zero_network_game_and_Lv60_passed": false
+    "original_zero_network_game_and_Lv60_passed": false,
+    "original_native_92_server_family_catalog_and_registry_lookup_static_proven": true,
+    "original_extra_server_35_tsv_contents_available": false,
+    "original_native_fresh_player_save_initialized": false,
+    "original_game_lv60_actual_screen_reboot_accepted": false
   },
   "restrictions": "No full proprietary data, disassembly dumps, source APK, original SAVE_DATA, private signing keys or bypass code committed; this is metadata only.",
   "unit_native_source_table_sequence": {
@@ -742,5 +746,46 @@
     "first_launch_native_engine_proven": false,
     "CI_jvm_execution_test": "tests/test_static_http_bridge.py",
     "device_observation_received": false
+  },
+  "original_download_tsv_resource_registry": {
+    "native_sha256": "333d2974ab2ff881fd70087fd62dea7d12d82addbc55cab2f2a675ad67e3a7e2",
+    "proof_type": "READ_ONLY_EXACT_AARCH64_29_OPCODE_WORDS_13_DIRECT_BLS_TWO_BRANCH_EDGES_ONE_ELF_RELOCATION",
+    "source_name_parser": "0x320c34 -> 0x321138 -> 0x364950",
+    "resource_reader_lookup": "0x364980 -> 0x34d014 singleton; 0x364990 -> 0x34d8e4 named resource lookup",
+    "missing_registered_resource": "0x321190 TBZ -> 0x321278; index/source reader fails",
+    "record_token_parser": "0x3211a4 and 0x3211c4 -> 0x363afc; parsed row insertion 0x3211e8 -> 0x32722c",
+    "registration_function": "0x34d0f4",
+    "original_register_loop": "0x741b6c w20=92; 0x741b74 getter; 0x741b84 register; 0x741b8c stride 0x30; 0x741b90 loop to 0x741b74",
+    "runtime_92_rows_ptr": "0xb17d78 R_AARCH64_RELATIVE -> 0xf98d38",
+    "runtime_92_rows_extent": "0xf98d38 to 0xf99e78, BSS, 92 records x48B",
+    "source_singleton_scene101": "0x71c6f4 getter -> 0x71c748 additional register",
+    "all_35_tsv_names_registered_at_boot_proven": false,
+    "actual_92_runtime_record_values_available_in_static_elf": false,
+    "real_android_native_original_engine_boot_tested": false,
+    "code": "tools/base_mod/trace_original_levelup_native.py::_original_download_tsv_resource_registration_chain",
+    "tests": "tests/test_trace_original_levelup_native.py"
+  },
+  "original_92_paired_server_families": {
+    "provenance": "original exact JP15.7.1 333d2974ab2ff881fd70087fd62dea7d12d82addbc55cab2f2a675ad67e3a7e2",
+    "code_location": "native .rodata 0x18f2c0..0x1fda44 NUL-delimited filename strings",
+    "original_server_list_names": 92,
+    "original_server_pack_names": 92,
+    "original_server_family_pairs": 92,
+    "sorted_stems_sha256_newline_terminated": "a1a1f8451aaed1527bd655b16fa9bad06cc1753c42dca41289186e9554a5507b",
+    "matching_native_registration_loop_count": 92,
+    "verified_family_examples": [
+      "MNumberServer",
+      "WImageDataServer",
+      "XImageServer"
+    ],
+    "one_static_runtime_table_initialization": "0x71599c..0x7159c0 embeds original XImageServer.list from .rodata into BSS table base 0xf98d38",
+    "runtime_92_record_to_92_family_one_to_one_proven": false,
+    "actual_owner_additional_server_pack_bytes_available_here": false,
+    "additional_owner_manifest_scanner": "tools/base_mod/trace_original_levelup_native.py::trace_from_owner_export --owner-extra-list-dir PATH",
+    "file_scan_does_not_touch_pack_contents": true,
+    "additional_manifests_only_accepted_when_in_native_original_catalog": true,
+    "contents_validated_by_original_game": false,
+    "native_original_offline_gameplay_boot_passed": false,
+    "original_SAVE_APK_or_assets_modified": false
   }
 }
