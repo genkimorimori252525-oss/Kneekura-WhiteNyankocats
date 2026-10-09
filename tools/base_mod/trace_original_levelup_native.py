@@ -2059,6 +2059,35 @@ def _original_download_tsv_resource_registration_chain(elf: bytes) -> dict[str, 
         0x741B74, 0x741B94
     ):
         raise LevelUpNativeTraceError("original 92-row registry loop drift")
+    # The 92 row table is a relocated pointer INTO .bss, not an array of
+    # immutable names that can be extracted from the static owner ELF.
+    # The actual source names require a private runtime/lifecycle witness.
+    source_ref = None
+    source_relocation_end = (
+        ORIGINAL_RELA_DYN_OFFSET
+        + ORIGINAL_RELA_DYN_COUNT * ORIGINAL_RELA_DYN_ENTRY_SIZE
+    )
+    for offset in range(
+        ORIGINAL_RELA_DYN_OFFSET,
+        source_relocation_end,
+        ORIGINAL_RELA_DYN_ENTRY_SIZE,
+    ):
+        ptr_slot, relocation_kind, relocated_target = struct.unpack_from(
+            "<QQq", elf, offset
+        )
+        if ptr_slot != 0xB17D78:
+            continue
+        if source_ref is not None or relocation_kind != 0x403:
+            raise LevelUpNativeTraceError(
+                "original 92-row table pointer relocation duplicate/type drift"
+            )
+        source_ref = relocated_target
+    if source_ref != 0xF98D38 or not (
+        0xB20F40 <= source_ref < source_ref + 92 * 0x30 <= 0xFA0760
+    ):
+        raise LevelUpNativeTraceError(
+            "original 92-row registry runtime BSS table pointer drift"
+        )
     return {
         "status": "ORIGINAL_NATIVE_NAMED_RESOURCE_REGISTRY_CONSUMER_AND_92_ROW_PRODUCER",
         "download_tsv_call_chain": (
@@ -2072,6 +2101,9 @@ def _original_download_tsv_resource_registration_chain(elf: bytes) -> dict[str, 
         "row_numeric_or_token_reader": "0x3211a4/0x3211c4 -> 0x363afc",
         "reader_parsed_row_insertion": "0x3211e8 -> 0x32722c",
         "registry_registration_function": "0x34d0f4",
+        "registry_source_pointer_relocation": "0xb17d78 R_AARCH64_RELATIVE -> 0xf98d38",
+        "registry_runtime_source_memory": "0xf98d38..0xf99e78 (92 x 0x30 bytes, inside .bss)",
+        "registration_names_static_elf_available": False,
         "registry_registration_loop": (
             "0x741b6c count92; 0x741b74 getter; 0x741b84 register; "
             "0x741b8c stride48; 0x741b90 B.NE -> 0x741b74"
