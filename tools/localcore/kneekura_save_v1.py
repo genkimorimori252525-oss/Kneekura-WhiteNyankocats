@@ -42,7 +42,8 @@ def fresh_profile(now_ms: int, *, cap: int = 100, seconds_per_point: int = 60,
     # The story ledger is local and separate from stage reward/drop history.
     # It never imports the rejected PONOS SAVE_DATA.
     from tools.localcore.story_checkpoint import apply_story_checkpoint
-    return apply_story_checkpoint(initial)
+    from tools.localcore.full_max_resources import apply_first_max_resources
+    return apply_first_max_resources(apply_story_checkpoint(initial))
 
 
 def validate(profile: dict) -> None:
