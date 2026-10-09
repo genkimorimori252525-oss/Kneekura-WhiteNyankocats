@@ -82,7 +82,7 @@
     "value_semantic_meaning": "UNKNOWN: original game stores a bytewise XOR-encoded value; value=1 selects first level-max popup; NOT yet proven per-unit level cap"
   },
   "source_code_tool": "tools/base_mod/trace_original_levelup_native.py",
-  "next_verified_code_task": "Examine original scene97 DownloadBatchTask (0x725e1c→0x73c9b8) for source pack/file IO and remote service vs local cached assets; evaluate scene104 0x71c50c and the real virgin profile initializer separately. Connect a local first-run player authority ONLY after proving original native game state/save and zero-egress. Then implement real original UI Lv60 (XP/Catseye), MAX initial wallet, restart and battle with original scenes/assets.",
+  "next_verified_code_task": "Trace original DownloadBatchTask 0x320be0 source-descriptor parser 0x321138 and how it is populated by local archives, connect owner-provided additional server pack inventory to exact 35 downloadable TSV names in the real JP native registry without network, then prove original account-free first-run new SAVE/Level60 in actual original scene 101/97/104. No publisher SAVE or H01/BAN bypass.",
   "release_status": {
     "original_ui_level_cap_patch_attached": false,
     "level_purchase_action_attached": false,
@@ -106,7 +106,10 @@
     "original_app_launch_wait_error4_success97_104_native_verified": true,
     "original_scene97_DownloadBatchTask_construction_verified": true,
     "original_account_free_fresh_save_generator_verified": false,
-    "original_whole_offline_native_gameplay_tested": false
+    "original_whole_offline_native_gameplay_tested": false,
+    "original_download_tsv_source_lookup_to_shared_getFilesDir_proven": true,
+    "original_download_tsv_35_items_resolved_on_device": false,
+    "original_zero_network_game_and_Lv60_passed": false
   },
   "restrictions": "No full proprietary data, disassembly dumps, source APK, original SAVE_DATA, private signing keys or bypass code committed; this is metadata only.",
   "unit_native_source_table_sequence": {
@@ -686,5 +689,58 @@
     "no_original_game_files_changed": true,
     "source_code": "tools/base_mod/trace_original_levelup_native.py::_original_scene97_download_batch_task",
     "tests": "tests/test_trace_original_levelup_native.py"
+  },
+  "original_download_batch_tsv_resolver": {
+    "original_elf_sha256": "333d2974ab2ff881fd70087fd62dea7d12d82addbc55cab2f2a675ad67e3a7e2",
+    "source": "owner JP15.7.1 original ARM64 libnative-lib.so exact byte/read-only",
+    "proof_type": "25 native instruction words + 7 direct BL targets + 2 explicit fail branches and one native ADRP+ADD string xref",
+    "entry": "0x73caa8 BL -> 0x320be0",
+    "formatted_filename": "download_%d.tsv at 0x197b44; 35 slot indices 0..34",
+    "per_item_result_storage": "0x73cab0 stores returned w0 to context+0x2fb8+index*4",
+    "metadata_or_source_descriptor_probe": "0x320c34 BL -> 0x321138",
+    "index_or_descriptor_failed_branch": "0x320c38 TBZ -> 0x320f30",
+    "failed_entry_no_source_object_returns": "0x320f34 CBZ -> 0x320f48; w19=-1",
+    "shared_exact_original_android_root": "0x320c40 BL -> 0x42cde8 (getFilesDir JNI, same as SAVE_DATA)",
+    "path_context_helpers": [
+      "0x320c48 BL -> 0x42cde0",
+      "0x320e88 BL -> 0x31a104",
+      "0x320e90 BL -> 0x42cde0"
+    ],
+    "other_return_literals": [
+      0,
+      1
+    ],
+    "audio_specific_extensions": [
+      ".caf",
+      ".ogg"
+    ],
+    "audio_specific_prefix": "snd at native 0x1a8c27 (0x320e68/0x320e6c xref)",
+    "nonaudio_tsv_does_not_match_these_extensions": true,
+    "conclusion": "TSV candidate goes through original indexed/source-metadata gate and conditionally same native getFilesDir path as SAVE, not a direct downloader API",
+    "uncertainties": [
+      "0x321138 exact index/source descriptor data population is not yet fully decoded",
+      "the filename might be bundled in owner Server packs, not original InstallPack local .list",
+      "a loose TSV placed in getFilesDir has NOT been demonstrated to satisfy original resolver",
+      "source does not rule out network from other stages or SDK IPC",
+      "exact 35/35 successful lookup on original Android native runtime is not verified"
+    ],
+    "original_owner_source_modified": false,
+    "actual_offline_first_boot_or_615mb_cache_proven": false,
+    "real_original_level60_upgrade_and_reboot_proven": false,
+    "code": "tools/base_mod/trace_original_levelup_native.py::_original_download_tsv_file_source_resolver",
+    "tests": "tests/test_trace_original_levelup_native.py"
+  },
+  "original_research_tsv_loose_file_probe": {
+    "package": "jp.kn.local.battlecats (research only, default-off/nonshipped)",
+    "original_activity": "bridge/java/MyActivity.java.in::probeLocalDownloadBatchTsvFiles",
+    "trigger": "once per Android app process at first valid original getFilesDir call",
+    "candidates": "download_0.tsv through download_34.tsv under app-private standard files root",
+    "output": "original-download-tsv-loose-v1 present=N absent=N unsafe=N",
+    "data_access": "presence and canonical path containment only; never read file contents, account, SAVE_DATA, absolute path or token",
+    "symlink_escape_rejected": true,
+    "loose_file_presence_is_original_packed_source_resolution_proof": false,
+    "first_launch_native_engine_proven": false,
+    "CI_jvm_execution_test": "tests/test_static_http_bridge.py",
+    "device_observation_received": false
   }
 }
