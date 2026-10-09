@@ -18,12 +18,13 @@ from tools.base_mod.trace_original_levelup_native import (
     ORIGINAL_CAP_INCREMENT_ITEM_TRANSACTION_ANCHORS,
     ORIGINAL_XP_TO_SAVE_DISPATCH_ANCHORS,
     ORIGINAL_SAVE_JNI_FILE_ROOT_ANCHORS,
+    ORIGINAL_MISSING_SAVE_ANCHORS,
     LevelUpNativeTraceError,
     _original_unit_data_loader, _original_effective_level_cap_getter,
     _original_upgrade_purchase_flow, _original_save_data_serialization,
     _original_save_restore_flow, _original_cap_increment_item_transaction,
     _original_normal_xp_purchase_save_routes,
-    _original_save_jni_files_root,
+    _original_save_jni_files_root, _original_missing_save_read_path,
     _original_arm64_cfg_successors, _original_arm64_cfg_witness,
     _original_arm64_cfg_all_direct_paths_hit_save,
     _levelmax_popup_branch,
@@ -555,6 +556,29 @@ class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
             with self.subTest(literal=hex(literal)):
                 with self.assertRaises(LevelUpNativeTraceError):
                     _original_save_jni_files_root(bytes(broken))
+
+    def test_original_no_SAVE_DATA_load_fails_and_does_not_fake_new_game(self):
+        fake = bytearray(0x9BBA70)
+        for at, opcode in ORIGINAL_MISSING_SAVE_ANCHORS.items():
+            struct.pack_into("<I", fake, at, opcode)
+        result = _original_missing_save_read_path(bytes(fake))
+        self.assertEqual(result["startup_read"], "0x9bb78c -> 0x8b43a4")
+        self.assertEqual(result["reader_returns_zero"], "0x8b453c w20=0")
+        self.assertFalse(result["fresh_profile_native_save_initialized"])
+        self.assertFalse(result["original_offline_first_boot_tested"])
+        self.assertFalse(result["new_game_creation_in_other_function_excluded"])
+
+    def test_original_empty_save_loader_rejects_branch_and_return_drift(self):
+        fake = bytearray(0x9BBA70)
+        for at, opcode in ORIGINAL_MISSING_SAVE_ANCHORS.items():
+            struct.pack_into("<I", fake, at, opcode)
+        for address in (0x8B441C, 0x8B4528, 0x8B452C,
+                        0x8B453C, 0x9BB78C, 0x9BB794, 0x9BBA54):
+            with self.subTest(at=hex(address)):
+                edited = bytearray(fake)
+                edited[address] ^= 1
+                with self.assertRaises(LevelUpNativeTraceError):
+                    _original_missing_save_read_path(bytes(edited))
 
     def test_real_game_original_upgrader_cues_are_not_fabricated_hooks(self):
         self.assertEqual(len(NATIVE_SHA256), 64)
