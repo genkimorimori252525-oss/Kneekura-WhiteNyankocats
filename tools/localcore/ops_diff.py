@@ -71,7 +71,8 @@ def review_update(before: dict, after: dict) -> dict:
         "content_changes": content,
         "schedule_changes": schedule,
         "content_ready_true_to_false": sorted(declined),
-        "requires_operator_review": changed or before["season"] != after["season"],
+        "publication_status_changed": before["status"] != after["status"],
+        "requires_operator_review": True,  # every new revision needs human/operator review
         "requires_player_save_migration": False,
         "player_progress_modified": False,
         "network_requests": 0,
