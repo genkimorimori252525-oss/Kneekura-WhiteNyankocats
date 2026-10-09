@@ -22,6 +22,7 @@ from tools.base_mod.trace_original_levelup_native import (
     ORIGINAL_SAVE_READ_WORKER_ANCHORS,
     ORIGINAL_WORKER_STATUS_VTABLE, ORIGINAL_WORKER_STATUS_ANCHORS,
     ORIGINAL_APP_LAUNCH_SCENE_ANCHORS,
+    ORIGINAL_APP_LAUNCH_RESULT_ANCHORS,
     ORIGINAL_RELA_DYN_OFFSET, ORIGINAL_RELA_DYN_COUNT,
     ORIGINAL_RELA_DYN_ENTRY_SIZE,
     LevelUpNativeTraceError,
@@ -32,6 +33,7 @@ from tools.base_mod.trace_original_levelup_native import (
     _original_save_jni_files_root, _original_missing_save_read_path,
     _original_save_read_worker, _original_save_worker_virtual_status,
     _original_app_launch_scene_from_save_presence,
+    _original_app_launch_result_scene_dispatch,
     _original_arm64_cfg_successors, _original_arm64_cfg_witness,
     _original_arm64_cfg_all_direct_paths_hit_save,
     _levelmax_popup_branch,
@@ -134,6 +136,15 @@ def _synthetic_original_app_launch_scene_fixture() -> bytearray:
     for pc, opcode in ORIGINAL_APP_LAUNCH_SCENE_ANCHORS.items():
         struct.pack_into("<I", payload, pc, opcode)
     return payload
+
+
+
+def _synthetic_app_launch_result_fixture() -> bytearray:
+    """Exact AArch64 opcodes from owner source; no proprietary native or SAVE."""
+    blob = bytearray(0x723490)
+    for address, opcode in ORIGINAL_APP_LAUNCH_RESULT_ANCHORS.items():
+        struct.pack_into("<I", blob, address, opcode)
+    return blob
 
 
 class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
@@ -735,6 +746,58 @@ class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
         struct.pack_into("<I", wrong_branch, 0x71D220, 0xD503201F)
         with self.assertRaisesRegex(LevelUpNativeTraceError, "opcode drifted"):
             _original_app_launch_scene_from_save_presence(bytes(wrong_branch))
+
+
+    def test_original_app_launch_status_selects_wait_scene4_or_success_scenes(self):
+        original = bytes(_synthetic_app_launch_result_fixture())
+        evidence = _original_app_launch_result_scene_dispatch(original)
+        self.assertEqual(
+            evidence["status"],
+            "EXACT_ORIGINAL_APP_LAUNCH_LOAD_RESULT_SCENE_DISPATCH",
+        )
+        self.assertEqual(evidence["frame_update_entry"], "0x721854")
+        self.assertIn("context+0x3c40b0", evidence["producer_scene_ptr"])
+        self.assertIn("context+0x3c40b0", evidence["consumer_scene_ptr"])
+        self.assertIn("0x4930b8", evidence["virtual_status_pinned_target"])
+        self.assertEqual(
+            evidence["status_false_branch"], "0x722b30 TBZ -> 0x723440"
+        )
+        self.assertEqual(
+            evidence["wait_without_failure"],
+            "0x723448 LDRB worker+9; 0x72344c CBZ -> 0x72299c",
+        )
+        self.assertIn("w1=4", evidence["error_scene"])
+        self.assertIn("scene97", evidence["success_side_scene_choice"])
+        self.assertIn("scene104", evidence["success_side_scene_choice"])
+        self.assertEqual(
+            _original_arm64_cfg_successors(original, 0x722B30),
+            (0x723440, 0x722B34),
+        )
+        self.assertEqual(
+            _original_arm64_cfg_successors(original, 0x72344C),
+            (0x72299C, 0x723450),
+        )
+        self.assertFalse(evidence["original_first_launch_without_SAVE_verified"])
+        self.assertFalse(evidence["native_first_game_account_free_initializer_found"])
+        self.assertFalse(evidence["original_android_device_scene_transition_observed"])
+        self.assertFalse(evidence["original_lv60_and_local_save_reboot_verified"])
+        self.assertFalse(evidence["all_sdk_network_egress_zero_proven"])
+
+    def test_original_app_launch_result_rejects_mutated_object_status_or_scene(self):
+        source = _synthetic_app_launch_result_fixture()
+        for address in (
+            0x721878, 0x721884, 0x722B10, 0x722B14, 0x722B18,
+            0x722B1C, 0x722B20, 0x722B24, 0x722B28, 0x722B2C,
+            0x722B30, 0x722B6C, 0x723440, 0x723444, 0x723448,
+            0x72344C, 0x723450, 0x723458, 0x72345C, 0x723460,
+            0x723474, 0x723484, 0x723488, 0x72348C,
+            0x71D310, 0x71D314, 0x71D31C,
+        ):
+            with self.subTest(address=hex(address)):
+                corrupted = bytearray(source)
+                corrupted[address] ^= 1
+                with self.assertRaises(LevelUpNativeTraceError):
+                    _original_app_launch_result_scene_dispatch(bytes(corrupted))
 
     def test_real_game_original_upgrader_cues_are_not_fabricated_hooks(self):
         self.assertEqual(len(NATIVE_SHA256), 64)
