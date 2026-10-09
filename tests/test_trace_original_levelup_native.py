@@ -27,6 +27,7 @@ from tools.base_mod.trace_original_levelup_native import (
     ORIGINAL_SCENE97_DOWNLOAD_BATCH_ANCHORS,
     ORIGINAL_DOWNLOAD_TSV_FILE_RESOLVER_ANCHORS,
     ORIGINAL_RESOURCE_REGISTRY_NATIVE_ANCHORS,
+    ORIGINAL_SERVER_FAMILY_CATALOG_ANCHORS,
     JP15_7_1_ORIGINAL_LOCAL_LIST_COUNTS,
     ORIGINAL_SCENE97_DOWNLOAD_BATCH_RELOCS, ORIGINAL_DOWNLOAD_BATCH_RTTI,
     ORIGINAL_RELA_DYN_OFFSET, ORIGINAL_RELA_DYN_COUNT,
@@ -44,6 +45,7 @@ from tools.base_mod.trace_original_levelup_native import (
     _original_scene97_download_batch_task,
     _original_download_tsv_file_source_resolver,
     _original_download_tsv_resource_registration_chain,
+    _original_registered_server_family_catalog,
     _original_download_batch_tsv_installed_local_coverage,
     _additional_owner_list_coverage,
     _original_arm64_cfg_successors, _original_arm64_cfg_witness,
@@ -201,6 +203,21 @@ def _synthetic_original_resource_registry_fixture() -> bytearray:
         "<QQq", blob, ORIGINAL_RELA_DYN_OFFSET,
         0xB17D78, 0x403, 0xF98D38
     )
+    return blob
+
+
+
+def _synthetic_original_server_family_catalog_fixture() -> bytearray:
+    """Original opcode/string addresses, synthetic family names only."""
+    blob = bytearray(0x7159C4)
+    for pc, opcode in ORIGINAL_SERVER_FAMILY_CATALOG_ANCHORS.items():
+        struct.pack_into("<I", blob, pc, opcode)
+    blob[0x1918D1:0x1918E3] = b"XImageServer.list\x00"
+    synthetic = b"XImageServer.pack\x00"
+    for i in range(1, 92):
+        synthetic += f"Test{i:03d}Server.list\x00".encode()
+        synthetic += f"Test{i:03d}Server.pack\x00".encode()
+    blob[0x1A0000:0x1A0000 + len(synthetic)] = synthetic
     return blob
 
 
@@ -1096,6 +1113,21 @@ class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
             self.assertNotIn("PRIVATE_ACCOUNT_NOT_LOGGED", repr(report))
             self.assertNotIn("PRIVATE_PACK_NEVER_READ", repr(report))
             self.assertEqual(report["families"]["MNumberServer"]["declared_entries"], 3)
+            pinned_families = {"MNumberServer", "WImageDataServer"}
+            original_only = _additional_owner_list_coverage(
+                root, known_original_families=pinned_families
+            )
+            self.assertEqual(original_only["family_count"], 2)
+            (root / "WrongServer.list").write_bytes(
+                encrypt_names(["download_2.tsv"])
+            )
+            with self.assertRaisesRegex(
+                LevelUpNativeTraceError, "not declared in pinned"
+            ):
+                _additional_owner_list_coverage(
+                    root, known_original_families=pinned_families
+                )
+
 
     def test_owned_additional_list_scan_rejects_missing_duplicate_or_symlink(self):
         from pathlib import Path
@@ -1137,6 +1169,40 @@ class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
                         LevelUpNativeTraceError, "not a regular safe"
                     ):
                         _additional_owner_list_coverage(root)
+
+
+    def test_exact_original_server_families_have_92_list_pack_pairs(self):
+        data = bytes(_synthetic_original_server_family_catalog_fixture())
+        receipt = _original_registered_server_family_catalog(data)
+        self.assertEqual(receipt["count_list_literals"], 92)
+        self.assertEqual(receipt["count_pack_literals"], 92)
+        self.assertEqual(receipt["count_paired_original_server_families"], 92)
+        self.assertIn("XImageServer", receipt["original_server_family_stems"])
+        self.assertIn("Test091Server", receipt["original_server_family_stems"])
+        self.assertIn("XImageServer.list", receipt["one_original_runtime_initializer"])
+        self.assertTrue(receipt["matches_92_registration_loop_row_count"])
+        self.assertFalse(receipt["all_runtime_registered_names_proven"])
+        self.assertFalse(receipt["all_owner_pack_payloads_possessed"])
+        self.assertFalse(receipt["real_original_game_first_boot_local_success"])
+
+    def test_original_server_family_catalog_rejects_opcode_literalmismatch_and_missing_pack(self):
+        source = _synthetic_original_server_family_catalog_fixture()
+        for pc in (0x71599C, 0x7159A0, 0x7159A4, 0x7159A8, 0x7159C0):
+            corrupted = bytearray(source)
+            corrupted[pc] ^= 1
+            with self.subTest(pc=hex(pc)):
+                with self.assertRaises(LevelUpNativeTraceError):
+                    _original_registered_server_family_catalog(bytes(corrupted))
+        corrupted = bytearray(source)
+        corrupted[0x1918D1] = ord("Q")
+        with self.assertRaisesRegex(LevelUpNativeTraceError, "literal drifted"):
+            _original_registered_server_family_catalog(bytes(corrupted))
+        corrupted = bytearray(source)
+        cursor = corrupted.find(b"Test091Server.pack\x00")
+        self.assertGreater(cursor, 0)
+        corrupted[cursor + len(b"Test091Server.pac")] = ord("x")
+        with self.assertRaisesRegex(LevelUpNativeTraceError, "92 paired"):
+            _original_registered_server_family_catalog(bytes(corrupted))
 
     def test_real_game_original_upgrader_cues_are_not_fabricated_hooks(self):
         self.assertEqual(len(NATIVE_SHA256), 64)
