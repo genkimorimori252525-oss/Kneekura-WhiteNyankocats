@@ -1,5 +1,12 @@
 # 独立Android Alpha — オーナーWindows環境と従来の上書きZIP方式（現行）
 
+## 0.3.1 / 未来編1章のお宝を含む最新配布（2026-10-09）
+
+**最新：** `kneekura-alpha-itf1-superior-overlay-20261009.zip`（SHA256 `01a1ea0a9991c8c01a413b13a13dc490b4588e2bd3dabe797b7c807c2bac6b27`）、独立Android versionCode **5**、最新APK SHA `491bf95fe1f494460c280ef1c253ccd25a303bfc31b5dd916f23564d4e30c3c1`。これ以降、本文の`versionCode4`、`HOME-fixed` ZIPは**過去版の説明**や。最新の正しい実行方法・保存状態の契約は [0.3.1独立版手順](independent-alpha-itf1-superior-2026-10-09.md) と [ストーリー初期状態v2](../architecture/kneekura-independent-story-checkpoint-v2.md) にある。
+
+最新ZIPも7ファイルで、既存`にーくらにゃんこ`直下に上書きするだけ。Java resolverは実績あるPS5.1用同一ファイルを維持、`INSTALL-ALPHA.ps1`はversionCode5と新APK SHAのみ更新し、署名鍵・端末・元JPセーブはリセットしない。事前`-CheckPrerequisites`と`adb devices`で準備を確認してから、いつもの`run_independent_alpha_update.ps1 -Apply`で導入する。実機USBは未検証。
+
+
 最終確認：2026-10-09。**この文書を最優先の案内とし、以前の配布ZIPの古いSHAや旧手順は docs/research/failure-repair-history.md の履歴だけとして扱う。**
 
 ## 添付された旧Lv60 ZIPと今回の独立Alpha ZIPは何が同じか
