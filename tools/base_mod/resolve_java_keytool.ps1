@@ -1,55 +1,58 @@
-﻿# Owner-safe JDK executable discovery for Windows PowerShell 5.1.
-# This file must be checked by real Windows PowerShell in CI.
-# Never assume JAVA_HOME/JDK_HOME/PATH or ProgramFiles are set.
+﻿# Owner-safe Java JDK resolver. Source through the Windows PowerShell 5.1 installer.
+# Never touch ADB, APKs, player SAVE or the filesystem other than file discovery.
 function Resolve-JavaKeytool {
-    $localAppDataRoot = $env:LOCALAPPDATA
-    if ([string]::IsNullOrWhiteSpace($localAppDataRoot)) {
-        $localAppDataRoot = [Environment]::GetFolderPath('LocalApplicationData')
-    }
-    if ([string]::IsNullOrWhiteSpace($localAppDataRoot)) {
-        throw 'LOCALAPPDATA is missing; cannot inspect installed Java JDK locations safely.'
-    }
-    # Never Join-Path an optional environment variable before checking it.
-    foreach ($commandName in @('keytool.exe', 'keytool')) {
-        $command = Get-Command -Name $commandName -CommandType Application -ErrorAction SilentlyContinue
-        if ($command -and (Test-Path -LiteralPath $command.Source -PathType Leaf)) {
-            return $command.Source
+    [CmdletBinding()]
+    param()
+
+    foreach ($name in @('keytool.exe', 'keytool')) {
+        $found = Get-Command -Name $name -CommandType Application -ErrorAction SilentlyContinue
+        if ($found -and -not [string]::IsNullOrWhiteSpace($found.Source) -and
+            (Test-Path -LiteralPath $found.Source -PathType Leaf)) {
+            return $found.Source
         }
     }
-    $jdkRoots = New-Object 'System.Collections.Generic.List[string]'
-    foreach ($environmentName in @('JAVA_HOME', 'JDK_HOME')) {
-        $root = [Environment]::GetEnvironmentVariable($environmentName)
-        if (-not [string]::IsNullOrWhiteSpace($root)) { $jdkRoots.Add($root) }
+    $candidates = New-Object 'System.Collections.Generic.List[string]'
+    foreach ($name in @('JAVA_HOME', 'JDK_HOME')) {
+        $home = [Environment]::GetEnvironmentVariable($name)
+        if (-not [string]::IsNullOrWhiteSpace($home)) { $candidates.Add($home.Trim('"')) }
     }
-    foreach ($javaCommandName in @('java.exe', 'java')) {
-        $javaCommand = Get-Command -Name $javaCommandName -CommandType Application -ErrorAction SilentlyContinue
-        if ($javaCommand -and -not [string]::IsNullOrWhiteSpace($javaCommand.Source)) {
-            $jdkRoots.Add((Split-Path -Path (Split-Path -Path $javaCommand.Source -Parent) -Parent))
-        }
-    }
-    $standardRoots = @(
-        (Join-Path $localAppDataRoot 'Programs\Eclipse Adoptium'),
-        (Join-Path $localAppDataRoot 'Android\Studio\jbr')
-    )
-    if (-not [string]::IsNullOrWhiteSpace($env:ProgramFiles)) {
-        $standardRoots += (Join-Path $env:ProgramFiles 'Java')
-        $standardRoots += (Join-Path $env:ProgramFiles 'Eclipse Adoptium')
-    }
-    foreach ($candidateRoot in $standardRoots) {
-        if ([string]::IsNullOrWhiteSpace($candidateRoot)) { continue }
-        if (Test-Path -LiteralPath $candidateRoot -PathType Container) {
-            $jdkRoots.Add($candidateRoot)
-            foreach ($child in @(Get-ChildItem -LiteralPath $candidateRoot -Directory -ErrorAction SilentlyContinue)) {
-                $jdkRoots.Add($child.FullName)
+    foreach ($name in @('java.exe', 'java')) {
+        $cmd = Get-Command -Name $name -CommandType Application -ErrorAction SilentlyContinue
+        if ($cmd -and -not [string]::IsNullOrWhiteSpace($cmd.Source)) {
+            $javaBin = Split-Path -Path $cmd.Source -Parent
+            if (-not [string]::IsNullOrWhiteSpace($javaBin)) {
+                $jdkHome = Split-Path -Path $javaBin -Parent
+                if (-not [string]::IsNullOrWhiteSpace($jdkHome)) { $candidates.Add($jdkHome) }
             }
         }
     }
-    foreach ($jdkRoot in $jdkRoots) {
-        if ([string]::IsNullOrWhiteSpace($jdkRoot)) { continue }
-        foreach ($exe in @('bin\keytool.exe', 'bin\keytool')) {
-            $path = Join-Path -Path $jdkRoot -ChildPath $exe
-            if (Test-Path -LiteralPath $path -PathType Leaf) { return $path }
+    $roots = New-Object 'System.Collections.Generic.List[string]'
+    foreach ($variable in @('ProgramFiles', 'ProgramFiles(x86)')) {
+        $home = [Environment]::GetEnvironmentVariable($variable)
+        if (-not [string]::IsNullOrWhiteSpace($home)) {
+            foreach ($segment in @('Java', 'Eclipse Adoptium', 'Microsoft', 'Zulu')) {
+                $roots.Add((Join-Path -Path $home -ChildPath $segment))
+            }
+            $roots.Add((Join-Path -Path $home -ChildPath 'Android\Android Studio\jbr'))
         }
     }
-    throw 'Java keytool.exe not found. Install JDK 17 or set JAVA_HOME to the JDK root (e.g. C:\\Program Files\\Java\\jdk-17); no APK installed.'
+    $local = [Environment]::GetEnvironmentVariable('LOCALAPPDATA')
+    if (-not [string]::IsNullOrWhiteSpace($local)) {
+        $roots.Add((Join-Path -Path $local -ChildPath 'Programs\Eclipse Adoptium'))
+        $roots.Add((Join-Path -Path $local -ChildPath 'Android\Studio\jbr'))
+    }
+    foreach ($root in $roots) {
+        if ([string]::IsNullOrWhiteSpace($root) -or
+            -not (Test-Path -LiteralPath $root -PathType Container)) { continue }
+        $candidates.Add($root)
+        foreach ($child in @(Get-ChildItem -LiteralPath $root -Directory -ErrorAction SilentlyContinue)) {
+            $candidates.Add($child.FullName)
+        }
+    }
+    foreach ($root in $candidates) {
+        if ([string]::IsNullOrWhiteSpace($root)) { continue }
+        $exe = Join-Path -Path $root -ChildPath 'bin\keytool.exe'
+        if (Test-Path -LiteralPath $exe -PathType Leaf) { return $exe }
+    }
+    throw 'Java JDK keytool.exe not found. Install JDK 17 or add JDK\bin to PATH. JAVA_HOME is optional. No APK was installed.'
 }
