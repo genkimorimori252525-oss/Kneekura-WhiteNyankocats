@@ -1054,6 +1054,112 @@ def _original_normal_xp_purchase_save_routes(elf: bytes) -> dict[str, Any]:
     }
 
 
+
+def _original_arm64_cfg_all_direct_paths_hit_save(
+    elf: bytes,
+    start: int,
+    end: int,
+    entry: int,
+    save_calls: frozenset[int],
+    *,
+    max_nodes: int = 20000,
+) -> dict[str, Any]:
+    """Fail closed if ANY modeled direct CFG exit bypasses the save calls.
+
+    This checks only finite DIRECT instruction-flow. Every BL/BLR is assumed
+    to return; exceptions, longjmp, syscall termination, IO failures and
+    game-side dynamically dispatched callbacks are unproven.
+    """
+    from collections import deque
+    if (not isinstance(elf, bytes)
+        or not isinstance(save_calls, frozenset) or not save_calls
+        or any(type(n) is not int for n in (start, end, entry, max_nodes))
+        or any(type(n) is not int for n in save_calls)
+        or any(n % 4 for n in (start, end, entry, *save_calls))
+        or not (0 <= start <= entry < end <= len(elf))
+        or any(not (start <= n < end) for n in save_calls)
+        or not 0 < max_nodes <= 50000):
+        raise LevelUpNativeTraceError("invalid original save-gate CFG bounds")
+    queue = deque([entry])
+    seen: set[int] = set()
+    seen_savers: set[int] = set()
+    ordinary_edges: dict[int, tuple[int, ...]] = {}
+    while queue:
+        pc = queue.popleft()
+        if pc in seen:
+            continue
+        seen.add(pc)
+        if len(seen) > max_nodes:
+            raise LevelUpNativeTraceError("original save-gate CFG exceeds node limit")
+        if pc in save_calls:
+            seen_savers.add(pc)
+            continue
+        successors = _original_arm64_cfg_successors(elf, pc)
+        if not successors:
+            raise LevelUpNativeTraceError(
+                f"original upgrade path terminates before SAVE_DATA at {_hex(pc)}"
+            )
+        if any(next_pc < start or next_pc >= end for next_pc in successors):
+            raise LevelUpNativeTraceError(
+                f"original upgrade path escapes save-gate range at {_hex(pc)}"
+            )
+        ordinary_edges[pc] = tuple(next_pc for next_pc in successors
+                                   if next_pc not in save_calls)
+        queue.extend(next_pc for next_pc in successors if next_pc not in seen)
+    if not seen_savers:
+        raise LevelUpNativeTraceError("original upgrade path found no SAVE_DATA calls")
+    # The preceding checks exclude direct exits. Also reject a reachable loop
+    # that could run forever without hitting a saver (Kahn topological order).
+    indegree = {pc: 0 for pc in ordinary_edges}
+    for successors in ordinary_edges.values():
+        for next_pc in successors:
+            if next_pc in indegree:
+                indegree[next_pc] += 1
+    ready = deque(pc for pc, count in indegree.items() if count == 0)
+    reduced = 0
+    while ready:
+        pc = ready.popleft()
+        reduced += 1
+        for next_pc in ordinary_edges[pc]:
+            if next_pc in indegree:
+                indegree[next_pc] -= 1
+                if indegree[next_pc] == 0:
+                    ready.append(next_pc)
+    if reduced != len(ordinary_edges):
+        raise LevelUpNativeTraceError(
+            "original upgrade has reachable cycle before SAVE_DATA call"
+        )
+    return {
+        "conditional_static_direct_paths_hit_a_saver": True,
+        "code_range": [_hex(start), _hex(end)],
+        "source_after_level_increment": _hex(entry),
+        "save_calls": [_hex(pc) for pc in sorted(seen_savers)],
+        "reachable_nodes": len(seen),
+        "non_save_nodes": len(ordinary_edges),
+        "early_direct_exits_found": 0,
+        "nonterminating_direct_cycles_found": 0,
+        "assumption": "BL/BLR returns normally; dynamic callbacks/exceptions and storage IO are out of scope",
+        "real_runtime_guaranteed_save": False,
+        "durable_disk_fsync_verified": False,
+        "local_zero_egress_runtime_attached": False,
+    }
+
+
+def _original_xp_purchase_save_gate(elf: bytes) -> dict[str, Any]:
+    """Check exact pinned native's post-Lv+1 direct CFG, not Android result."""
+    result = _original_arm64_cfg_all_direct_paths_hit_save(
+        elf, 0x850000, 0x85B000, 0x8583B8,
+        frozenset((0x859A40, 0x85A748))
+    )
+    if (result["save_calls"] != ["0x859a40", "0x85a748"]
+        or result["reachable_nodes"] != 244
+        or result["non_save_nodes"] != 242):
+        raise LevelUpNativeTraceError(
+            "original JP native post-level CFG structural counts drifted"
+        )
+    return result
+
+
 def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict:
     digest = sha256(elf).hexdigest()
     if digest != expected_sha or expected_sha != NATIVE_SHA256:
@@ -1107,6 +1213,7 @@ def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict
         "original_save_restore_flow": _original_save_restore_flow(elf),
         "original_cap_increment_item_transaction": _original_cap_increment_item_transaction(elf),
         "original_normal_xp_purchase_save_routes": _original_normal_xp_purchase_save_routes(elf),
+        "original_xp_purchase_save_gate": _original_xp_purchase_save_gate(elf),
         "native_original_game_upgrader_getter_identified": True,
         "native_original_game_upgrade_purchase_hook_verified": False,
         "unit_cap_purchase_hook_attached": False,
