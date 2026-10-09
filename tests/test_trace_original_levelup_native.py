@@ -14,9 +14,11 @@ from tools.base_mod.trace_original_levelup_native import (
     ORIGINAL_EFFECTIVE_CAP_GETTER_ANCHORS, ORIGINAL_CAP_GETTER_LEVEL_LABEL,
     ORIGINAL_UPGRADE_PURCHASE_ANCHORS,
     ORIGINAL_NATIVE_SAVE_SERIALIZATION_ANCHORS,
+    ORIGINAL_NATIVE_SAVE_RESTORE_ANCHORS,
     LevelUpNativeTraceError,
     _original_unit_data_loader, _original_effective_level_cap_getter,
     _original_upgrade_purchase_flow, _original_save_data_serialization,
+    _original_save_restore_flow,
     _levelmax_popup_branch,
     _popup_value_call_chain,
     direct_adrp_add_refs, trace_exact_native,
@@ -44,6 +46,16 @@ def _synthetic_loader_fixture() -> bytearray:
     }.items():
         struct.pack_into("<I", payload, address, opcode)
     return payload
+
+
+
+def _synthetic_save_restore_fixture() -> bytearray:
+    # Proprietary original native binary is never copied into tests or GitHub.
+    blob = bytearray(0x8BA010)
+    blob[0x191955:0x19195F] = b"SAVE_DATA\x00"
+    for at, opcode in ORIGINAL_NATIVE_SAVE_RESTORE_ANCHORS.items():
+        struct.pack_into("<I", blob, at, opcode)
+    return blob
 
 
 class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
@@ -296,6 +308,44 @@ class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
         with self.assertRaisesRegex(LevelUpNativeTraceError,
                                      "bounds/name drifted"):
             _original_save_data_serialization(bytes(valid))
+
+    def test_native_original_save_restore_xp_current_and_cap_rows(self):
+        evidence = _original_save_restore_flow(
+            bytes(_synthetic_save_restore_fixture())
+        )
+        self.assertEqual(evidence["read_entry"], "0x8b43a4")
+        self.assertEqual(evidence["deserialize_game_context"],
+                         "0x8b44ac -> 0x8a669c")
+        self.assertEqual(evidence["writer_open"],
+                         "0x8b46fc -> 0x35e410")
+        self.assertIn("0x8a69f8", evidence["restore_xp"])
+        self.assertIn("context+0x47ba4+cat*8",
+                      evidence["restore_current_levels"])
+        self.assertIn("context+0x3ad80c+cat*8",
+                      evidence["restore_max_cap_increments"])
+        self.assertFalse(evidence["durable_fsync_or_atomic_commit_proven"])
+        self.assertFalse(evidence["successful_purchase_triggers_save_proven"])
+        self.assertFalse(evidence["network_independent_fresh_game_profile_proven"])
+        self.assertFalse(evidence["safe_original_native_game_patch_attached"])
+
+    def test_native_restore_distinguishes_read_and_write_failures(self):
+        clean = _synthetic_save_restore_fixture()
+        for pc in (0x8B4404, 0x8B441C, 0x8B4444, 0x8B4448,
+                   0x8B44AC, 0x8A69EC, 0x8A69F8,
+                   0x8A91E4, 0x8A920C, 0x8A921C, 0x8A9230,
+                   0x8AD14C, 0x8AD174, 0x8AD180, 0x8AD194,
+                   0x8B46FC, 0x8B4700, 0x8B97E8):
+            with self.subTest(site=hex(pc)):
+                broken = bytearray(clean)
+                broken[pc] ^= 1
+                with self.assertRaisesRegex(
+                        LevelUpNativeTraceError,
+                        "original save restore native opcode drifted"):
+                    _original_save_restore_flow(bytes(broken))
+        wrong_name = bytearray(clean)
+        wrong_name[0x191955] = ord("x")
+        with self.assertRaisesRegex(LevelUpNativeTraceError, "bounds/name"):
+            _original_save_restore_flow(bytes(wrong_name))
 
     def test_real_game_original_upgrader_cues_are_not_fabricated_hooks(self):
         self.assertEqual(len(NATIVE_SHA256), 64)
