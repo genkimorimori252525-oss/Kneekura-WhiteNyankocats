@@ -11,8 +11,10 @@ import unittest
 from tools.base_mod.trace_original_levelup_native import (
     CUES, EXPECTED_ANCHORS, NATIVE_SHA256, ORIGINAL_UNIT_DATA_ANCHORS,
     ORIGINAL_UNIT_DATA_BOOT_ANCHORS, ORIGINAL_UNIT_SOURCE_STRINGS,
+    ORIGINAL_EFFECTIVE_CAP_GETTER_ANCHORS, ORIGINAL_CAP_GETTER_LEVEL_LABEL,
     LevelUpNativeTraceError,
-    _original_unit_data_loader, _levelmax_popup_branch,
+    _original_unit_data_loader, _original_effective_level_cap_getter,
+    _levelmax_popup_branch,
     _popup_value_call_chain,
     direct_adrp_add_refs, trace_exact_native,
 )
@@ -170,6 +172,46 @@ class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
         blob[0x9C598C] ^= 1
         with self.assertRaisesRegex(LevelUpNativeTraceError, "startup callsite drifted"):
             _original_unit_data_loader(bytes(blob))
+
+    def test_original_native_cap_getter_is_real_col18_plus_save_min_col50(self):
+        # Keep owner original source private. Synthetic pinned native instruction
+        # fixture proves the exact getter, saved high16, hard cap and UI caller.
+        blob = bytearray(0x821918)
+        where, level = ORIGINAL_CAP_GETTER_LEVEL_LABEL
+        blob[where:where + len(level)] = level
+        for address, opcode in ORIGINAL_EFFECTIVE_CAP_GETTER_ANCHORS.items():
+            struct.pack_into("<I", blob, address, opcode)
+        actual = _original_effective_level_cap_getter(bytes(blob))
+        self.assertEqual(actual["getter_entry"], "0x53b2bc")
+        self.assertEqual(
+            actual["formula"],
+            "min(unitbuy_col18 + decoded_saved_base_increment, unitbuy_col50)"
+        )
+        self.assertEqual(actual["saved_increment_read"],
+                         "0x53b330 -> 0x9cc024 (decoded upper 16 bits)")
+        self.assertEqual(actual["min_function"], "0x53b3ac -> 0x349c94")
+        self.assertEqual(actual["verified_original_caller"],
+                         "0x821904 -> 0x53b2bc")
+        self.assertFalse(actual["upgrade_button_purchase_caller_identified"])
+        self.assertFalse(actual["xp_or_catseye_debit_identified"])
+        self.assertFalse(actual["original_game_zero_egress_local_save_attached"])
+
+    def test_native_cap_getter_rejects_wrong_min_and_csv_offset(self):
+        original = bytearray(0x821918)
+        where, level = ORIGINAL_CAP_GETTER_LEVEL_LABEL
+        original[where:where + len(level)] = level
+        for pc, opcode in ORIGINAL_EFFECTIVE_CAP_GETTER_ANCHORS.items():
+            struct.pack_into("<I", original, pc, opcode)
+        for drift in (0x53B2F0, 0x53B328, 0x53B3AC, 0x349C98, 0x821904):
+            blob = bytearray(original)
+            blob[drift] ^= 1
+            with self.assertRaisesRegex(LevelUpNativeTraceError,
+                                         "getter opcode drifted"):
+                _original_effective_level_cap_getter(bytes(blob))
+        original[where] = ord("x")
+        with self.assertRaisesRegex(LevelUpNativeTraceError,
+                                     "level UI label string drifted"):
+            _original_effective_level_cap_getter(bytes(original))
 
     def test_real_game_original_upgrader_cues_are_not_fabricated_hooks(self):
         self.assertEqual(len(NATIVE_SHA256), 64)
