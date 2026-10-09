@@ -10,6 +10,7 @@ import unittest
 
 from tools.base_mod.trace_original_levelup_native import (
     CUES, EXPECTED_ANCHORS, NATIVE_SHA256, LevelUpNativeTraceError,
+    _levelmax_popup_branch,
     direct_adrp_add_refs, trace_exact_native,
 )
 
@@ -65,6 +66,20 @@ class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
             direct_adrp_add_refs(
                 bytes(code), 0x2900, text_start=0x1000, text_end=0x5100
             )
+
+    def test_exact_original_levelmax_popup_compare_selects_two_variants(self):
+        # Requires the pinned original branch opcodes to prove only the
+        # 0x4e3068 cmp w0,#1 and 0x4e306c b.ne->0x4e3238 structure.
+        blob = bytearray(0x4E3240)
+        struct.pack_into("<II", blob, 0x4E3068, 0x7100041F, 0x54000E61)
+        branch = _levelmax_popup_branch(bytes(blob))
+        self.assertEqual(branch["branch_target"], "0x4e3238")
+        self.assertEqual(branch["fallthrough_label"], "drop_popup_chara_levelmax1")
+        self.assertEqual(branch["branch_label"], "drop_popup_chara_levelmax2")
+        self.assertFalse(branch["underlying_upgrade_limit_getter_identified"])
+        blob[0x4E3068] ^= 1
+        with self.assertRaises(LevelUpNativeTraceError):
+            _levelmax_popup_branch(bytes(blob))
 
     def test_real_game_original_upgrader_cues_are_not_fabricated_hooks(self):
         self.assertEqual(len(NATIVE_SHA256), 64)
