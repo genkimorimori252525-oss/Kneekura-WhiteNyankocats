@@ -207,6 +207,7 @@ ORIGINAL_UNIT_DATA_ANCHORS = {
     0x8A2D1C: 0x54FFFDC1,  # next col while index<63
     0x8A2D24: 0x91040339,  # next cat record +=256
     0x8A2D28: 0xF10DCAFF,  # 882 cat records
+    0x8A2D2C: 0x54FFFCA1,  # next unitbuy cat record
     0x8A2D38: 0x90FFC789,  # unitlevel.csv ADRP
     0x8A2D3C: 0x91253929,  # unitlevel.csv ADD
     0x8A2D6C: 0x94042AD3,  # open unitlevel.csv
