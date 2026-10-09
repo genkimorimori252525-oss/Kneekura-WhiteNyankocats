@@ -112,6 +112,17 @@ python -m tools.localcore.opsctl calendar --pack ops/seasons/2026-autumn-prototy
 
 これらは現地JSTの設計時刻であり、PONOSの今日/今週の実際の開催予定の転載ではない。
 
+
+### バージョン更新差分を監査する仕組み（追加済み）
+
+さらに tools/localcore/ops_diff.py に、Jollyが運営パック改訂をレビューする read-only ツールを実装した。新旧season packを読み、revisionの単調増加、stable IDの種類/参照先のすり替え拒否、追加・変更・廃止されたschedule/content、ready真→偽のダウングレードを一覧にする。元のプレイヤーSAVEを変更したり、公開するものではない。
+
+~~~powershell
+python -m tools.localcore.ops_diff --before ops/seasons/2026-autumn-prototype.json --after private/update-1.02-candidate.json
+~~~
+
+後継パックは必ずrevisionを上げ、元のイベント・報酬・ゲーム進行の履歴はKNEEKURA_SAVE_V1の別領域で保持する。**差分監査のPASS＝端末へ配信済み・公開承認済みではない**。
+
 ## 5. 未実装と完成判定
 
 初期段階で元PONOSの素材・確率・開催スケジュールを端末から直接同期しない。本人が所有する元素材を一度取り込み、Kneekura運営は独自の内容・時間を発行する。
