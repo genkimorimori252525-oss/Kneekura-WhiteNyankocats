@@ -82,7 +82,7 @@
     "value_semantic_meaning": "UNKNOWN: original game stores a bytewise XOR-encoded value; value=1 selects first level-max popup; NOT yet proven per-unit level cap"
   },
   "source_code_tool": "tools/base_mod/trace_original_levelup_native.py",
-  "next_verified_code_task": "Trace original native first-game state initialization AFTER SAVE_DATA reader returns false (0x9bb794 and caller of 0x9bb760), prove existence and compatibility of native new-game save writer under separate app package with no INTERNET; only then bind MAX XP/catfood/NP/items + Level60 cap upgrade to native in-game. Avoid replacing missing SAVE with a rejected official save or independent lookalike.",
+  "next_verified_code_task": "Identify which original app lifecycle/UI dispatch constructs and runs save loader worker 0x492b80 and where its success/failure status vtable 0x4930b8 is consumed; distinguish normal virgin first boot from import/recovery. Use source-native and research-only save-presence debug probe to show whether real original engine itself creates local SAVE_DATA on an isolated device, then bind independent no-account local player authority and test original Lv60, XP/CatsEyes, reboot.",
   "release_status": {
     "original_ui_level_cap_patch_attached": false,
     "level_purchase_action_attached": false,
@@ -94,7 +94,9 @@
     "original_native_save_reload_field_map_proven": true,
     "original_native_normal_xp_purchase_to_save_conditional_routes_proven": true,
     "original_native_fresh_profile_full_offline_verified": false,
-    "original_native_level60_real_ui_passed": false
+    "original_native_level60_real_ui_passed": false,
+    "original_game_virgin_player_initialization_proven": false,
+    "original_device_boot_after_missing_SAVE_verified": false
   },
   "restrictions": "No full proprietary data, disassembly dumps, source APK, original SAVE_DATA, private signing keys or bypass code committed; this is metadata only.",
   "unit_native_source_table_sequence": {
@@ -510,7 +512,19 @@
       "New package isolates from previous trace and vendor installs; no original PONOS SAVE bytes copied, decoded, or reused.",
       "Original native SAVE_DATA absent read reports failure to caller; follow-on original first-game initialization has NOT been found or proven.",
       "Original-game compatibility is not certified by JVM Activity compile stubs, source CFG analysis, standalone Alpha Android build, or CI tests."
-    ]
+    ],
+    "source_only_save_lifecycle_probe": {
+      "location": "bridge/java/MyActivity.java.in::probeLocalGameSaveFiles",
+      "scope": "research flavor jp.kn.local.battlecats only",
+      "source": "original JNI read/write both use Activity.getFilesDir",
+      "fields": "SAVE_DATA, SAVE_DATA4, SAVE_DATA8; presence, length only",
+      "anti_leak": "canonical containment; symlink outside app root marked unsafe; no bytes/account identifiers/absolute paths in debug messages",
+      "deduplicates_identical_snapshots": true,
+      "observed_first_absence_JVM_fixture": true,
+      "observed_new_local_fixture_after_restart_JVM": true,
+      "real_original_native_gameplay_SAVE_observed": false,
+      "device_logcat_evidence_observed": false
+    }
   },
   "original_empty_save_native_result": {
     "provenance": "exact original owned JP15.7.1 ARM64 native source SHA256 333d2974ab2ff881fd70087fd62dea7d12d82addbc55cab2f2a675ad67e3a7e2",
@@ -522,6 +536,32 @@
     "startup_false_branch": "0x9bb794 TBZ -> 0x9bba44",
     "other_original_first_game_initializer_verified": false,
     "source_script": "tools/base_mod/trace_original_levelup_native.py::_original_missing_save_read_path",
-    "test_script": "tests/test_trace_original_levelup_native.py"
+    "test_script": "tests/test_trace_original_levelup_native.py",
+    "correction": "Original 0x9bb764 reader failure returns through async worker 0x492b80. This is not proof that new player initialization is absent or first boot must fail."
+  },
+  "original_save_loader_async_worker": {
+    "pinned_native_sha256": "333d2974ab2ff881fd70087fd62dea7d12d82addbc55cab2f2a675ad67e3a7e2",
+    "proof": "exact AArch64 instructions, direct calls, branch targets and ELF .rela.dyn vtable relative entries verified read-only",
+    "save_reader": "0x8b43a4",
+    "read_stage": "0x9bb764 -> 0x8b43a4",
+    "worker": "0x492b80",
+    "worker_invocation": "0x493200 -> 0x492b80 from std::thread callback",
+    "thread_setup": "0x492d40/0x492df0 pthread_create",
+    "post_read_result": "0x492be8 BL -> 0x9bb764, 0x492bec TBZ failed -> 0x492d28",
+    "post_read_check": "0x492c6c BL -> 0x9c571c; false -> 0x492d28",
+    "success_flag": "0x492d20 STRB at state+8",
+    "failure_flag": "0x492d28 MOV #1 then 0x492d2c STRB at state+9",
+    "status_virtual_function": "0x4930b8 (R_AARCH64_RELATIVE from 0xaefb58)",
+    "status_probes_success": "0x4930d8 LDRB state+8",
+    "status_probes_failure": "0x4930fc and 0x493128 LDRB state+9",
+    "progress_virtual_function": "0x4930a4 (R_AARCH64_RELATIVE from 0xaefb50)",
+    "thread_start_virtual_function": "0x492d40 (R_AARCH64_RELATIVE from 0xaefb48)",
+    "JNI_appInit_directly_invokes_this_worker_proven": false,
+    "original_virgin_first_boot_schedules_this_worker_proven": false,
+    "native_fresh_game_state_generator_discovered": false,
+    "runtime_on_device_accepted": false,
+    "correction": "Prior evidence referred to 0x9bb764 as original startup SAVE reader. It is concretely called from the verified async worker; a mandatory FIRST-BOOT callsite and native new-game behavior remain UNVERIFIED. Do not patch this worker as a universal initializer.",
+    "test_module": "tests/test_trace_original_levelup_native.py",
+    "script": "tools/base_mod/trace_original_levelup_native.py"
   }
 }
