@@ -446,6 +446,44 @@ class StaticHttpBridgeTests(unittest.TestCase):
                     self.assertIn("ROOT=BLOCKED", refused.stdout)
                     marker.unlink()
 
+    def test_local_research_builder_rejects_networked_or_legacy_save_modes_before_io(self):
+        from tools.base_mod.build_owned_static_http_bridge import (
+            build_owned_static_http_bridge,
+        )
+        from tools.base_mod.inject_java_http_bridge import inject_bridge_split_set
+        from tools.base_mod.verify_static_http_bridge import verify_static_http_bridge
+
+        for no_internet, subdir, backup in (
+            (False, False, False),
+            (True, True, False),
+            (True, False, True),
+        ):
+            with self.subTest(no_internet=no_internet, subdir=subdir, backup=backup):
+                with self.assertRaisesRegex(
+                        ValueError, "local research requires no-INTERNET"):
+                    build_owned_static_http_bridge(
+                        Path("missing-original-source.zip"),
+                        flavor="local-research",
+                        shim=Path("missing-shim"),
+                        keystore=Path("missing-signing-key"),
+                        alias="not-used", storepass="not-used",
+                        output_dir=Path("must-not-create"),
+                        research_isolate_original_native_files_dir=subdir,
+                        research_deny_internet=no_internet,
+                        enable_backup_offline_replay=backup,
+                    )
+        with self.assertRaisesRegex(ValueError, "must remove Android INTERNET"):
+            inject_bridge_split_set(
+                Path("must-not-read"), Path("must-not-write"),
+                flavor="local-research",
+                bridge_dex_path=Path("missing.dex"),
+            )
+        with self.assertRaisesRegex(ValueError, "must omit INTERNET"):
+            verify_static_http_bridge(
+                Path("must-not-read"), Path("must-not-write"),
+                flavor="local-research", replay_enabled=False,
+            )
+
     def test_original_owner_builder_rejects_nonresearch_private_save_mode(self) -> None:
         from tools.base_mod.build_owned_static_http_bridge import (
             build_owned_static_http_bridge,
