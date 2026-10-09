@@ -67,7 +67,7 @@
     "branch_target": "0x4e3238",
     "falls_through_to": "0x4e3070",
     "meaning_of_comparison": "UNDETERMINED",
-    "actual_upgrade_limit_getter": "NOT_FOUND",
+    "actual_upgrade_limit_getter": "POPUP_BRANCH_ONLY_NOT_THE_CAP_GETTER; VERIFIED_DIFFERENT_GETTER_0x53b2bc",
     "value_callee": "0x9cbf94",
     "value_callee_opcodes": {
       "caller_bl": "0x9413a3cd",
@@ -82,12 +82,13 @@
     "value_semantic_meaning": "UNKNOWN: original game stores a bytewise XOR-encoded value; value=1 selects first level-max popup; NOT yet proven per-unit level cap"
   },
   "source_code_tool": "tools/base_mod/trace_original_levelup_native.py",
-  "next_verified_code_task": "Follow consumers of XOR-decoded unitbuy.csv column18 at native context+0x4b0a8+asset_index*0x100, identify actual per-cat cap calculation and UI purchase + CatsEye/XP + new local save writer without editing owner original SAVE.",
+  "next_verified_code_task": "Trace native original upgrade button purchase call path to effective cap getter 0x53b2bc, XP/CatsEye debit and level write; wire narrow safe offline-owned save provider and validate original gameplay UI before release",
   "release_status": {
     "original_ui_level_cap_patch_attached": false,
     "level_purchase_action_attached": false,
     "real_original_game_verified": false,
-    "full_offline_game_verified": false
+    "full_offline_game_verified": false,
+    "original_native_effective_cap_formula_proven": true
   },
   "restrictions": "No full proprietary data, disassembly dumps, source APK, original SAVE_DATA, private signing keys or bypass code committed; this is metadata only.",
   "unit_native_source_table_sequence": {
@@ -131,5 +132,21 @@
     "original_game_lv60_purchase_passed": false,
     "full_local_save_connected": false,
     "correction_note": "Prior 0x8a2eb4/0x8a2eb8 was mislabeled as unitbuy.csv col18; exact original code switches to unitlevel.csv immediately before this loop. Corrected after inspecting file switch at 0x8a2d38/0x8a2d6c. The real unitbuy col18 writes via XOR loop at 0x8a2cd4..0x8a2d1c."
+  },
+  "verified_native_effective_cap_getter": {
+    "proof": "PINNED_OWNER_ORIGINAL_ARM64_OPCODES_ONLY",
+    "entry": "0x53b2bc",
+    "src_base": "unitbuy.csv column18 XOR-decoded at per-asset native context+0x4b0a8+asset_index*0x100",
+    "saved_increment": "0x53b330 -> 0x9cc024, upper16 decoded per-unit max_upgrade_level from native context+0x3ad80c+asset_index*8",
+    "src_native_limit": "unitbuy.csv column50 XOR-decoded from per-asset record+0xc8",
+    "min_tail": "0x53b3ac B -> 0x349c94 (cmp w0,w1; csel w0,w0,w1,lt)",
+    "formula": "min(unitbuy_col18 + decoded_saved_base_increment, unitbuy_col50)",
+    "confirmed_caller": "0x821904 BL -> 0x53b2bc, followed by integer-to-string conversion at 0x82190c with original level string nearby",
+    "original_upgrade_ui_cap_getter_identified": true,
+    "original_upgrade_button_purchase_hook_identified": false,
+    "xp_or_catseye_purchase_debit_verified": false,
+    "local_game_save_writer_attached": false,
+    "device_e2e_playtest_passed": false,
+    "result_status": "EXACT_SOURCE_CAP_FORMULA_IDENTIFIED_NO_PATCH_APPLIED"
   }
 }
