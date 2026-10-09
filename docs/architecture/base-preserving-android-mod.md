@@ -1,5 +1,8 @@
 # Kneekura WhiteNyankocats — Base-Preserving Android Mod Design
 
+> **Reclassified 2026-10-09:** the original-game host described below is a **research/compatibility candidate, not a demonstrated fully offline product**. The previously preferred original network fallback and original SAVE_DATA format do not meet the new [zero-egress/local-authority P0 contract](2026-10-09-complete-local-offline-audit.md). Preserve the UI only when the entire binary passes network and save-independence gates; otherwise choose an independent offline host. Do not certify or install original-host builds as fully local based on existing parity/CI tests.
+
+
 Status: proposed current architecture after the 2026-10-06 direction correction.
 
 Target anchor: JP 15.7.1, exact verified user-owned APK/export.
