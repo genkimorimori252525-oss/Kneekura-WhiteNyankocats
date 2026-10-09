@@ -1686,6 +1686,63 @@ def _original_app_launch_result_scene_dispatch(elf: bytes) -> dict[str, Any]:
     }
 
 
+
+# The two concrete TARGET scene entry points reached by AppLaunchLoad's
+# successful-result branch are different routines in the original engine.
+# Neither has been shown to be the legitimate virgin-game SAVE generator.
+ORIGINAL_APP_LAUNCH_TARGET_SCENE_ENTRY_ANCHORS = {
+    0x71C9EC: 0x7101851F,  # scene97 comparison
+    0x71C9F0: 0x540023C0,  # scene97 -> 0x71ce68
+    0x71CE68: 0x529F5C17,  # scene97 dispatch branch start
+    0x71CE78: 0x940190BE,  # scene97 handler helper
+    0x71CE80: 0x940023E7,  # scene97 handler game context helper
+    0x71C504: 0x7101A11F,  # scene104 comparison
+    0x71C508: 0x54008C41,  # not scene104 -> 0x71d690
+    0x71C50C: 0xB0FFD4A8,  # scene104 dispatch branch start
+    0x71C518: 0x97F13268,  # scene104 helper
+}
+
+
+def _original_app_launch_target_scene_entries(elf: bytes) -> dict[str, Any]:
+    """Source-pin scene 97/104 handlers, not their gameplay meaning."""
+    if len(elf) < 0x71CE84:
+        raise LevelUpNativeTraceError("original 97/104 target scenes truncated")
+    for pc, opcode in ORIGINAL_APP_LAUNCH_TARGET_SCENE_ENTRY_ANCHORS.items():
+        if _u32(elf, pc) != opcode:
+            raise LevelUpNativeTraceError(
+                f"original AppLaunchLoad target-scene opcode drift at {_hex(pc)}"
+            )
+    for pc, target in (
+        (0x71CE78, 0x781170),
+        (0x71CE80, 0x725E1C),
+        (0x71C518, 0x368EB8),
+    ):
+        if _decode_relative_bl(elf, pc) != target:
+            raise LevelUpNativeTraceError(
+                f"original AppLaunchLoad target-scene callee drift at {_hex(pc)}"
+            )
+    for pc, target in (
+        (0x71C9F0, 0x71CE68),
+        (0x71C508, 0x71D690),
+    ):
+        if target not in _original_arm64_cfg_successors(elf, pc):
+            raise LevelUpNativeTraceError(
+                f"original AppLaunchLoad target-scene branch drift at {_hex(pc)}"
+            )
+    return {
+        "status": "SOURCE_PINNED_ORIGINAL_APP_LAUNCH_SCENE97_AND_SCENE104_ENTRY_HANDLERS",
+        "scene97_branch": "0x71c9ec CMP #97; 0x71c9f0 BEQ -> 0x71ce68",
+        "scene97_handler_calls": ["0x71ce78 -> 0x781170", "0x71ce80 -> 0x725e1c"],
+        "scene104_branch": "0x71c504 CMP #104; 0x71c508 B.NE -> 0x71d690; scene104 at 0x71c50c",
+        "scene104_handler_call": "0x71c518 -> 0x368eb8",
+        "account_free_virgin_player_creation_in_scene97_proven": False,
+        "account_free_virgin_player_creation_in_scene104_proven": False,
+        "native_scene_transitions_observed_on_device": False,
+        "original_game_player_save_created_or_reloaded": False,
+        "gameplay_level60_finished": False,
+    }
+
+
 def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict:
     digest = sha256(elf).hexdigest()
     if digest != expected_sha or expected_sha != NATIVE_SHA256:
@@ -1746,6 +1803,7 @@ def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict
         "original_save_worker_virtual_status": _original_save_worker_virtual_status(elf),
         "original_app_launch_scene_from_save_presence": _original_app_launch_scene_from_save_presence(elf),
         "original_app_launch_result_scene_dispatch": _original_app_launch_result_scene_dispatch(elf),
+        "original_app_launch_target_scene_entries": _original_app_launch_target_scene_entries(elf),
         "native_original_game_upgrader_getter_identified": True,
         "native_original_game_upgrade_purchase_hook_verified": False,
         "original_native_conditional_xp_purchase_to_save_calls_proven": True,
