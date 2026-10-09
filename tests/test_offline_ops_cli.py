@@ -35,7 +35,7 @@ class OfflineOpsCliSmokeTests(unittest.TestCase):
         snapshot = json.loads(result.stdout)["snapshot"]
         self.assertEqual(snapshot["active"]["gacha"], [])
         self.assertEqual(snapshot["active"]["stage"], [])
-        self.assertEqual(len(snapshot["preview"]["notice"]), 1)
+        self.assertEqual(len(snapshot["preview"]["notice"]), 3)
         self.assertTrue(any(x["kind"] == "stage" for x in snapshot["blocked"]))
 
     def test_windows_outside_season_not_rendered(self):
