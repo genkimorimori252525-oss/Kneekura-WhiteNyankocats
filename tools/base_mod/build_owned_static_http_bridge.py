@@ -46,6 +46,7 @@ def build_owned_static_http_bridge(
     storepass: str,
     output_dir: Path,
     enable_backup_offline_replay: bool = False,
+    research_isolate_original_native_files_dir: bool = False,
     keypass: str | None = None,
     zipalign: str | None = None,
     apksigner: str | None = None,
@@ -56,6 +57,8 @@ def build_owned_static_http_bridge(
 ) -> dict:
     if flavor not in FLAVOR_PACKAGES:
         raise ValueError(f"unknown flavor: {flavor}")
+    if research_isolate_original_native_files_dir and flavor != "research":
+        raise ValueError("original native files research isolation requires research flavor")
 
     export_zip = export_zip.resolve()
     shim = shim.resolve()
@@ -93,6 +96,7 @@ def build_owned_static_http_bridge(
     bridge_build = build_bridge_dex(
         flavor=flavor,
         enabled=enable_backup_offline_replay,
+        isolate_original_native_files_dir=research_isolate_original_native_files_dir,
         output=bridge_dex,
         javac=javac,
         d8=d8,
@@ -147,8 +151,9 @@ Flavor: {flavor}
 Package: {package_name}
 Launcher: {launcher}
 Backup offline replay enabled: {str(enable_backup_offline_replay).lower()}
+Original native file root isolation (RESEARCH ONLY): {str(research_isolate_original_native_files_dir).lower()}
 
-This build contains NO Frida Gadget.
+This build contains NO Frida Gadget.\nThis is a research-only, network-capable original native host: the file-root\noption DOES NOT certify a fresh independent SAVE, game boot, or zero network.
 
 Install every APK together:
   adb install-multiple --no-streaming -r *.apk
@@ -177,6 +182,9 @@ Final device smoke should be performed only after repository parity is green.
         "package": package_name,
         "launcher": launcher,
         "backup_offline_replay_enabled": enable_backup_offline_replay,
+        "research_original_native_files_dir_isolation": research_isolate_original_native_files_dir,
+        "original_independent_local_save_verified": False,
+        "original_zero_network_verified": False,
         "source_export_sha256": EXPECTED_EXPORT_SHA256,
         "signed_split_dir": str(signed),
         "signer_certificate_sha256": signing_ledger[
@@ -197,6 +205,11 @@ def main() -> int:
     parser.add_argument("--keypass")
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--enable-backup-offline-replay", action="store_true")
+    parser.add_argument(
+        "--research-isolate-original-native-files-dir",
+        action="store_true",
+        help="Research only: original Activity.getFilesDir private root; not offline gameplay",
+    )
     parser.add_argument("--zipalign")
     parser.add_argument("--apksigner")
     parser.add_argument("--javac")
@@ -215,6 +228,7 @@ def main() -> int:
         keypass=args.keypass,
         output_dir=args.output,
         enable_backup_offline_replay=args.enable_backup_offline_replay,
+        research_isolate_original_native_files_dir=args.research_isolate_original_native_files_dir,
         zipalign=args.zipalign,
         apksigner=args.apksigner,
         javac=args.javac,
