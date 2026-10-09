@@ -58,14 +58,21 @@ def build_owned_static_http_bridge(
 ) -> dict:
     if flavor not in FLAVOR_PACKAGES:
         raise ValueError(f"unknown flavor: {flavor}")
-    if research_deny_internet and (
-        flavor != "research" or not research_isolate_original_native_files_dir
-    ):
-        raise ValueError(
-            "original no-INTERNET research requires research flavor AND private file root"
-        )
-    if research_isolate_original_native_files_dir and flavor != "research":
-        raise ValueError("original native files research isolation requires research flavor")
+    if flavor == "local-research":
+        if (not research_deny_internet or research_isolate_original_native_files_dir
+                or enable_backup_offline_replay):
+            raise ValueError(
+                "local research requires no-INTERNET, original app root and no online backup replay"
+            )
+    else:
+        if research_deny_internet and (
+            flavor != "research" or not research_isolate_original_native_files_dir
+        ):
+            raise ValueError(
+                "original no-INTERNET research requires research flavor AND private file root"
+            )
+        if research_isolate_original_native_files_dir and flavor != "research":
+            raise ValueError("original native files research isolation requires research flavor")
 
     export_zip = export_zip.resolve()
     shim = shim.resolve()
@@ -161,6 +168,7 @@ Package: {package_name}
 Launcher: {launcher}
 Backup offline replay enabled: {str(enable_backup_offline_replay).lower()}
 Original native file root isolation (RESEARCH ONLY): {str(research_isolate_original_native_files_dir).lower()}
+Fresh original game local package (NO independent SAVE schema): {str(flavor == "local-research").lower()}
 INTERNET permission removal (RESEARCH ONLY): {str(research_deny_internet).lower()}
 
 This build contains NO Frida Gadget.
@@ -198,6 +206,9 @@ Final device smoke should be performed only after repository parity is green.
         "research_original_native_files_dir_isolation": research_isolate_original_native_files_dir,
         "research_no_internet_manifest": research_deny_internet,
         "original_independent_local_save_verified": False,
+        "fresh_local_original_package": flavor == "local-research",
+        "original_native_file_root_is_super": flavor == "local-research",
+        "local_origin_marker_is_gameplay_save": False,
         "original_zero_network_verified": False,
         "source_export_sha256": EXPECTED_EXPORT_SHA256,
         "signed_split_dir": str(signed),
