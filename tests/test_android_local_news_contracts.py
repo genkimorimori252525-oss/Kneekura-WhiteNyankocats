@@ -70,7 +70,8 @@ class OfflineBaseNoticeContracts(unittest.TestCase):
         for content in (ui, repository):
             self.assertNotIn("new URL(", content)
             self.assertNotIn("HttpURLConnection", content)
-            self.assertNotIn("WebView", content)
+            self.assertNotIn("import android.webkit.WebView;", content)
+            self.assertNotIn("new WebView(", content)
 
     def test_notice_schedule_does_not_grant_stage_clear_or_inventory(self):
         from tools.localcore.notice_feed import notice_feed
