@@ -82,7 +82,7 @@
     "value_semantic_meaning": "UNKNOWN: original game stores a bytewise XOR-encoded value; value=1 selects first level-max popup; NOT yet proven per-unit level cap"
   },
   "source_code_tool": "tools/base_mod/trace_original_levelup_native.py",
-  "next_verified_code_task": "Follow original scene97 (0x71c9ec/0x71ce68) and scene104 (0x71c504/0x71c50c) entry handlers and genuine fresh player-state constructor; identify whether state is legitimately initialized and saved without any account/service. Only then attach a verified independent local-authority adapter to existing original SAVED read/write and one-cat Lv60 + restart; capture real no-INTERNET original-native UI/battle and SDK/IPC egress on device.",
+  "next_verified_code_task": "Examine original scene97 DownloadBatchTask (0x725e1c→0x73c9b8) for source pack/file IO and remote service vs local cached assets; evaluate scene104 0x71c50c and the real virgin profile initializer separately. Connect a local first-run player authority ONLY after proving original native game state/save and zero-egress. Then implement real original UI Lv60 (XP/Catseye), MAX initial wallet, restart and battle with original scenes/assets.",
   "release_status": {
     "original_ui_level_cap_patch_attached": false,
     "level_purchase_action_attached": false,
@@ -102,7 +102,11 @@
     "original_game_zero_egress_battlecats_passed": false,
     "original_AppLaunchLoad_result_to_wait_error_scene4_and_success97_104_verified": true,
     "original_new_player_save_generator_identified": false,
-    "original_game_Lv60_playable_device_proof": false
+    "original_game_Lv60_playable_device_proof": false,
+    "original_app_launch_wait_error4_success97_104_native_verified": true,
+    "original_scene97_DownloadBatchTask_construction_verified": true,
+    "original_account_free_fresh_save_generator_verified": false,
+    "original_whole_offline_native_gameplay_tested": false
   },
   "restrictions": "No full proprietary data, disassembly dumps, source APK, original SAVE_DATA, private signing keys or bypass code committed; this is metadata only.",
   "unit_native_source_table_sequence": {
@@ -618,5 +622,69 @@
     "owner_original_APK_and_SAVE_untouched": true,
     "source_verifier": "tools/base_mod/trace_original_levelup_native.py::_original_app_launch_result_scene_dispatch",
     "regression": "tests/test_trace_original_levelup_native.py"
+  },
+  "original_app_launch_result_dispatch_native": {
+    "type": "PINNED_ORIGINAL_JP15_7_1_NATIVE_APP_LAUNCH_LOAD_SCENE_RESULTS",
+    "pinned_original_sha256": "333d2974ab2ff881fd70087fd62dea7d12d82addbc55cab2f2a675ad67e3a7e2",
+    "read_only_original_native_verified": true,
+    "exact_opcode_anchors": 34,
+    "branch_destinations": [
+      "0x722b14 -> 0x72298c (not scene101)",
+      "0x722b20 -> 0x72299c (no object)",
+      "0x722b30 -> 0x723440 (status false)",
+      "0x722b6c -> 0x723470 (conditional success-side)",
+      "0x723444 -> 0x72299c (no scene pointer)",
+      "0x72344c -> 0x72299c (failure flag absent => wait)"
+    ],
+    "dynamic_status_vtable_pointer": "0x722b24/0x722b28/0x722b2c BLR [scene_object.vtable+0x20]",
+    "original_vtable_slot": "0xaefb58 -> 0x4930b8 (ELF R_AARCH64_RELATIVE verified separately)",
+    "producer_native_scene_object": "0x71d314/0x71d31c -> context+0x3c40b0",
+    "consumer_native_scene_object": "0x722b18/0x722b1c -> context+0x3c40b0",
+    "wait_on_pending": "0x723448 ldrb worker_state+9, 0x72344c cbz ->0x72299c",
+    "error_on_failure": "0x723450 sets error type7; 0x723458 sets scene4; 0x723460 BL -> 0x71c408",
+    "success_conditional_transition": "0x723470..0x72348c chooses scene97 when context[0x10d9]==0 else scene104 and calls 0x71c408",
+    "actual_game_state_initialized_on_virgin_start": false,
+    "valid_independent_local_SAVE_created": false,
+    "real_original_JP_device_scene_transition_observed": false,
+    "local_Lv60_XP_CatsEye_and_reboot_test_passed": false,
+    "original_save_or_assets_modified": false,
+    "source_code": "tools/base_mod/trace_original_levelup_native.py::_original_app_launch_result_scene_dispatch",
+    "tests": "tests/test_trace_original_levelup_native.py"
+  },
+  "original_app_launch_success_targets": {
+    "type": "PINNED_NATIVE_JP_SOURCE_SCENE97_SCENE104_DISTINCT_HANDLERS",
+    "scene97": "0x71c9ec cmp #97 -> 0x71ce68",
+    "scene97_calls": [
+      "0x71ce78 -> 0x781170",
+      "0x71ce80 -> 0x725e1c"
+    ],
+    "scene104": "0x71c504 cmp #104 -> 0x71c50c",
+    "scene104_call": "0x71c518 -> 0x368eb8",
+    "original_virgin_player_constructor_found": false,
+    "source_code": "tools/base_mod/trace_original_levelup_native.py::_original_app_launch_target_scene_entries"
+  },
+  "original_scene97_DownloadBatchTask": {
+    "status": "ORIGINAL_CLASS_IDENTITY_AND_CONSTRUCTOR_PROVEN",
+    "pinned_native_sha256": "333d2974ab2ff881fd70087fd62dea7d12d82addbc55cab2f2a675ad67e3a7e2",
+    "original_scene97_helper": "0x71ce80 -> 0x725e1c",
+    "wrapper_native_allocation": "0x725ec0/0x725ec4",
+    "wrapper_vtable": "0x725ecc/0x725ed0/0x725edc -> 0xafe0b0",
+    "actual_task_constructor": "0x725ee8 -> 0x73c9b8",
+    "original_RTTI_at": "0x1db616",
+    "original_RTTI_name": "NSt6__ndk120__shared_ptr_emplaceI17DownloadBatchTaskNS_9allocatorIS1_EEEE",
+    "ELF_RELATIVE_relocs": {
+      "0xafe0a8": "0xafe0d8",
+      "0xafe0e0": "0x1db616",
+      "0xafe0b0": "0x73c968",
+      "0xafe0b8": "0x73c978",
+      "0xafe0c0": "0x73c9a8"
+    },
+    "concrete_network_request_link_found": false,
+    "required_615mb_files_source_or_manifest_confirmed": false,
+    "pure_local_packs_satisfy_download_task_proven": false,
+    "direct_original_new_player_save_generator_identified": false,
+    "no_original_game_files_changed": true,
+    "source_code": "tools/base_mod/trace_original_levelup_native.py::_original_scene97_download_batch_task",
+    "tests": "tests/test_trace_original_levelup_native.py"
   }
 }
