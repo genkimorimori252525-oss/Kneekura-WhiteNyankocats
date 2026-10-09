@@ -2120,6 +2120,95 @@ def _original_download_tsv_resource_registration_chain(elf: bytes) -> dict[str, 
     }
 
 
+
+# Original JP15.7.1 ELF .rodata holds exactly 92 Server .list/.pack
+# FAMILY PAIRS. This number matches the ORIGINAL 92 x 0x30 registration
+# loop, and the source initializer at 0x71599c..0x7159c0 demonstrably
+# copies an original "XImageServer.list" string into the runtime BSS table.
+# Exact 92-by-name registration in-memory is NOT simulated or claimed.
+ORIGINAL_SERVER_FAMILY_CATALOG_ANCHORS = {
+    0x71599C: 0x90FFD3E9,  # ADRP x9 -> XImageServer.list page
+    0x7159A0: 0x91234529,  # ADD x9 -> XImageServer.list string
+    0x7159A4: 0xF0004408,  # ADRP x8 -> runtime BSS registry table page
+    0x7159A8: 0x9134E108,  # ADD x8 -> 0xf98d38 native table base
+    0x7159AC: 0x3DC00120,  # load source string bytes
+    0x7159C0: 0x3C801100,  # store string into native table
+}
+ORIGINAL_RODATA_START = 0x18F2C0
+ORIGINAL_RODATA_END = 0x1FDA44
+
+
+def _original_registered_server_family_catalog(elf: bytes) -> dict[str, Any]:
+    """Recover exact *filenames* in original Server .list/.pack catalog.
+
+    Does NOT extract pack payloads, invent a downloaded cache, or claim every
+    original initialized registry entry is usable before first offline boot.
+    Source binary must be pinned by caller's original SHA check.
+    """
+    import re
+
+    if len(elf) < 0x7159C4:
+        raise LevelUpNativeTraceError("original server family code truncated")
+    for pc, expected in ORIGINAL_SERVER_FAMILY_CATALOG_ANCHORS.items():
+        if _u32(elf, pc) != expected:
+            raise LevelUpNativeTraceError(
+                f"original Server family registry initializer drift at {_hex(pc)}"
+            )
+    if elf[0x1918D1:0x1918E3] != b"XImageServer.list\x00":
+        raise LevelUpNativeTraceError("original XImageServer.list literal drifted")
+    xrefs = direct_adrp_add_refs(
+        elf, 0x1918D1, text_start=0x71599C, text_end=0x7159A4
+    )
+    if (len(xrefs) != 1
+        or xrefs[0]["adrp_address"] != "0x71599c"
+        or xrefs[0]["add_address"] != "0x7159a0"):
+        raise LevelUpNativeTraceError(
+            "original initializer XImageServer.list ADRP/ADD target drifted"
+        )
+    names: set[str] = set()
+    rodata = elf[ORIGINAL_RODATA_START:ORIGINAL_RODATA_END]
+    for match in re.finditer(
+        rb"[A-Za-z][A-Za-z0-9_]*Server\.(?:list|pack)\x00", rodata
+    ):
+        file_offset = ORIGINAL_RODATA_START + match.start()
+        if file_offset > ORIGINAL_RODATA_START and elf[file_offset - 1] != 0:
+            continue  # accept whole NUL-delimited literals, not substrings
+        name = match.group()[:-1].decode("ascii")
+        if name in names:
+            raise LevelUpNativeTraceError(
+                "original source Server family name unexpectedly duplicated"
+            )
+        names.add(name)
+    stems: set[str] = {name.rsplit(".", 1)[0] for name in names}
+    if (len(names) != 184 or len(stems) != 92
+        or any(
+            f"{stem}.list" not in names or f"{stem}.pack" not in names
+            for stem in stems
+        )
+        or not {"MNumberServer", "WImageDataServer", "XImageServer"}.issubset(stems)):
+        raise LevelUpNativeTraceError(
+            "original 92 paired server family names differ from pinned owner ELF"
+        )
+    return {
+        "status": "ORIGINAL_JP15_7_1_EXACT_RODATA_92_SERVER_LIST_PACK_FAMILIES",
+        "count_list_literals": 92,
+        "count_pack_literals": 92,
+        "count_paired_original_server_families": len(stems),
+        "original_server_family_stems": sorted(stems),
+        "one_original_runtime_initializer": (
+            "0x71599c..0x7159c0 writes original XImageServer.list "
+            "from .rodata into registry BSS"
+        ),
+        "runtime_source_table": "0xf98d38 (relocated pointer 0xb17d78)",
+        "matches_92_registration_loop_row_count": True,
+        "all_runtime_registered_names_proven": False,
+        "all_owner_pack_payloads_possessed": False,
+        "all_35_download_tsv_names_available": False,
+        "real_original_game_first_boot_local_success": False,
+        "native_or_original_save_modified": False,
+    }
+
+
 def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict:
     digest = sha256(elf).hexdigest()
     if digest != expected_sha or expected_sha != NATIVE_SHA256:
@@ -2184,6 +2273,7 @@ def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict
         "original_scene97_download_batch_task": _original_scene97_download_batch_task(elf),
         "original_download_tsv_file_source_resolver": _original_download_tsv_file_source_resolver(elf),
         "original_download_tsv_resource_registration_chain": _original_download_tsv_resource_registration_chain(elf),
+        "original_registered_server_family_catalog": _original_registered_server_family_catalog(elf),
         "native_original_game_upgrader_getter_identified": True,
         "native_original_game_upgrade_purchase_hook_verified": False,
         "original_native_conditional_xp_purchase_to_save_calls_proven": True,
@@ -2270,7 +2360,7 @@ def _original_download_batch_tsv_installed_local_coverage(
 
 
 
-def _additional_owner_list_coverage(extra_list_dir: Path) -> dict[str, Any]:
+def _additional_owner_list_coverage(extra_list_dir: Path, *, known_original_families: set[str] | None = None) -> dict[str, Any]:
     """Scan *owner-supplied* additional encrypted .list manifests, read only.
 
     Does not load .pack payloads, contact servers, extract unrelated original
@@ -2305,6 +2395,11 @@ def _additional_owner_list_coverage(extra_list_dir: Path) -> dict[str, Any]:
                 "duplicate owned additional .list family name"
             )
         observed_normalized.add(normalized)
+        if (known_original_families is not None
+            and path.stem not in known_original_families):
+            raise LevelUpNativeTraceError(
+                "owned additional .list family not declared in pinned JP15.7.1 native catalog"
+            )
         if path.stat().st_size > 4 * 1024 * 1024:
             raise LevelUpNativeTraceError(
                 "owned additional encrypted .list too large"
@@ -2355,7 +2450,12 @@ def trace_from_owner_export(owner_zip: Path, *, extra_list_dir: Path | None = No
     )
     if extra_list_dir is not None:
         report["owner_additional_encrypted_list_tsv_coverage"] = (
-            _additional_owner_list_coverage(extra_list_dir)
+            _additional_owner_list_coverage(
+                extra_list_dir,
+                known_original_families=set(
+                    report["original_registered_server_family_catalog"]["original_server_family_stems"]
+                ),
+            )
         )
     return report
 
