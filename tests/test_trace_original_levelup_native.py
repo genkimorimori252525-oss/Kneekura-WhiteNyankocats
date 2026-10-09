@@ -23,6 +23,7 @@ from tools.base_mod.trace_original_levelup_native import (
     ORIGINAL_WORKER_STATUS_VTABLE, ORIGINAL_WORKER_STATUS_ANCHORS,
     ORIGINAL_APP_LAUNCH_SCENE_ANCHORS,
     ORIGINAL_APP_LAUNCH_RESULT_ANCHORS,
+    ORIGINAL_APP_LAUNCH_TARGET_SCENE_ENTRY_ANCHORS,
     ORIGINAL_RELA_DYN_OFFSET, ORIGINAL_RELA_DYN_COUNT,
     ORIGINAL_RELA_DYN_ENTRY_SIZE,
     LevelUpNativeTraceError,
@@ -34,6 +35,7 @@ from tools.base_mod.trace_original_levelup_native import (
     _original_save_read_worker, _original_save_worker_virtual_status,
     _original_app_launch_scene_from_save_presence,
     _original_app_launch_result_scene_dispatch,
+    _original_app_launch_target_scene_entries,
     _original_arm64_cfg_successors, _original_arm64_cfg_witness,
     _original_arm64_cfg_all_direct_paths_hit_save,
     _levelmax_popup_branch,
@@ -798,6 +800,30 @@ class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
                 corrupted[address] ^= 1
                 with self.assertRaises(LevelUpNativeTraceError):
                     _original_app_launch_result_scene_dispatch(bytes(corrupted))
+
+    def test_original_success_scene97_and_104_have_distinct_real_handlers(self):
+        blob = bytearray(0x71CE84)
+        for pc, opcode in ORIGINAL_APP_LAUNCH_TARGET_SCENE_ENTRY_ANCHORS.items():
+            struct.pack_into("<I", blob, pc, opcode)
+        report = _original_app_launch_target_scene_entries(bytes(blob))
+        self.assertEqual(report["scene97_handler_calls"],
+                         ["0x71ce78 -> 0x781170", "0x71ce80 -> 0x725e1c"])
+        self.assertEqual(report["scene104_handler_call"], "0x71c518 -> 0x368eb8")
+        self.assertFalse(report["account_free_virgin_player_creation_in_scene97_proven"])
+        self.assertFalse(report["account_free_virgin_player_creation_in_scene104_proven"])
+        self.assertFalse(report["original_game_player_save_created_or_reloaded"])
+
+    def test_original_scene97_104_handler_drift_fails_closed(self):
+        source = bytearray(0x71CE84)
+        for pc, opcode in ORIGINAL_APP_LAUNCH_TARGET_SCENE_ENTRY_ANCHORS.items():
+            struct.pack_into("<I", source, pc, opcode)
+        for pc in (0x71C9EC, 0x71C9F0, 0x71CE78, 0x71CE80,
+                   0x71C504, 0x71C508, 0x71C518):
+            broken = bytearray(source)
+            broken[pc] ^= 1
+            with self.subTest(where=hex(pc)):
+                with self.assertRaises(LevelUpNativeTraceError):
+                    _original_app_launch_target_scene_entries(bytes(broken))
 
     def test_real_game_original_upgrader_cues_are_not_fabricated_hooks(self):
         self.assertEqual(len(NATIVE_SHA256), 64)
