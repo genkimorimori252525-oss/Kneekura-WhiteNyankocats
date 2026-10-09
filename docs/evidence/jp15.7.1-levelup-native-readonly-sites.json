@@ -82,7 +82,7 @@
     "value_semantic_meaning": "UNKNOWN: original game stores a bytewise XOR-encoded value; value=1 selects first level-max popup; NOT yet proven per-unit level cap"
   },
   "source_code_tool": "tools/base_mod/trace_original_levelup_native.py",
-  "next_verified_code_task": "Source save read/write->getFilesDir JNI is pinned. Next implement and test original-game first-run local state initialization with no official save/account plus research original engine boot when INTERNET permission is absent; prove real save path and restart, then actual one-cat Lv60 upgrade/XP/CatsEye and combat. SDK/IPC egress must be audited separately.",
+  "next_verified_code_task": "Trace original native first-game state initialization AFTER SAVE_DATA reader returns false (0x9bb794 and caller of 0x9bb760), prove existence and compatibility of native new-game save writer under separate app package with no INTERNET; only then bind MAX XP/catfood/NP/items + Level60 cap upgrade to native in-game. Avoid replacing missing SAVE with a rejected official save or independent lookalike.",
   "release_status": {
     "original_ui_level_cap_patch_attached": false,
     "level_purchase_action_attached": false,
@@ -92,7 +92,9 @@
     "original_native_upgrade_purchase_cap_and_xp_semantics_proven": true,
     "original_native_item_debit_cap_plus_one_and_save_call_proven": true,
     "original_native_save_reload_field_map_proven": true,
-    "original_native_normal_xp_purchase_to_save_conditional_routes_proven": true
+    "original_native_normal_xp_purchase_to_save_conditional_routes_proven": true,
+    "original_native_fresh_profile_full_offline_verified": false,
+    "original_native_level60_real_ui_passed": false
   },
   "restrictions": "No full proprietary data, disassembly dumps, source APK, original SAVE_DATA, private signing keys or bypass code committed; this is metadata only.",
   "unit_native_source_table_sequence": {
@@ -469,5 +471,57 @@
       "adoption": "getFilesDir is app-private storage and relative paths matter",
       "boundary": "Overridden JNI/SDK/offline runtime still requires physical verification"
     }
-  ]
+  ],
+  "fresh_local_original_game_research_host": {
+    "status": "CODE_IMPLEMENTED_DEFAULT_UNSHIPPED_NATIVE_GAME_RUNTIME_UNVERIFIED",
+    "original_version": "JP15.7.1",
+    "original_owned_source_sha256": "38c3bbb8d2cf2101793c9462617d4293e19fc99588b6655fd40299fd61a0ef56",
+    "new_research_package": "jp.kn.local.battlecats",
+    "original_vendor_package": "jp.co.ponos.battlecats",
+    "prior_research_package": "jp.kn.trace.battlecats",
+    "same_length_all_packages": 22,
+    "installed_app_data_root": "Android context.super.getFilesDir() of separate local-research package",
+    "original_nested_subdir_override": false,
+    "protects_vendor_and_prior_research_save": true,
+    "first_run_save_names_refused_without_origin_marker": [
+      "SAVE_DATA",
+      "SAVE_DATA4",
+      "SAVE_DATA8"
+    ],
+    "local_origin_marker": ".kneekura-virgin-local-jp15-7-1",
+    "origin_marker_is_auth_or_save_format": false,
+    "denied_network_methods": "MyActivity.newHttpRequest throws before original super fallback",
+    "manifest_research_INTERNET_permission_removed": true,
+    "sdk_and_native_ipc_egress_verified": false,
+    "local_original_native_game_root_actually_tested_on_owner_android": false,
+    "authorized_fresh_gameplay_state_initialized": false,
+    "actual_native_level60_upgrade_and_restart_verified": false,
+    "codepaths": [
+      "tools/base_mod/package_flavor.py",
+      "bridge/java/MyActivity.java.in",
+      "tools/base_mod/inject_java_http_bridge.py",
+      "tools/base_mod/build_owned_static_http_bridge.py",
+      "tools/base_mod/verify_static_http_bridge.py",
+      "tools/base_mod/verify_shipping_boundary.py",
+      "tests/test_static_http_bridge.py"
+    ],
+    "notes": [
+      "Android official app-specific internal files directories are already unique by installed application package/UID; nested redirection could hide original native non-SAVE assets.",
+      "New package isolates from previous trace and vendor installs; no original PONOS SAVE bytes copied, decoded, or reused.",
+      "Original native SAVE_DATA absent read reports failure to caller; follow-on original first-game initialization has NOT been found or proven.",
+      "Original-game compatibility is not certified by JVM Activity compile stubs, source CFG analysis, standalone Alpha Android build, or CI tests."
+    ]
+  },
+  "original_empty_save_native_result": {
+    "provenance": "exact original owned JP15.7.1 ARM64 native source SHA256 333d2974ab2ff881fd70087fd62dea7d12d82addbc55cab2f2a675ad67e3a7e2",
+    "file_open": "0x8b4404 -> 0x35d620",
+    "failure_branch": "0x8b441c -> 0x8b4508",
+    "failure_code_handler": "0x8b4528 sets w1=4; 0x8b452c -> 0x71c408",
+    "original_read_result": "0x8b453c sets w20=0",
+    "startup_calls_reader": "0x9bb78c -> 0x8b43a4",
+    "startup_false_branch": "0x9bb794 TBZ -> 0x9bba44",
+    "other_original_first_game_initializer_verified": false,
+    "source_script": "tools/base_mod/trace_original_levelup_native.py::_original_missing_save_read_path",
+    "test_script": "tests/test_trace_original_levelup_native.py"
+  }
 }
