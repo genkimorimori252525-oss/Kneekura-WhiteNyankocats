@@ -23,6 +23,7 @@ from tools.base_mod.trace_original_levelup_native import (
     _original_save_restore_flow, _original_cap_increment_item_transaction,
     _original_normal_xp_purchase_save_routes,
     _original_arm64_cfg_successors, _original_arm64_cfg_witness,
+    _original_arm64_cfg_all_direct_paths_hit_save,
     _levelmax_popup_branch,
     _popup_value_call_chain,
     direct_adrp_add_refs, trace_exact_native,
@@ -461,6 +462,46 @@ class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
             _original_arm64_cfg_witness(bytes(blank), 0, 0x100,
                                         0x40, 0x80), []
         )
+
+    def test_original_direct_cfg_checks_all_paths_through_saver(self):
+        # Tiny synthetic AArch64 program with two conditional exits and
+        # two explicit save callsite gates; no proprietary code included.
+        blob = bytearray(0x200)
+        struct.pack_into("<I", blob, 0x100, 0x54000100)  # b.eq +0x20
+        struct.pack_into("<I", blob, 0x104, 0x1400000B)  # b -> 0x130
+        struct.pack_into("<I", blob, 0x120, 0x14000005)  # b -> 0x134
+        struct.pack_into("<I", blob, 0x130, 0x94000000)  # modeled save BL
+        struct.pack_into("<I", blob, 0x134, 0x94000000)  # alternate save BL
+        actual = _original_arm64_cfg_all_direct_paths_hit_save(
+            bytes(blob), 0x100, 0x180, 0x100, frozenset({0x130, 0x134})
+        )
+        self.assertEqual(actual["save_calls"], ["0x130", "0x134"])
+        self.assertEqual(actual["reachable_nodes"], 5)
+        self.assertEqual(actual["non_save_nodes"], 3)
+        self.assertTrue(actual["conditional_static_direct_paths_hit_a_saver"])
+        self.assertFalse(actual["real_runtime_guaranteed_save"])
+        self.assertFalse(actual["durable_disk_fsync_verified"])
+
+    def test_original_save_gate_fails_on_unsaved_exit_cycle_or_out_of_range(self):
+        source = bytearray(0x200)
+        struct.pack_into("<I", source, 0x100, 0x54000100)
+        struct.pack_into("<I", source, 0x104, 0x1400000B)
+        struct.pack_into("<I", source, 0x120, 0x14000005)
+        struct.pack_into("<I", source, 0x130, 0x94000000)
+        struct.pack_into("<I", source, 0x134, 0x94000000)
+        for opcode, expected in (
+            (0xD65F03C0, "terminates before SAVE_DATA"),
+            (0x14000000, "reachable cycle before SAVE_DATA"),
+            (0x1400007F, "escapes save-gate range"),
+        ):
+            broken = bytearray(source)
+            struct.pack_into("<I", broken, 0x104, opcode)
+            with self.subTest(opcode=hex(opcode)):
+                with self.assertRaisesRegex(LevelUpNativeTraceError, expected):
+                    _original_arm64_cfg_all_direct_paths_hit_save(
+                        bytes(broken), 0x100, 0x180, 0x100,
+                        frozenset({0x130, 0x134})
+                    )
 
     def test_real_game_original_upgrader_cues_are_not_fabricated_hooks(self):
         self.assertEqual(len(NATIVE_SHA256), 64)
