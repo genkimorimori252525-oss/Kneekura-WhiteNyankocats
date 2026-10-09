@@ -157,10 +157,16 @@ def build_bridge_dex(
     android_jar: str | None = None,
     root: Path = Path("."),
     use_external_files_dir: bool = False,
+    isolate_original_native_files_dir: bool = False,
 ) -> dict:
     package_name = FLAVOR_PACKAGES.get(flavor)
     if package_name is None:
         raise ValueError(f"unknown flavor: {flavor!r}")
+
+    if isolate_original_native_files_dir and flavor != "research":
+        raise ValueError("original-game native file isolation requires research flavor")
+    if isolate_original_native_files_dir and use_external_files_dir:
+        raise ValueError("original-game native file isolation conflicts with external files")
 
     launcher = package_name + ".MyActivity"
     if len(launcher.encode("utf-8")) != len(ORIGINAL_LAUNCHER.encode("utf-8")):
@@ -181,6 +187,10 @@ def build_bridge_dex(
         .replace(
             "__KNEEKURA_USE_EXTERNAL_FILES_DIR__",
             "true" if use_external_files_dir else "false",
+        )
+        .replace(
+            "__KNEEKURA_ISOLATE_ORIGINAL_NATIVE_FILES_DIR__",
+            "true" if isolate_original_native_files_dir else "false",
         )
     )
     if "__KNEEKURA_" in rendered:
@@ -261,6 +271,12 @@ def build_bridge_dex(
         "dex_sha256": sha256_file(output),
         "dex_size": output.stat().st_size,
         "use_external_files_dir": use_external_files_dir,
+        "isolated_original_native_files_dir": isolate_original_native_files_dir,
+        "isolated_original_native_files_leaf": (
+            "kneekura-native-jp15-7-1" if isolate_original_native_files_dir else None
+        ),
+        "original_native_gameplay_persistence_verified": False,
+        "network_egress_guarantee": "NOT_VERIFIED",
     }
 
 
@@ -406,6 +422,11 @@ def main() -> int:
     parser.add_argument("--android-jar")
     parser.add_argument("--root", type=Path, default=Path("."))
     parser.add_argument("--use-external-files-dir", action="store_true")
+    parser.add_argument(
+        "--research-isolate-original-native-files-dir",
+        action="store_true",
+        help="Research ONLY; original native getFilesDir path isolation, NOT a gameplay save",
+    )
     args = parser.parse_args()
 
     output = args.output.resolve()
@@ -424,6 +445,7 @@ def main() -> int:
             android_jar=args.android_jar,
             root=args.root,
             use_external_files_dir=args.use_external_files_dir,
+            isolate_original_native_files_dir=args.research_isolate_original_native_files_dir,
         )
 
     ledger = inject_bridge_split_set(
