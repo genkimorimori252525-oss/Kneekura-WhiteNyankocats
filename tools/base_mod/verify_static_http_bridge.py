@@ -81,7 +81,9 @@ def verify_static_http_bridge(
     package_name = FLAVOR_PACKAGES.get(flavor)
     if package_name is None:
         raise ValueError(f"unknown flavor: {flavor!r}")
-    if research_deny_internet and flavor != "research":
+    if flavor == "local-research" and not research_deny_internet:
+        raise ValueError("local-research original host must omit INTERNET permission")
+    if research_deny_internet and flavor not in ("research", "local-research"):
         raise ValueError("original no-INTERNET bridge validation requires research flavor")
 
     bridge_launcher = package_name + ".MyActivity"
@@ -300,6 +302,9 @@ def verify_static_http_bridge(
         "original_scene_activity_subclassed": True,
         "unknown_request_super_fallthrough": True,
         "research_no_internet_manifest": research_deny_internet,
+        "fresh_separate_original_game_package": flavor == "local-research",
+        "local_research_uses_original_activity_files_root": flavor == "local-research",
+        "original_player_save_freshly_initialized_verified": False,
         "source_INTERNET_permission": True,
         "final_INTERNET_permission": not research_deny_internet,
         "third_party_sdk_ipc_egress_audited": False,
