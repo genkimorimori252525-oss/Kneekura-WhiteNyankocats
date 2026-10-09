@@ -58,14 +58,14 @@ def build_owned_static_http_bridge(
 ) -> dict:
     if flavor not in FLAVOR_PACKAGES:
         raise ValueError(f"unknown flavor: {flavor}")
-    if research_isolate_original_native_files_dir and flavor != "research":
-        raise ValueError("original native files research isolation requires research flavor")
     if research_deny_internet and (
         flavor != "research" or not research_isolate_original_native_files_dir
     ):
         raise ValueError(
             "original no-INTERNET research requires research flavor AND private file root"
         )
+    if research_isolate_original_native_files_dir and flavor != "research":
+        raise ValueError("original native files research isolation requires research flavor")
 
     export_zip = export_zip.resolve()
     shim = shim.resolve()
