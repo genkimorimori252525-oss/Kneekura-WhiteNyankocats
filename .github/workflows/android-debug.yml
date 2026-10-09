@@ -10,6 +10,13 @@ on:
       - "build.gradle.kts"
       - "gradle.properties"
       - ".github/workflows/android-debug.yml"
+  pull_request:
+    paths:
+      - "app/**"
+      - "settings.gradle.kts"
+      - "build.gradle.kts"
+      - "gradle.properties"
+      - ".github/workflows/android-debug.yml"
   workflow_dispatch:
 
 permissions:
