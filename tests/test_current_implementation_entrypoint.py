@@ -65,6 +65,33 @@ class OneDoorFourImplementationsTests(unittest.TestCase):
                          for check in section["checks"].values()))
         self.assertIn("検証ハーネス", IDENTITY.read_text(encoding="utf-8"))
 
+    def test_owner_max_and_jolly_liveops_cannot_fall_off_roadmap(self):
+        current = CURRENT.read_text(encoding="utf-8")
+        roadmap = ROADMAP.read_text(encoding="utf-8")
+        product = IDENTITY.read_text(encoding="utf-8")
+        expected = (
+            "full-max-start-jp15.7.1.json",
+            "i", "お知らせ", "ステージ", "ガチャ", "ログイン5枠",
+        )
+        for concept in expected:
+            self.assertIn(concept, current)
+            self.assertIn(concept, roadmap)
+        self.assertIn("初期資源・経験値", product)
+        self.assertIn("独自運営（ジョリー担当、必須）", product)
+        import tools.localcore.full_max_resources as economy
+        self.assertTrue(economy.POLICY_PATH.is_file())
+        liveops_source = ROOT / "tools/localcore/ops_calendar.py"
+        notices = ROOT / "tools/localcore/notice_feed.py"
+        login = ROOT / "tools/localcore/login_rotation.py"
+        for file in (liveops_source, notices, login):
+            self.assertTrue(file.is_file(), file)
+        gates = json.loads(RELEASE_GATES.read_text(encoding="utf-8"))
+        fidelity = gates["axes"]["BATTLE_CATS_FIDELITY"]["checks"]
+        self.assertFalse(fidelity["max_initial_economy_in_original_inventory"]["verified"])
+        self.assertFalse(
+            fidelity["jolly_operated_news_gacha_event_stage_in_original_ui"]["verified"]
+        )
+
     def test_original_manifest_remains_unshipped_with_exact_spec(self):
         data = json.loads(STATS.read_text(encoding="utf-8"))
         self.assertEqual(data["status"], "PREVIEW_ONLY_NOT_INSTALLABLE")
