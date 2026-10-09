@@ -24,6 +24,8 @@ from tools.base_mod.trace_original_levelup_native import (
     ORIGINAL_APP_LAUNCH_SCENE_ANCHORS,
     ORIGINAL_APP_LAUNCH_RESULT_ANCHORS,
     ORIGINAL_APP_LAUNCH_TARGET_SCENE_ENTRY_ANCHORS,
+    ORIGINAL_SCENE97_DOWNLOAD_BATCH_ANCHORS,
+    ORIGINAL_SCENE97_DOWNLOAD_BATCH_RELOCS, ORIGINAL_DOWNLOAD_BATCH_RTTI,
     ORIGINAL_RELA_DYN_OFFSET, ORIGINAL_RELA_DYN_COUNT,
     ORIGINAL_RELA_DYN_ENTRY_SIZE,
     LevelUpNativeTraceError,
@@ -36,6 +38,7 @@ from tools.base_mod.trace_original_levelup_native import (
     _original_app_launch_scene_from_save_presence,
     _original_app_launch_result_scene_dispatch,
     _original_app_launch_target_scene_entries,
+    _original_scene97_download_batch_task,
     _original_arm64_cfg_successors, _original_arm64_cfg_witness,
     _original_arm64_cfg_all_direct_paths_hit_save,
     _levelmax_popup_branch,
@@ -146,6 +149,27 @@ def _synthetic_app_launch_result_fixture() -> bytearray:
     blob = bytearray(0x723490)
     for address, opcode in ORIGINAL_APP_LAUNCH_RESULT_ANCHORS.items():
         struct.pack_into("<I", blob, address, opcode)
+    return blob
+
+
+
+def _synthetic_scene97_download_task_fixture() -> bytearray:
+    """Tiny pinned opcode/RTTI+RELATIVE relocation fixture, not owner ELF."""
+    size = max(
+        0x73C9FC, 0x1DB616 + len(ORIGINAL_DOWNLOAD_BATCH_RTTI),
+        ORIGINAL_RELA_DYN_OFFSET
+        + ORIGINAL_RELA_DYN_COUNT * ORIGINAL_RELA_DYN_ENTRY_SIZE,
+    )
+    blob = bytearray(size)
+    blob[0x1DB616:0x1DB616 + len(ORIGINAL_DOWNLOAD_BATCH_RTTI)] = (
+        ORIGINAL_DOWNLOAD_BATCH_RTTI
+    )
+    for pc, opcode in ORIGINAL_SCENE97_DOWNLOAD_BATCH_ANCHORS.items():
+        struct.pack_into("<I", blob, pc, opcode)
+    for idx, (slot, dest) in enumerate(
+            ORIGINAL_SCENE97_DOWNLOAD_BATCH_RELOCS.items()):
+        struct.pack_into("<QQq", blob, ORIGINAL_RELA_DYN_OFFSET + idx*24,
+                         slot, 0x403, dest)
     return blob
 
 
@@ -824,6 +848,37 @@ class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
             with self.subTest(where=hex(pc)):
                 with self.assertRaises(LevelUpNativeTraceError):
                     _original_app_launch_target_scene_entries(bytes(broken))
+
+    def test_original_scene97_allocates_download_batch_task_not_fresh_profile(self):
+        result = _original_scene97_download_batch_task(
+            bytes(_synthetic_scene97_download_task_fixture())
+        )
+        self.assertEqual(result["task_constructor"], "0x725ee8 -> 0x73c9b8")
+        self.assertIn("DownloadBatchTask", result["rtti"])
+        self.assertEqual(result["rtti_relocation"], "0xafe0e0 -> 0x1db616")
+        self.assertEqual(result["typeinfo_relocation"], "0xafe0a8 -> 0xafe0d8")
+        self.assertFalse(result["network_transport_called"])
+        self.assertFalse(result["remote_data_required_proven"])
+        self.assertFalse(result["615mb_additional_assets_locally_available_proven"])
+        self.assertFalse(result["task_is_new_game_save_generator_proven"])
+
+    def test_original_download_batch_task_drift_fails_closed(self):
+        intact = _synthetic_scene97_download_task_fixture()
+        for pc in (0x71CE80, 0x725EC4, 0x725ECC, 0x725EE8,
+                   0x73C9F0, 0x73C9F8):
+            other = bytearray(intact)
+            other[pc] ^= 1
+            with self.subTest(opcode=hex(pc)):
+                with self.assertRaises(LevelUpNativeTraceError):
+                    _original_scene97_download_batch_task(bytes(other))
+        for where in (0x1DB616,
+                      ORIGINAL_RELA_DYN_OFFSET,
+                      ORIGINAL_RELA_DYN_OFFSET+8):
+            other = bytearray(intact)
+            other[where] ^= 1
+            with self.subTest(where=hex(where)):
+                with self.assertRaises(LevelUpNativeTraceError):
+                    _original_scene97_download_batch_task(bytes(other))
 
     def test_real_game_original_upgrader_cues_are_not_fabricated_hooks(self):
         self.assertEqual(len(NATIVE_SHA256), 64)
