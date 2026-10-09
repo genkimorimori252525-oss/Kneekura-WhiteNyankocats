@@ -94,6 +94,12 @@ jobs:
             $env:JAVA_HOME = $savedJava
             $env:LOCALAPPDATA = $savedLocal
           }
+      - name: Reproduce readonly HOME alias and null JAVA_HOME in PowerShell 5.1
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          & .\tools\agent_terminal\check_windows_owner_jdk.ps1
+          if (-not $?) { throw "Actual Windows PowerShell 5.1 owner-JDK runtime regression failed" }
       - name: Run committed validation plan
         run: >-
           python -m tools.agent_terminal.verify plan .agent-validation/plan.json
