@@ -167,6 +167,10 @@ def render_bridge_source(
     package_name = FLAVOR_PACKAGES.get(flavor)
     if package_name is None:
         raise ValueError(f"unknown flavor: {flavor!r}")
+    if flavor == "local-research" and (
+        enabled or use_external_files_dir or isolate_original_native_files_dir
+    ):
+        raise ValueError("local research must keep original files root and deny online backup replay")
     if isolate_original_native_files_dir and flavor != "research":
         raise ValueError("original-game native file isolation requires research flavor")
     if isolate_original_native_files_dir and use_external_files_dir:
@@ -182,7 +186,7 @@ def render_bridge_source(
         )
         .replace(
             "__KNEEKURA_DEBUG_LOG__",
-            "true" if flavor == "research" else "false",
+            "true" if flavor in ("research", "local-research") else "false",
         )
         .replace(
             "__KNEEKURA_USE_EXTERNAL_FILES_DIR__",
@@ -191,6 +195,14 @@ def render_bridge_source(
         .replace(
             "__KNEEKURA_ISOLATE_ORIGINAL_NATIVE_FILES_DIR__",
             "true" if isolate_original_native_files_dir else "false",
+        )
+        .replace(
+            "__KNEEKURA_LOCAL_RESEARCH_FRESH_ROOT__",
+            "true" if flavor == "local-research" else "false",
+        )
+        .replace(
+            "__KNEEKURA_LOCAL_RESEARCH_DENY_HTTP__",
+            "true" if flavor == "local-research" else "false",
         )
     )
     if "__KNEEKURA_" in rendered:
@@ -305,6 +317,12 @@ def build_bridge_dex(
         ),
         "original_native_gameplay_persistence_verified": False,
         "network_egress_guarantee": "NOT_VERIFIED",
+        "strict_local_research_package": flavor == "local-research",
+        "original_native_files_root": (
+            "super.getFilesDir() in separate app UID" if flavor == "local-research"
+            else "existing original bridge mode"
+        ),
+        "origin_marker_is_gameplay_save": False,
     }
 
 
@@ -397,7 +415,9 @@ def inject_bridge_split_set(
     package_name = FLAVOR_PACKAGES.get(flavor)
     if package_name is None:
         raise ValueError(f"unknown flavor: {flavor!r}")
-    if research_deny_internet and flavor != "research":
+    if flavor == "local-research" and not research_deny_internet:
+        raise ValueError("local research must remove Android INTERNET permission")
+    if research_deny_internet and flavor not in ("research", "local-research"):
         raise ValueError("original INTERNET quarantine is research flavor only")
     launcher = package_name + ".MyActivity"
 
