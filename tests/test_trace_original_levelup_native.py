@@ -17,11 +17,13 @@ from tools.base_mod.trace_original_levelup_native import (
     ORIGINAL_NATIVE_SAVE_RESTORE_ANCHORS,
     ORIGINAL_CAP_INCREMENT_ITEM_TRANSACTION_ANCHORS,
     ORIGINAL_XP_TO_SAVE_DISPATCH_ANCHORS,
+    ORIGINAL_SAVE_JNI_FILE_ROOT_ANCHORS,
     LevelUpNativeTraceError,
     _original_unit_data_loader, _original_effective_level_cap_getter,
     _original_upgrade_purchase_flow, _original_save_data_serialization,
     _original_save_restore_flow, _original_cap_increment_item_transaction,
     _original_normal_xp_purchase_save_routes,
+    _original_save_jni_files_root,
     _original_arm64_cfg_successors, _original_arm64_cfg_witness,
     _original_arm64_cfg_all_direct_paths_hit_save,
     _levelmax_popup_branch,
@@ -79,6 +81,17 @@ def _synthetic_normal_xp_save_dispatch_fixture() -> bytearray:
     direct_b = 0x14000000 | (((target - pc) // 4) & 0x03FFFFFF)
     struct.pack_into("<I", blob, pc, direct_b)
     return blob
+
+
+
+def _synthetic_original_jni_file_root_fixture() -> bytearray:
+    """Exact instruction words, but NEVER a redistributed original ELF."""
+    payload = bytearray(0x8B4700)
+    payload[0x1905A5:0x1905B1] = b"getFilesDir\x00"
+    payload[0x191955:0x19195F] = b"SAVE_DATA\x00"
+    for pc, opcode in ORIGINAL_SAVE_JNI_FILE_ROOT_ANCHORS.items():
+        struct.pack_into("<I", payload, pc, opcode)
+    return payload
 
 
 class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
@@ -502,6 +515,46 @@ class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
                         bytes(broken), 0x100, 0x180, 0x100,
                         frozenset({0x130, 0x134})
                     )
+
+
+    def test_original_save_reader_and_writer_use_same_android_jni_files_root(self):
+        result = _original_save_jni_files_root(
+            bytes(_synthetic_original_jni_file_root_fixture())
+        )
+        self.assertEqual(
+            result["status"],
+            "ORIGINAL_SAVE_DATA_READ_AND_WRITE_SHARE_ANDROID_FILES_DIR_JNI",
+        )
+        self.assertEqual(result["same_file_root_thunk"], "0x42cde8")
+        self.assertIn("0x35d6b0 -> 0x42cde8", result["save_reader_path"])
+        self.assertIn("0x35e510 -> 0x42cde8", result["save_writer_path"])
+        self.assertEqual(result["jni_method_name"], "getFilesDir")
+        self.assertEqual(result["filename_combiner_read"],
+                         "0x35d6c0 -> 0x31a104")
+        self.assertEqual(result["filename_combiner_write"],
+                         "0x35e520 -> 0x31a104")
+        self.assertFalse(result["actual_original_host_java_subclass_invocation_proven"])
+        self.assertFalse(result["original_native_save_under_isolated_root_device_tested"])
+        self.assertFalse(result["fresh_independent_player_authority_integrated"])
+        self.assertFalse(result["full_zero_network_first_boot_proven"])
+        self.assertFalse(result["original_lv60_purchase_reboot_proven"])
+
+    def test_original_save_jni_chain_rejects_drift_or_incorrect_root(self):
+        original = _synthetic_original_jni_file_root_fixture()
+        for pc in (0x8B4404, 0x8B46FC, 0x35D6B0,
+                   0x35E510, 0x35D6C0, 0x35E520,
+                   0x42CDE8, 0x45AA3C, 0x45AA40):
+            broken = bytearray(original)
+            broken[pc] ^= 1
+            with self.subTest(pc=hex(pc)):
+                with self.assertRaises(LevelUpNativeTraceError):
+                    _original_save_jni_files_root(bytes(broken))
+        for literal in (0x1905A5, 0x191955):
+            broken = bytearray(original)
+            broken[literal] ^= 1
+            with self.subTest(literal=hex(literal)):
+                with self.assertRaises(LevelUpNativeTraceError):
+                    _original_save_jni_files_root(bytes(broken))
 
     def test_real_game_original_upgrader_cues_are_not_fabricated_hooks(self):
         self.assertEqual(len(NATIVE_SHA256), 64)
