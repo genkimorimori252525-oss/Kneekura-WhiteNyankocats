@@ -195,8 +195,8 @@ ORIGINAL_UNIT_DATA_ANCHORS = {
     0x8A2C60: 0xB0FFC848,  # unitbuy.csv ADRP
     0x8A2C64: 0x91268D08,  # unitbuy.csv ADD
     0x8A2C88: 0x94042B0C,  # open unitbuy.csv
-    0x8A2CB8: 0x91018318,  # per-cat encoded unitbuy data (context+0x4b060)
-    0x8A2CBC: 0x91018739,  # decoded destination (context+0x4b061)
+    0x8A2CB8: 0x91018118,  # per-cat encoded unitbuy data (context+0x4b060)
+    0x8A2CBC: 0x91018539,  # decoded destination (context+0x4b061)
     0x8A2CC8: 0x8B17231A,  # index*256
     0x8A2CD8: 0x2A1303E1,  # w1 = col number (0..62)
     0x8A2CDC: 0x97EB0388,  # read unitbuy col
