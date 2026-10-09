@@ -268,11 +268,37 @@ class StaticHttpBridgeTests(unittest.TestCase):
         self.assertIn("__KNEEKURA_USE_EXTERNAL_FILES_DIR__", injector)
         self.assertNotIn("patch_exact_dex_string(", injector)
 
+    def test_original_owner_builder_rejects_nonresearch_private_save_mode(self) -> None:
+        from tools.base_mod.build_owned_static_http_bridge import (
+            build_owned_static_http_bridge,
+        )
+        for flavor in ("personal", "practice"):
+            with self.subTest(flavor=flavor):
+                with self.assertRaisesRegex(ValueError, "requires research flavor"):
+                    build_owned_static_http_bridge(
+                        Path("not-read-export.zip"),
+                        flavor=flavor,
+                        shim=Path("not-read-shim.so"),
+                        keystore=Path("not-read-keystore"),
+                        alias="never-used",
+                        storepass="unused",
+                        output_dir=Path("not-created"),
+                        research_isolate_original_native_files_dir=True,
+                    )
+
     def test_static_builder_preserves_original_native_extraction(self) -> None:
         source = (
             ROOT / "tools/base_mod/build_owned_static_http_bridge.py"
         ).read_text(encoding="utf-8")
         self.assertIn("research_native_extraction=False", source)
+        self.assertIn("research_isolate_original_native_files_dir: bool = False", source)
+        self.assertIn(
+            "isolate_original_native_files_dir=research_isolate_original_native_files_dir",
+            source,
+        )
+        self.assertIn('"original_independent_local_save_verified": False', source)
+        self.assertIn('"original_zero_network_verified": False', source)
+        self.assertIn("--research-isolate-original-native-files-dir", source)
 
     def test_compile_stub_is_never_product_logic(self) -> None:
         stub = (
