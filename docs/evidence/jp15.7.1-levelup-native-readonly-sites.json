@@ -82,13 +82,14 @@
     "value_semantic_meaning": "UNKNOWN: original game stores a bytewise XOR-encoded value; value=1 selects first level-max popup; NOT yet proven per-unit level cap"
   },
   "source_code_tool": "tools/base_mod/trace_original_levelup_native.py",
-  "next_verified_code_task": "Trace native original upgrade button purchase call path to effective cap getter 0x53b2bc, XP/CatsEye debit and level write; wire narrow safe offline-owned save provider and validate original gameplay UI before release",
+  "next_verified_code_task": "Map native purchase XP debit/current level increment from 0x8581fc/0x858390/0x8583b8 to verified original FILE SAVE/deserialize path, integrate a version-pinned independent offline game authority without illegal original SAVE reuse; only then test one cat to Lv60 and reload.",
   "release_status": {
     "original_ui_level_cap_patch_attached": false,
     "level_purchase_action_attached": false,
     "real_original_game_verified": false,
     "full_offline_game_verified": false,
-    "original_native_effective_cap_formula_proven": true
+    "original_native_effective_cap_formula_proven": true,
+    "original_native_upgrade_purchase_cap_and_xp_semantics_proven": true
   },
   "restrictions": "No full proprietary data, disassembly dumps, source APK, original SAVE_DATA, private signing keys or bypass code committed; this is metadata only.",
   "unit_native_source_table_sequence": {
@@ -148,5 +149,34 @@
     "local_game_save_writer_attached": false,
     "device_e2e_playtest_passed": false,
     "result_status": "EXACT_SOURCE_CAP_FORMULA_IDENTIFIED_NO_PATCH_APPLIED"
+  },
+  "verified_original_upgrade_purchase_flow": {
+    "source_sha256": "333d2974ab2ff881fd70087fd62dea7d12d82addbc55cab2f2a675ad67e3a7e2",
+    "proof_type": "READ_ONLY_OWNER_ORIGINAL_AARCH64_43_EXACT_OPCODES_12_DIRECT_CALLS_2_BRANCH_TARGETS",
+    "exact_private_source_verified": true,
+    "selected_cat": "0x8581f8 -> 0x86ada0",
+    "original_cap_predicate": "0x8581fc -> 0x53be0c",
+    "native_cap_predicate_result": "0x858200 TBZ -> 0x85904c on no-upgrade",
+    "current_level_upper16": "context+0x47ba4+cat_asset_index*8",
+    "max_upgrade_increment_upper16": "context+0x3ad80c+cat_asset_index*8 (separate from current level)",
+    "cap_logic": "compare next current level with min(unitbuy.csv col18 + decoded saved base increment, unitbuy.csv col50); other original conditions remain",
+    "xp_wallet": "context+0xc3b8",
+    "xp_cost_adjustment": "0x858364 -> 0x85d658",
+    "xp_read": "0x858374 -> 0x9d8718",
+    "insufficient_xp_exit": "0x85837c b.lt -> 0x8594c0",
+    "xp_decrement": "0x858388 sub w1,w0,w20",
+    "xp_encoded_write": "0x858390 -> 0x9d86e4",
+    "current_level_increment": "0x8583b8 -> 0x9cc04c (current level upper16 +1)",
+    "separate_cap_increment_code_lead": "0x85db80 -> 0x9cc04c (semantics/XP-CatsEye consumption not proven)",
+    "post_purchase_events": [
+      "0x8583d8 -> 0x4a46ec",
+      "0x8583e0 -> 0x4a4a50"
+    ],
+    "original_disk_save_write_proven": false,
+    "original_cats_eye_deduction_proven": false,
+    "original_game_android_runtime_patch_attached": false,
+    "independent_zero_egress_gameplay_save_attached": false,
+    "original_game_upgrade_to_60_verified": false,
+    "next_code_target": "Map original game persistence + valid local account-free progression into native purchase path without touching restricted PONOS SAVE_DATA; preserve exact original XP and Catseye economics"
   }
 }
