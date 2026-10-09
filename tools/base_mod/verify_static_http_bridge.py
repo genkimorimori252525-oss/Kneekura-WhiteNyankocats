@@ -162,6 +162,7 @@ def verify_static_http_bridge(
         reports.append({"name": name, **diff})
 
     with zipfile.ZipFile(original_dir / "base.apk", "r") as original_base:
+        original_manifest = original_base.read("AndroidManifest.xml")
         original_classes4 = original_base.read("classes4.dex")
         original_method = _new_http_method(
             original_classes4,
@@ -210,7 +211,7 @@ def verify_static_http_bridge(
         if ORIGINAL_LAUNCHER in manifest_values:
             raise ValueError("original launcher remained active in bridge manifest")
         source_perms = manifest_components(
-            original_base.read("AndroidManifest.xml")
+            original_manifest
         )["declared_permissions"]
         actual_perms = manifest_components(
             final_base.read("AndroidManifest.xml")
