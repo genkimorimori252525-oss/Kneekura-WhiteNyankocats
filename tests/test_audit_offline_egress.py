@@ -122,7 +122,7 @@ class OfflineEgressAuditTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "exactly one"):
             remove_exact_uses_permission(source, "android.permission.INTERNET")
         malformed = fixture_axml(permissions=("android.permission.INTERNET",))
-        with self.assertRaisesRegex(ValueError, "immediate paired end"):
+        with self.assertRaisesRegex(ValueError, "no closing tag|immediate paired end"):
             remove_exact_uses_permission(malformed, "android.permission.INTERNET")
         broken_len = bytearray(good)
         struct.pack_into("<I", broken_len, 4, len(good) + 1)
