@@ -92,6 +92,14 @@ the repository validation harness before handing terminal commands to a human.
 
 Current shared source: tools/base_mod/resolve_java_keytool.ps1; strict Windows CI: .github/workflows/agent-terminal-validation.yml; repaired overlay: docs/updates/independent-alpha-existing-folder-overwrite.md.
 
+## Owner-approved local starting chapters (2026-10-09)
+
+- **Current independent game seed (latest)**: Empire of Cats / 日本編 chapters 1–3 **plus Into the Future / 未来編 chapter 1** are all complete, all **48 stages each**, all **Superior treasure rank 3**. No Future chapters 2–3, Cosmos or SoL chapter is initially marked complete.
+- The exact legacy JP15.7.1 main-story slot mapping is EoC 0/1/2, historical reserved 3, **ItF1 = 4**. In the independent app use semantic keys `eoc1/eoc2/eoc3/itf1`, not raw PONOS SAVE offsets.
+- Canonical independent policy lives in `app/src/main/assets/kneekura-story-bootstrap-v2.json`; local Android storage is `StoryProgressStore.java` and the Python KNEEKURA_SAVE_V1 prototype is `tools/localcore/story_checkpoint.py`. All future owner builds must preserve this checkpoint without wiping existing units/resources/story progress or awarding stage drops without gameplay.
+- `docs/architecture/kneekura-post-eoc-liveops.md` previously said Future1 starts uncleared; that is a **superseded historical design**, not the latest owner instruction. Read `docs/architecture/kneekura-independent-story-checkpoint-v2.md` for the authoritative new behavior.
+- A stateless preview or `all_stages_unlocked=true` is NOT sufficient to claim chapter clears/treasures. Actual independent per-stage records and Android persistence are mandatory. Do not alter official `SAVE_DATA` or reintroduce original-account checks.
+
 ## Standard commands
 
 Harness self-test:
