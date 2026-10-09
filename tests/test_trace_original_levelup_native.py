@@ -25,6 +25,7 @@ from tools.base_mod.trace_original_levelup_native import (
     ORIGINAL_APP_LAUNCH_RESULT_ANCHORS,
     ORIGINAL_APP_LAUNCH_TARGET_SCENE_ENTRY_ANCHORS,
     ORIGINAL_SCENE97_DOWNLOAD_BATCH_ANCHORS,
+    JP15_7_1_ORIGINAL_LOCAL_LIST_COUNTS,
     ORIGINAL_SCENE97_DOWNLOAD_BATCH_RELOCS, ORIGINAL_DOWNLOAD_BATCH_RTTI,
     ORIGINAL_RELA_DYN_OFFSET, ORIGINAL_RELA_DYN_COUNT,
     ORIGINAL_RELA_DYN_ENTRY_SIZE,
@@ -39,6 +40,7 @@ from tools.base_mod.trace_original_levelup_native import (
     _original_app_launch_result_scene_dispatch,
     _original_app_launch_target_scene_entries,
     _original_scene97_download_batch_task,
+    _original_download_batch_tsv_installed_local_coverage,
     _original_arm64_cfg_successors, _original_arm64_cfg_witness,
     _original_arm64_cfg_all_direct_paths_hit_save,
     _levelmax_popup_branch,
@@ -885,6 +887,45 @@ class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
             with self.subTest(where=hex(where)):
                 with self.assertRaises(LevelUpNativeTraceError):
                     _original_scene97_download_batch_task(bytes(other))
+
+    def test_original_installpack_35_tsv_coverage_is_exact_manifest_not_guess(self):
+        # Synthetic AES manifests, no original local .list/.pack bytes.
+        from tools.base_mod.battlecats_pack_writer import encrypt_manifest_bytes
+
+        def sealed_list(names):
+            text = str(len(names)) + "\n"
+            text += "".join(f"{name},{index*16},16\n"
+                            for index, name in enumerate(names))
+            return encrypt_manifest_bytes(text.encode("utf-8"))
+
+        source = {
+            family: sealed_list(
+                ["download_5.tsv", "not-a-download.tsv"] if family == "DataLocal"
+                else ["download_12.tsv"] if family == "DownloadLocal"
+                else []
+            )
+            for family in JP15_7_1_ORIGINAL_LOCAL_LIST_COUNTS
+        }
+        report = _original_download_batch_tsv_installed_local_coverage(
+            source, require_exact_owner_counts=False
+        )
+        self.assertEqual(report["checked_bundled_local_family_count"], 9)
+        self.assertEqual(report["checked_bundled_local_entry_count"], 3)
+        self.assertEqual(report["present_bundled_local_tsv"],
+                         ["download_12.tsv", "download_5.tsv"])
+        self.assertEqual(len(report["missing_bundled_local_tsv"]), 33)
+        self.assertFalse(report["all_35_download_tsv_bundled_locally"])
+        self.assertFalse(report["actual_remote_server_packs_examined"])
+        self.assertFalse(report["actual_615mb_download_completed"])
+        self.assertFalse(report["local_engine_boot_and_download_fallback_verified"])
+
+        with self.assertRaisesRegex(LevelUpNativeTraceError, "count drifted"):
+            _original_download_batch_tsv_installed_local_coverage(source)
+        with self.assertRaisesRegex(LevelUpNativeTraceError, "family set changed"):
+            _original_download_batch_tsv_installed_local_coverage(
+                {"DataLocal": source["DataLocal"]},
+                require_exact_owner_counts=False,
+            )
 
     def test_real_game_original_upgrader_cues_are_not_fabricated_hooks(self):
         self.assertEqual(len(NATIVE_SHA256), 64)
