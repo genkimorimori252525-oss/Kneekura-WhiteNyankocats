@@ -1858,6 +1858,120 @@ def _original_scene97_download_batch_task(elf: bytes) -> dict[str, Any]:
     }
 
 
+
+# SOURCE-only JP15.7.1 resolver behind DownloadBatchTask TSV lookup:
+# Scene97 constructs "download_%d.tsv" -> formats index 0..34 ->
+# 0x73caa8 calls the *asset/source file resolver* at 0x320be0.
+# That resolver first queries an internal source index (0x321138);
+# a result-bit failure leads to a -1 return. The other route calls the
+# SAME JNI getFilesDir thunk 0x42cde8 used by SAVE_DATA read/write.
+# .caf/.ogg sound-specific handling is unrelated to .tsv names.
+# Do not conclude from these sites that remote content was downloaded,
+# or that placing loose TSVs in an app folder satisfies its source index.
+ORIGINAL_DOWNLOAD_TSV_FILE_RESOLVER_ANCHORS = {
+    0x73CA9C: 0x97EF9E6E,  # native download_%d.tsv name formatter
+    0x73CAA8: 0x97EF904E,  # same exact 0x320be0 resolver
+    0x73CAB0: 0xB8357B40,  # save each returned status indexed by w21
+    0x320BE0: 0xD10543FF,  # original resolver entry
+    0x320C34: 0x94000141,  # query source index
+    0x320C38: 0x360017C0,  # failed index lookup -> 0x320f30
+    0x320C40: 0x9404306A,  # invoke same JNI getFilesDir thunk as SAVE
+    0x320C48: 0x94043066,  # check constructed file-root context
+    0x320C4C: 0x37000080,  # conditional file-root check
+    0x320C98: 0x528C65DC,  # .caf format suffix low half
+    0x320CA8: 0x72ACCC3C,  # .caf high half
+    0x320E24: 0x528DE5C9,  # .ogg low half
+    0x320E28: 0x72ACECE9,  # .ogg high half
+    0x320E5C: 0x540004A0,  # extension-match conditional branch
+    0x320E68: 0x90FFF440,  # ADRP sound data path prefix
+    0x320E6C: 0x91309C00,  # ADD sound data prefix literal
+    0x320E88: 0x97FFE49F,  # file/resource name join helper
+    0x320E90: 0x94042FD4,  # check resolved file-path source
+    0x320F30: 0xF9400260,  # index lookup failure-side object access
+    0x320F34: 0xB40000A0,  # CBZ -> -1 return
+    0x320F44: 0xD63F0100,  # optional vtable callback (not HTTP proof)
+    0x320F48: 0x12800013,  # w19 = -1
+    0x320F70: 0x2A1F03F3,  # w19 = 0
+    0x320FA0: 0x2A1303E0,  # w0 = return code
+    0x321004: 0x52800033,  # w19 = 1 on another code path
+}
+
+
+def _original_download_tsv_file_source_resolver(elf: bytes) -> dict[str, Any]:
+    """Verify native TSV resolver index gate / getFilesDir / result values.
+
+    File names, source lists and original JNI root are proven on exact owner
+    binary; source-index population, success for a concrete TSV, actual
+    Android no-network game boot and server-pack availability are not.
+    """
+    if len(elf) < 0x73CAB4:
+        raise LevelUpNativeTraceError("original TSV source resolver bytes truncated")
+    if elf[0x1A8C27:0x1A8C2B] != b"snd\x00":
+        raise LevelUpNativeTraceError("original sound resource prefix literal drifted")
+    for pc, expected in ORIGINAL_DOWNLOAD_TSV_FILE_RESOLVER_ANCHORS.items():
+        if _u32(elf, pc) != expected:
+            raise LevelUpNativeTraceError(
+                f"original TSV file resolver opcode drifted at {_hex(pc)}"
+            )
+    for pc, target in {
+        0x73CA9C: 0x324454,  # TSV name formatter
+        0x73CAA8: 0x320BE0,  # original source resolver
+        0x320C34: 0x321138,  # source-index gate
+        0x320C40: 0x42CDE8,  # JNI getFilesDir, shared with SAVE_DATA
+        0x320C48: 0x42CDE0,  # file-root query
+        0x320E88: 0x31A104,  # path/name join
+        0x320E90: 0x42CDE0,  # path/source check
+    }.items():
+        if _decode_relative_bl(elf, pc) != target:
+            raise LevelUpNativeTraceError(
+                f"original TSV source resolver callee drifted at {_hex(pc)}"
+            )
+    if 0x320F30 not in _original_arm64_cfg_successors(elf, 0x320C38):
+        raise LevelUpNativeTraceError("original TSV source index failure branch drifted")
+    if 0x320F48 not in _original_arm64_cfg_successors(elf, 0x320F34):
+        raise LevelUpNativeTraceError("original TSV resolver -1 return branch drifted")
+    refs = direct_adrp_add_refs(
+        elf, 0x1A8C27, text_start=0x320E68, text_end=0x320E70
+    )
+    if (len(refs) != 1
+        or refs[0]["adrp_address"] != "0x320e68"
+        or refs[0]["add_address"] != "0x320e6c"):
+        raise LevelUpNativeTraceError("original audio-only path prefix reference drifted")
+    suffixes = {
+        ".caf": (_u32(elf, 0x320C98), _u32(elf, 0x320CA8)),
+        ".ogg": (_u32(elf, 0x320E24), _u32(elf, 0x320E28)),
+    }
+    if not (
+        suffixes[".caf"] == (0x528C65DC, 0x72ACCC3C)
+        and suffixes[".ogg"] == (0x528DE5C9, 0x72ACECE9)
+        and "download_0.tsv".endswith(".tsv")
+    ):
+        raise LevelUpNativeTraceError("original non-TSV audio fallback drifted")
+    return {
+        "status": "ORIGINAL_DOWNLOAD_BATCH_TSV_SOURCE_INDEX_AND_JNI_FILES_ROOT_VERIFIED",
+        "caller_name_builder": "0x73ca9c -> 0x324454",
+        "original_lookup": "0x73caa8 -> 0x320be0",
+        "per_index_native_result": "0x73cab0 [context+0x2fb8+index*4]",
+        "source_index_query": "0x320c34 -> 0x321138",
+        "missing_source_index_branch": "0x320c38 TBZ -> 0x320f30",
+        "missing_source_object_return": "0x320f34 CBZ -> 0x320f48 (return -1)",
+        "shared_android_files_dir": "0x320c40 -> 0x42cde8 (getFilesDir JNI thunk)",
+        "file_path_query": "0x320c48/0x320e90 -> 0x42cde0",
+        "file_path_join": "0x320e88 -> 0x31a104",
+        "observed_return_value_constants": [-1, 0, 1],
+        "audio_only_suffixes": [".caf", ".ogg"],
+        "audio_only_prefix": "snd (0x1a8c27)",
+        "download_tsv_audio_extension": False,
+        "loose_tsv_in_files_dir_satisfies_source_index_proven": False,
+        "actual_original_35_asset_files_resolved_successfully": False,
+        "owned_additional_server_pack_coverage_proven": False,
+        "direct_real_network_request_from_resolver_proven": False,
+        "other_transport_paths_excluded": False,
+        "original_local_save_or_app_assets_modified": False,
+        "original_offline_gameplay_Lv60_verified": False,
+    }
+
+
 def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict:
     digest = sha256(elf).hexdigest()
     if digest != expected_sha or expected_sha != NATIVE_SHA256:
@@ -1920,6 +2034,7 @@ def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict
         "original_app_launch_result_scene_dispatch": _original_app_launch_result_scene_dispatch(elf),
         "original_app_launch_target_scene_entries": _original_app_launch_target_scene_entries(elf),
         "original_scene97_download_batch_task": _original_scene97_download_batch_task(elf),
+        "original_download_tsv_file_source_resolver": _original_download_tsv_file_source_resolver(elf),
         "native_original_game_upgrader_getter_identified": True,
         "native_original_game_upgrade_purchase_hook_verified": False,
         "original_native_conditional_xp_purchase_to_save_calls_proven": True,
