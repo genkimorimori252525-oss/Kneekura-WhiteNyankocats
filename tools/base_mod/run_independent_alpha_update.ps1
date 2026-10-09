@@ -1,4 +1,4 @@
-param(
+﻿param(
     [switch]$Apply,
     [switch]$TransferOwnedExport,
     [string]$DeviceSerial = "",
@@ -21,7 +21,7 @@ if (-not (Test-Path -LiteralPath (Join-Path $repo 'tools/base_mod') -PathType Co
     throw '既存の「にーくらにゃんこ」フォルダのルートで上書き展開してな。'
 }
 $expectedFiles = @{
-    'INSTALL-ALPHA.ps1' = '5f2b19732ee61913863b3bf8147137706f284b85d837e0e9886e68e0965b0b25'
+    'INSTALL-ALPHA.ps1' = 'fe32e0b9010449fd8ea747521d215ff052b59a3f4dae8cdd263698ba755250f6'
     'independent-alpha.apk' = '9fc91ad09da1f242669404b86abbb53030aca133206f27c2cfb501a443a9ec3b'
 }
 foreach ($item in $expectedFiles.GetEnumerator()) {
