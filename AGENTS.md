@@ -56,6 +56,14 @@ the repository validation harness before handing terminal commands to a human.
 - Independent Android `MainActivity` has an i button opening `NoticeActivity`: 3 bundled introductory articles are shown until a separately trusted signed LiveOps content pack is imported. This is NOT the original PONOS WebView and not a final full base scene.
 - Content updates must not alter independent player SAVE, stage clears, inventory or gacha draws. Signed content validity and actual game functionality require different release gates.
 
+## Owner-facing distribution format: always project-root overlay ZIP (2026-10-09)
+
+- The owner has a settled, explicitly preferred update process: download ZIP, extract/overwrite **directly into the existing `にーくらにゃんこ` project root**, run exactly one PowerShell command from that root (`powershell -ExecutionPolicy Bypass -File .\tools\base_mod\<runner>.ps1 -Apply`). This is the default for all future owner-side release kits unless they explicitly request something else.
+- Do **not** unexpectedly switch to a separate self-contained folder, custom start.cmd flow, unrelated APK installer UI, or force re-uploading previously supplied assets. Keep new runner names descriptive and the archive's `tools/` tree rooted at ZIP top level (no extra parent directory).
+- Every user kit must include all owner-visible binaries/scripts needed for the advertised command; preserve existing `.venv`, original source archives, private signing keys and SAVE_DATA. NEVER put private artifacts into a public GitHub commit.
+- Default runner without `-Apply` should be preflight-only where possible. With `-Apply`, validate input fingerprints, existing app/package signing, owner device and backup constraints. NEVER uninstall or clear app data to get around a signing mismatch.
+- Distinguish the independent offline Android Stage Fidelity Alpha (`jp.kneekura.whitenyankocats`) from historical patched `jp.kn.*` builds and from any fully playable 1.01 release. An overlay delivery *format* does not prove feature completeness or device QA.
+- Current owner ZIP format is documented in `docs/updates/independent-alpha-existing-folder-overwrite.md` and entrypoint `tools/base_mod/run_independent_alpha_update.ps1`. The actual APK belongs in owner-only delivery ZIP under `tools/base_mod/independent_alpha_20261009/`, not in the public source repository.
 ## Standard commands
 
 Harness self-test:
