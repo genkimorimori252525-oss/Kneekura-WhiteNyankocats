@@ -213,8 +213,12 @@ def _synthetic_original_server_family_catalog_fixture() -> bytearray:
     for pc, opcode in ORIGINAL_SERVER_FAMILY_CATALOG_ANCHORS.items():
         struct.pack_into("<I", blob, pc, opcode)
     blob[0x1918D1:0x1918E3] = b"XImageServer.list\x00"
-    synthetic = b"XImageServer.pack\x00"
-    for i in range(1, 92):
+    synthetic = (
+        b"XImageServer.pack\x00"
+        b"MNumberServer.list\x00MNumberServer.pack\x00"
+        b"WImageDataServer.list\x00WImageDataServer.pack\x00"
+    )
+    for i in range(1, 90):
         synthetic += f"Test{i:03d}Server.list\x00".encode()
         synthetic += f"Test{i:03d}Server.pack\x00".encode()
     blob[0x1A0000:0x1A0000 + len(synthetic)] = synthetic
@@ -1178,7 +1182,7 @@ class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
         self.assertEqual(receipt["count_pack_literals"], 92)
         self.assertEqual(receipt["count_paired_original_server_families"], 92)
         self.assertIn("XImageServer", receipt["original_server_family_stems"])
-        self.assertIn("Test091Server", receipt["original_server_family_stems"])
+        self.assertIn("Test089Server", receipt["original_server_family_stems"])
         self.assertIn("XImageServer.list", receipt["one_original_runtime_initializer"])
         self.assertTrue(receipt["matches_92_registration_loop_row_count"])
         self.assertFalse(receipt["all_runtime_registered_names_proven"])
@@ -1198,9 +1202,9 @@ class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
         with self.assertRaisesRegex(LevelUpNativeTraceError, "literal drifted"):
             _original_registered_server_family_catalog(bytes(corrupted))
         corrupted = bytearray(source)
-        cursor = corrupted.find(b"Test091Server.pack\x00")
+        cursor = corrupted.find(b"Test089Server.pack\x00")
         self.assertGreater(cursor, 0)
-        corrupted[cursor + len(b"Test091Server.pac")] = ord("x")
+        corrupted[cursor + len(b"Test089Server.pac")] = ord("x")
         with self.assertRaisesRegex(LevelUpNativeTraceError, "92 paired"):
             _original_registered_server_family_catalog(bytes(corrupted))
 
