@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "inspection_date": "2026-10-09",
+  "provenance": "exact JP15.7.1 owner-source ARM64 libnative-lib.so (read-only offline examination)",
+  "owner_export_sha256": "38c3bbb8d2cf2101793c9462617d4293e19fc99588b6655fd40299fd61a0ef56",
+  "native_sha256": "333d2974ab2ff881fd70087fd62dea7d12d82addbc55cab2f2a675ad67e3a7e2",
+  "file": "split_config.arm64_v8a.apk::lib/arm64-v8a/libnative-lib.so",
+  "method": "AArch64 ADRP plus ADD immediate xref and conditional branch literal decoding; direct static disassembly; no original-game execution",
+  "string_xrefs": [
+    {
+      "cue": "unitbuy.csv",
+      "rodata": "0x1ab9a3",
+      "adrp": "0x8a2c60",
+      "add": "0x8a2c64",
+      "interpretation": "Direct resource/data string use; surrounding function has 882-count loop, NOT proven upgrade cap getter"
+    },
+    {
+      "cue": "BcResCatsEyeLevelUp",
+      "rodata": "0x190ccb",
+      "adrp": "0x942b64",
+      "add": "0x942b68",
+      "interpretation": "Original UI resource lead, NOT proof of level-up logic"
+    },
+    {
+      "cue": "CatsEyeLevelUp",
+      "rodata": "0x1a077e",
+      "adrp": "0x94cf70",
+      "add": "0x94cf74",
+      "interpretation": "Original UI resource lead, NOT proof of level-up logic"
+    },
+    {
+      "cue": "drop_popup_chara_levelmax1",
+      "rodata": "0x1a9244",
+      "adrp": "0x4e3070",
+      "add": "0x4e3074",
+      "interpretation": "Original max-level popup string A"
+    },
+    {
+      "cue": "drop_popup_chara_levelmax2",
+      "rodata": "0x1ad611",
+      "adrp": "0x4e3238",
+      "add": "0x4e323c",
+      "interpretation": "Original max-level popup string B"
+    },
+    {
+      "cue": "potential_skill_MaxLevel",
+      "rodata": "0x1ac4e7",
+      "adrp": "0x4a1a9c",
+      "add": "0x4a1aa0",
+      "interpretation": "Potential-skill maximum-level UI lead"
+    },
+    {
+      "cue": "Recommended_levelup.csv",
+      "rodata": "0x1aa740",
+      "adrp": "0x88a170",
+      "add": "0x88a174",
+      "interpretation": "Original recommended leveling resource filename lead"
+    }
+  ],
+  "control_flow_candidate": {
+    "at": "0x4e3068",
+    "opcode": "0x7100041f",
+    "instruction": "cmp w0,#1",
+    "conditional_at": "0x4e306c",
+    "conditional_opcode": "0x54000e61",
+    "branch": "b.ne",
+    "branch_target": "0x4e3238",
+    "falls_through_to": "0x4e3070",
+    "meaning_of_comparison": "UNDETERMINED",
+    "actual_upgrade_limit_getter": "NOT_FOUND"
+  },
+  "source_code_tool": "tools/base_mod/trace_original_levelup_native.py",
+  "next_verified_code_task": "Follow original call hierarchy/backwards data-flow for return value w0 feeding 0x4e3068, identify the real per-unit level-cap getter from unitbuy.csv + independent player state, then prepare a narrowly scoped original-engine adapter; no trial original SAVE reinstallation.",
+  "release_status": {
+    "original_ui_level_cap_patch_attached": false,
+    "level_purchase_action_attached": false,
+    "real_original_game_verified": false,
+    "full_offline_game_verified": false
+  },
+  "restrictions": "No full proprietary data, disassembly dumps, source APK, original SAVE_DATA, private signing keys or bypass code committed; this is metadata only."
+}
