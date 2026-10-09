@@ -667,6 +667,134 @@ def _original_save_data_serialization(elf: bytes) -> dict[str, Any]:
     }
 
 
+
+# Original native serializer's close/commit status and paired SAVE_DATA reader.
+# These source locations prove the XP/current-level/cap-increment deserializer
+# uses exactly the same game-context fields as the purchase-side writer.
+# The source still does NOT prove a durable fsync, new standalone offline
+# profile compatibility, or safe original-device startup.
+ORIGINAL_NATIVE_SAVE_RESTORE_ANCHORS = {
+    0x8B43A4: 0xD10443FF,  # reader wrapper entry
+    0x8B43D0: 0xB0FFC6E9,  # original SAVE_DATA string ADRP
+    0x8B43D4: 0x91255529,  # original SAVE_DATA string ADD
+    0x8B4404: 0x97EAA487,  # open input source
+    0x8B441C: 0x36000774,  # failed-open branch
+    0x8B4444: 0x97EAA8D7,  # reader ready/validation
+    0x8B4448: 0x360006E0,  # failed-validation branch
+    0x8B44AC: 0x97FFC87C,  # deserialize game context
+    0x8A66E0: 0x97EAD7B4,  # deserialize source/version value
+    0x8A69E8: 0x52987713,  # native XP record at context+0xc3b8
+    0x8A69EC: 0x97EAD6F1,  # read XP from source
+    0x8A69F4: 0x8B1302C0,  # XP destination context+0xc3b8
+    0x8A69F8: 0x9404C73B,  # encode XP in native game context
+    0x8A91E4: 0x97EACCF3,  # current levels recorded count
+    0x8A91F4: 0x91411EC9,  # context + 0x47000
+    0x8A9200: 0x912E9133,  # +0xba4: current-level array
+    0x8A920C: 0x97EACCE9,  # read next current level
+    0x8A921C: 0x9404BD32,  # encode current level
+    0x8A9230: 0x54FFFEAB,  # current-level loop, input count
+    0x8AD14C: 0x97EABD19,  # cap increments recorded count
+    0x8AD15C: 0x914EB6C9,  # context +0x3ad000
+    0x8AD168: 0x91203133,  # +0x80c: max-upgrade array
+    0x8AD174: 0x97EABD0F,  # read next cap increment
+    0x8AD180: 0x9404AD59,  # encode cap increment
+    0x8AD194: 0x54FFFECB,  # cap-increment loop, input count
+    0x8B46FC: 0x97EAA745,  # open original SAVE_DATA writer
+    0x8B4700: 0x360063E0,  # write-open failed branch
+    0x8B97DC: 0x940044EC,  # other game fields into source output
+    0x8B97E8: 0x97EA9539,  # finalize underlying output stream
+    0x8B97EC: 0x2A0003F3,  # save stream finalizer result
+    0x8B9BD8: 0x12000260,  # return masked bool status
+}
+
+
+def _original_save_restore_flow(elf: bytes) -> dict[str, Any]:
+    """Pin original WRITE stream finalization and READ state restoration.
+
+    This source-derived path includes the level-purchase XP and level fields
+    and their corresponding binary-deserialization stores. It does not prove
+    independent local boot, storage durability, or runtime UI acceptance.
+    """
+    if len(elf) < 0x8BA010 or elf[0x191955:0x19195F] != b"SAVE_DATA\x00":
+        raise LevelUpNativeTraceError("original save restore source bounds/name drifted")
+    for at, word in ORIGINAL_NATIVE_SAVE_RESTORE_ANCHORS.items():
+        if _u32(elf, at) != word:
+            raise LevelUpNativeTraceError(
+                f"original save restore native opcode drifted at {_hex(at)}"
+            )
+    calls = {
+        0x8B4404: 0x35D620,  # reader open
+        0x8B4444: 0x35E7A0,  # reader ready
+        0x8B44AC: 0x8A669C,  # original deserializer
+        0x8A66E0: 0x35C5B0,  # source version value
+        0x8A69EC: 0x35C5B0,  # original XP
+        0x8A69F8: 0x9D86E4,  # restored XP
+        0x8A91E4: 0x35C5B0,  # current level count
+        0x8A920C: 0x35C5B0,  # current level
+        0x8A921C: 0x9D86E4,  # restored level
+        0x8AD14C: 0x35C5B0,  # max increment count
+        0x8AD174: 0x35C5B0,  # max increment
+        0x8AD180: 0x9D86E4,  # restored max increment
+        0x8B46FC: 0x35E410,  # original writer open
+        0x8B97DC: 0x8CAB8C,  # extra original data serialization
+        0x8B97E8: 0x35ECCC,  # stream finalization
+    }
+    for at, expected in calls.items():
+        if _decode_relative_bl(elf, at) != expected:
+            raise LevelUpNativeTraceError(
+                f"original save restore BL target drifted at {_hex(at)}"
+            )
+    for at, target in (
+        (0x8B441C, 0x8B4508),
+        (0x8B4448, 0x8B4524),
+        (0x8B4700, 0x8B537C),
+    ):
+        branch = _u32(elf, at)
+        if branch & 0x7F000000 != 0x36000000:
+            raise LevelUpNativeTraceError(
+                f"original save open/validation TBZ drifted at {_hex(at)}"
+            )
+        displacement = _sign_extend((branch >> 5) & 0x3FFF, 14) * 4
+        if at + displacement != target:
+            raise LevelUpNativeTraceError(
+                f"original save open/validation branch target drifted at {_hex(at)}"
+            )
+    for at, target in (
+        (0x8A9230, 0x8A9204),
+        (0x8AD194, 0x8AD16C),
+    ):
+        branch = _u32(elf, at)
+        if branch & 0xFF00001F != 0x5400000B:
+            raise LevelUpNativeTraceError(
+                f"original saved unit-array loop drifted at {_hex(at)}"
+            )
+        displacement = _sign_extend((branch >> 5) & 0x7FFFF, 19) * 4
+        if at + displacement != target:
+            raise LevelUpNativeTraceError(
+                f"original saved unit-array loop target drifted at {_hex(at)}"
+            )
+    return {
+        "status": "VERIFIED_ORIGINAL_NATIVE_SAVE_READER_WRITER_STREAM_SEAMS",
+        "save_filename": "SAVE_DATA",
+        "read_entry": "0x8b43a4",
+        "reader_open": "0x8b4404 -> 0x35d620",
+        "reader_validity": "0x8b4444 -> 0x35e7a0",
+        "deserialize_game_context": "0x8b44ac -> 0x8a669c",
+        "restore_xp": "0x8a69ec read; 0x8a69f8 encode at context+0xc3b8",
+        "restore_current_levels": "0x8a91e4 dynamic stored count, 0x8a920c read, 0x8a921c encode at context+0x47ba4+cat*8",
+        "restore_max_cap_increments": "0x8ad14c dynamic stored count, 0x8ad174 read, 0x8ad180 encode at context+0x3ad80c+cat*8",
+        "write_entry": "0x8b9fc8 -> 0x8b46b0",
+        "writer_open": "0x8b46fc -> 0x35e410",
+        "serializer_finished": "0x8b97e8 -> 0x35eccc; return status in w0",
+        "storage_backend_identified": False,
+        "durable_fsync_or_atomic_commit_proven": False,
+        "successful_purchase_triggers_save_proven": False,
+        "network_independent_fresh_game_profile_proven": False,
+        "original_game_level60_restart_verified": False,
+        "safe_original_native_game_patch_attached": False,
+    }
+
+
 def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict:
     digest = sha256(elf).hexdigest()
     if digest != expected_sha or expected_sha != NATIVE_SHA256:
@@ -717,6 +845,7 @@ def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict
         "original_effective_level_cap_getter": _original_effective_level_cap_getter(elf),
         "original_upgrade_purchase_flow": _original_upgrade_purchase_flow(elf),
         "original_save_data_serialization": _original_save_data_serialization(elf),
+        "original_save_restore_flow": _original_save_restore_flow(elf),
         "native_original_game_upgrader_getter_identified": True,
         "native_original_game_upgrade_purchase_hook_verified": False,
         "unit_cap_purchase_hook_attached": False,
