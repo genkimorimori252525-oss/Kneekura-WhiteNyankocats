@@ -413,6 +413,10 @@ class StaticHttpBridgeTests(unittest.TestCase):
                 " SAVE_DATA4=absent SAVE_DATA8=absent", first.stdout
             )
             self.assertNotIn("PROTECTED_ORIGINAL", first.stdout)
+            self.assertIn(
+                "TRACE=original-download-tsv-loose-v1"
+                " present=0 absent=35 unsafe=0", first.stdout
+            )
             marker = local_root / ".kneekura-virgin-local-jp15-7-1"
             self.assertTrue(marker.is_file())
             self.assertEqual(marker.stat().st_size, 0)
@@ -421,6 +425,7 @@ class StaticHttpBridgeTests(unittest.TestCase):
                              b"PROTECTED_ORIGINAL")
 
             (local_root / "SAVE_DATA").write_bytes(b"NEW_LOCAL_GAME_SAVE_FIXTURE")
+            (local_root / "download_0.tsv").write_bytes(b"OWNED_LOCAL_TEST_TSV")
             resumed = run_host()
             self.assertIn("ROOT=" + str(local_root.resolve()), resumed.stdout)
             self.assertIn(
@@ -428,9 +433,28 @@ class StaticHttpBridgeTests(unittest.TestCase):
                 + str(len(b"NEW_LOCAL_GAME_SAVE_FIXTURE")), resumed.stdout
             )
             self.assertNotIn("NEW_LOCAL_GAME_SAVE_FIXTURE", resumed.stdout)
+            self.assertIn(
+                "TRACE=original-download-tsv-loose-v1"
+                " present=1 absent=34 unsafe=0", resumed.stdout
+            )
+            self.assertNotIn("OWNED_LOCAL_TEST_TSV", resumed.stdout)
             self.assertEqual((local_root / "SAVE_DATA").read_bytes(),
                              b"NEW_LOCAL_GAME_SAVE_FIXTURE")
             if hasattr(os, "symlink"):
+                external_tsv = base / "not-app-private-download-tsv"
+                external_tsv.write_bytes(b"PRIVATE_EXTERNAL_TSV_CONTENT")
+                try:
+                    os.symlink(external_tsv, local_root / "download_1.tsv")
+                except OSError:
+                    pass
+                else:
+                    tsv_scan = run_host()
+                    self.assertIn(
+                        "TRACE=original-download-tsv-loose-v1"
+                        " present=1 absent=33 unsafe=1", tsv_scan.stdout
+                    )
+                    self.assertNotIn("PRIVATE_EXTERNAL_TSV_CONTENT", tsv_scan.stdout)
+                    (local_root / "download_1.tsv").unlink()
                 (local_root / "SAVE_DATA").unlink()
                 outside_file = base / "out-of-app-data"
                 outside_file.write_bytes(b"PRIVATE_EXTERNAL_FILE")
@@ -479,6 +503,21 @@ class StaticHttpBridgeTests(unittest.TestCase):
                     refused = run_host()
                     self.assertIn("ROOT=BLOCKED", refused.stdout)
                     marker.unlink()
+
+    def test_local_research_original_tsv_observer_is_single_pass_and_read_only(self):
+        original = (ROOT / "bridge/java/MyActivity.java.in").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("private static boolean localDownloadTsvProbeCompleted", original)
+        self.assertIn("if (localDownloadTsvProbeCompleted)", original)
+        self.assertIn('new File(root, "download_" + index + ".tsv")', original)
+        self.assertIn("for (int index = 0; index < 35; index++)", original)
+        self.assertIn("candidate.getCanonicalPath().startsWith(trusted)", original)
+        self.assertIn("original-download-tsv-loose-v1", original)
+        self.assertIn("localDownloadTsvProbeCompleted = true", original)
+        self.assertIn("probeLocalDownloadBatchTsvFiles(root);", original)
+        self.assertNotIn("FileInputStream", original)
+        self.assertNotIn("FileOutputStream", original)
 
     def test_local_research_builder_rejects_networked_or_legacy_save_modes_before_io(self):
         from tools.base_mod.build_owned_static_http_bridge import (
