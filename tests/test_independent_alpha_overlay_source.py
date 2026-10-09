@@ -33,6 +33,21 @@ class FamiliarOverlayUpdateTests(unittest.TestCase):
         )
         self.assertNotIn("5f2b19732ee61913863b3bf8147137706f284b85d837e0e9886e68e0965b0b25", parsed)
 
+    def test_null_java_home_regression_and_distribution_digests(self):
+        helper = ROOT / "tools/base_mod/resolve_java_keytool.ps1"
+        self.assertTrue(helper.exists())
+        self.assertTrue(helper.read_bytes().startswith(bytes((0xEF, 0xBB, 0xBF))))
+        source = helper.read_text(encoding="utf-8-sig")
+        self.assertIn("function Resolve-JavaKeytool", source)
+        self.assertIn("Get-Command -Name $commandName -CommandType Application", source)
+        self.assertIn("[string]::IsNullOrWhiteSpace($root)", source)
+        self.assertNotIn("Join-Path $env:JAVA_HOME", source)
+        self.assertIn("throw 'Java keytool.exe not found", source)
+        wrapper = WRAPPER.read_text(encoding="utf-8-sig")
+        self.assertIn("a2f6f8f011275296340fcaec15e49eb498e0f4bd77096ce92ad8d5ee59c08bc4", wrapper)
+        self.assertIn("d36f57ce928807fde46738ab64ad1f61e7b651118c08821842ffe3835b3b18f0", wrapper)
+        self.assertNotIn("fe32e0b9010449fd8ea747521d215ff052b59a3f4dae8cdd263698ba755250f6", wrapper)
+
     def test_refuses_destructive_or_original_save_operations(self):
         source = WRAPPER.read_text(encoding="utf-8")
         for forbidden in ("adb uninstall", "pm clear", "install -d", "SAVE_DATA", "Remove-Item -Recurse"):
