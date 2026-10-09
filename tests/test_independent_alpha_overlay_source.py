@@ -1,5 +1,6 @@
 """Ensure the familiar folder-overwrite installer remains fail-closed."""
 from pathlib import Path
+import re
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -42,10 +43,12 @@ class FamiliarOverlayUpdateTests(unittest.TestCase):
         self.assertIn("Get-Command -Name $name -CommandType Application", source)
         self.assertIn("[string]::IsNullOrWhiteSpace($root)", source)
         self.assertNotIn("Join-Path $env:JAVA_HOME", source)
+        self.assertIsNone(re.search(r"(?i)\$home\b", source), "Do not assign/read PowerShell read-only $HOME via $home")
+        self.assertIn("$jdkInstallDirectory", source)
         self.assertIn("throw 'Java JDK keytool.exe not found", source)
         wrapper = WRAPPER.read_text(encoding="utf-8-sig")
         self.assertIn("a2f6f8f011275296340fcaec15e49eb498e0f4bd77096ce92ad8d5ee59c08bc4", wrapper)
-        self.assertIn("6f9ab5a9164f9ce1005c9cb961cc2e1c61bfc13b24cd29ba74c9fd44d9fbedbf", wrapper)
+        self.assertIn("d3f7f6c1af84690a444887d0b5dbeb85e3b4b4679cb31abcb7a47ae431472ac7", wrapper)
         self.assertNotIn("fe32e0b9010449fd8ea747521d215ff052b59a3f4dae8cdd263698ba755250f6", wrapper)
 
     def test_refuses_destructive_or_original_save_operations(self):
