@@ -35,6 +35,7 @@ ELF_APK_NAME = "lib/arm64-v8a/libnative-lib.so"
 # Only exact original text identifiers. No speculative native function names.
 CUES = {
     "unit_data_file": "unitbuy.csv",
+    "native_activity_files_dir": "getFilesDir",
     "unit_level_file": "unitlevel.csv",
     "unit_xp_file": "unitexp.csv",
     "catseye_screen_resource": "BcResCatsEyeLevelUp",
@@ -51,6 +52,7 @@ CUES = {
 # Proven direct ADRP+ADD disassembly sites from *this exact native SHA only*.
 EXPECTED_ANCHORS = {
     "unit_data_file": {0x8A2C60},
+    "native_activity_files_dir": {0x45AA3C},
     # Direct filename xrefs do NOT identify the durable serializer/writer.
     "original_save_file": {0x71C984, 0x74B13C, 0x8B43D0, 0x8B9FDC, 0x8C5334},
     "original_save4_file": {0x7EDD54, 0x8BA0B0, 0x8C1D30},
@@ -1223,7 +1225,7 @@ def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict
         "notes": [
             "unitbuy.csv column18 is XOR-decoded to the original 256-byte-per-unit native table; separate unitlevel.csv and unitexp.csv plain 80-byte rows must not be confused",
             "CatsEyeLevelUp and levelmax popups are original-game native code location leads",
-            "Original SAVE_DATA/SAVE_DATA4/SAVE_DATA8 filename xrefs are entrypoint leads ONLY, not proof of durable save writer or acceptable independent local authority",
+            "Original SAVE_DATA/SAVE_DATA4/SAVE_DATA8 filename xrefs and native getFilesDir JNI string xref (0x45aa3c) show potential file-root seams, NOT actual offline save redirection or persistence proof",
             "Bounded direct CFG reaches the original SAVE_DATA calls, but physical UI execution, file durability and zero-network local authority remain unproven",
         ],
         "original_assets_written_to_repo": False,
