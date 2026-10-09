@@ -286,6 +286,64 @@ class StaticHttpBridgeTests(unittest.TestCase):
                         research_isolate_original_native_files_dir=True,
                     )
 
+    def test_research_no_internet_original_host_requires_private_root(self) -> None:
+        from tools.base_mod.build_owned_static_http_bridge import (
+            build_owned_static_http_bridge,
+        )
+        from tools.base_mod.inject_java_http_bridge import inject_bridge_split_set
+        from tools.base_mod.verify_static_http_bridge import verify_static_http_bridge
+
+        for flavor, isolated in (
+            ("personal", True), ("practice", True), ("research", False)
+        ):
+            with self.subTest(flavor=flavor, isolated=isolated):
+                with self.assertRaisesRegex(
+                        ValueError,
+                        "requires research flavor AND private file root"):
+                    build_owned_static_http_bridge(
+                        Path("must-not-read-user-source.zip"),
+                        flavor=flavor,
+                        shim=Path("must-not-read-shim.so"),
+                        keystore=Path("must-not-read-signing-key"),
+                        alias="not-used",
+                        storepass="not-used",
+                        output_dir=Path("must-not-create"),
+                        research_isolate_original_native_files_dir=isolated,
+                        research_deny_internet=True,
+                    )
+        with self.assertRaisesRegex(ValueError, "research flavor only"):
+            inject_bridge_split_set(
+                Path("must-not-read"), Path("must-not-write"),
+                flavor="personal", bridge_dex_path=Path("must-not-read.dex"),
+                research_deny_internet=True,
+            )
+        with self.assertRaisesRegex(ValueError, "requires research flavor"):
+            verify_static_http_bridge(
+                Path("must-not-read"), Path("must-not-write"),
+                flavor="personal", replay_enabled=False,
+                research_deny_internet=True,
+            )
+
+    def test_original_host_network_permission_gate_is_not_release_claim(self) -> None:
+        injector = (
+            ROOT / "tools/base_mod/inject_java_http_bridge.py"
+        ).read_text(encoding="utf-8")
+        builder = (
+            ROOT / "tools/base_mod/build_owned_static_http_bridge.py"
+        ).read_text(encoding="utf-8")
+        verifier = (
+            ROOT / "tools/base_mod/verify_static_http_bridge.py"
+        ).read_text(encoding="utf-8")
+        self.assertIn("--research-no-internet-permission", injector)
+        self.assertIn("remove_exact_uses_permission(", injector)
+        self.assertIn("manifest_components(patched_manifest)", injector)
+        self.assertIn("research_deny_internet: bool = False", builder)
+        self.assertIn("research_deny_internet=research_deny_internet", builder)
+        self.assertIn("research_deny_internet: bool = False", verifier)
+        self.assertIn('"original_game_zero_egress_proven": False', verifier)
+        self.assertIn('"original_independent_local_save_verified": False', builder)
+        self.assertIn('"original_zero_network_verified": False', builder)
+
     def test_static_builder_preserves_original_native_extraction(self) -> None:
         source = (
             ROOT / "tools/base_mod/build_owned_static_http_bridge.py"
