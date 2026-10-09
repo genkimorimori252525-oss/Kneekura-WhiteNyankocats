@@ -40,6 +40,7 @@ public final class MainActivity extends Activity {
     private Mode mode = Mode.STAGES;
     private TextView statusText;
     private TextView resourceText;
+    private TextView storyCheckpointText;
     private TextView operationsText;
     private ArrayAdapter<String> adapter;
     private ProgressBar progressBar;
@@ -100,6 +101,14 @@ public final class MainActivity extends Activity {
         resourceText.setTextColor(Color.rgb(125, 76, 12));
         resourceText.setPadding(0, dp(3), 0, dp(5));
         root.addView(resourceText);
+
+        // This separate app-private checkpoint is not a PONOS SAVE_DATA edit.
+        // Available stages and cleared chapters intentionally remain distinct.
+        storyCheckpointText = new TextView(this);
+        storyCheckpointText.setTextSize(13);
+        storyCheckpointText.setTextColor(Color.rgb(46, 93, 66));
+        storyCheckpointText.setPadding(dp(3), dp(1), dp(3), dp(5));
+        root.addView(storyCheckpointText);
 
         LinearLayout controls = new LinearLayout(this);
         controls.setOrientation(LinearLayout.HORIZONTAL);
@@ -216,6 +225,28 @@ public final class MainActivity extends Activity {
 
         setContentView(root);
         refreshResourceBanner();
+        refreshInitialStoryCheckpoint();
+    }
+
+    private void refreshInitialStoryCheckpoint() {
+        if (storyCheckpointText == null) return;
+        try {
+            StoryProgressStore.Summary state =
+                    StoryProgressStore.ensureInitialCheckpoint(this);
+            if (state.completeChapters == 4 && state.superiorTreasures == 192) {
+                storyCheckpointText.setText(
+                        "独立セーブ初期状態：日本編1〜3章＋未来編1章クリア／最高のお宝 各48個");
+            } else {
+                storyCheckpointText.setText(
+                        "独立セーブの進行状態：" + state.completeChapters
+                        + "章クリア／最高のお宝 " + state.superiorTreasures
+                        + "個（ストーリー画面との連動は開発中）");
+            }
+        } catch (Exception error) {
+            // An unknown/corrupt independent sidecar is never silently reset.
+            storyCheckpointText.setText(
+                    "進行データの確認に失敗。保存済みデータは変更せず保護しています。");
+        }
     }
 
     private void refreshResourceBanner() {
