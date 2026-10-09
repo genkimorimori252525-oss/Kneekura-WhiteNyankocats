@@ -1,5 +1,8 @@
 # Kneekura WhiteNyankocats — Design Philosophy
 
+> **2026-10-09 P0 architecture override:** This document records the earlier original-UI-first philosophy. For future product work, **strict zero external egress, self-contained first launch, and Kneekura-owned local save authority take priority over preserving the original JP native runtime**. Original UI/animations remain a high-value visual target *only when that host passes offline isolation*. If the original host cannot be decoupled from official network/client save enforcement, an independent local engine is authorized. The old preservation priority order below applies **only after** these P0 conditions are met. [Evidence and gates](2026-10-09-complete-local-offline-audit.md).
+
+
 Status: approved by project owner on 2026-10-06.
 
 ## The principle
