@@ -63,6 +63,37 @@ jobs:
             }
             Write-Host "Windows PowerShell 5.1 syntax PASS: $path"
           }
+      - name: Ensure deterministic JDK 17 on Windows
+        if: runner.os == 'Windows'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Regression – no JAVA_HOME, with and without LOCALAPPDATA
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $savedJava = $env:JAVA_HOME
+          $savedLocal = $env:LOCALAPPDATA
+          try {
+            $env:JAVA_HOME = $null
+            . .\tools\base_mod\resolve_java_keytool.ps1
+            $found = Resolve-JavaKeytool
+            if (-not (Test-Path -LiteralPath $found -PathType Leaf)) {
+              throw "Resolved a missing keytool executable: $found"
+            }
+            Write-Host "PASS: JAVA_HOME unset resolves: $found"
+            $env:LOCALAPPDATA = $null
+            $foundAgain = Resolve-JavaKeytool
+            if (-not (Test-Path -LiteralPath $foundAgain -PathType Leaf)) {
+              throw "LOCALAPPDATA fallback did not resolve keytool"
+            }
+            Write-Host "PASS: JAVA_HOME and LOCALAPPDATA unset"
+          } finally {
+            $env:JAVA_HOME = $savedJava
+            $env:LOCALAPPDATA = $savedLocal
+          }
       - name: Run committed validation plan
         run: >-
           python -m tools.agent_terminal.verify plan .agent-validation/plan.json
