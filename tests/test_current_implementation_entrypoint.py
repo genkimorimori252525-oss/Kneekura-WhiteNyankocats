@@ -27,7 +27,7 @@ class OneDoorFourImplementationsTests(unittest.TestCase):
         self.assertIn("docs/roadmap/2026-10-09-original-battle-cats-delivery.md", current)
         self.assertIn("FIRST: READ [CURRENT.md]", agents[:1300])
         self.assertIn("START HERE — CURRENT.md", readme[:600])
-        self.assertIn("Level 0", ROADMAP.read_text(encoding="utf-8"))
+        self.assertIn("レベル0", ROADMAP.read_text(encoding="utf-8"))
 
     def test_four_only_current_workstreams_with_one_live_issue_each(self):
         doc = CURRENT.read_text(encoding="utf-8")
@@ -63,7 +63,7 @@ class OneDoorFourImplementationsTests(unittest.TestCase):
         self.assertFalse(any(check["verified"]
                          for section in gate["axes"].values()
                          for check in section["checks"].values()))
-        self.assertIn("研究・検証", IDENTITY.read_text(encoding="utf-8"))
+        self.assertIn("検証ハーネス", IDENTITY.read_text(encoding="utf-8"))
 
     def test_original_manifest_remains_unshipped_with_exact_spec(self):
         data = json.loads(STATS.read_text(encoding="utf-8"))
