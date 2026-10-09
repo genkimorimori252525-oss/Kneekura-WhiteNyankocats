@@ -1,5 +1,9 @@
 # 独立Android Alpha — オーナーWindows環境と従来の上書きZIP方式（現行）
 
+<!-- HISTORICAL_RESEARCH_ONLY_OWNER_NOT_PLAYABLE -->
+> **IMPORTANT OWNER PRODUCT REQUIREMENT — 2026-10-09:** This document is a **historical research/test harness installation guide only**. The owner wants the **actual にゃんこ大戦争 game experience**, **NOT** the small independent Stage Fidelity Alpha lookalike. Previous conversation wording that promoted this APK as the desired playable game is withdrawn. **Do not hand this installer/APK to the owner as a finished or adequate Kneekura Battle Cats game.** It remains useful only when explicitly performing research/debug tests. The active target is original Battle Cats gameplay fidelity **AND** strict fully offline operation; see [PRODUCT_IDENTITY.md](../../PRODUCT_IDENTITY.md) and [Issue #10](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/issues/10). Do not infer product acceptance from a CI PASS.
+
+
 ## 0.3.1 / 未来編1章のお宝を含む最新配布（2026-10-09）
 
 **最新：** `kneekura-alpha-itf1-superior-overlay-20261009.zip`（SHA256 `01a1ea0a9991c8c01a413b13a13dc490b4588e2bd3dabe797b7c807c2bac6b27`）、独立Android versionCode **5**、最新APK SHA `491bf95fe1f494460c280ef1c253ccd25a303bfc31b5dd916f23564d4e30c3c1`。これ以降、本文の`versionCode4`、`HOME-fixed` ZIPは**過去版の説明**や。最新の正しい実行方法・保存状態の契約は [0.3.1独立版手順](independent-alpha-itf1-superior-2026-10-09.md) と [ストーリー初期状態v2](../architecture/kneekura-independent-story-checkpoint-v2.md) にある。
