@@ -69,7 +69,7 @@ def audit(path: Path) -> dict:
     reserved = ("home", "host", "pid", "pshome", "pwd", "profile")
     for label, ps_text in (("outer", outer), ("inner", nested), ("JDK helper", helper)):
         for name in reserved:
-            if re.search(r"(?i)\\$" + name + r"\\b\\s*(?:=(?!=)|\\+=|-=)", ps_text):
+            if re.search(r"(?i)\$" + name + r"\b\s*(?:=(?!=)|\+=|-=)", ps_text):
                 raise UnsafeRelease("PowerShell readonly reserved variable assignment in " + label + ": " + name)
 
     if any(s in nested.lower() for s in ("adb uninstall", "pm clear", "rm -rf")):
