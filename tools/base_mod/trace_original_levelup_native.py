@@ -116,6 +116,35 @@ def direct_adrp_add_refs(
     return references
 
 
+def _levelmax_popup_branch(elf: bytes) -> dict:
+    """Exact JP UI branch between two original level-max popup strings.
+
+    The condition's actual gameplay meaning is UNKNOWN. We validate control
+    flow only; no assumption this computes a unit's native effective cap.
+    """
+    compare_addr = 0x4E3068
+    branch_addr = 0x4E306C
+    if _u32(elf, compare_addr) != 0x7100041F:
+        raise LevelUpNativeTraceError("original max-level popup compare drifted")
+    instruction = _u32(elf, branch_addr)
+    if instruction != 0x54000E61:  # b.ne (condition=NE)
+        raise LevelUpNativeTraceError("original max-level conditional branch drifted")
+    distance = _sign_extend((instruction >> 5) & 0x7FFFF, 19) * 4
+    target = branch_addr + distance
+    if target != 0x4E3238:
+        raise LevelUpNativeTraceError("level-max popup branch target drifted")
+    return {
+        "compare_address": _hex(compare_addr),
+        "compare_instruction": "cmp w0, #1",
+        "conditional_address": _hex(branch_addr),
+        "conditional_branch": "b.ne",
+        "branch_target": _hex(target),
+        "fallthrough_label": "drop_popup_chara_levelmax1",
+        "branch_label": "drop_popup_chara_levelmax2",
+        "underlying_upgrade_limit_getter_identified": False,
+    }
+
+
 def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict:
     digest = sha256(elf).hexdigest()
     if digest != expected_sha or expected_sha != NATIVE_SHA256:
@@ -160,6 +189,7 @@ def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict
         "native_sha256": digest,
         "evidence_type": "AARCH64_DIRECT_STRING_XREF_ONLY",
         "references": refs,
+        "levelmax_popup_branch_candidate": _levelmax_popup_branch(elf),
         "native_original_game_upgrader_getter_identified": False,
         "unit_cap_purchase_hook_attached": False,
         "scope": "READ_ONLY_EXACT_OWNER_SOURCE",
