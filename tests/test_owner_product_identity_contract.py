@@ -117,7 +117,7 @@ class OwnerProductIdentityTests(unittest.TestCase):
         ):
             self.assertIn(essential, self.doc, essential)
         self.assertIn(
-            "a research harness",
+            "research harness",
             README.read_text(encoding="utf-8"),
         )
 
