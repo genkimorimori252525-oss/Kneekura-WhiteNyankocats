@@ -92,6 +92,36 @@ class OneDoorFourImplementationsTests(unittest.TestCase):
             fidelity["jolly_operated_news_gacha_event_stage_in_original_ui"]["verified"]
         )
 
+    def test_max_resources_and_full_original_base_ops_are_mandatory(self):
+        current = CURRENT.read_text(encoding="utf-8")
+        plan = ROADMAP.read_text(encoding="utf-8")
+        identity = IDENTITY.read_text(encoding="utf-8")
+        for name in (
+            "full-max-start-jp15.7.1.json",
+            "MAX", "XP", "NP", "ネコカン",
+            "右上i", "ガチャ", "イベント", "ステージ", "ログイン",
+            "原作",
+        ):
+            self.assertIn(name, current, name)
+        self.assertIn("full_max_resources.py", current)
+        self.assertIn("ops_calendar.py", current)
+        self.assertIn("notice_feed.py", current)
+        self.assertIn("login_rotation.py", current)
+        self.assertIn("初期資源MAX", plan)
+        self.assertIn("ジョリー", plan)
+        self.assertIn("右上i", plan)
+        self.assertIn("全てMAX", identity)
+        self.assertIn("独自運営（ジョリー担当、必須）", identity)
+        gates = json.loads(RELEASE_GATES.read_text(encoding="utf-8"))
+        self.assertIn(
+            "max_initial_economy_in_original_inventory",
+            gates["axes"]["BATTLE_CATS_FIDELITY"]["checks"]
+        )
+        self.assertIn(
+            "jolly_operated_news_gacha_event_stage_in_original_ui",
+            gates["axes"]["BATTLE_CATS_FIDELITY"]["checks"]
+        )
+
     def test_original_manifest_remains_unshipped_with_exact_spec(self):
         data = json.loads(STATS.read_text(encoding="utf-8"))
         self.assertEqual(data["status"], "PREVIEW_ONLY_NOT_INSTALLABLE")
