@@ -4,6 +4,18 @@ This repository contains device-facing PowerShell and Android tooling where an
 incorrect command can waste a long device/debug cycle. Coding agents must use
 the repository validation harness before handing terminal commands to a human.
 
+## Windows owner environment: mandatory compatibility contract
+
+**Treat this as a release-blocking contract for every new assistant/Codex session.** The owner uses Windows 11 with `powershell.exe` **5.1**, a Japanese-path project at `C:\Users\genki\Downloads\にーくらにゃんこ`, an existing Java 17 + Android SDK environment where `JAVA_HOME` can be missing, and prefers only **ZIP-overwrite into the existing project root + one `-Apply` command**. Read [the historic failure record](docs/research/failure-repair-history.md) before any installer edit.
+
+- **PowerShell names are case-insensitive.** Do not assign to `$home` (read-only `$HOME`), `$host`, `$pid`, `$pshome`, or other automatic/reserved variables. A successful syntax parse does not mean assignment is legal at runtime.
+- Use Windows PS5.1 with BOM in every shipped `.ps1`. Resolve optional `JAVA_HOME`, `JDK_HOME`, `LOCALAPPDATA`, `TEMP` with explicit null checks. Never call `Join-Path` on a null variable.
+- **Test the missed execution branch, not just the happy path**: in CI isolate PATH so `keytool.exe` cannot be found, set only a fake `JDK_HOME\bin\keytool.exe`, unset `JAVA_HOME`/`LOCALAPPDATA`, and run `tools/agent_terminal/check_windows_owner_jdk.ps1` with Windows PowerShell 5.1. A PATH-provided keytool may otherwise hide `$HOME` collisions.
+- For any owner installer ZIP, validate the **actual nested installer**, BOM, all file hashes, manifests and privacy constraints after the last edit using `python -m tools.base_mod.audit_owner_overlay_zip <exact-final-zip>`. Never silently skip absent nested scripts in source-only CI or claim that a source-only PASS proves the shipped ZIP has been executed.
+- Respect legacy failures from the old 89-page handoff: missing optional SAVE_DATA4 must not cause PowerShell native-command aborts; StrictMode optional fields require existence checks; Japanese ADB path needs ASCII staging; game SAVE reserialization changes size/time, so semantic validation outranks fixed historic SHA/length.
+- Keep **installer behavior** separate from the independent game runtime. The user's `-CheckJava` must not sign, install, connect ADB, mutate a save or change a private keystore.
+- A red CI or incomplete ZIP audit blocks distribution. Owner USB hardware, keystore password, physical game UI and restarts are explicit `USER_GATE` until proven; do not spend their time as a replacement for your own tests.
+
 ## Required behavior
 
 1. **Validate before handoff.** For repository-local commands, run the command
