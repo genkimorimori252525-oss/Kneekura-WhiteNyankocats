@@ -82,7 +82,7 @@
     "value_semantic_meaning": "UNKNOWN: original game stores a bytewise XOR-encoded value; value=1 selects first level-max popup; NOT yet proven per-unit level cap"
   },
   "source_code_tool": "tools/base_mod/trace_original_levelup_native.py",
-  "next_verified_code_task": "Map native purchase XP debit/current level increment from 0x8581fc/0x858390/0x8583b8 to verified original FILE SAVE/deserialize path, integrate a version-pinned independent offline game authority without illegal original SAVE reuse; only then test one cat to Lv60 and reload.",
+  "next_verified_code_task": "Trace original serializer 0x8b46b0 to actual durable file commit/restore (vs only intermediate stream) and the purchase 0x8583b8 to SAVE_DATA wrapper 0x8b9fc8 branch reachability; integrate verified original interface with independent fully local fresh player authority, not rejected official SAVE.",
   "release_status": {
     "original_ui_level_cap_patch_attached": false,
     "level_purchase_action_attached": false,
@@ -207,5 +207,40 @@
     "role_in_upgrade_purchase_persistence_identified": false,
     "original_file_bytes_committed": false,
     "next": "Trace write/serialization and reload path and correlate original 0x8583b8 level increment with durable persistence; then adapt to independent local authority."
+  },
+  "original_save_data_serialization": {
+    "source_native_sha256": "333d2974ab2ff881fd70087fd62dea7d12d82addbc55cab2f2a675ad67e3a7e2",
+    "evidence": "exact original AArch64 instruction, direct calls and 882×8 array loops",
+    "filename": "SAVE_DATA",
+    "wrapper": "0x8b9fc8 -> 0x8b46b0",
+    "runtime_game_context": "x0 original native context",
+    "xp_serialization": {
+      "wallet_offset": "context+0xc3b8",
+      "native_decoder": "0x8b48c8 -> 0x9d8718",
+      "append_to_stream": "0x8b48d4 -> 0x35cfe8"
+    },
+    "current_level_serialization": {
+      "source": "context+0x47ba4+cat*8",
+      "count": 882,
+      "stride": 8,
+      "decode": "0x8b4e38 -> 0x9d8718",
+      "append": "0x8b4e44 -> 0x35cfe8",
+      "next_row_branch": "0x8b4e50 -> 0x8b4e34"
+    },
+    "max_level_increment_serialization": {
+      "source": "context+0x3ad80c+cat*8",
+      "count": 882,
+      "stride": 8,
+      "decode": "0x8b630c -> 0x9d8718",
+      "append": "0x8b6318 -> 0x35cfe8",
+      "next_row_branch": "0x8b6324 -> 0x8b6308"
+    },
+    "ui_side_call": "0x8593e0 -> 0x8b9fc8",
+    "ui_side_reachable_from_specific_lvl_purchase_result": "UNVERIFIED",
+    "durable_storage_flush": "UNVERIFIED",
+    "reload_deserialize_map": "UNVERIFIED",
+    "independent_local_authority_injected": false,
+    "original_game_lv60_purchase_reboot_accepted": false,
+    "status": "ORIGINAL_SAVE_SERIALIZER_FIELD_FLOW_PROVEN_ONLY"
   }
 }
