@@ -114,7 +114,7 @@ class StaticHttpBridgeTests(unittest.TestCase):
         injector = (ROOT / "tools/base_mod/inject_java_http_bridge.py").read_text(
             encoding="utf-8"
         )
-        self.assertIn("Original native app may expect additional local assets", original)
+        self.assertIn("the original native app may expect additional local assets", original)
         self.assertIn("does not implement a network-free game", original)
         self.assertIn("original native private save root unavailable", original)
         self.assertIn('isolate_original_native_files_dir: bool = False', injector)
