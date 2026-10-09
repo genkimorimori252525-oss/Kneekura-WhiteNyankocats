@@ -12,8 +12,10 @@ from tools.base_mod.trace_original_levelup_native import (
     CUES, EXPECTED_ANCHORS, NATIVE_SHA256, ORIGINAL_UNIT_DATA_ANCHORS,
     ORIGINAL_UNIT_DATA_BOOT_ANCHORS, ORIGINAL_UNIT_SOURCE_STRINGS,
     ORIGINAL_EFFECTIVE_CAP_GETTER_ANCHORS, ORIGINAL_CAP_GETTER_LEVEL_LABEL,
+    ORIGINAL_UPGRADE_PURCHASE_ANCHORS,
     LevelUpNativeTraceError,
     _original_unit_data_loader, _original_effective_level_cap_getter,
+    _original_upgrade_purchase_flow,
     _levelmax_popup_branch,
     _popup_value_call_chain,
     direct_adrp_add_refs, trace_exact_native,
@@ -212,6 +214,48 @@ class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
         with self.assertRaisesRegex(LevelUpNativeTraceError,
                                      "level UI label string drifted"):
             _original_effective_level_cap_getter(bytes(original))
+
+    def test_original_purchase_checks_cap_then_debits_xp_and_adds_current_level(self):
+        # Real addresses and instruction words only; original proprietary
+        # libnative-lib.so, SAVE_DATA and assets stay outside GitHub.
+        blob = bytearray(0x85DB84)
+        for at, opcode in ORIGINAL_UPGRADE_PURCHASE_ANCHORS.items():
+            struct.pack_into("<I", blob, at, opcode)
+        flow = _original_upgrade_purchase_flow(bytes(blob))
+        self.assertEqual(flow["cap_eligibility_predicate"],
+                         "0x8581fc -> 0x53be0c")
+        self.assertEqual(flow["cannot_upgrade_branch"],
+                         "0x858200 TBZ -> 0x85904c")
+        self.assertEqual(flow["max_cap_increment_record"],
+                         "context+0x3ad80c+asset_index*8")
+        self.assertEqual(flow["current_level_record"],
+                         "context+0x47ba4+asset_index*8")
+        self.assertEqual(flow["xp_wallet_record"], "context+0xc3b8")
+        self.assertEqual(flow["xp_debit"],
+                         "0x858390 -> 0x9d86e4; new_xp=old_xp-cost")
+        self.assertEqual(flow["xp_affordability_branch"],
+                         "0x85837c B.LT -> 0x8594c0")
+        self.assertEqual(flow["current_level_increment"],
+                         "0x8583b8 -> 0x9cc04c; upper16 current base+1")
+        self.assertFalse(flow["save_writer_proven"])
+        self.assertFalse(flow["cats_eye_consume_proven"])
+        self.assertFalse(flow["native_purchase_patch_attached"])
+        self.assertFalse(flow["original_device_upgrade_passed"])
+
+    def test_original_purchase_rejects_wrong_cap_xp_or_current_level_store(self):
+        clean = bytearray(0x85DB84)
+        for at, opcode in ORIGINAL_UPGRADE_PURCHASE_ANCHORS.items():
+            struct.pack_into("<I", clean, at, opcode)
+        for address in (0x53BE44, 0x53BEA4, 0x53BF08,
+                        0x8581FC, 0x858200, 0x85837C,
+                        0x858390, 0x8583B8, 0x85DB80):
+            broken = bytearray(clean)
+            broken[address] ^= 1
+            with self.subTest(address=hex(address)):
+                with self.assertRaisesRegex(
+                    LevelUpNativeTraceError, "purchase opcode drifted"
+                ):
+                    _original_upgrade_purchase_flow(bytes(broken))
 
     def test_real_game_original_upgrader_cues_are_not_fabricated_hooks(self):
         self.assertEqual(len(NATIVE_SHA256), 64)
