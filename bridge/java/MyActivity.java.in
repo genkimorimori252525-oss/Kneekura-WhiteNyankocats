@@ -3,6 +3,7 @@ package __KNEEKURA_PACKAGE__;
 import android.opengl.GLSurfaceView;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.net.URL;
@@ -22,6 +23,13 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
     private static final boolean ENABLE_BACKUP_OFFLINE_REPLAY = __KNEEKURA_ENABLE_BACKUP_REPLAY__;
     private static final boolean DEBUG_RESEARCH_LOG = __KNEEKURA_DEBUG_LOG__;
     private static final boolean USE_EXTERNAL_FILES_DIR = __KNEEKURA_USE_EXTERNAL_FILES_DIR__;
+    // Research-only: redirect ORIGINAL native getFilesDir() consumers to a
+    // fresh, app-private versioned root. This is not an independent SAVE schema
+    // or proof that original game boot/level-up works without remote services.
+    private static final boolean ISOLATE_ORIGINAL_NATIVE_FILES_DIR =
+            __KNEEKURA_ISOLATE_ORIGINAL_NATIVE_FILES_DIR__;
+    private static final String ORIGINAL_NATIVE_FILES_LEAF = "kneekura-native-jp15-7-1";
+    private static volatile File originalNativeFilesDirectory;
 
     private static final String BACKUP_SCHEME = "https";
     private static final String BACKUP_HOST = "nyanko-backups.ponosgames.com";
@@ -67,8 +75,48 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
         }
     }
 
+    /**
+     * Existing JP15.7.1 native code references Activity.getFilesDir().
+     * Only research builds explicitly requesting the local-source seam use
+     * this isolated folder. Fail CLOSED instead of falling back to the
+     * original PONOS file root if this folder is unavailable/unsafe.
+     *
+     * IMPORTANT: the original native app may expect additional local assets
+     * under getFilesDir. This method alone neither seeds a fresh gameplay
+     * state nor implements a network-free game or independent player authority.
+     */
     @Override
     public File getFilesDir() {
+        if (ISOLATE_ORIGINAL_NATIVE_FILES_DIR) {
+            if (USE_EXTERNAL_FILES_DIR) {
+                throw new IllegalStateException("conflicting original save directory modes");
+            }
+            File known = originalNativeFilesDirectory;
+            if (known != null && known.isDirectory()) {
+                return known;
+            }
+            synchronized (MyActivity.class) {
+                File base = super.getFilesDir();
+                if (base == null || !base.isDirectory()) {
+                    throw new IllegalStateException("original app-private files directory unavailable");
+                }
+                File directory = new File(base, ORIGINAL_NATIVE_FILES_LEAF);
+                try {
+                    String trusted = base.getCanonicalPath() + File.separator;
+                    if (!directory.getCanonicalPath().startsWith(trusted)) {
+                        throw new IllegalStateException("original native private save root escaped");
+                    }
+                    if (!directory.isDirectory() && (!directory.mkdirs() || !directory.isDirectory())) {
+                        throw new IllegalStateException("original native private save root unavailable");
+                    }
+                } catch (IOException error) {
+                    throw new IllegalStateException("original native private save root unresolved", error);
+                }
+                originalNativeFilesDirectory = directory;
+                debugResearch("original-native-private-files-root active");
+                return directory;
+            }
+        }
         if (!USE_EXTERNAL_FILES_DIR) {
             return super.getFilesDir();
         }
