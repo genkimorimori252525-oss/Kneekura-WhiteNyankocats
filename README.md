@@ -1,5 +1,13 @@
 # Kneekura-WhiteNyankocats
 
+## Important — User-confirmed product identity (2026-10-09)
+
+**The owner wants the genuine gameplay experience of PONOS's にゃんこ大戦争 (The Battle Cats), not a lookalike cat game.** The complete offline environment and Kneekura customization must retain original game UI/scene transitions, battles, characters, assets and animations, stages, gacha and progression. Neither a runnable simplified Android prototype nor a network-disconnected mock game fulfills the request.
+
+**[Authoritative PRODUCT_IDENTITY.md](PRODUCT_IDENTITY.md)** (owner's non-negotiable acceptance contract), **[product fidelity + offline release gates](docs/architecture/product-identity-gates.json)**.
+
+**Current status:** the small independent Java Android `app/` ("Stage Fidelity Alpha") is strictly a *research harness*, **not the actual Battle Cats game** or an owner-ready full 1.01 update. Some prior replies mistakenly presented the harness as playable replacement. Do not repeat or recommend it as one. The preferred research direction is preserving as much original JP15.7.1 game engine/UI and behavior as safely possible while establishing verified complete offline independence. A separate engine remains research-only until original-game parity is demonstrated and the owner approves it.
+
 PC-capable, offline-first Battle Cats compatibility sandbox for personal research and custom content.
 
 The project is designed around two goals:
