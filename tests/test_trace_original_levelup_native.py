@@ -11,6 +11,7 @@ import unittest
 from tools.base_mod.trace_original_levelup_native import (
     CUES, EXPECTED_ANCHORS, NATIVE_SHA256, LevelUpNativeTraceError,
     _levelmax_popup_branch,
+    _popup_value_call_chain,
     direct_adrp_add_refs, trace_exact_native,
 )
 
@@ -80,6 +81,29 @@ class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
         blob[0x4E3068] ^= 1
         with self.assertRaises(LevelUpNativeTraceError):
             _levelmax_popup_branch(bytes(blob))
+
+    def test_actual_popup_value_call_chain_is_not_a_sixty_level_getter(self):
+        blob = bytearray(0x9CBFB0)
+        struct.pack_into("<I", blob, 0x4E3060, 0x9413A3CD)
+        struct.pack_into("<I", blob, 0x9CBF9C, 0x940031DF)
+        for where, opcode in (
+            (0x9CBFA0, 0x52986A08),
+            (0x9CBFA4, 0x12003C09),
+            (0x9CBFA8, 0x6B08013F),
+            (0x9CBFAC, 0x1A883120),
+        ):
+            struct.pack_into("<I", blob, where, opcode)
+        details = _popup_value_call_chain(bytes(blob))
+        self.assertEqual(details["value_reader"], "0x9cbf94")
+        self.assertEqual(details["decoder"], "0x9d8718")
+        self.assertEqual(
+            details["return_expression"],
+            "min((decoded_32bit & 0xffff), 50000)",
+        )
+        self.assertFalse(details["original_level_cap_getter_proven"])
+        struct.pack_into("<I", blob, 0x9CBFA0, 0x52986A09)
+        with self.assertRaises(LevelUpNativeTraceError):
+            _popup_value_call_chain(bytes(blob))
 
     def test_real_game_original_upgrader_cues_are_not_fabricated_hooks(self):
         self.assertEqual(len(NATIVE_SHA256), 64)
