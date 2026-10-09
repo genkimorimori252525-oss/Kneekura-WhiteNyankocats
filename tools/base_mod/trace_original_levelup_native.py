@@ -795,6 +795,101 @@ def _original_save_restore_flow(elf: bytes) -> dict[str, Any]:
     }
 
 
+
+# Original max-upgrade (+1) purchase path with item debit transaction.
+# Catseye material category identity should still be audited from original
+# resource catalog, so no fabricated material names/amounts are assumed.
+# Unlike a generic SAVE_DATA filename xref, 0x85db88 is directly AFTER
+# the original cap-increment write and explicitly calls the original serializer.
+ORIGINAL_CAP_INCREMENT_ITEM_TRANSACTION_ANCHORS = {
+    0x85D9F4: 0x71001ADF,  # six source material slots
+    0x85D9F8: 0x54000A60,  # exit slot scan
+    0x85DA04: 0x97F37827,  # resource quantity required for this unit/slot
+    0x85DA0C: 0x7100041F,  # require >=1 before debit entry
+    0x85DA10: 0x54FFFF0B,  # skip material if no requirement
+    0x85DA14: 0x528000A0,  # item category = 5
+    0x85DA18: 0x2A1603E1,  # slot index
+    0x85DA1C: 0x97F64805,  # material type -> inventory ID
+    0x85DABC: 0x4B1703E9,  # NEG required count => debit
+    0x85DAC4: 0xB9002329,  # stage negative item delta
+    0x85DB4C: 0xEB1402BF,  # compare pending item delta collection
+    0x85DB50: 0x54000681,  # apply item deltas before cap increment
+    0x85DB58: 0x914EBE68,  # per-cat upgrade history table
+    0x85DB5C: 0x910FD115,
+    0x85DB68: 0xB8696AA8,
+    0x85DB6C: 0x11000508,
+    0x85DB70: 0xB8296AA8,
+    0x85DB74: 0x914EB548,  # max-increment base (+0x3ad000)
+    0x85DB78: 0x52800021,  # +1 level-cap increment
+    0x85DB7C: 0x91203100,  # max-increment record +0x80c
+    0x85DB80: 0x9405B933,  # change encoded max cap increment
+    0x85DB84: 0xAA1303E0,  # original game context
+    0x85DB88: 0x94017110,  # immediate original SAVE_DATA serializer
+    0x85DC1C: 0x54FFF9C0,  # after inventory drain, proceed to cap
+    0x85DC20: 0x294386A0,  # inventory ID and signed negative delta
+    0x85DC24: 0x2A1F03E2,
+    0x85DC28: 0x97F6444C,  # apply inventory change
+}
+
+
+def _original_cap_increment_item_transaction(elf: bytes) -> dict[str, Any]:
+    """Pin original item consumption before native max-cap +1 then SAVE_DATA.
+
+    Distinct from the normal base-level upgrade flow at 0x8581fc.
+    The inline SAVE_DATA call is proven, but POSIX flush, offline native host,
+    and Catseye inventory item subtype mapping are still unverified.
+    """
+    if len(elf) < 0x85DC2C:
+        raise LevelUpNativeTraceError("original cap increment transaction bounds drifted")
+    for pc, expected in ORIGINAL_CAP_INCREMENT_ITEM_TRANSACTION_ANCHORS.items():
+        if _u32(elf, pc) != expected:
+            raise LevelUpNativeTraceError(
+                f"original cap increment transaction opcode drifted at {_hex(pc)}"
+            )
+    for pc, expected in {
+        0x85DA04: 0x53BAA0,
+        0x85DA1C: 0x5EFA30,
+        0x85DB80: 0x9CC04C,
+        0x85DB88: 0x8B9FC8,
+        0x85DC28: 0x5EED58,
+    }.items():
+        if _decode_relative_bl(elf, pc) != expected:
+            raise LevelUpNativeTraceError(
+                f"original cap increment transaction BL drifted at {_hex(pc)}"
+            )
+    for pc, target, cond in (
+        (0x85D9F8, 0x85DB44, 0),  # EQ six-slot scan completed
+        (0x85DA10, 0x85D9F0, 11),  # LT no material needed
+        (0x85DB50, 0x85DC20, 1),  # NE item debit queue remains
+        (0x85DC1C, 0x85DB54, 0),  # EQ inventory debit complete
+    ):
+        branch = _u32(elf, pc)
+        if (branch & 0xFF00001F) != 0x54000000 | cond:
+            raise LevelUpNativeTraceError(
+                f"original cap increment branch type drifted at {_hex(pc)}"
+            )
+        disp = _sign_extend((branch >> 5) & 0x7FFFF, 19) * 4
+        if pc + disp != target:
+            raise LevelUpNativeTraceError(
+                f"original cap increment branch target drifted at {_hex(pc)}"
+            )
+    return {
+        "status": "VERIFIED_ORIGINAL_NATIVE_CAP_ITEM_DEBIT_INCREMENT_SAVE_CALL",
+        "process_material_slots": "0x85d9f4: six candidate material slots",
+        "required_material_count": "0x85da04 -> 0x53baa0",
+        "material_inventory_id": "0x85da14 category5, 0x85da1c -> 0x5efa30",
+        "negative_material_delta": "0x85dabc neg required, 0x85dac4 stages delta",
+        "debit_loop": "0x85db50 -> 0x85dc20; 0x85dc28 -> 0x5eed58; 0x85dc1c -> 0x85db54",
+        "max_upgrade_increment": "0x85db78 +1; 0x85db80 -> 0x9cc04c, per cat context+0x3ad80c+cat*8",
+        "save_called_after_increment": "0x85db88 -> 0x8b9fc8",
+        "original_catseye_material_subtypes_verified": False,
+        "material_sufficiency_and_atomicity_proven": False,
+        "original_save_file_fsync_and_restart_proven": False,
+        "offline_independent_game_integrated": False,
+        "android_lv60_ui_purchase_verified": False,
+    }
+
+
 def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict:
     digest = sha256(elf).hexdigest()
     if digest != expected_sha or expected_sha != NATIVE_SHA256:
@@ -846,6 +941,7 @@ def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict
         "original_upgrade_purchase_flow": _original_upgrade_purchase_flow(elf),
         "original_save_data_serialization": _original_save_data_serialization(elf),
         "original_save_restore_flow": _original_save_restore_flow(elf),
+        "original_cap_increment_item_transaction": _original_cap_increment_item_transaction(elf),
         "native_original_game_upgrader_getter_identified": True,
         "native_original_game_upgrade_purchase_hook_verified": False,
         "unit_cap_purchase_hook_attached": False,
