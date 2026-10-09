@@ -1,5 +1,9 @@
 # 独立Android Alpha — USB導入・iボタン実機検証（2026-10-09）
 
+<!-- HISTORICAL_RESEARCH_ONLY_OWNER_NOT_PLAYABLE -->
+> **IMPORTANT OWNER PRODUCT REQUIREMENT — 2026-10-09:** This document is a **historical research/test harness installation guide only**. The owner wants the **actual にゃんこ大戦争 game experience**, **NOT** the small independent Stage Fidelity Alpha lookalike. Previous conversation wording that promoted this APK as the desired playable game is withdrawn. **Do not hand this installer/APK to the owner as a finished or adequate Kneekura Battle Cats game.** It remains useful only when explicitly performing research/debug tests. The active target is original Battle Cats gameplay fidelity **AND** strict fully offline operation; see [PRODUCT_IDENTITY.md](../../PRODUCT_IDENTITY.md) and [Issue #10](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/issues/10). Do not infer product acceptance from a CI PASS.
+
+
 **目的:** 以前の本家セーブ不正表示と完全に切り離した `jp.kneekura.whitenyankocats` の独立AlphaをUSBデバッグで検証。現段階はStage Fidelity Alphaであり、原作同等の基地・戦闘を再現した完成版ではない。
 
 ## ビルドの出所
