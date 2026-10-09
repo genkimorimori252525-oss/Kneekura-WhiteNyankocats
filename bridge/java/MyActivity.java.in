@@ -111,14 +111,22 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
         // File metadata only. No original save content, inquiry code, token,
         // resource/account data or absolute filesystem path is recorded.
         StringBuilder status = new StringBuilder("original-save-presence-v1");
-        for (String filename : FORBIDDEN_PREEXISTING_SAVES) {
-            File candidate = new File(root, filename);
-            if (candidate.isFile()) {
-                status.append(" ").append(filename).append("=present:");
-                status.append(candidate.length());
-            } else {
-                status.append(" ").append(filename).append("=absent");
+        try {
+            String trusted = root.getCanonicalPath() + File.separator;
+            for (String filename : FORBIDDEN_PREEXISTING_SAVES) {
+                File candidate = new File(root, filename);
+                if (!candidate.getCanonicalPath().startsWith(trusted)) {
+                    status.append(" ").append(filename).append("=unsafe");
+                } else if (candidate.isFile()) {
+                    status.append(" ").append(filename).append("=present:");
+                    status.append(candidate.length());
+                } else {
+                    status.append(" ").append(filename).append("=absent");
+                }
             }
+        } catch (IOException error) {
+            // Never inspect or export a path if canonical containment failed.
+            status = new StringBuilder("original-save-presence-v1 unavailable");
         }
         String snapshot = status.toString();
         synchronized (MyActivity.class) {
