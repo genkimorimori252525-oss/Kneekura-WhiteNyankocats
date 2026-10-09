@@ -22,7 +22,7 @@ class FamiliarOverlayUpdateTests(unittest.TestCase):
         # ANSI encoding. Japanese text can break parsing before any command.
         raw = WRAPPER.read_bytes()
         self.assertTrue(
-            raw.startswith(b"\\xef\\xbb\\xbf"),
+            raw.startswith(bytes((0xEF, 0xBB, 0xBF))),
             "Windows PowerShell 5.1 requires UTF-8 BOM for this Japanese script",
         )
         parsed = raw.decode("utf-8-sig")
