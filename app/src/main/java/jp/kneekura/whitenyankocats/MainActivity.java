@@ -59,13 +59,41 @@ public final class MainActivity extends Activity {
         root.setPadding(dp(18), dp(10), dp(18), dp(10));
         root.setBackgroundColor(Color.rgb(246, 239, 216));
 
+        // Base top-right i: show Kneekura's own signed, offline announcements.
+        LinearLayout titleBar = new LinearLayout(this);
+        titleBar.setOrientation(LinearLayout.HORIZONTAL);
+        titleBar.setGravity(Gravity.CENTER_VERTICAL);
+
         TextView title = new TextView(this);
         title.setText("にーくら大戦争 — Stage Fidelity Alpha");
         title.setTextSize(22);
         title.setTextColor(Color.BLACK);
         title.setGravity(Gravity.CENTER_VERTICAL);
-        root.addView(title, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(44)));
+        titleBar.addView(title, new LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.MATCH_PARENT, 1));
+
+        Button noticeButton = new Button(this);
+        noticeButton.setText("i");
+        noticeButton.setAllCaps(false);
+        noticeButton.setTextSize(26);
+        noticeButton.setTypeface(android.graphics.Typeface.DEFAULT,
+                android.graphics.Typeface.BOLD);
+        noticeButton.setTextColor(Color.BLACK);
+        noticeButton.setContentDescription("にーくら運営からのお知らせを開く");
+        android.graphics.drawable.GradientDrawable circle =
+                new android.graphics.drawable.GradientDrawable();
+        circle.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+        circle.setColor(Color.WHITE);
+        circle.setStroke(dp(2), Color.rgb(40, 36, 31));
+        noticeButton.setBackground(circle);
+        noticeButton.setOnClickListener(v ->
+                startActivity(new Intent(this, NoticeActivity.class)));
+        LinearLayout.LayoutParams infoParams =
+                new LinearLayout.LayoutParams(dp(45), dp(45));
+        infoParams.setMargins(dp(7), 0, 0, 0);
+        titleBar.addView(noticeButton, infoParams);
+        root.addView(titleBar, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(51)));
 
         resourceText = new TextView(this);
         resourceText.setTextSize(17);
