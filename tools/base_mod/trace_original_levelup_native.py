@@ -1759,6 +1759,18 @@ ORIGINAL_SCENE97_DOWNLOAD_BATCH_ANCHORS = {
     0x73C9F0: 0xD0001E08,  # real task vtable page
     0x73C9F4: 0x91040108,  # task vtable offset
     0x73C9F8: 0xA9000408,  # task vtable/owner reference
+    0x73CA20: 0x5285F70A,  # per-slot 0x2fb8 context offset
+    0x73CA24: 0xAA1F03F5,  # x21 = 0 index
+    0x73CA34: 0x8B0A02DA,  # x26 = game context + 0x2fb8
+    0x73CA3C: 0xF0FFD2DC,  # ADRP "download_%d.tsv" page
+    0x73CA40: 0x912D139C,  # ADD "download_%d.tsv" at 0x197b44
+    0x73CA60: 0x910006B5,  # ++index
+    0x73CA64: 0xF1008EBF,  # CMP x21,#35
+    0x73CA68: 0x540006C0,  # B.EQ ->0x73cb40
+    0x73CA98: 0x2A1503E2,  # w2=entry index
+    0x73CA9C: 0x97EF9E6E,  # formatted name helper
+    0x73CAA8: 0x97EF904E,  # source/asset resolution helper
+    0x73CAB0: 0xB8357B40,  # per-index result [game_context+0x2fb8]
 }
 ORIGINAL_DOWNLOAD_BATCH_RTTI = (
     b"NSt6__ndk120__shared_ptr_emplaceI17DownloadBatchTaskNS_9allocatorIS1_EEEE\x00"
@@ -1784,6 +1796,14 @@ def _original_scene97_download_batch_task(elf: bytes) -> dict[str, Any]:
     if (elf[0x1DB616:0x1DB616+len(ORIGINAL_DOWNLOAD_BATCH_RTTI)]
         != ORIGINAL_DOWNLOAD_BATCH_RTTI):
         raise LevelUpNativeTraceError("original DownloadBatchTask RTTI literal drifted")
+    if elf[0x197B44:0x197B44+16] != b"download_%d.tsv\x00":
+        raise LevelUpNativeTraceError(
+            "original scene97 download-list TSV name template drifted"
+        )
+    if 0x73CB40 not in _original_arm64_cfg_successors(elf, 0x73CA68):
+        raise LevelUpNativeTraceError(
+            "original scene97 35-entry manifest loop destination changed"
+        )
     for pc, expected in ORIGINAL_SCENE97_DOWNLOAD_BATCH_ANCHORS.items():
         if _u32(elf, pc) != expected:
             raise LevelUpNativeTraceError(
@@ -1793,6 +1813,8 @@ def _original_scene97_download_batch_task(elf: bytes) -> dict[str, Any]:
         (0x71CE80, 0x725E1C),
         (0x725EC4, 0xAD76C0),
         (0x725EE8, 0x73C9B8),
+        (0x73CA9C, 0x324454),
+        (0x73CAA8, 0x320BE0),
     ):
         if _decode_relative_bl(elf, pc) != target:
             raise LevelUpNativeTraceError(
@@ -1822,6 +1844,11 @@ def _original_scene97_download_batch_task(elf: bytes) -> dict[str, Any]:
         "rtti_relocation": "0xafe0e0 -> 0x1db616",
         "typeinfo_relocation": "0xafe0a8 -> 0xafe0d8",
         "vtable_entry_count_pinned": 3,
+        "tsv_template": "download_%d.tsv (native 0x197b44)",
+        "indexed_manifest_entries": 35,
+        "native_index_loop": "0x73ca24 idx0; 0x73ca60 increment; 0x73ca64 cmp #35; 0x73ca68 BEQ -> 0x73cb40",
+        "per_index_source_lookup": "0x73ca9c -> 0x324454; 0x73caa8 -> 0x320be0",
+        "per_index_native_storage": "0x73cab0 writes result into context+0x2fb8+idx*4",
         "network_transport_call_proven": False,
         "remote_data_required_proven": False,
         "615mb_additional_assets_locally_available_proven": False,
