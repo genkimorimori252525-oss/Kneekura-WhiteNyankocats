@@ -38,6 +38,15 @@ class OfflineOpsCliSmokeTests(unittest.TestCase):
         self.assertEqual(len(snapshot["preview"]["notice"]), 1)
         self.assertTrue(any(x["kind"] == "stage" for x in snapshot["blocked"]))
 
+    def test_windows_outside_season_not_rendered(self):
+        from tools.localcore.opsctl import windows_in_range
+        from tools.localcore.ops_calendar import JST
+        pack = json.loads(PACK.read_text(encoding="utf-8"))
+        self.assertEqual(windows_in_range(pack, "2026-12-01", 14), [])
+        clip = windows_in_range(pack, "2026-11-30", 4)
+        self.assertTrue(all(w["end"] <= "2026-12-01T00:00:00+09:00" for w in clip))
+        self.assertTrue(all(w["start"] < w["end"] for w in clip))
+
     def test_calendar_range_and_fail_closed_invalid_pack(self):
         result = run("calendar", "--pack", str(PACK),
                      "--from-date", "2026-10-09", "--days", "14")
