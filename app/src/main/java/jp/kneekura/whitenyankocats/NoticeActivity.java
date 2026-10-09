@@ -92,15 +92,16 @@ public final class NoticeActivity extends Activity {
         try {
             LocalOpsStore.Status version = LocalOpsStore.current(this);
             if (version == null) {
-                sourceLabel.setText("運営データ：未導入　／　通信なし");
-                emptyMessage("まだ運営データが入ってへんで。\n基地の「運営更新」から署名付きのお知らせZIPを取り込んでな。");
-                return;
+                sourceLabel.setText("アプリ内蔵のお知らせ　／　完全オフライン");
+            } else {
+                sourceLabel.setText("運営データ v" + version.revision +
+                        "　／　完全オフライン・署名検証済み");
             }
-            sourceLabel.setText("運営データ v" + version.revision +
-                    "　／　完全オフライン・署名検証済み");
             List<LocalNoticeRepository.Notice> notices = LocalNoticeRepository.current(this);
             if (notices.isEmpty()) {
-                emptyMessage("現在掲載中のお知らせはありません。\n次の運営更新まで、そのままゲームを遊んでな。");
+                emptyMessage(version == null
+                        ? "現在掲載中の内蔵お知らせはありません。\n今後は署名付きの運営ZIPでも更新できるで。"
+                        : "現在掲載中のお知らせはありません。\n次の運営更新まで、そのままゲームを遊んでな。");
                 return;
             }
             for (LocalNoticeRepository.Notice item : notices) {
