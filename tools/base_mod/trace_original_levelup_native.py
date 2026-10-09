@@ -1256,6 +1256,60 @@ def _original_save_jni_files_root(elf: bytes) -> dict[str, Any]:
     }
 
 
+
+# Exact original JP15.7.1 SAVE_DATA-absent behavior: the loader reports
+# failure rather than silently claiming a new native game has been seeded.
+ORIGINAL_MISSING_SAVE_ANCHORS = {
+    0x8B4404: 0x97EAA487, 0x8B441C: 0x36000774,
+    0x8B4508: 0xB94057E8, 0x8B4510: 0x540000A0,
+    0x8B4514: 0x7100051F, 0x8B4518: 0x54000161,
+    0x8B4524: 0xAA1303E0, 0x8B4528: 0x52800081,
+    0x8B452C: 0x97F99FB7, 0x8B453C: 0x2A1F03F4,
+    0x9BB78C: 0x97FBE306, 0x9BB790: 0x2A0003F3,
+    0x9BB794: 0x36001580, 0x9BBA54: 0x12000260,
+    0x9BBA6C: 0xD65F03C0,
+}
+
+
+def _original_missing_save_read_path(elf: bytes) -> dict[str, Any]:
+    """Original empty-SAVE failure propagation, NOT a new-game initializer."""
+    if len(elf) < 0x9BBA70:
+        raise LevelUpNativeTraceError("original empty SAVE source truncated")
+    for pc, expected in ORIGINAL_MISSING_SAVE_ANCHORS.items():
+        if _u32(elf, pc) != expected:
+            raise LevelUpNativeTraceError(
+                f"original empty SAVE opcode drift at {_hex(pc)}"
+            )
+    for pc, dest in (
+        (0x8B4404, 0x35D620),
+        (0x8B452C, 0x71C408),
+        (0x9BB78C, 0x8B43A4),
+    ):
+        if _decode_relative_bl(elf, pc) != dest:
+            raise LevelUpNativeTraceError(
+                f"original empty SAVE call drift at {_hex(pc)}"
+            )
+    for pc, dest in ((0x8B441C, 0x8B4508), (0x9BB794, 0x9BBA44)):
+        insn = _u32(elf, pc)
+        if (insn & 0x7F000000) != 0x36000000:
+            raise LevelUpNativeTraceError("original empty SAVE TBZ type drift")
+        offset = _sign_extend((insn >> 5) & 0x3FFF, 14) * 4
+        if pc + offset != dest:
+            raise LevelUpNativeTraceError("original empty SAVE branch drift")
+    return {
+        "status": "ORIGINAL_NATIVE_EMPTY_SAVE_FAILURE_PATH_PROVEN",
+        "source_open": "0x8b4404 -> 0x35d620",
+        "read_failed": "0x8b441c TBZ -> 0x8b4508",
+        "original_status_handler": "0x8b4528 w1=4; 0x8b452c -> 0x71c408",
+        "reader_returns_zero": "0x8b453c w20=0",
+        "startup_read": "0x9bb78c -> 0x8b43a4",
+        "startup_false_branch": "0x9bb794 TBZ -> 0x9bba44",
+        "new_game_creation_in_other_function_excluded": False,
+        "fresh_profile_native_save_initialized": False,
+        "original_offline_first_boot_tested": False,
+    }
+
+
 def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict:
     digest = sha256(elf).hexdigest()
     if digest != expected_sha or expected_sha != NATIVE_SHA256:
@@ -1311,6 +1365,7 @@ def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict
         "original_normal_xp_purchase_save_routes": _original_normal_xp_purchase_save_routes(elf),
         "original_xp_purchase_save_gate": _original_xp_purchase_save_gate(elf),
         "original_save_jni_files_root": _original_save_jni_files_root(elf),
+        "original_missing_save_read_path": _original_missing_save_read_path(elf),
         "native_original_game_upgrader_getter_identified": True,
         "native_original_game_upgrade_purchase_hook_verified": False,
         "original_native_conditional_xp_purchase_to_save_calls_proven": True,
