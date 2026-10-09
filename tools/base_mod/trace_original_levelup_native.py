@@ -1456,6 +1456,123 @@ def _original_save_worker_virtual_status(elf: bytes) -> dict[str, Any]:
     }
 
 
+
+# Original MyApplication scene transition, not a newly invented game host.
+# Scene 0x65 (101) has a concrete SAVE_DATA existence probe leading to a
+# native AppLaunchLoad object on one conditional branch. A distinct scene 4
+# is selected on SAVE read error elsewhere; never confuse these two.
+ORIGINAL_APP_LAUNCH_SCENE_ANCHORS = {
+    0x71C408: 0xA9BB7BFD,  # original scene transition entry
+    0x71C444: 0x7101903F,  # compare requested scene with 100
+    0x71C458: 0xB9348001,  # store requested scene ID
+    0x71C5B0: 0x7100111F,  # compare scene 4
+    0x71C5B4: 0x54003460,  # scene 4 -> other scene branch
+    0x71C6E4: 0x7101951F,  # compare scene 101
+    0x71C6E8: 0x54007D41,  # if not 101, skip AppLaunchLoad branch
+    0x71C984: 0xB0FFD3A9,  # ADRP original SAVE_DATA literal
+    0x71C988: 0x91255529,  # ADD -> original SAVE_DATA literal
+    0x71C9A8: 0xD10403A1,  # original file name argument
+    0x71C9AC: 0xAA1F03E2,  # file open mode argument zero
+    0x71C9B0: 0x97F1031C,  # original source filesystem file open
+    0x71C9B8: 0x2A0003F4,  # retain file-open result
+    0x71C9C8: 0x36004214,  # TBZ file-open bit0 -> scene-object creation path
+    0x71D208: 0x390042BF,  # reset stage load flag for path
+    0x71D220: 0xB4000174,  # conditional cleanup
+    0x71D258: 0x37000248,  # conditional cleanup
+    0x71D264: 0x1400001D,  # direct -> 0x71d2d8
+    0x71D2DC: 0x36000068,  # TBZ -> 0x71d2e8
+    0x71D2E8: 0x52800E00,  # 112-byte native scene wrapper
+    0x71D2EC: 0x940EE8F5,  # allocator
+    0x71D30C: 0x97F5D4FB,  # AppLaunchLoad constructor
+    0x71D310: 0x914F1268,  # game context + 0x3c4000
+    0x71D314: 0x9102C117,  # save scene shared_ptr at +0xb0
+    0x71D31C: 0xA90052F5,  # install scene reference
+    0x492730: 0xB00032E8,  # AppLaunchLoad vtable ADRP
+    0x492734: 0x912CE108,  # AppLaunchLoad vtable + 0xb38
+    0x492738: 0xF9000008,  # store vtable
+    0x7231C8: 0x52800CA1,  # request scene 101
+    0x7231CC: 0x97FFE48F,  # calls original scene transition
+    0x8B4528: 0x52800081,  # failed SAVE read selects scene 4
+    0x8B452C: 0x97F99FB7,  # calls same original scene transition
+}
+
+
+def _original_app_launch_scene_from_save_presence(elf: bytes) -> dict[str, Any]:
+    """Connect exact original scene 101, SAVE_DATA probe and AppLaunchLoad.
+
+    A conditional source-CFG witness is NOT a physically observed first
+    launch, and this is not a new native game profile generator.
+    """
+    if len(elf) < 0x8B4530:
+        raise LevelUpNativeTraceError("original AppLaunchLoad scene source truncated")
+    if elf[0x191955:0x19195F] != b"SAVE_DATA\x00":
+        raise LevelUpNativeTraceError("original launch source SAVE_DATA literal drifted")
+    if elf[0x1C507D:0x1C508D] != b"13AppLaunchLoad\x00":
+        raise LevelUpNativeTraceError("original AppLaunchLoad RTTI drifted")
+    for pc, expected in ORIGINAL_APP_LAUNCH_SCENE_ANCHORS.items():
+        if _u32(elf, pc) != expected:
+            raise LevelUpNativeTraceError(
+                f"original scene SAVED AppLaunchLoad opcode drifted at {_hex(pc)}"
+            )
+    for pc, target in {
+        0x71C9B0: 0x35D620,
+        0x71D2EC: 0xAD76C0,
+        0x71D30C: 0x4926F8,
+        0x7231CC: 0x71C408,
+        0x8B452C: 0x71C408,
+    }.items():
+        if _decode_relative_bl(elf, pc) != target:
+            raise LevelUpNativeTraceError(
+                f"original AppLaunchLoad scene call target drifted at {_hex(pc)}"
+            )
+    expected_edges = {
+        0x71C5B4: 0x71CC40,  # ERROR scene 4 is separate
+        0x71C6E8: 0x71D690,  # NOT scene 101
+        0x71C9C8: 0x71D208, # no SAVE path
+        0x71D220: 0x71D24C,
+        0x71D258: 0x71D2A0,
+        0x71D264: 0x71D2D8,
+        0x71D2DC: 0x71D2E8,
+    }
+    for pc, expected in expected_edges.items():
+        if expected not in _original_arm64_cfg_successors(elf, pc):
+            raise LevelUpNativeTraceError(
+                f"original AppLaunchLoad scene direct CFG edge drifted at {_hex(pc)}"
+            )
+    witness = _original_arm64_cfg_witness(
+        elf, 0x71C408, 0x71DCF4, 0x71C9C8, 0x71D30C
+    )
+    if not witness or witness[1] != 0x71D208 or 0x71D2E8 not in witness:
+        raise LevelUpNativeTraceError(
+            "original absent-SAVE to AppLaunchLoad conditional witness missing"
+        )
+    if _original_arm64_cfg_witness(
+        elf, 0x71C408, 0x71DCF4, 0x71CC40, 0x71D30C
+    ):
+        raise LevelUpNativeTraceError(
+            "original scene 4 unexpectedly overlaps scene 101 creation path"
+        )
+    return {
+        "status": "PINNED_ORIGINAL_SCENE_101_SAVE_PROBE_AND_APP_LAUNCH_LOAD",
+        "scene_transition": "0x71c408",
+        "explicit_scene_101_caller": "0x7231c8 MOV w1=101; 0x7231cc BL 0x71c408",
+        "scene_101_dispatch": "0x71c6e4 CMP #101; 0x71c6e8 B.NE skip",
+        "original_source_file_literal": "SAVE_DATA (0x191955)",
+        "native_scene_file_probe": "0x71c9b0 -> 0x35d620",
+        "absent_file_branch": "0x71c9c8 TBZ -> 0x71d208",
+        "conditional_absent_file_witness_length": len(witness),
+        "native_AppLaunchLoad_constructor": "0x71d30c -> 0x4926f8",
+        "AppLaunchLoad_vtable_init": "0x492730/0x492734/0x492738",
+        "native_scene_ptr_record": "game_context+0x3c40b0",
+        "SAVE_read_failure_different_scene": "0x8b4528 w1=4; 0x8b452c -> 0x71c408",
+        "type_identity_from_original_RTTI": "13AppLaunchLoad (0x1c507d)",
+        "scene_101_is_obligatory_first_launch_proven": False,
+        "first_run_native_player_save_initializer_found": False,
+        "original_offline_first_boot_and_level60_proven": False,
+        "old_publisher_save_or_private_art_modified": False,
+    }
+
+
 def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict:
     digest = sha256(elf).hexdigest()
     if digest != expected_sha or expected_sha != NATIVE_SHA256:
@@ -1514,6 +1631,7 @@ def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict
         "original_missing_save_read_path": _original_missing_save_read_path(elf),
         "original_save_read_worker": _original_save_read_worker(elf),
         "original_save_worker_virtual_status": _original_save_worker_virtual_status(elf),
+        "original_app_launch_scene_from_save_presence": _original_app_launch_scene_from_save_presence(elf),
         "native_original_game_upgrader_getter_identified": True,
         "native_original_game_upgrade_purchase_hook_verified": False,
         "original_native_conditional_xp_purchase_to_save_calls_proven": True,
