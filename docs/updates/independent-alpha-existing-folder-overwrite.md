@@ -13,3 +13,28 @@
 - 実機の導入・iボタン閲覧・再起動永続性はユーザー確認待ち。既存の独立Alphaセーブのバックアップ/復元が可能とは保証せず、署名が違ってもアンインストールしない。
 
 今後、配布方式の変更が不要なら**この形式を毎回使うこと**。以前の配布方式から勝手に standalone ZIP を新設しない。
+
+
+## PS51-JAVA-NULL repair (2026-10-09)
+
+Important: the previous ZIPs failed first because of PowerShell 5.1 UTF-8 BOM and then because unset JAVA_HOME was used directly as Join-Path Path. Those releases are withdrawn; use only the repaired ZIP.
+
+The repaired overwrite ZIP includes an additional source file: tools/base_mod/resolve_java_keytool.ps1. Both entrypoint and nested INSTALL-ALPHA.ps1 use UTF-8 BOM; the nested installer dot-sources the shared resolver. It now finds Java keytool from PATH, guarded JAVA_HOME/JDK_HOME and installed JDK paths, instead of requiring JAVA_HOME to be set.
+
+Read-only Java check (does NOT install):
+
+    powershell -ExecutionPolicy Bypass -File .\tools\base_mod\independent_alpha_20261009\INSTALL-ALPHA.ps1 -CheckJava
+
+Optional read-only full tool availability check:
+
+    powershell -ExecutionPolicy Bypass -File .\tools\base_mod\independent_alpha_20261009\INSTALL-ALPHA.ps1 -CheckPrerequisites
+
+Actual update remains one familiar command after ZIP overwrite:
+
+    powershell -ExecutionPolicy Bypass -File .\tools\base_mod\run_independent_alpha_update.ps1 -Apply
+
+Exact repaired nested installer SHA256: a2f6f8f011275296340fcaec15e49eb498e0f4bd77096ce92ad8d5ee59c08bc4
+Exact shared Java resolver SHA256: d36f57ce928807fde46738ab64ad1f61e7b651118c08821842ffe3835b3b18f0
+APK SHA256 (unchanged): 9fc91ad09da1f242669404b86abbb53030aca133206f27c2cfb501a443a9ec3b
+
+CI: Windows Powershell 5.1 tests missing JAVA_HOME/LOCALAPPDATA. Actual user USB signing/key/password and on-device install are separate USER_GATE, NOT covered by CI.
