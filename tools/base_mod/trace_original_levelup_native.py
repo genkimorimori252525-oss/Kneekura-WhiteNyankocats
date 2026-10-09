@@ -1162,6 +1162,100 @@ def _original_xp_purchase_save_gate(elf: bytes) -> dict[str, Any]:
     return result
 
 
+
+# Exact JP15.7.1 original SAVE_DATA IO -> Android Activity.getFilesDir seam.
+# Both original SAVE_DATA reader and writer call the SAME JNI thunk to obtain
+# the app-private file root. This is stronger evidence than a literal xref.
+# It does NOT prove that the subclass override is actually loaded on device,
+# nor any network-free first boot or independent local save authority.
+ORIGINAL_SAVE_JNI_FILE_ROOT_ANCHORS = {
+    0x8B4404: 0x97EAA487,  # SAVE_DATA reader -> file-open source
+    0x8B46FC: 0x97EAA745,  # SAVE_DATA writer -> file-open sink
+    0x35D6B0: 0x94033DCE,  # source -> same getFilesDir JNI thunk
+    0x35D6C0: 0x97FEF291,  # source path + caller filename combiner
+    0x35E510: 0x94033A36,  # sink -> same getFilesDir JNI thunk
+    0x35E520: 0x97FEEEF9,  # sink path + caller filename combiner
+    0x42CDE8: 0x1400B703,  # JNI stub tail branch
+    0x45A9F4: 0xD10343FF,  # target JNI helper entry
+    0x45AA3C: 0xD0FFE9A8,  # ADRP x8 -> original getFilesDir string
+    0x45AA40: 0x91169508,  # ADD x8 -> original getFilesDir string
+    0x45AB98: 0x97FC6397,  # JNI method lookup callsite
+    0x45ABB4: 0xD63F0100,  # JNI vtable virtual call
+}
+
+
+def _original_save_jni_files_root(elf: bytes) -> dict[str, Any]:
+    """Prove original SAVE_DATA reader/writer lead to the same JNI file root.
+
+    JNI calls within original native code are real; original-game save/load
+    success under an alternative MyActivity subclass remains a device gate.
+    """
+    if len(elf) < 0x8B4700:
+        raise LevelUpNativeTraceError("original SAVE_DATA path chain truncated")
+    if elf[0x1905A5:0x1905B1] != b"getFilesDir\x00":
+        raise LevelUpNativeTraceError("original getFilesDir JNI literal drifted")
+    if elf[0x191955:0x19195F] != b"SAVE_DATA\x00":
+        raise LevelUpNativeTraceError("original SAVE_DATA literal drifted")
+    for pc, expected in ORIGINAL_SAVE_JNI_FILE_ROOT_ANCHORS.items():
+        if _u32(elf, pc) != expected:
+            raise LevelUpNativeTraceError(
+                f"original SAVE_DATA JNI path chain drifted at {_hex(pc)}"
+            )
+    bl_targets = {
+        0x8B4404: 0x35D620,
+        0x8B46FC: 0x35E410,
+        0x35D6B0: 0x42CDE8,
+        0x35D6C0: 0x31A104,
+        0x35E510: 0x42CDE8,
+        0x35E520: 0x31A104,
+    }
+    for pc, target in bl_targets.items():
+        if _decode_relative_bl(elf, pc) != target:
+            raise LevelUpNativeTraceError(
+                f"original SAVE_DATA path call target drifted at {_hex(pc)}"
+            )
+    thunk = _u32(elf, 0x42CDE8)
+    if (thunk & 0xFC000000 != 0x14000000
+        or 0x42CDE8 + _sign_extend(thunk & 0x03FFFFFF, 26) * 4
+        != 0x45A9F4):
+        raise LevelUpNativeTraceError("original getFilesDir JNI thunk target drifted")
+    refs = direct_adrp_add_refs(
+        elf, 0x1905A5, text_start=0x45AA3C, text_end=0x45AA44
+    )
+    if len(refs) != 1 or int(refs[0]["adrp_address"], 16) != 0x45AA3C:
+        raise LevelUpNativeTraceError("original getFilesDir JNI string xref drifted")
+    return {
+        "status": "ORIGINAL_SAVE_DATA_READ_AND_WRITE_SHARE_ANDROID_FILES_DIR_JNI",
+        "exact_original_native_pinned": True,
+        "save_reader_path": [
+            "0x8b4404 -> 0x35d620",
+            "0x35d6b0 -> 0x42cde8",
+            "0x42cde8 -> 0x45a9f4",
+        ],
+        "save_writer_path": [
+            "0x8b46fc -> 0x35e410",
+            "0x35e510 -> 0x42cde8",
+            "0x42cde8 -> 0x45a9f4",
+        ],
+        "same_file_root_thunk": "0x42cde8",
+        "jni_method_name": "getFilesDir",
+        "jni_literal_address": "0x1905a5",
+        "jni_virtual_invocation": "0x45abb4",
+        "filename_combiner_read": "0x35d6c0 -> 0x31a104",
+        "filename_combiner_write": "0x35e520 -> 0x31a104",
+        "source_save_filename": "SAVE_DATA",
+        "research_only_activity_override_path": (
+            "bridge/java/MyActivity.java.in::getFilesDir"
+        ),
+        "actual_original_host_java_subclass_invocation_proven": False,
+        "original_native_save_under_isolated_root_device_tested": False,
+        "fresh_independent_player_authority_integrated": False,
+        "full_zero_network_first_boot_proven": False,
+        "original_lv60_purchase_reboot_proven": False,
+        "private_original_save_or_apk_modified": False,
+    }
+
+
 def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict:
     digest = sha256(elf).hexdigest()
     if digest != expected_sha or expected_sha != NATIVE_SHA256:
@@ -1216,6 +1310,7 @@ def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict
         "original_cap_increment_item_transaction": _original_cap_increment_item_transaction(elf),
         "original_normal_xp_purchase_save_routes": _original_normal_xp_purchase_save_routes(elf),
         "original_xp_purchase_save_gate": _original_xp_purchase_save_gate(elf),
+        "original_save_jni_files_root": _original_save_jni_files_root(elf),
         "native_original_game_upgrader_getter_identified": True,
         "native_original_game_upgrade_purchase_hook_verified": False,
         "original_native_conditional_xp_purchase_to_save_calls_proven": True,
@@ -1225,7 +1320,7 @@ def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict
         "notes": [
             "unitbuy.csv column18 is XOR-decoded to the original 256-byte-per-unit native table; separate unitlevel.csv and unitexp.csv plain 80-byte rows must not be confused",
             "CatsEyeLevelUp and levelmax popups are original-game native code location leads",
-            "Original SAVE_DATA/SAVE_DATA4/SAVE_DATA8 filename xrefs and native getFilesDir JNI string xref (0x45aa3c) show potential file-root seams, NOT actual offline save redirection or persistence proof",
+            "Original SAVE_DATA reader and writer BOTH reach JNI getFilesDir through native 0x42cde8. Java subclass interception/zero-egress and real device save are still unverified",
             "Bounded direct CFG reaches the original SAVE_DATA calls, but physical UI execution, file durability and zero-network local authority remain unproven",
         ],
         "original_assets_written_to_repo": False,
