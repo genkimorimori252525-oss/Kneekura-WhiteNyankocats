@@ -21,6 +21,7 @@ from tools.base_mod.trace_original_levelup_native import (
     ORIGINAL_MISSING_SAVE_ANCHORS,
     ORIGINAL_SAVE_READ_WORKER_ANCHORS,
     ORIGINAL_WORKER_STATUS_VTABLE, ORIGINAL_WORKER_STATUS_ANCHORS,
+    ORIGINAL_APP_LAUNCH_SCENE_ANCHORS,
     ORIGINAL_RELA_DYN_OFFSET, ORIGINAL_RELA_DYN_COUNT,
     ORIGINAL_RELA_DYN_ENTRY_SIZE,
     LevelUpNativeTraceError,
@@ -30,6 +31,7 @@ from tools.base_mod.trace_original_levelup_native import (
     _original_normal_xp_purchase_save_routes,
     _original_save_jni_files_root, _original_missing_save_read_path,
     _original_save_read_worker, _original_save_worker_virtual_status,
+    _original_app_launch_scene_from_save_presence,
     _original_arm64_cfg_successors, _original_arm64_cfg_witness,
     _original_arm64_cfg_all_direct_paths_hit_save,
     _levelmax_popup_branch,
@@ -113,6 +115,25 @@ def _synthetic_worker_status_fixture() -> bytearray:
         struct.pack_into("<QQq", data, ORIGINAL_RELA_DYN_OFFSET + idx * 24,
                          slot, 0x403, target)
     return data
+
+
+
+def _synthetic_original_app_launch_scene_fixture() -> bytearray:
+    """Synthetic ARM64 scene branch canvas with exact JP opcode anchors ONLY.
+
+    Do not store original proprietary game function bodies or SAVE_DATA.
+    """
+    payload = bytearray(0x8B4530)
+    payload[0x191955:0x19195F] = b"SAVE_DATA\x00"
+    payload[0x1C507D:0x1C508D] = b"13AppLaunchLoad\x00"
+    # The source's actual conditional absent-file witness travels 0x71c9c8
+    # -> 0x71d208 -> 0x71d2e8 -> constructor at 0x71d30c. NOPs model only
+    # otherwise irrelevant local cleanup. Distinct ERROR scene 4 remains UDF.
+    for pc in range(0x71D208, 0x71D320, 4):
+        struct.pack_into("<I", payload, pc, 0xD503201F)
+    for pc, opcode in ORIGINAL_APP_LAUNCH_SCENE_ANCHORS.items():
+        struct.pack_into("<I", payload, pc, opcode)
+    return payload
 
 
 class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
@@ -670,6 +691,50 @@ class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
             with self.subTest(fault=fault):
                 with self.assertRaises(LevelUpNativeTraceError):
                     _original_save_worker_virtual_status(bytes(broken))
+
+    def test_original_scene_101_has_SAVE_DATA_probe_and_AppLaunchLoad_conditional_path(self):
+        result = _original_app_launch_scene_from_save_presence(
+            bytes(_synthetic_original_app_launch_scene_fixture())
+        )
+        self.assertEqual(result["status"],
+                         "PINNED_ORIGINAL_SCENE_101_SAVE_PROBE_AND_APP_LAUNCH_LOAD")
+        self.assertEqual(result["explicit_scene_101_caller"],
+                         "0x7231c8 MOV w1=101; 0x7231cc BL 0x71c408")
+        self.assertEqual(result["original_source_file_literal"], "SAVE_DATA (0x191955)")
+        self.assertEqual(result["absent_file_branch"], "0x71c9c8 TBZ -> 0x71d208")
+        self.assertEqual(result["native_AppLaunchLoad_constructor"],
+                         "0x71d30c -> 0x4926f8")
+        self.assertEqual(result["native_scene_ptr_record"],
+                         "game_context+0x3c40b0")
+        self.assertEqual(result["SAVE_read_failure_different_scene"],
+                         "0x8b4528 w1=4; 0x8b452c -> 0x71c408")
+        self.assertGreater(result["conditional_absent_file_witness_length"], 8)
+        self.assertFalse(result["scene_101_is_obligatory_first_launch_proven"])
+        self.assertFalse(result["first_run_native_player_save_initializer_found"])
+        self.assertFalse(result["original_offline_first_boot_and_level60_proven"])
+
+    def test_original_AppLaunchLoad_scene_rejects_branch_constructor_and_RTTI_drift(self):
+        source = _synthetic_original_app_launch_scene_fixture()
+        for pc in (0x71C5B4, 0x71C6E4, 0x71C6E8, 0x71C9A8,
+                   0x71C9B0, 0x71C9C8, 0x71D264, 0x71D2DC,
+                   0x71D30C, 0x71D31C, 0x492730, 0x492738,
+                   0x7231C8, 0x7231CC, 0x8B4528, 0x8B452C):
+            broken = bytearray(source)
+            broken[pc] ^= 1
+            with self.subTest(pc=hex(pc)):
+                with self.assertRaises(LevelUpNativeTraceError):
+                    _original_app_launch_scene_from_save_presence(bytes(broken))
+        for literal in (0x191955, 0x1C507D):
+            broken = bytearray(source)
+            broken[literal] ^= 1
+            with self.subTest(literal=hex(literal)):
+                with self.assertRaises(LevelUpNativeTraceError):
+                    _original_app_launch_scene_from_save_presence(bytes(broken))
+        # Fail closed if expected first-hop branch target no longer exists.
+        wrong_branch = bytearray(source)
+        struct.pack_into("<I", wrong_branch, 0x71D220, 0xD503201F)
+        with self.assertRaisesRegex(LevelUpNativeTraceError, "opcode drifted"):
+            _original_app_launch_scene_from_save_presence(bytes(wrong_branch))
 
     def test_real_game_original_upgrader_cues_are_not_fabricated_hooks(self):
         self.assertEqual(len(NATIVE_SHA256), 64)
