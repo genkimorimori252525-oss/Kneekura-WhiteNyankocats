@@ -19,12 +19,14 @@ from tools.base_mod.trace_original_levelup_native import (
     ORIGINAL_XP_TO_SAVE_DISPATCH_ANCHORS,
     ORIGINAL_SAVE_JNI_FILE_ROOT_ANCHORS,
     ORIGINAL_MISSING_SAVE_ANCHORS,
+    ORIGINAL_SAVE_READ_WORKER_ANCHORS,
     LevelUpNativeTraceError,
     _original_unit_data_loader, _original_effective_level_cap_getter,
     _original_upgrade_purchase_flow, _original_save_data_serialization,
     _original_save_restore_flow, _original_cap_increment_item_transaction,
     _original_normal_xp_purchase_save_routes,
     _original_save_jni_files_root, _original_missing_save_read_path,
+    _original_save_read_worker,
     _original_arm64_cfg_successors, _original_arm64_cfg_witness,
     _original_arm64_cfg_all_direct_paths_hit_save,
     _levelmax_popup_branch,
@@ -579,6 +581,37 @@ class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
                 edited[address] ^= 1
                 with self.assertRaises(LevelUpNativeTraceError):
                     _original_missing_save_read_path(bytes(edited))
+
+    def test_original_save_read_is_in_async_worker_not_proven_first_boot(self):
+        # Stub contains only exact instruction words, no private native bytes.
+        stub = bytearray(0x49320C)
+        for pc, opcode in ORIGINAL_SAVE_READ_WORKER_ANCHORS.items():
+            struct.pack_into("<I", stub, pc, opcode)
+        result = _original_save_read_worker(bytes(stub))
+        self.assertEqual(result["worker_thread_entry"], "0x493200 -> 0x492b80")
+        self.assertEqual(result["native_loader"], "0x492be8 -> 0x9bb764 -> 0x8b43a4")
+        self.assertEqual(result["missing_save_status_branch"],
+                         "0x492bec TBZ -> 0x492d28")
+        self.assertEqual(result["success_flag"],
+                         "0x492d20 STRB [worker_state+8]")
+        self.assertEqual(result["failure_flag"],
+                         "0x492d28 sets 1; 0x492d2c STRB [worker_state+9]")
+        self.assertFalse(result["actual_app_first_launch_calls_this_worker_proven"])
+        self.assertFalse(result["missing_SAVE_is_absence_of_new_game_generator_proven"])
+        self.assertFalse(result["original_native_new_player_initializer_found"])
+
+    def test_original_save_worker_error_branches_and_flags_reject_drift(self):
+        template = bytearray(0x49320C)
+        for pc, opcode in ORIGINAL_SAVE_READ_WORKER_ANCHORS.items():
+            struct.pack_into("<I", template, pc, opcode)
+        for pc in (0x492BE8, 0x492BEC, 0x492C6C, 0x492C70,
+                   0x492D20, 0x492D28, 0x492D2C,
+                   0x492DF0, 0x493200, 0x493208):
+            broken = bytearray(template)
+            broken[pc] ^= 1
+            with self.subTest(where=hex(pc)):
+                with self.assertRaises(LevelUpNativeTraceError):
+                    _original_save_read_worker(bytes(broken))
 
     def test_real_game_original_upgrader_cues_are_not_fabricated_hooks(self):
         self.assertEqual(len(NATIVE_SHA256), 64)
