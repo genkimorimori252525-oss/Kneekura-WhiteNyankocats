@@ -1573,6 +1573,119 @@ def _original_app_launch_scene_from_save_presence(elf: bytes) -> dict[str, Any]:
     }
 
 
+
+# ORIGINAL JP15.7.1 AppLaunchLoad STATUS CONSUMER (not an inferred handler).
+# The producer 0x71d314/0x71d31c stores the actual native scene object at
+# context+0x3c40b0; scene 101's original frame update (0x721854) loads this
+# same pointer, dynamically dispatches the AppLaunchLoad status vtable slot,
+# and chooses WAIT / ERROR scene 4 / success scene 97 or 104.
+#
+# This does NOT make a virgin game account-free, patch the original engine,
+# or prove the owner Android device starts offline with a usable local SAVE.
+ORIGINAL_APP_LAUNCH_RESULT_ANCHORS = {
+    0x721878: 0x914F0C09,  # x9 = context+0x3c3000
+    0x721884: 0x91129137,  # x23 = context+0x3c34a4
+    0x722B10: 0x7101951F,  # requested scene == 101?
+    0x722B14: 0x54FFF3C1,  # not scene101 -> 0x72298c
+    0x722B18: 0x913032F4,  # x20 = x23+0xc0c = context+0x3c40b0
+    0x722B1C: 0xF9400280,  # x0 = load scene object [x20]
+    0x722B20: 0xB4FFF3E0,  # null object -> return
+    0x722B24: 0xF9400008,  # load vtable
+    0x722B28: 0xF9401108,  # load virtual method at vtable+0x20
+    0x722B2C: 0xD63F0100,  # BLR x8 (original AppLaunchLoad status)
+    0x722B30: 0x36004880,  # status bit0 zero -> 0x723440
+    0x722B34: 0x52800028,  # success status processed separately
+    0x722B68: 0xEB1702BF,  # later success-side event-queue comparison
+    0x722B6C: 0x54004820,  # success-side condition -> 0x723470
+    0x723440: 0xF9400288,  # reload scene object on pending/error path
+    0x723444: 0xB4FFAAC8,  # missing -> frame return
+    0x723448: 0x39402508,  # read original worker failure byte [+9]
+    0x72344C: 0x34FFAA88,  # no failure -> WAIT at 0x72299c
+    0x723450: 0x528000E8,  # set original error subtype 7
+    0x723454: 0xAA1303E0,  # x0 = original game context
+    0x723458: 0x52800081,  # scene 4
+    0x72345C: 0xB9332668,  # original error subtype state at +0x3324
+    0x723460: 0x97FFE3EA,  # call original scene dispatcher
+    0x723470: 0x52821B28,  # game state flag index 0x10d9
+    0x723474: 0x52800C29,  # scene97 (0x61) candidate
+    0x723478: 0xAA1303E0,  # x0 = context
+    0x72347C: 0x38686A68,  # game state flag read
+    0x723480: 0x7100011F,  # flag == 0?
+    0x723484: 0x52800D08,  # scene104 (0x68) alternative
+    0x723488: 0x1A880121,  # CSEL w1,w9,w8,eq
+    0x72348C: 0x97FFE3DF,  # call original scene dispatcher
+    0x71D310: 0x914F1268,  # producer original context+0x3c4000
+    0x71D314: 0x9102C117,  # producer shared scene slot +0xb0
+    0x71D31C: 0xA90052F5,  # producer stores AppLaunchLoad scene ptr
+}
+
+
+def _original_app_launch_result_scene_dispatch(elf: bytes) -> dict[str, Any]:
+    """Pin real original AppLaunchLoad status->wait/error/success dispatch.
+
+    Original scene-101 state is producer+consumer consistent at context+
+    0x3c40b0. The virtual method slot belongs to the *same* pinned native
+    AppLaunchLoad vtable verified by _original_save_worker_virtual_status.
+    Branch reachability in this native function is NOT a successful original
+    Android gameplay-first-boot or standalone SAVE acceptance result.
+    """
+    if len(elf) < 0x723490:
+        raise LevelUpNativeTraceError("original AppLaunchLoad result control flow truncated")
+    for pc, opcode in ORIGINAL_APP_LAUNCH_RESULT_ANCHORS.items():
+        if _u32(elf, pc) != opcode:
+            raise LevelUpNativeTraceError(
+                f"original AppLaunchLoad status/scene opcode drift at {_hex(pc)}"
+            )
+    if (0x3C3000 + 0x4A4 + 0xC0C != 0x3C4000 + 0xB0
+        or ORIGINAL_WORKER_STATUS_VTABLE.get(0xAEFB58) != 0x4930B8):
+        raise LevelUpNativeTraceError("original producer/consumer or status vtable mismatch")
+    for pc, target in ((0x723460, 0x71C408), (0x72348C, 0x71C408)):
+        if _decode_relative_bl(elf, pc) != target:
+            raise LevelUpNativeTraceError(
+                f"original AppLaunchLoad scene transition BL drift at {_hex(pc)}"
+            )
+    conditional_edges = {
+        0x722B14: 0x72298C,  # not scene101
+        0x722B20: 0x72299C,  # no active scene object
+        0x722B30: 0x723440,  # status false => pending or failure
+        0x722B6C: 0x723470,  # success-side additional condition
+        0x723444: 0x72299C,  # no scene pointer on false status
+        0x72344C: 0x72299C,  # false status and NO failure => wait
+    }
+    for pc, target in conditional_edges.items():
+        if target not in _original_arm64_cfg_successors(elf, pc):
+            raise LevelUpNativeTraceError(
+                f"original AppLaunchLoad result branch drift at {_hex(pc)}"
+            )
+    if (_original_arm64_cfg_successors(elf, 0x722B30)
+        != (0x723440, 0x722B34)
+        or _original_arm64_cfg_successors(elf, 0x72344C)
+        != (0x72299C, 0x723450)):
+        raise LevelUpNativeTraceError(
+            "original AppLaunchLoad pending/success alternatives changed"
+        )
+    return {
+        "status": "EXACT_ORIGINAL_APP_LAUNCH_LOAD_RESULT_SCENE_DISPATCH",
+        "frame_update_entry": "0x721854",
+        "scene101_selected": "0x722b10 CMP #101; 0x722b14 B.NE -> 0x72298c",
+        "producer_scene_ptr": "0x71d314/0x71d31c context+0x3c40b0",
+        "consumer_scene_ptr": "0x722b18/0x722b1c context+0x3c40b0",
+        "virtual_status_call": "0x722b28 [vtable+0x20]; 0x722b2c BLR x8",
+        "virtual_status_pinned_target": "0xaefb58 R_AARCH64_RELATIVE -> 0x4930b8 (independently validated)",
+        "status_false_branch": "0x722b30 TBZ -> 0x723440",
+        "wait_without_failure": "0x723448 LDRB worker+9; 0x72344c CBZ -> 0x72299c",
+        "error_scene": "0x723450 sets 7; 0x723458 w1=4; 0x723460 -> 0x71c408",
+        "success_side_scene_choice": "0x723470..0x723488 chooses scene97 if context[0x10d9]==0, else scene104; 0x72348c -> 0x71c408",
+        "successful_launch_implies_new_player_save_created": False,
+        "original_first_launch_without_SAVE_verified": False,
+        "native_first_game_account_free_initializer_found": False,
+        "original_android_device_scene_transition_observed": False,
+        "original_lv60_and_local_save_reboot_verified": False,
+        "all_sdk_network_egress_zero_proven": False,
+        "original_binary_or_owner_player_SAVE_mutated": False,
+    }
+
+
 def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict:
     digest = sha256(elf).hexdigest()
     if digest != expected_sha or expected_sha != NATIVE_SHA256:
@@ -1632,6 +1745,7 @@ def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict
         "original_save_read_worker": _original_save_read_worker(elf),
         "original_save_worker_virtual_status": _original_save_worker_virtual_status(elf),
         "original_app_launch_scene_from_save_presence": _original_app_launch_scene_from_save_presence(elf),
+        "original_app_launch_result_scene_dispatch": _original_app_launch_result_scene_dispatch(elf),
         "native_original_game_upgrader_getter_identified": True,
         "native_original_game_upgrade_purchase_hook_verified": False,
         "original_native_conditional_xp_purchase_to_save_calls_proven": True,
