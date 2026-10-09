@@ -16,10 +16,13 @@ from tools.base_mod.trace_original_levelup_native import (
     ORIGINAL_NATIVE_SAVE_SERIALIZATION_ANCHORS,
     ORIGINAL_NATIVE_SAVE_RESTORE_ANCHORS,
     ORIGINAL_CAP_INCREMENT_ITEM_TRANSACTION_ANCHORS,
+    ORIGINAL_XP_TO_SAVE_DISPATCH_ANCHORS,
     LevelUpNativeTraceError,
     _original_unit_data_loader, _original_effective_level_cap_getter,
     _original_upgrade_purchase_flow, _original_save_data_serialization,
     _original_save_restore_flow, _original_cap_increment_item_transaction,
+    _original_normal_xp_purchase_save_routes,
+    _original_arm64_cfg_successors, _original_arm64_cfg_witness,
     _levelmax_popup_branch,
     _popup_value_call_chain,
     direct_adrp_add_refs, trace_exact_native,
@@ -56,6 +59,24 @@ def _synthetic_save_restore_fixture() -> bytearray:
     blob[0x191955:0x19195F] = b"SAVE_DATA\x00"
     for at, opcode in ORIGINAL_NATIVE_SAVE_RESTORE_ANCHORS.items():
         struct.pack_into("<I", blob, at, opcode)
+    return blob
+
+
+
+def _synthetic_normal_xp_save_dispatch_fixture() -> bytearray:
+    """Small instruction-selection fixture; NEVER copied proprietary ELF."""
+    blob = bytearray(0x8B9FCC)
+    # A no-op-only synthetic control-flow canvas; pinned branch words below
+    # are the only real original instruction words retained as test anchors.
+    for at in range(0x850000, 0x85B000, 4):
+        struct.pack_into("<I", blob, at, 0xD503201F)  # ARM64 nop
+    for at, opcode in ORIGINAL_XP_TO_SAVE_DISPATCH_ANCHORS.items():
+        struct.pack_into("<I", blob, at, opcode)
+    # The real original region between 0x8597fc and 0x859850 has game UI
+    # operations; synthetic fixture uses a single B to exercise route A.
+    pc, target = 0x8597FC, 0x859850
+    direct_b = 0x14000000 | (((target - pc) // 4) & 0x03FFFFFF)
+    struct.pack_into("<I", blob, pc, direct_b)
     return blob
 
 
@@ -378,6 +399,68 @@ class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
                     LevelUpNativeTraceError, "transaction opcode drifted"
                 ):
                     _original_cap_increment_item_transaction(bytes(trial))
+
+    def test_original_normal_xp_purchase_conditional_routes_reach_real_saver(self):
+        fixture = _synthetic_normal_xp_save_dispatch_fixture()
+        flow = _original_normal_xp_purchase_save_routes(bytes(fixture))
+        self.assertEqual(flow["source_xp_debit"], "0x858390 -> 0x9d86e4")
+        self.assertEqual(flow["native_current_level_increment"],
+                         "0x8583b8 -> 0x9cc04c")
+        self.assertTrue(flow["xp_debit_reaches_level_increment"])
+        self.assertEqual(set(flow["conditional_save_routes"]),
+                         {"0x859a40", "0x85a748"})
+        for site in ("0x859a40", "0x85a748"):
+            self.assertEqual(
+                flow["conditional_save_routes"][site]["original_save_target"],
+                "0x8b9fc8"
+            )
+        self.assertFalse(flow["all_successful_upgrade_paths_save_proven"])
+        self.assertFalse(flow["runtime_branch_values_or_reachability_proven"])
+        self.assertFalse(flow["original_disk_durable_flush_proven"])
+        self.assertFalse(flow["fresh_independent_zero_network_save_connected"])
+        self.assertFalse(flow["original_game_lv60_screen_and_reboot_verified"])
+
+    def test_original_normal_xp_save_route_opcode_or_path_drift_fails_closed(self):
+        baseline = _synthetic_normal_xp_save_dispatch_fixture()
+        for at in (0x858390, 0x8583B8, 0x858450,
+                   0x858534, 0x859994, 0x859A40, 0x85A748):
+            trial = bytearray(baseline)
+            trial[at] ^= 1
+            with self.subTest(opcode=hex(at)):
+                with self.assertRaisesRegex(
+                    LevelUpNativeTraceError, "branch opcode drifted"
+                ):
+                    _original_normal_xp_purchase_save_routes(bytes(trial))
+        path_corrupted = bytearray(baseline)
+        struct.pack_into("<I", path_corrupted, 0x8597FC, 0xD65F03C0)  # ret
+        with self.assertRaisesRegex(LevelUpNativeTraceError,
+                                     "conditional route drifted"):
+            _original_normal_xp_purchase_save_routes(bytes(path_corrupted))
+
+    def test_original_bounded_cfg_has_no_fabricated_edges(self):
+        fixture = bytes(_synthetic_normal_xp_save_dispatch_fixture())
+        self.assertEqual(_original_arm64_cfg_successors(fixture, 0x858450),
+                         (0x8584E0, 0x858454))
+        self.assertEqual(_original_arm64_cfg_successors(fixture, 0x859994),
+                         (0x85A730, 0x859998))
+        self.assertEqual(_original_arm64_cfg_successors(fixture, 0x859A40),
+                         (0x859A44,))
+        self.assertEqual(
+            _original_arm64_cfg_witness(
+                fixture, 0x850000, 0x85B000, 0x8583B8, 0x859A40
+            )[-1], 0x859A40
+        )
+        with self.assertRaises(LevelUpNativeTraceError):
+            _original_arm64_cfg_witness(
+                fixture, 0x850001, 0x85B000, 0x8583B8, 0x859A40
+            )
+        # UDF/RET cannot be invented as branches.
+        blank = bytearray(0x100)
+        struct.pack_into("<I", blank, 0x40, 0xD65F03C0)
+        self.assertEqual(
+            _original_arm64_cfg_witness(bytes(blank), 0, 0x100,
+                                        0x40, 0x80), []
+        )
 
     def test_real_game_original_upgrader_cues_are_not_fabricated_hooks(self):
         self.assertEqual(len(NATIVE_SHA256), 64)
