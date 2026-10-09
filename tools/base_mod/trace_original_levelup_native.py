@@ -1310,6 +1310,88 @@ def _original_missing_save_read_path(elf: bytes) -> dict[str, Any]:
     }
 
 
+
+# Original JP15.7.1 source context for the loader at 0x9bb764:
+# it is called by a threaded init worker, which sets distinct success/failure
+# flags. DO NOT assume this specific worker is the original FIRST-LAUNCH
+# new-game generator. Distinguishing that lifecycle caller is the next task.
+ORIGINAL_SAVE_READ_WORKER_ANCHORS = {
+    0x492B80: 0xA9BD7BFD,  # worker entry
+    0x492BD4: 0x9414A408,  # preceding preparation
+    0x492BE8: 0x9414A2DF,  # original SAVE loader
+    0x492BEC: 0x360009E0,  # save loader failed => 0x492d28
+    0x492C6C: 0x9414CAAC,  # further post-read check
+    0x492C70: 0x360005C0,  # post-read check failed => 0x492d28
+    0x492D1C: 0x97FB18EB,  # success finalization
+    0x492D20: 0x39002275,  # success flag byte [x19 + 8]
+    0x492D28: 0x52800028,  # failed flag = 1
+    0x492D2C: 0x39002668,  # failure flag byte [x19 + 9]
+    0x492D40: 0xD10183FF,  # async worker launcher entry
+    0x492DE4: 0x10002502,  # thread entry PC reference
+    0x492DF0: 0x941912D4,  # pthread_create
+    0x4931FC: 0xF9403C00,  # async state/context pointer
+    0x493200: 0x97FFFE60,  # worker callback invokes 0x492b80
+    0x493204: 0xAA1303E0,  # future state before completion
+    0x493208: 0x941912DE,  # std::future state set_value
+}
+
+
+def _original_save_read_worker(elf: bytes) -> dict[str, Any]:
+    """Verify the exact save-loading worker, NOT original first-game creation.
+
+    Missing save/error causes a worker failure flag. A thread/future dispatch
+    calls this worker. The relevant appInit/new-game caller is not established.
+    """
+    if len(elf) < 0x49320C:
+        raise LevelUpNativeTraceError("original save worker ELF bounds drifted")
+    for pc, opcode in ORIGINAL_SAVE_READ_WORKER_ANCHORS.items():
+        if _u32(elf, pc) != opcode:
+            raise LevelUpNativeTraceError(
+                f"original save worker opcode drifted at {_hex(pc)}"
+            )
+    for pc, target in (
+        (0x492BD4, 0x9BBBF4),
+        (0x492BE8, 0x9BB764),
+        (0x492C6C, 0x9C571C),
+        (0x492D1C, 0x3590C8),
+        (0x492DF0, 0xAD7940),
+        (0x493200, 0x492B80),
+        (0x493208, 0xAD7D80),
+    ):
+        if _decode_relative_bl(elf, pc) != target:
+            raise LevelUpNativeTraceError(
+                f"original save worker call target drifted at {_hex(pc)}"
+            )
+    for pc, target in (
+        (0x492BEC, 0x492D28),
+        (0x492C70, 0x492D28),
+    ):
+        insn = _u32(elf, pc)
+        if (insn & 0x7F000000) != 0x36000000:
+            raise LevelUpNativeTraceError("original save worker TBZ type drifted")
+        delta = _sign_extend((insn >> 5) & 0x3FFF, 14) * 4
+        if pc + delta != target:
+            raise LevelUpNativeTraceError(
+                f"original save worker conditional branch drifted at {_hex(pc)}"
+            )
+    return {
+        "status": "EXACT_ORIGINAL_SAVE_LOAD_ASYNC_WORKER_IDENTIFIED",
+        "thread_launcher": "0x492d40",
+        "worker_thread_entry": "0x493200 -> 0x492b80",
+        "native_loader": "0x492be8 -> 0x9bb764 -> 0x8b43a4",
+        "missing_save_status_branch": "0x492bec TBZ -> 0x492d28",
+        "post_load_check": "0x492c6c -> 0x9c571c",
+        "post_load_check_failed_branch": "0x492c70 TBZ -> 0x492d28",
+        "success_flag": "0x492d20 STRB [worker_state+8]",
+        "failure_flag": "0x492d28 sets 1; 0x492d2c STRB [worker_state+9]",
+        "future_completion": "0x493208 -> std::future set_value",
+        "actual_app_first_launch_calls_this_worker_proven": False,
+        "missing_SAVE_is_absence_of_new_game_generator_proven": False,
+        "original_native_new_player_initializer_found": False,
+        "local_save_or_source_binary_modified": False,
+    }
+
+
 def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict:
     digest = sha256(elf).hexdigest()
     if digest != expected_sha or expected_sha != NATIVE_SHA256:
@@ -1366,6 +1448,7 @@ def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict
         "original_xp_purchase_save_gate": _original_xp_purchase_save_gate(elf),
         "original_save_jni_files_root": _original_save_jni_files_root(elf),
         "original_missing_save_read_path": _original_missing_save_read_path(elf),
+        "original_save_read_worker": _original_save_read_worker(elf),
         "native_original_game_upgrader_getter_identified": True,
         "native_original_game_upgrade_purchase_hook_verified": False,
         "original_native_conditional_xp_purchase_to_save_calls_proven": True,
