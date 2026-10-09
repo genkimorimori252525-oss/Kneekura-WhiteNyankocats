@@ -341,6 +341,7 @@ ORIGINAL_EFFECTIVE_CAP_GETTER_ANCHORS = {
     0x53B2BC: 0xA9BB7BFD,  # getter entry
     0x53B2D4: 0x2A0003F3,  # asset index in w19
     0x53B2D8: 0x94078313,  # original game context getter
+    0x53B2DC: 0x52960C15,  # base constant lower 16 bits = 0xb060
     0x53B2E0: 0x93787E74,  # index * 256
     0x53B2E4: 0x72A00095,  # context + 0x4b060
     0x53B2E8: 0x8B150008,
@@ -364,6 +365,7 @@ ORIGINAL_EFFECTIVE_CAP_GETTER_ANCHORS = {
     0x53B338: 0x2A184108,
     0x53B33C: 0x0B000108,  # base level + decoded saved increment
     0x53B340: 0x0B196113,
+    0x53B344: 0x940782F8,  # context getter before native hard cap
     0x53B350: 0x8B150108,  # same unitbuy per-cat row
     0x53B354: 0x8B140108,
     0x53B358: 0x39432909,  # unitbuy col50 third byte (+0xca)
