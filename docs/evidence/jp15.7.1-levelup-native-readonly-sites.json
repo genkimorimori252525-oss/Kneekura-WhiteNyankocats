@@ -82,7 +82,7 @@
     "value_semantic_meaning": "UNKNOWN: original game stores a bytewise XOR-encoded value; value=1 selects first level-max popup; NOT yet proven per-unit level cap"
   },
   "source_code_tool": "tools/base_mod/trace_original_levelup_native.py",
-  "next_verified_code_task": "Original normal XP purchase direct paths now verified to reach save wrapper under modeled returning calls. Implement and verify fresh independent zero-egress local authority while preserving original engine/UI; investigate native writer disk durability/failure and boot-time restore, then one-cat Lv60 purchase/reboot with real device evidence. Do not reintroduce rejected official SAVE.",
+  "next_verified_code_task": "Original runtime save reader/writer and JNI getFilesDir root are identified; use research-only isolated original-game app-private folder to prove real SAVED file path and required content; then implement independent zero-egress local authority at original native gameplay bridge. Avoid incorrectly treating path isolation as full save architecture.",
   "release_status": {
     "original_ui_level_cap_patch_attached": false,
     "level_purchase_action_attached": false,
@@ -370,5 +370,27 @@
     "original_binary_or_owner_SAVE_mutated": false,
     "source_code": "tools/base_mod/trace_original_levelup_native.py::_original_xp_purchase_save_gate",
     "regression": "tests/test_trace_original_levelup_native.py"
+  },
+  "original_native_files_directory_adapter": {
+    "exact_native_source_sha256": "333d2974ab2ff881fd70087fd62dea7d12d82addbc55cab2f2a675ad67e3a7e2",
+    "source_rodata_at": "0x1905a5",
+    "source_literal": "getFilesDir",
+    "source_adrp_add": "0x45aa3c / 0x45aa40",
+    "assumption": "Original native JNI references Activity.getFilesDir; evidence does NOT prove the SAVE_DATA reader/writer obtains that exact path at runtime.",
+    "actual_patch_location": "bridge/java/MyActivity.java.in::getFilesDir",
+    "java_builder": "tools/base_mod/inject_java_http_bridge.py::render_bridge_source",
+    "only_enabled_for": "explicit research flavor, build-time option --research-isolate-original-native-files-dir",
+    "private_dir_leaf": "kneekura-native-jp15-7-1",
+    "validation": "canonical-path containment; mkdir failure throws; symlink escape rejects; user-private original SAVE_DATA never copied",
+    "default_feature_enabled": false,
+    "device_android_original_engine_boot_verified": false,
+    "actual_original_SAVE_DATA_on_private_root_verified": false,
+    "original_game_authoritative_save_schema_replaced": false,
+    "auto_seed_first_run_gameplay_save_implemented": false,
+    "full_offline_zero_egress_verified": false,
+    "unit_test": "tests/test_static_http_bridge.py includes real javac/java execution with original Activity compile-stub; tests real private folder, no original SAVE copied, reentry and symlink escape.",
+    "level60_product_acceptance": false,
+    "versioned_original_binary_modified": false,
+    "next_code_change": "Run original native engine save/open against isolated root only after zero-egress app boundary and required local asset import are verified. Implement independent versioned player-save provider mapping XP/current/cap fields and prove UI, battle, restart; do not import rejected original SAVE."
   }
 }
