@@ -32,15 +32,16 @@ class OfflineOperationsCalendarTests(unittest.TestCase):
         self.assertEqual(pack["status"], "draft")
         self.assertEqual(pack["policy"]["login_active_slots"], 5)
         self.assertFalse(pack["policy"]["real_money"])
-        self.assertEqual(len(pack["schedule"]), 12)
+        self.assertEqual(len(pack["schedule"]), 14)
+        self.assertEqual(len(pack["catalog"]["notice"]), 3)
         self.assertEqual(canonical_hash(pack), canonical_hash(deepcopy(pack)))
 
     def test_jst_weekday_and_preview_never_enters_game(self):
         report = active_at(sample_pack(), jst(2026, 10, 9, 19))
         self.assertTrue(report["season_active"])
         self.assertTrue(any(item["kind"] == "stage" for item in report["blocked"]))
-        self.assertEqual([x["title"] for x in report["preview"]["notice"]],
-                         ["にーくらオフライン運営・試作プレビュー"])
+        self.assertEqual({x["content_id"] for x in report["preview"]["notice"]},
+                         {item["id"] for item in sample_pack()["catalog"]["notice"]})
         self.assertEqual(report["active"]["stage"], [])
         self.assertEqual(report["active"]["gacha"], [])
         self.assertFalse(report["actual_stage_clear_modified"])
@@ -111,9 +112,13 @@ class OfflineOperationsCalendarTests(unittest.TestCase):
             "valid_until": "2026-12-01", "monthdays": [9],
             "from_time": "09:00", "to_time": "10:00",
         }
-        self.assertEqual(len(active_at(pack, jst(2026, 10, 9, 9, 30))["preview"]["notice"]), 1)
-        self.assertEqual(len(active_at(pack, jst(2026, 11, 9, 9, 30))["preview"]["notice"]), 1)
-        self.assertEqual(active_at(pack, jst(2026, 10, 10, 9, 30))["preview"]["notice"], [])
+        def first_notice_at(when):
+            return "kneekura:notice:prototype" in {
+                row["content_id"] for row in active_at(pack, when)["preview"]["notice"]
+            }
+        self.assertTrue(first_notice_at(jst(2026, 10, 9, 9, 30)))
+        self.assertTrue(first_notice_at(jst(2026, 11, 9, 9, 30)))
+        self.assertFalse(first_notice_at(jst(2026, 10, 10, 9, 30)))
 
     def test_same_priority_collisions_rejected(self):
         pack = sample_pack()
