@@ -176,6 +176,36 @@ final class LocalOpsStore {
         return "にーくら運営データ v" + received.revision + " を適用しました";
     }
 
+    /**
+     * Returns ONLY the already-imported and SHA-checked published local pack.
+     * No network request, no asset download, no player SAVE access.
+     *
+     * The import path performs full signature verification and stores content
+     * under a trusted, app-private revision. This method rechecks that the
+     * current pointer, SHA and independent runtime safety policies still hold.
+     */
+    static JSONObject loadCurrentPack(Context context) throws Exception {
+        JSONObject pointer = readPointer(context, CURRENT);
+        if (pointer == null) return null;
+        File stored = new File(contentDir(context), pointer.getString("file"));
+        JSONObject pack = new JSONObject(
+                new String(readBounded(stored), StandardCharsets.UTF_8));
+        JSONObject policy = pack.getJSONObject("policy");
+        if (!CHANNEL.equals(pack.getString("channel")) ||
+                pack.getInt("schema_version") != 1 ||
+                !"published".equals(pack.getString("status")) ||
+                pack.getInt("revision") != pointer.getInt("revision") ||
+                !"Asia/Tokyo".equals(pack.getString("timezone")) ||
+                !"forbidden".equals(policy.getString("network")) ||
+                !"KNEEKURA_SAVE_V1".equals(policy.getString("owner_save")) ||
+                policy.getBoolean("real_money") ||
+                policy.getBoolean("stage_availability_is_clear") ||
+                policy.getInt("login_active_slots") != 5) {
+            throw new IOException("Invalid independently imported local operator pack");
+        }
+        return pack;
+    }
+
     static Status current(Context context) throws Exception {
         JSONObject pointer = readPointer(context, CURRENT);
         return pointer == null ? null : new Status(
