@@ -156,7 +156,7 @@ def _synthetic_app_launch_result_fixture() -> bytearray:
 def _synthetic_scene97_download_task_fixture() -> bytearray:
     """Tiny pinned opcode/RTTI+RELATIVE relocation fixture, not owner ELF."""
     size = max(
-        0x73C9FC, 0x1DB616 + len(ORIGINAL_DOWNLOAD_BATCH_RTTI),
+        0x73CAB4, 0x1DB616 + len(ORIGINAL_DOWNLOAD_BATCH_RTTI),
         ORIGINAL_RELA_DYN_OFFSET
         + ORIGINAL_RELA_DYN_COUNT * ORIGINAL_RELA_DYN_ENTRY_SIZE,
     )
