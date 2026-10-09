@@ -64,6 +64,20 @@ the repository validation harness before handing terminal commands to a human.
 - Default runner without `-Apply` should be preflight-only where possible. With `-Apply`, validate input fingerprints, existing app/package signing, owner device and backup constraints. NEVER uninstall or clear app data to get around a signing mismatch.
 - Distinguish the independent offline Android Stage Fidelity Alpha (`jp.kneekura.whitenyankocats`) from historical patched `jp.kn.*` builds and from any fully playable 1.01 release. An overlay delivery *format* does not prove feature completeness or device QA.
 - Current owner ZIP format is documented in `docs/updates/independent-alpha-existing-folder-overwrite.md` and entrypoint `tools/base_mod/run_independent_alpha_update.ps1`. The actual APK belongs in owner-only delivery ZIP under `tools/base_mod/independent_alpha_20261009/`, not in the public source repository.
+## Never repeat PS5.1 / JAVA_HOME failures (2026-10-09)
+
+**MANDATORY release gate for all future AI sessions.** The owner twice encountered failures from an apparently validated ZIP: a Japanese Windows PowerShell 5.1 script without UTF-8 BOM, then a nested installer calling Join-Path on unset JAVA_HOME. Treat both as engineering errors, NOT owner errors.
+
+1. Validate the **actual ZIP-contained entrypoint AND nested installer**, not only a copied GitHub wrapper. Every distributed .ps1 must use UTF-8 BOM (EF BB BF) if it contains non-ASCII, and MUST pass the real Windows PowerShell 5.1 parser.
+2. JAVA_HOME, JDK_HOME, LOCALAPPDATA, TEMP, ANDROID_HOME, ANDROID_SDK_ROOT and all tool locations may be missing. Guard all path operations before Join-Path. Do NOT assume PATH includes Java/keytool or Android SDK. Use the shared resolve_java_keytool.ps1 and fail with an actionable message if no JDK is found.
+3. Windows CI MUST reproduce the original defect with JAVA_HOME **unset** and then with JAVA_HOME+LOCALAPPDATA unset. Check Java and Android tool preflight with **no device mutations** before letting the user run -Apply.
+4. Compare SHA256 of the exact shipped APK, installer and resolver against the outer wrapper; verify ZIP CRC and manifest content after the LAST edit. CI run success for an earlier script is NOT proof the packaged installer worked.
+5. Owner distribution format is fixed: overwrite-extract the ZIP into the existing にーくらにゃんこ project root, then one PowerShell -Apply. Do not require new folders/scripts when avoidable.
+6. USB hardware, owner keystore, password and actual Android startup are USER_GATE until run by the owner. Never claim the installed game passed or that an untested ZIP is proven on the device.
+7. Never uninstall, clear app data, overwrite owner original SAVE_DATA or bypass a signing mismatch. On any failure, update docs/research/failure-repair-history.md, this rule and a CI regression BEFORE reissuing another ZIP.
+
+Current shared source: tools/base_mod/resolve_java_keytool.ps1; strict Windows CI: .github/workflows/agent-terminal-validation.yml; repaired overlay: docs/updates/independent-alpha-existing-folder-overwrite.md.
+
 ## Standard commands
 
 Harness self-test:
