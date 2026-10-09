@@ -1743,6 +1743,94 @@ def _original_app_launch_target_scene_entries(elf: bytes) -> dict[str, Any]:
     }
 
 
+
+# Scene97's actual task allocation is DownloadBatchTask in the owner's
+# ORIGINAL game, proven by native constructor stores + RTTI ELF relocations.
+# The task NAME is not proof that an HTTP request actually fires or that
+# those assets cannot be resolved from local owner packs; that is #15.
+ORIGINAL_SCENE97_DOWNLOAD_BATCH_ANCHORS = {
+    0x71CE80: 0x940023E7,  # scene97 helper -> 0x725e1c
+    0x725EC0: 0x52800A00,  # allocate native scene task wrapper
+    0x725EC4: 0x940EC5FF,  # C++ allocator
+    0x725ECC: 0xB0001EC8,  # ADRP x8 for vtable at 0xafe0b0
+    0x725ED0: 0x9102C108,  # ADD x8, x8, #0xb0
+    0x725EDC: 0xF9000008,  # STR x8,[x0] vtable
+    0x725EE8: 0x94005AB4,  # constructor -> 0x73c9b8
+    0x73C9F0: 0xD0001E08,  # real task vtable page
+    0x73C9F4: 0x91040108,  # task vtable offset
+    0x73C9F8: 0xA9000408,  # task vtable/owner reference
+}
+ORIGINAL_DOWNLOAD_BATCH_RTTI = (
+    b"NSt6__ndk120__shared_ptr_emplaceI17DownloadBatchTaskNS_9allocatorIS1_EEEE\x00"
+)
+ORIGINAL_SCENE97_DOWNLOAD_BATCH_RELOCS = {
+    0xAFE0A8: 0xAFE0D8,  # shared_ptr emplace vtable -> typeinfo
+    0xAFE0E0: 0x1DB616,  # typeinfo -> original DownloadBatchTask RTTI
+    0xAFE0B0: 0x73C968,  # vtable method 0
+    0xAFE0B8: 0x73C978,  # vtable method 1
+    0xAFE0C0: 0x73C9A8,  # vtable method 2
+}
+
+
+def _original_scene97_download_batch_task(elf: bytes) -> dict[str, Any]:
+    """Verify original scene97 constructs a DownloadBatchTask-backed object.
+
+    This is asset-loading/extra-data boundary evidence, NOT proof that an
+    external network request was made or that the 615MB offline assets exist.
+    """
+    end = ORIGINAL_RELA_DYN_OFFSET + ORIGINAL_RELA_DYN_COUNT * ORIGINAL_RELA_DYN_ENTRY_SIZE
+    if len(elf) < max(0x73C9FC, 0x1DB616 + len(ORIGINAL_DOWNLOAD_BATCH_RTTI), end):
+        raise LevelUpNativeTraceError("original DownloadBatchTask native/RTTI source truncated")
+    if (elf[0x1DB616:0x1DB616+len(ORIGINAL_DOWNLOAD_BATCH_RTTI)]
+        != ORIGINAL_DOWNLOAD_BATCH_RTTI):
+        raise LevelUpNativeTraceError("original DownloadBatchTask RTTI literal drifted")
+    for pc, expected in ORIGINAL_SCENE97_DOWNLOAD_BATCH_ANCHORS.items():
+        if _u32(elf, pc) != expected:
+            raise LevelUpNativeTraceError(
+                f"original scene97 DownloadBatchTask opcode drift at {_hex(pc)}"
+            )
+    for pc, target in (
+        (0x71CE80, 0x725E1C),
+        (0x725EC4, 0xAD76C0),
+        (0x725EE8, 0x73C9B8),
+    ):
+        if _decode_relative_bl(elf, pc) != target:
+            raise LevelUpNativeTraceError(
+                f"original scene97 DownloadBatchTask callee drift at {_hex(pc)}"
+            )
+    refs: dict[int, int] = {}
+    for off in range(ORIGINAL_RELA_DYN_OFFSET, end, ORIGINAL_RELA_DYN_ENTRY_SIZE):
+        slot, info, value = struct.unpack_from("<QQq", elf, off)
+        if slot not in ORIGINAL_SCENE97_DOWNLOAD_BATCH_RELOCS:
+            continue
+        if slot in refs or info != 0x403:
+            raise LevelUpNativeTraceError(
+                "original scene97 DownloadBatchTask RELATIVE relocation corrupted"
+            )
+        refs[slot] = value
+    if refs != ORIGINAL_SCENE97_DOWNLOAD_BATCH_RELOCS:
+        raise LevelUpNativeTraceError(
+            "original DownloadBatchTask vtable/typeinfo targets changed"
+        )
+    return {
+        "status": "ORIGINAL_SCENE97_DOWNLOAD_BATCH_TASK_TYPE_AND_CONSTRUCTOR_PROVEN",
+        "origin": "0x71ce80 scene97 -> 0x725e1c",
+        "task_wrapper_allocation": "0x725ec0 size0x50; 0x725ec4 allocator",
+        "task_wrapper_vtable": "0x725ecc/0x725ed0/0x725edc -> 0xafe0b0",
+        "task_constructor": "0x725ee8 -> 0x73c9b8",
+        "rtti": ORIGINAL_DOWNLOAD_BATCH_RTTI[:-1].decode("ascii"),
+        "rtti_relocation": "0xafe0e0 -> 0x1db616",
+        "typeinfo_relocation": "0xafe0a8 -> 0xafe0d8",
+        "vtable_entry_count_pinned": 3,
+        "network_transport_called": False,
+        "remote_data_required_proven": False,
+        "615mb_additional_assets_locally_available_proven": False,
+        "task_is_new_game_save_generator_proven": False,
+        "original_game_first_launch_playable_proven": False,
+        "user_asset_or_SAVE_modified": False,
+    }
+
+
 def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict:
     digest = sha256(elf).hexdigest()
     if digest != expected_sha or expected_sha != NATIVE_SHA256:
@@ -1804,6 +1892,7 @@ def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict
         "original_app_launch_scene_from_save_presence": _original_app_launch_scene_from_save_presence(elf),
         "original_app_launch_result_scene_dispatch": _original_app_launch_result_scene_dispatch(elf),
         "original_app_launch_target_scene_entries": _original_app_launch_target_scene_entries(elf),
+        "original_scene97_download_batch_task": _original_scene97_download_batch_task(elf),
         "native_original_game_upgrader_getter_identified": True,
         "native_original_game_upgrade_purchase_hook_verified": False,
         "original_native_conditional_xp_purchase_to_save_calls_proven": True,
