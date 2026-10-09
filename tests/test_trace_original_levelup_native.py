@@ -191,6 +191,19 @@ def _synthetic_tsv_source_resolver_fixture() -> bytearray:
     return payload
 
 
+
+def _synthetic_original_resource_registry_fixture() -> bytearray:
+    """Pinned opcodes + one synthetic relocation, NEVER original ELF assets."""
+    blob = bytearray(0x741B94)
+    for pc, opcode in ORIGINAL_RESOURCE_REGISTRY_NATIVE_ANCHORS.items():
+        struct.pack_into("<I", blob, pc, opcode)
+    struct.pack_into(
+        "<QQq", blob, ORIGINAL_RELA_DYN_OFFSET,
+        0xB17D78, 0x403, 0xF98D38
+    )
+    return blob
+
+
 class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
     def test_decodes_real_arm64_adrp_add_page_and_register(self):
         code = bytearray(0x4000)
@@ -993,9 +1006,7 @@ class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
         # Only 29 original opcode words are used, no original executable or
         # game assets. This verifies a different, original registry-backed
         # path from a guessed loose-file/provider-only shortcut.
-        blob = bytearray(0x741B94)
-        for pc, opcode in ORIGINAL_RESOURCE_REGISTRY_NATIVE_ANCHORS.items():
-            struct.pack_into("<I", blob, pc, opcode)
+        blob = _synthetic_original_resource_registry_fixture()
         result = _original_download_tsv_resource_registration_chain(bytes(blob))
         self.assertEqual(
             result["status"],
@@ -1018,15 +1029,19 @@ class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
         )
         self.assertFalse(result["all_35_download_tsv_registered_proven"])
         self.assertFalse(result["92_registry_names_enumerated_proven"])
+        self.assertEqual(
+            result["registry_source_pointer_relocation"],
+            "0xb17d78 R_AARCH64_RELATIVE -> 0xf98d38",
+        )
+        self.assertIn("inside .bss", result["registry_runtime_source_memory"])
+        self.assertFalse(result["registration_names_static_elf_available"])
         self.assertFalse(result["registry_initialized_before_offline_scene97_proven"])
         self.assertFalse(result["loose_original_app_files_dir_tsv_accepted_proven"])
         self.assertFalse(result["independent_fresh_local_profile_attached"])
         self.assertFalse(result["original_device_offline_gameplay_Lv60_verified"])
 
     def test_original_tsv_resource_registry_registration_and_parser_drift_fails(self):
-        fixture = bytearray(0x741B94)
-        for pc, opcode in ORIGINAL_RESOURCE_REGISTRY_NATIVE_ANCHORS.items():
-            struct.pack_into("<I", fixture, pc, opcode)
+        fixture = _synthetic_original_resource_registry_fixture()
         for pc in (0x321138, 0x321188, 0x321190, 0x3211A4,
                    0x3211E8, 0x364980, 0x364990, 0x3649F8,
                    0x34D014, 0x34D0F4, 0x741B6C, 0x741B70,
@@ -1035,6 +1050,12 @@ class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
             corrupted = bytearray(fixture)
             corrupted[pc] ^= 1
             with self.subTest(site=hex(pc)):
+                with self.assertRaises(LevelUpNativeTraceError):
+                    _original_download_tsv_resource_registration_chain(bytes(corrupted))
+        for field_offset in (0, 8, 16):
+            corrupted = bytearray(fixture)
+            corrupted[ORIGINAL_RELA_DYN_OFFSET + field_offset] ^= 1
+            with self.subTest(relocation_field=field_offset):
                 with self.assertRaises(LevelUpNativeTraceError):
                     _original_download_tsv_resource_registration_chain(bytes(corrupted))
 
