@@ -272,6 +272,19 @@ class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
             EXPECTED_ANCHORS["catseye_screen_resource"], {0x942B64}
         )
         self.assertEqual(CUES["unit_data_file"], "unitbuy.csv")
+        self.assertEqual(CUES["original_save_file"], "SAVE_DATA")
+        self.assertEqual(
+            EXPECTED_ANCHORS["original_save_file"],
+            {0x71C984, 0x74B13C, 0x8B43D0, 0x8B9FDC, 0x8C5334},
+        )
+        self.assertEqual(
+            EXPECTED_ANCHORS["original_save4_file"],
+            {0x7EDD54, 0x8BA0B0, 0x8C1D30},
+        )
+        self.assertEqual(
+            EXPECTED_ANCHORS["original_save8_file"],
+            {0x748E00, 0x74AD74, 0x74AF48},
+        )
         with self.assertRaisesRegex(
             LevelUpNativeTraceError, "exact JP15.7.1 native hash"
         ):
