@@ -6,7 +6,7 @@
 - 導入（USB接続後、プロジェクトルート）：`powershell -ExecutionPolicy Bypass -File .\tools\base_mod\run_independent_alpha_update.ps1 -Apply`
 - `-Apply`なしは**ハッシュ・マニフェストの静的確認のみ**で、端末を操作しない。任意の `-TransferOwnedExport` は元ZIP（ルート直下）を検査して端末にUSB送信する。
 - 配布は独立アプリ `jp.kneekura.whitenyankocats`、versionCode4の Stage Fidelity Alpha。原作同等/完成版1.01ではない。
-- APKはGitHub Actions `37874721255` の成果物、SHA256 `9fc91ad09da1f242669404b86abbb53030aca133206f27c2cfb501a443a9ec3b`。署名用元 `INSTALL-ALPHA.ps1` SHA256 `5f2b19732ee61913863b3bf8147137706f284b85d837e0e9886e68e0965b0b25`。
+- APKはGitHub Actions `37874721255` の成果物、SHA256 `9fc91ad09da1f242669404b86abbb53030aca133206f27c2cfb501a443a9ec3b`。署名用修正版 `INSTALL-ALPHA.ps1` SHA256 `a2f6f8f011275296340fcaec15e49eb498e0f4bd77096ce92ad8d5ee59c08bc4`。
 - 初回のみ PC `%LOCALAPPDATA%\Kneekura\OwnerSigning` の固定オーナー鍵を作成する。以後同じ鍵とパスワード。元ゲーム `jp.co.ponos.battlecats` および従来 `jp.kn.*` のセーブ/APIには触れない。
 - USB・Android SDK・Javaは既存の環境を再利用。既存独立アプリと署名が違う場合はバックアップ元APK退避後に**停止**。アンインストール/データ消去/公式データ移行なし。
 - 上書きZIPに個人 `.venv`、APK署名鍵、`SAVE_DATA`、旧元APK/Packは含めない。GitHubには導入スクリプト/手順だけ保存し、バイナリ/秘密鍵は会話で手渡し。
@@ -34,7 +34,22 @@ Actual update remains one familiar command after ZIP overwrite:
     powershell -ExecutionPolicy Bypass -File .\tools\base_mod\run_independent_alpha_update.ps1 -Apply
 
 Exact repaired nested installer SHA256: a2f6f8f011275296340fcaec15e49eb498e0f4bd77096ce92ad8d5ee59c08bc4
-Exact shared Java resolver SHA256: d36f57ce928807fde46738ab64ad1f61e7b651118c08821842ffe3835b3b18f0
+Exact shared Java resolver SHA256: 6f9ab5a9164f9ce1005c9cb961cc2e1c61bfc13b24cd29ba74c9fd44d9fbedbf
 APK SHA256 (unchanged): 9fc91ad09da1f242669404b86abbb53030aca133206f27c2cfb501a443a9ec3b
 
 CI: Windows Powershell 5.1 tests missing JAVA_HOME/LOCALAPPDATA. Actual user USB signing/key/password and on-device install are separate USER_GATE, NOT covered by CI.
+
+### 2026-10-09 release candidate fingerprint and mandatory actual ZIP audit
+
+**User-facing repaired owner ZIP ONLY**: `kneekura-alpha-existing-folder-overlay-java-fixed-20261009.zip`
+- Verified final ZIP SHA256: `4f12a5b1dfa75975fac4e95a54bb45e1e235b49adae5e8914e8b79eae3e72431`.
+- Contains exactly 7 files. APK remains `9fc91ad09da1f242669404b86abbb53030aca133206f27c2cfb501a443a9ec3b` (no game-content changes).
+- Source wrapper, nested installer and Java resolver are all UTF-8 BOM; null-safe JDK search, `-CheckJava` and `-CheckPrerequisites` before the optional USB `-Apply`.
+- SHA256 of nested installer: `a2f6f8f011275296340fcaec15e49eb498e0f4bd77096ce92ad8d5ee59c08bc4`; Java helper: `6f9ab5a9164f9ce1005c9cb961cc2e1c61bfc13b24cd29ba74c9fd44d9fbedbf`; outer wrapper: `9023beed724e8763916797a9ee54cc3af1b7e5c392b06571c74700d070bb55fe`.
+- Before handing any future ZIP to the owner, **run the packaged artifact auditor on that exact ZIP, after the final byte change**, not just source unit tests:
+
+```powershell
+python -m tools.base_mod.audit_owner_overlay_zip .\kneekura-alpha-existing-folder-overlay-java-fixed-20261009.zip
+```
+
+This is a read-only audit only. It must pass ZIP integrity, all manifest SHA digests, actual nested PowerShell BOM, JAVA_HOME-null regression, no-uninstall contract and outer-wrapper digest pinning. Windows 5.1 parser/JDK resolver CI is an additional gate. Failure means **NO RELEASE**. The completed Android device install remains a separate owner USER_GATE.
