@@ -69,12 +69,15 @@ class OperatorRevisionDiffTests(unittest.TestCase):
     def test_retirement_requires_removing_dependent_schedule(self):
         before, after = original(), original()
         after["revision"] = 2
-        after["catalog"]["notice"] = []
+        after["catalog"]["notice"] = [
+            item for item in after["catalog"]["notice"]
+            if item["id"] != "kneekura:notice:prototype"
+        ]
         with self.assertRaisesRegex(LiveOpsError, "reference"):
             review_update(before, after)
         after["schedule"] = [
             item for item in after["schedule"]
-            if item["kind"] != "notice"
+            if item["content_id"] != "kneekura:notice:prototype"
         ]
         report = review_update(before, after)
         self.assertEqual(report["content_changes"]["retired"],
