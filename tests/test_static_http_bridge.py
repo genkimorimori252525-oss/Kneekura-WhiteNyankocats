@@ -124,6 +124,138 @@ class StaticHttpBridgeTests(unittest.TestCase):
         self.assertIn('"network_egress_guarantee": "NOT_VERIFIED"', injector)
         self.assertIn("--research-isolate-original-native-files-dir", injector)
 
+
+    def test_original_activity_java_compiles_and_native_root_is_isolated(self) -> None:
+        """Exercise the actual rendered original-game Activity override on a JVM.
+
+        Only Android API compile stubs are faked; actual Java getFilesDir
+        implementation, directory creation and save separation are executed.
+        This is NOT the original Android runtime / native game persistence.
+        """
+        import shutil
+        import subprocess
+        import tempfile
+
+        javac, java = shutil.which("javac"), shutil.which("java")
+        if not (javac and java):
+            self.skipTest("Java compiler/runtime unavailable")
+        original = (ROOT / "bridge/java/MyActivity.java.in").read_text(encoding="utf-8")
+        stubs = {
+            "android/opengl/GLSurfaceView.java": (
+                "package android.opengl; public class GLSurfaceView {"
+                "public void queueEvent(Runnable task) {task.run();}}"
+            ),
+            "android/util/Log.java": (
+                "package android.util; public class Log {"
+                "public static int i(String tag,String value) {return 0;}}"
+            ),
+            "jp/co/ponos/battlecats/MyActivity.java": """
+                package jp.co.ponos.battlecats;
+                import java.io.File;
+                import java.net.URL;
+                import java.nio.ByteBuffer;
+                import java.util.HashMap;
+                public class MyActivity {
+                    public File getFilesDir() {return new File(System.getProperty("bc.baseDir"));}
+                    public File getExternalFilesDir(String type) {
+                        return new File(System.getProperty("bc.externalDir", "no-external-folder"));
+                    }
+                    public int newHttpRequest(
+                        String method, String url, float timeout, HashMap headers,
+                        ByteBuffer body, String[] values, boolean b1, boolean b2
+                    ) {return 0;}
+                    public static void newResponse(
+                        int id, int code, String url, String body,
+                        Object bytes, boolean finalResponse
+                    ) {}
+                }
+            """,
+            "Harness.java": """
+                import jp.kn.trace.battlecats.MyActivity;
+                public class Harness {
+                    public static void main(String[] args) throws Exception {
+                        try {
+                            System.out.println(new MyActivity().getFilesDir().getCanonicalPath());
+                        } catch (IllegalStateException error) {
+                            System.out.println("BLOCKED");
+                        }
+                    }
+                }
+            """,
+        }
+        with tempfile.TemporaryDirectory(prefix="kneekura-native-io-test-") as temp:
+            temp_path = Path(temp)
+            files_root = temp_path / "original-root"
+            files_root.mkdir()
+            original_save = files_root / "SAVE_DATA"
+            original_save.write_bytes(b"UNTOUCHED_OWNER_ORIGINAL_SAVE_FIXTURE")
+            external = temp_path / "external"
+            external.mkdir()
+            for isolated in (False, True):
+                with self.subTest(isolated=isolated):
+                    name = "isolated" if isolated else "default"
+                    root = temp_path / name
+                    src = root / "src"
+                    out = root / "out"
+                    out.mkdir(parents=True)
+                    material = dict(stubs)
+                    material["jp/kn/trace/battlecats/MyActivity.java"] = (
+                        render_bridge_source(
+                            original, flavor="research", enabled=False,
+                            isolate_original_native_files_dir=isolated,
+                        )
+                    )
+                    java_sources = []
+                    for filename, code in material.items():
+                        source_file = src / filename
+                        source_file.parent.mkdir(parents=True, exist_ok=True)
+                        source_file.write_text(code, encoding="utf-8")
+                        java_sources.append(str(source_file))
+                    compiled = subprocess.run(
+                        [javac, "-source", "8", "-target", "8", "-d", str(out),
+                         *java_sources],
+                        capture_output=True, text=True, check=False,
+                    )
+                    self.assertEqual(compiled.returncode, 0, compiled.stderr)
+                    command = [
+                        java, "-cp", str(out), "-Dbc.baseDir=" + str(files_root),
+                        "-Dbc.externalDir=" + str(external), "Harness"
+                    ]
+                    one = subprocess.run(command, capture_output=True, text=True)
+                    two = subprocess.run(command, capture_output=True, text=True)
+                    self.assertEqual(one.returncode, 0, one.stderr)
+                    self.assertEqual(one.stdout, two.stdout)
+                    expected = (files_root / "kneekura-native-jp15-7-1"
+                                if isolated else files_root)
+                    self.assertEqual(one.stdout.strip(), str(expected.resolve()))
+                    self.assertTrue(expected.is_dir())
+                    if isolated:
+                        self.assertFalse((expected / "SAVE_DATA").exists())
+                    self.assertEqual(
+                        original_save.read_bytes(),
+                        b"UNTOUCHED_OWNER_ORIGINAL_SAVE_FIXTURE"
+                    )
+                    if isolated and hasattr(__import__("os"), "symlink"):
+                        # Symlink change must not redirect the native root out
+                        # of its app-private parent on the next call.
+                        import os
+                        isolated_root = files_root / "kneekura-native-jp15-7-1"
+                        import shutil as _shutil
+                        _shutil.rmtree(isolated_root)
+                        outside = temp_path / "outside"
+                        outside.mkdir(exist_ok=True)
+                        try:
+                            os.symlink(outside, isolated_root)
+                        except OSError:
+                            pass  # symlink privileges may be absent on Windows
+                        else:
+                            blocked = subprocess.run(
+                                command, capture_output=True, text=True
+                            )
+                            self.assertEqual(blocked.returncode, 0, blocked.stderr)
+                            self.assertEqual(blocked.stdout.strip(), "BLOCKED")
+                            isolated_root.unlink()
+
     def test_bridge_is_additional_dex_not_original_method_rewrite(self) -> None:
         injector = (
             ROOT / "tools/base_mod/inject_java_http_bridge.py"
