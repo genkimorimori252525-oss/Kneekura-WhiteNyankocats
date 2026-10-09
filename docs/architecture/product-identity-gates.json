@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "identity": "KNEEKURA_REAL_BATTLE_CATS_EXPERIENCE",
+  "source": "owner-confirmed-2026-10-09",
+  "owner_requirement": "PONOSにゃんこ大戦争そのもののゲーム体験。似せた別ゲームは不許可。",
+  "official_source_anchor": "JP15.7.1 user-owned game and archival data",
+  "standalone_alpha_role": "RESEARCH_HARNESS_NOT_PLAYABLE_PRODUCT",
+  "release_ready": false,
+  "release_claim_allowed": false,
+  "owner_acceptance": "NOT_GIVEN",
+  "axes": {
+    "BATTLE_CATS_FIDELITY": {
+      "required": true,
+      "checks": {
+        "original_base_and_ui": {
+          "verified": false,
+          "evidence": []
+        },
+        "original_battle_rules_and_timings": {
+          "verified": false,
+          "evidence": []
+        },
+        "original_characters_enemies_and_assets": {
+          "verified": false,
+          "evidence": []
+        },
+        "original_animation_sound_and_transitions": {
+          "verified": false,
+          "evidence": []
+        },
+        "original_stages_rewards_gacha_and_progression": {
+          "verified": false,
+          "evidence": []
+        },
+        "owner_madoka_godzilla_levelcaps_future1_in_same_game": {
+          "verified": false,
+          "evidence": []
+        }
+      }
+    },
+    "ZERO_EGRESS_AND_LOCAL_AUTHORITY": {
+      "required": true,
+      "checks": {
+        "cold_start_no_network_egress": {
+          "verified": false,
+          "evidence": []
+        },
+        "no_original_account_or_rejected_save": {
+          "verified": false,
+          "evidence": []
+        },
+        "local_play_gacha_events_and_save_reboot": {
+          "verified": false,
+          "evidence": []
+        },
+        "safe_local_updates_backup_rollback": {
+          "verified": false,
+          "evidence": []
+        }
+      }
+    }
+  },
+  "policy": {
+    "harness_can_be_described_as_game_finished": false,
+    "allow_substitute_clone_without_original_parity": false,
+    "allow_engine_swap_as_research_only": true,
+    "requires_owner_explicit_acceptance_for_product": true,
+    "requires_comparative_jp_game_evidence": true,
+    "original_assets_stay_private": true
+  },
+  "status_note": "Static build, Android APK CI, isolated mock battle, local notice, and independent save demos are not proofs of the full original Battle Cats game experience."
+}
