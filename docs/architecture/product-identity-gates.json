@@ -35,6 +35,14 @@
         "owner_madoka_godzilla_levelcaps_future1_in_same_game": {
           "verified": false,
           "evidence": []
+        },
+        "max_initial_economy_in_original_inventory": {
+          "verified": false,
+          "evidence": []
+        },
+        "jolly_operated_news_gacha_event_stage_in_original_ui": {
+          "verified": false,
+          "evidence": []
         }
       }
     },
@@ -68,5 +76,5 @@
     "requires_comparative_jp_game_evidence": true,
     "original_assets_stay_private": true
   },
-  "status_note": "Static build, Android APK CI, isolated mock battle, local notice, and independent save demos are not proofs of the full original Battle Cats game experience."
+  "status_note": "Source-only tests for full-max saved balances and operator schedule/news do not prove the real Battle Cats upgrade/inventory screens, base i announcements or active event/gacha/stage behavior. Both offline and game fidelity require real original-compatible runtime evidence."
 }
