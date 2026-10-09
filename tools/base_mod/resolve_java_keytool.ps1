@@ -16,8 +16,8 @@ function Resolve-JavaKeytool {
 
     $candidates = New-Object 'System.Collections.Generic.List[string]'
     foreach ($name in @('JAVA_HOME', 'JDK_HOME')) {
-        $home = [Environment]::GetEnvironmentVariable($name)
-        if (-not [string]::IsNullOrWhiteSpace($home)) { $candidates.Add($home.Trim('"')) }
+        $jdkInstallDirectory = [Environment]::GetEnvironmentVariable($name)
+        if (-not [string]::IsNullOrWhiteSpace($jdkInstallDirectory)) { $candidates.Add($jdkInstallDirectory.Trim('"')) }
     }
     foreach ($name in @('java.exe', 'java')) {
         $cmd = Get-Command -Name $name -CommandType Application -ErrorAction SilentlyContinue
@@ -31,12 +31,12 @@ function Resolve-JavaKeytool {
     }
     $roots = New-Object 'System.Collections.Generic.List[string]'
     foreach ($variable in @('ProgramFiles', 'ProgramFiles(x86)')) {
-        $home = [Environment]::GetEnvironmentVariable($variable)
-        if (-not [string]::IsNullOrWhiteSpace($home)) {
+        $jdkInstallDirectory = [Environment]::GetEnvironmentVariable($variable)
+        if (-not [string]::IsNullOrWhiteSpace($jdkInstallDirectory)) {
             foreach ($branch in @('Java', 'Eclipse Adoptium', 'Microsoft', 'Zulu')) {
-                $roots.Add((Join-Path -Path $home -ChildPath $branch))
+                $roots.Add((Join-Path -Path $jdkInstallDirectory -ChildPath $branch))
             }
-            $roots.Add((Join-Path -Path $home -ChildPath 'Android\Android Studio\jbr'))
+            $roots.Add((Join-Path -Path $jdkInstallDirectory -ChildPath 'Android\Android Studio\jbr'))
         }
     }
     $local = [Environment]::GetEnvironmentVariable('LOCALAPPDATA')
