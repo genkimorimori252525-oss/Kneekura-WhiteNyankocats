@@ -24,6 +24,8 @@ FIDLITY_CHECKS = {
     "original_animation_sound_and_transitions",
     "original_stages_rewards_gacha_and_progression",
     "owner_madoka_godzilla_levelcaps_future1_in_same_game",
+    "max_initial_economy_in_original_inventory",
+    "jolly_operated_news_gacha_event_stage_in_original_ui",
 }
 OFFLINE_CHECKS = {
     "cold_start_no_network_egress",
