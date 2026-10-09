@@ -73,7 +73,7 @@ def audit(path: Path) -> dict:
     if overlay.get("privacy", {}).get("never_uninstalls_app") is not True:
         raise UnsafeRelease("no-uninstall safety contract missing")
     recorded = overlay.get("files", {})
-    if not isinstance(recorded, dict) or not REQUIRED.issubset(recorded):
+    if not isinstance(recorded, dict) or not (REQUIRED - {OVERLAY_MANIFEST}).issubset(recorded):
         raise UnsafeRelease("incomplete overlay digest list")
     for name, expected in recorded.items():
         if name not in files or not isinstance(expected, str) or not HEX.fullmatch(expected):
