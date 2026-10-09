@@ -9,10 +9,10 @@ import struct
 import unittest
 
 from tools.base_mod.trace_original_levelup_native import (
-    CUES, EXPECTED_ANCHORS, NATIVE_SHA256, UNITBUY_BASE_CAP_LOAD_ANCHORS,
-    UNITBUY_BOOT_CALLSITE_ANCHORS,
+    CUES, EXPECTED_ANCHORS, NATIVE_SHA256, ORIGINAL_UNIT_DATA_ANCHORS,
+    ORIGINAL_UNIT_DATA_BOOT_ANCHORS, ORIGINAL_UNIT_SOURCE_STRINGS,
     LevelUpNativeTraceError,
-    _unitbuy_original_base_cap_loader, _levelmax_popup_branch,
+    _original_unit_data_loader, _levelmax_popup_branch,
     _popup_value_call_chain,
     direct_adrp_add_refs, trace_exact_native,
 )
@@ -25,6 +25,20 @@ def put_direct_ref(blob: bytearray, *, pc: int, target: int, reg: int = 8):
     adrp = 0x90000000 | ((imm & 3) << 29) | (((imm >> 2) & 0x7FFFF) << 5) | reg
     add = 0x91000000 | ((target & 0xFFF) << 10) | (reg << 5) | reg
     struct.pack_into("<II", blob, pc, adrp, add)
+
+
+def _synthetic_loader_fixture() -> bytearray:
+    # Source-only tiny AArch64 instructions + three filenames, no original assets.
+    payload = bytearray(0x9C59AC)
+    for source, address in ORIGINAL_UNIT_SOURCE_STRINGS.items():
+        encoded = source.encode("ascii") + b"\x00"
+        payload[address:address + len(encoded)] = encoded
+    for address, opcode in {
+        **ORIGINAL_UNIT_DATA_ANCHORS,
+        **ORIGINAL_UNIT_DATA_BOOT_ANCHORS,
+    }.items():
+        struct.pack_into("<I", payload, address, opcode)
+    return payload
 
 
 class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
@@ -108,63 +122,54 @@ class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
             _popup_value_call_chain(bytes(blob))
 
 
-    def test_original_unitbuy_col18_is_stored_into_per_cat_native_ram(self):
-        # A compact synthetic instruction fixture; never commit original ELF.
-        blob = bytearray(0x9C59AC)
-        blob[0x1AB9A3:0x1AB9AF] = b"unitbuy.csv\x00"
-        for address, opcode in {
-            **UNITBUY_BASE_CAP_LOAD_ANCHORS,
-            **UNITBUY_BOOT_CALLSITE_ANCHORS,
-        }.items():
-            struct.pack_into("<I", blob, address, opcode)
-        found = _unitbuy_original_base_cap_loader(bytes(blob))
-        self.assertEqual(found["column_index_zero_based"], 18)
-        self.assertEqual(found["column_parser_target"], "0x363afc")
-        self.assertEqual(found["original_startup_caller"], "0x9c598c -> 0x8a2c0c")
-        self.assertEqual(found["first_row_value_offset_from_context"], "0x44fd0c")
-        self.assertEqual(found["row_stride_bytes"], 80)
-        self.assertEqual(found["row_count"], 882)
-        self.assertFalse(found["levelup_ui_getter_identified"])
-        self.assertFalse(found["upgrade_purchase_or_xp_debit_identified"])
-        self.assertFalse(found["offline_original_save_attached"])
+    def test_exact_unit_data_sources_are_not_mislabeled(self):
+        original = _synthetic_loader_fixture()
+        details = _original_unit_data_loader(bytes(original))
+        self.assertEqual(
+            details["source_file_order"],
+            ["unitbuy.csv", "unitlevel.csv", "unitexp.csv"]
+        )
+        self.assertEqual(
+            details["unitbuy"]["decoded_column18_ram_offset"],
+            "context+0x4b0a8+asset_index*0x100"
+        )
+        self.assertEqual(details["unitbuy"]["source_field_count_per_cat"], 63)
+        self.assertEqual(details["unitbuy"]["row_stride_bytes"], 256)
+        self.assertEqual(details["unitlevel"]["column18_parser_call"], "0x8a2eb4")
+        self.assertEqual(details["unitlevel"]["column18_ram_offset"],
+                         "context+0x44fd0c+asset_index*0x50")
+        self.assertEqual(details["unitexp"]["column18_parser_call"], "0x8a3060")
+        self.assertEqual(details["unitexp"]["column18_ram_offset"],
+                         "context+0x4610ac+asset_index*0x50")
+        self.assertEqual(details["unitbuy"]["row_count"], 882)
+        self.assertEqual(details["unitlevel"]["row_count"], 882)
+        self.assertFalse(details["levelup_ui_getter_identified"])
+        self.assertFalse(details["upgrade_purchase_or_xp_debit_identified"])
+        self.assertFalse(details["safe_original_game_patch_attached"])
 
-        # A store-site change must be treated as binary/version drift.
+    def test_original_data_loader_rejects_wrong_field_store(self):
+        blob = _synthetic_loader_fixture()
         blob[0x8A2EB8] ^= 1
         with self.assertRaisesRegex(LevelUpNativeTraceError, "opcode drifted"):
-            _unitbuy_original_base_cap_loader(bytes(blob))
+            _original_unit_data_loader(bytes(blob))
+        blob = _synthetic_loader_fixture()
+        blob[0x8A2CF0] ^= 1
+        with self.assertRaisesRegex(LevelUpNativeTraceError, "opcode drifted"):
+            _original_unit_data_loader(bytes(blob))
 
-    def test_original_boot_caller_must_reach_exact_882_unit_loader(self):
-        blob = bytearray(0x9C59AC)
-        blob[0x1AB9A3:0x1AB9AF] = b"unitbuy.csv\x00"
-        for at, opcode in {
-            **UNITBUY_BASE_CAP_LOAD_ANCHORS,
-            **UNITBUY_BOOT_CALLSITE_ANCHORS,
-        }.items():
-            struct.pack_into("<I", blob, at, opcode)
-        self.assertEqual(
-            _unitbuy_original_base_cap_loader(bytes(blob))["row_count"], 882
-        )
+    def test_original_loader_rejects_mismatched_filenames_and_boot_entry(self):
+        blob = _synthetic_loader_fixture()
+        blob[0x19294E] = ord("x")
+        with self.assertRaisesRegex(LevelUpNativeTraceError, "unitlevel.csv.*drifted"):
+            _original_unit_data_loader(bytes(blob))
+        blob = _synthetic_loader_fixture()
+        blob[0x1AB9A3] = ord("x")
+        with self.assertRaisesRegex(LevelUpNativeTraceError, "unitbuy.csv.*drifted"):
+            _original_unit_data_loader(bytes(blob))
+        blob = _synthetic_loader_fixture()
         blob[0x9C598C] ^= 1
         with self.assertRaisesRegex(LevelUpNativeTraceError, "startup callsite drifted"):
-            _unitbuy_original_base_cap_loader(bytes(blob))
-
-    def test_original_unitbuy_loader_rejects_wrong_row_stride_and_source(self):
-        blob = bytearray(0x9C59AC)
-        blob[0x1AB9A3:0x1AB9AF] = b"unitbuy.csv\x00"
-        for address, opcode in {
-            **UNITBUY_BASE_CAP_LOAD_ANCHORS,
-            **UNITBUY_BOOT_CALLSITE_ANCHORS,
-        }.items():
-            struct.pack_into("<I", blob, address, opcode)
-        struct.pack_into("<I", blob, 0x8A2ED0, 0x910102D6)
-        with self.assertRaises(LevelUpNativeTraceError):
-            _unitbuy_original_base_cap_loader(bytes(blob))
-        struct.pack_into(
-            "<I", blob, 0x8A2ED0, UNITBUY_BASE_CAP_LOAD_ANCHORS[0x8A2ED0]
-        )
-        blob[0x1AB9A3] = ord("x")
-        with self.assertRaisesRegex(LevelUpNativeTraceError, "string drifted"):
-            _unitbuy_original_base_cap_loader(bytes(blob))
+            _original_unit_data_loader(bytes(blob))
 
     def test_real_game_original_upgrader_cues_are_not_fabricated_hooks(self):
         self.assertEqual(len(NATIVE_SHA256), 64)
