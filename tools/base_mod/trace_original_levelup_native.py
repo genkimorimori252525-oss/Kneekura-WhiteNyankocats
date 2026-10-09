@@ -184,6 +184,63 @@ def _levelmax_popup_branch(elf: bytes) -> dict:
     }
 
 
+
+# This is the ORIGINAL game's loader-to-memory seam, NOT the upgrade-click hook.
+# Keep these opcodes pinned to the owner's exact JP15.7.1 native build.
+UNITBUY_BASE_CAP_LOAD_ANCHORS = {
+    0x8A2C30: 0xAA0003F3,  # mov x19,x0 (game context on entry)
+    0x8A2C60: 0xB0FFC848,  # ADRP for unitbuy.csv
+    0x8A2C64: 0x91268D08,  # ADD for unitbuy.csv
+    0x8A2C94: 0x91513E6A,  # x10=context+0x44f000
+    0x8A2C9C: 0x9133B156,  # x22=context+0x44fcec
+    0x8A2D80: 0x52806E53,  # w19=882 rows
+    0x8A2EB0: 0x52800241,  # w1=18 (zero-based CSV column)
+    0x8A2EB4: 0x97EB0312,  # BL parser
+    0x8A2EB8: 0xB90022C0,  # STR w0,[x22,#0x20]
+    0x8A2ED0: 0x910142D6,  # x22+=0x50
+    0x8A2ED4: 0x54FFF581,  # B.NE next row
+}
+
+
+def _unitbuy_original_base_cap_loader(elf: bytes) -> dict[str, Any]:
+    """Prove where original unitbuy.csv column 18 enters ORIGINAL native RAM.
+
+    This is a verified data-store seam suitable for following consumers; it
+    DOES NOT establish the click-to-upgrade check, Catseye/XP debit, persistence,
+    or a safe original-offline runtime. Never patch a SAVE based on this alone.
+    """
+    if len(elf) < 0x8A2ED8 or elf[0x1AB9A3:0x1AB9AF] != b"unitbuy.csv\x00":
+        raise LevelUpNativeTraceError("original unitbuy loader bounds/string drifted")
+    for at, expected in UNITBUY_BASE_CAP_LOAD_ANCHORS.items():
+        if _u32(elf, at) != expected:
+            raise LevelUpNativeTraceError(
+                f"original unitbuy column18 loader opcode drifted at {_hex(at)}"
+            )
+    if _decode_relative_bl(elf, 0x8A2EB4) != 0x363AFC:
+        raise LevelUpNativeTraceError("unitbuy column18 read target drifted")
+    branch = _u32(elf, 0x8A2ED4)
+    offset = _sign_extend((branch >> 5) & 0x7FFFF, 19) * 4
+    if 0x8A2ED4 + offset != 0x8A2D84:
+        raise LevelUpNativeTraceError("unitbuy 882-row loop target drifted")
+    return {
+        "data_file": "unitbuy.csv",
+        "loader_entry": "0x8a2c0c",
+        "column_index_zero_based": 18,
+        "column_parser_call": "0x8a2eb4",
+        "column_parser_target": "0x363afc",
+        "native_store_instruction": "0x8a2eb8",
+        "native_context_base": "entry x0 saved in x19, then x22 set before row loop",
+        "first_row_value_offset_from_context": "0x44fd0c",
+        "row_stride_bytes": 80,
+        "row_count": 882,
+        "next_row_branch": "0x8a2ed4 -> 0x8a2d84",
+        "verified": "ORIGINAL_NATIVE_CSV_COLUMN18_TO_MEMORY_STORE",
+        "levelup_ui_getter_identified": False,
+        "upgrade_purchase_or_xp_debit_identified": False,
+        "offline_original_save_attached": False,
+    }
+
+
 def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict:
     digest = sha256(elf).hexdigest()
     if digest != expected_sha or expected_sha != NATIVE_SHA256:
@@ -230,11 +287,12 @@ def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict
         "references": refs,
         "levelmax_popup_branch_candidate": _levelmax_popup_branch(elf),
         "levelmax_popup_value_call_chain": _popup_value_call_chain(elf),
+        "unitbuy_native_base_cap_loader": _unitbuy_original_base_cap_loader(elf),
         "native_original_game_upgrader_getter_identified": False,
         "unit_cap_purchase_hook_attached": False,
         "scope": "READ_ONLY_EXACT_OWNER_SOURCE",
         "notes": [
-            "unitbuy.csv loader/string reference is not proof of the level cap calculation",
+            "unitbuy.csv col18 is verified to enter 882-row native memory, but its upgrade/UI consumer is still unverified",
             "CatsEyeLevelUp and levelmax popups are original-game native code location leads",
             "Further control-flow and original-game UI behavior must be verified before patching",
         ],
