@@ -29,6 +29,21 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
     private static final boolean ISOLATE_ORIGINAL_NATIVE_FILES_DIR =
             __KNEEKURA_ISOLATE_ORIGINAL_NATIVE_FILES_DIR__;
     private static final String ORIGINAL_NATIVE_FILES_LEAF = "kneekura-native-jp15-7-1";
+    // A DIFFERENT Android package has its own internal files directory.
+    // This exact-version local-research flavor is intentionally distinct
+    // from both PONOS and older jp.kn.trace.battlecats installations.
+    // It keeps the ORIGINAL native file root (no child redirection) to avoid
+    // hiding the game's non-SAVE_DATA assets. This gate is NOT a new save
+    // schema and does NOT yet certify original-game first-run compatibility.
+    private static final boolean LOCAL_RESEARCH_FRESH_ROOT =
+            __KNEEKURA_LOCAL_RESEARCH_FRESH_ROOT__;
+    private static final boolean LOCAL_RESEARCH_DENY_HTTP =
+            __KNEEKURA_LOCAL_RESEARCH_DENY_HTTP__;
+    private static final String LOCAL_RESEARCH_MARKER = ".kneekura-virgin-local-jp15-7-1";
+    private static final String[] FORBIDDEN_PREEXISTING_SAVES = {
+            "SAVE_DATA", "SAVE_DATA4", "SAVE_DATA8"
+    };
+
 
     private static final String BACKUP_SCHEME = "https";
     private static final String BACKUP_HOST = "nyanko-backups.ponosgames.com";
@@ -84,8 +99,58 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
      * under getFilesDir. This method alone neither seeds a fresh gameplay
      * state nor implements a network-free game or independent player authority.
      */
+    private File newLocalOriginalGameRoot() {
+        // The local-research PACKAGE ALREADY has its own Android app-data root.
+        // Its first observed use must not silently reuse a previous experiment's
+        // SAVE_DATA. The marker records local-origin only; it is NOT an account,
+        // a game-save serializer, an authentication secret, or a format upgrade.
+        if (USE_EXTERNAL_FILES_DIR || ISOLATE_ORIGINAL_NATIVE_FILES_DIR) {
+            throw new IllegalStateException("conflicting original local research file modes");
+        }
+        synchronized (MyActivity.class) {
+            File root = super.getFilesDir();
+            if (root == null || !root.isDirectory()) {
+                throw new IllegalStateException("original local research private files unavailable");
+            }
+            File marker = new File(root, LOCAL_RESEARCH_MARKER);
+            try {
+                String exactMarkerPath = new File(
+                        root.getCanonicalPath(), LOCAL_RESEARCH_MARKER
+                ).getPath();
+                if (marker.exists()) {
+                    // Reject a symlink or replacement marker with foreign content.
+                    if (!marker.getCanonicalPath().equals(exactMarkerPath)
+                            || !marker.isFile() || marker.length() != 0L) {
+                        throw new IllegalStateException("untrusted local research origin marker");
+                    }
+                } else {
+                    for (String filename : FORBIDDEN_PREEXISTING_SAVES) {
+                        if (new File(root, filename).exists()) {
+                            throw new IllegalStateException("unowned prior SAVE_DATA in local research package");
+                        }
+                    }
+                    if (!marker.createNewFile()) {
+                        throw new IllegalStateException("local research origin marker creation failed");
+                    }
+                }
+                // Canonical path check AFTER creation catches symlink relocation.
+                if (!marker.getCanonicalPath().equals(exactMarkerPath)
+                        || !marker.isFile() || marker.length() != 0L) {
+                    throw new IllegalStateException("local research origin marker changed");
+                }
+            } catch (IOException error) {
+                throw new IllegalStateException("original local research origin root unavailable", error);
+            }
+            debugResearch("original-local-fresh-package-root active");
+            return root;
+        }
+    }
+
     @Override
     public File getFilesDir() {
+        if (LOCAL_RESEARCH_FRESH_ROOT) {
+            return newLocalOriginalGameRoot();
+        }
         if (ISOLATE_ORIGINAL_NATIVE_FILES_DIR) {
             if (USE_EXTERNAL_FILES_DIR) {
                 throw new IllegalStateException("conflicting original save directory modes");
@@ -190,6 +255,13 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
             String[] strings,
             boolean flag1,
             boolean flag2) {
+        if (LOCAL_RESEARCH_DENY_HTTP) {
+            // Strict local-research mode cannot return to original HTTP code.
+            // This intentionally surfaces a missing local service dependency
+            // instead of reconnecting a refused SAVE or PONOS account.
+            throw new IllegalStateException("original local research HTTP disabled");
+        }
+
         if (!isExactBackupRequest(
                 method,
                 requestUrl,
