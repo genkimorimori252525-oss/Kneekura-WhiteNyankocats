@@ -13,9 +13,10 @@ from tools.base_mod.trace_original_levelup_native import (
     ORIGINAL_UNIT_DATA_BOOT_ANCHORS, ORIGINAL_UNIT_SOURCE_STRINGS,
     ORIGINAL_EFFECTIVE_CAP_GETTER_ANCHORS, ORIGINAL_CAP_GETTER_LEVEL_LABEL,
     ORIGINAL_UPGRADE_PURCHASE_ANCHORS,
+    ORIGINAL_NATIVE_SAVE_SERIALIZATION_ANCHORS,
     LevelUpNativeTraceError,
     _original_unit_data_loader, _original_effective_level_cap_getter,
-    _original_upgrade_purchase_flow,
+    _original_upgrade_purchase_flow, _original_save_data_serialization,
     _levelmax_popup_branch,
     _popup_value_call_chain,
     direct_adrp_add_refs, trace_exact_native,
@@ -256,6 +257,45 @@ class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
                     LevelUpNativeTraceError, "purchase opcode drifted"
                 ):
                     _original_upgrade_purchase_flow(bytes(broken))
+
+    def test_original_save_data_serializer_includes_xp_current_levels_and_cap_increments(self):
+        # Original runtime field sources pinned from the same owner native ELF;
+        # owner SAVE_DATA and binary remain private.
+        blob = bytearray(0x8BA044)
+        blob[0x191955:0x19195F] = b"SAVE_DATA\x00"
+        for pc, opcode in ORIGINAL_NATIVE_SAVE_SERIALIZATION_ANCHORS.items():
+            struct.pack_into("<I", blob, pc, opcode)
+        result = _original_save_data_serialization(bytes(blob))
+        self.assertEqual(result["native_save_wrapper"], "0x8b9fc8 -> 0x8b46b0")
+        self.assertEqual(result["xp_wallet_decoded"],
+                         "0x8b48c8: context+0xc3b8")
+        self.assertIn("882 records", result["current_level_table"])
+        self.assertIn("882 records", result["max_upgrade_table"])
+        self.assertEqual(result["ui_side_save_wrapper_caller"],
+                         "0x8593e0 -> 0x8b9fc8")
+        self.assertFalse(result["ui_side_caller_directly_post_purchase_verified"])
+        self.assertFalse(result["disk_save_flush_completed_verified"])
+        self.assertFalse(result["save_reboot_reload_verified"])
+        self.assertFalse(result["independent_offline_local_authority_integrated"])
+
+    def test_original_serializer_rejects_wrong_xp_level_cap_or_save_name(self):
+        valid = bytearray(0x8BA044)
+        valid[0x191955:0x19195F] = b"SAVE_DATA\x00"
+        for pc, opcode in ORIGINAL_NATIVE_SAVE_SERIALIZATION_ANCHORS.items():
+            struct.pack_into("<I", valid, pc, opcode)
+        for pc in (0x8BA008, 0x8B48C0, 0x8B48D4,
+                   0x8B4E30, 0x8B4E44, 0x8B4E50,
+                   0x8B6304, 0x8B6318, 0x8B6324):
+            with self.subTest(address=hex(pc)):
+                broken = bytearray(valid)
+                broken[pc] ^= 1
+                with self.assertRaisesRegex(LevelUpNativeTraceError,
+                                             "serializer opcode drifted"):
+                    _original_save_data_serialization(bytes(broken))
+        valid[0x191955] = ord("x")
+        with self.assertRaisesRegex(LevelUpNativeTraceError,
+                                     "bounds/name drifted"):
+            _original_save_data_serialization(bytes(valid))
 
     def test_real_game_original_upgrader_cues_are_not_fabricated_hooks(self):
         self.assertEqual(len(NATIVE_SHA256), 64)
