@@ -564,6 +564,109 @@ def _original_upgrade_purchase_flow(elf: bytes) -> dict[str, Any]:
     }
 
 
+
+# The actual ORIGINAL native SAVE_DATA serialization entry is reachable through
+# the filename wrapper. It serializes XP and BOTH distinct per-cat tables.
+# Bytes written to durable disk, reload, and separate local authority are still
+# NOT PROVEN. No original code, app, or player SAVE is modified.
+ORIGINAL_NATIVE_SAVE_SERIALIZATION_ANCHORS = {
+    0x8B9FC8: 0xD10103FF,  # SAVE_DATA wrapper entry
+    0x8B9FDC: 0x90FFC6C9,  # literal SAVE_DATA ADRP
+    0x8B9FE0: 0x91255529,  # literal SAVE_DATA ADD
+    0x8BA008: 0x97FFE9AA,  # wrapper calls serializer
+    0x8B48C0: 0x52987708,  # XP balance address +0xc3b8
+    0x8B48C4: 0x8B080260,
+    0x8B48C8: 0x94048F94,  # decoded XP wallet
+    0x8B48D4: 0x97EAA1C5,  # append XP to serialization stream
+    0x8B4E20: 0x52806E41,  # 882 current level records
+    0x8B4E24: 0x97EAA071,  # append count
+    0x8B4E28: 0x91411F08,  # context+0x47000
+    0x8B4E30: 0x912E9114,  # context+0x47ba4
+    0x8B4E34: 0xAA1403E0,
+    0x8B4E38: 0x94048E38,  # decode per-cat current level
+    0x8B4E44: 0x97EAA069,  # append current level
+    0x8B4E48: 0xF1000673,
+    0x8B4E4C: 0x91002294,  # 8-byte stride
+    0x8B4E50: 0x54FFFF21,  # next of 882
+    0x8B62F4: 0x52806E41,  # 882 max upgrade records
+    0x8B62F8: 0x97EA9B3C,  # append count
+    0x8B62FC: 0x914EB708,  # context+0x3ad000
+    0x8B6304: 0x91203114,  # context+0x3ad80c
+    0x8B6308: 0xAA1403E0,
+    0x8B630C: 0x94048903,  # decode saved cap increment
+    0x8B6318: 0x97EA9B34,  # append cap increment
+    0x8B631C: 0xF1000673,
+    0x8B6320: 0x91002294,  # 8-byte stride
+    0x8B6324: 0x54FFFF21,  # next of 882
+    0x8593E0: 0x940182FA,  # UI-side trigger of SAVE_DATA wrapper
+}
+
+
+def _original_save_data_serialization(elf: bytes) -> dict[str, Any]:
+    """Verifies original SAVE_DATA serialization includes purchase core fields.
+
+    The exact 0x8b9fc8 SAVE_DATA wrapper calls 0x8b46b0, which decodes and
+    appends XP, current level and max-upgrade increment separately. The IO
+    completion/reload path and whether the UI calls it after a particular
+    level-purchase branch are not yet proven. Never imply an offline save works.
+    """
+    if len(elf) < 0x8BA044 or elf[0x191955:0x19195F] != b"SAVE_DATA\x00":
+        raise LevelUpNativeTraceError("original SAVE_DATA serialization bounds/name drifted")
+    for pc, expected in ORIGINAL_NATIVE_SAVE_SERIALIZATION_ANCHORS.items():
+        if _u32(elf, pc) != expected:
+            raise LevelUpNativeTraceError(
+                f"original SAVE_DATA serializer opcode drifted at {_hex(pc)}"
+            )
+    calls = {
+        0x8BA008: 0x8B46B0,
+        0x8B48C8: 0x9D8718,
+        0x8B48D4: 0x35CFE8,
+        0x8B4E24: 0x35CFE8,
+        0x8B4E38: 0x9D8718,
+        0x8B4E44: 0x35CFE8,
+        0x8B62F8: 0x35CFE8,
+        0x8B630C: 0x9D8718,
+        0x8B6318: 0x35CFE8,
+        0x8593E0: 0x8B9FC8,
+    }
+    for pc, expected in calls.items():
+        if _decode_relative_bl(elf, pc) != expected:
+            raise LevelUpNativeTraceError(
+                f"original SAVE_DATA serialization target drifted at {_hex(pc)}"
+            )
+    for pc, target in (
+        (0x8B4E50, 0x8B4E34),
+        (0x8B6324, 0x8B6308),
+    ):
+        word = _u32(elf, pc)
+        if word & 0xFF00001F != 0x54000001:
+            raise LevelUpNativeTraceError(
+                f"original SAVE_DATA row-loop branch changed at {_hex(pc)}"
+            )
+        displacement = _sign_extend((word >> 5) & 0x7FFFF, 19) * 4
+        if pc + displacement != target:
+            raise LevelUpNativeTraceError(
+                f"original SAVE_DATA row-loop target drifted at {_hex(pc)}"
+            )
+    return {
+        "status": "VERIFIED_ORIGINAL_SAVE_DATA_SERIALIZER_INCLUDE_UPGRADE_FIELDS",
+        "original_filename": "SAVE_DATA",
+        "native_save_wrapper": "0x8b9fc8 -> 0x8b46b0",
+        "xp_wallet_decoded": "0x8b48c8: context+0xc3b8",
+        "xp_wallet_serialized": "0x8b48d4 -> 0x35cfe8",
+        "current_level_table": "0x8b4e30: context+0x47ba4; 882 records, 8-byte stride",
+        "current_level_serializer": "0x8b4e38 decoded; 0x8b4e44 append",
+        "max_upgrade_table": "0x8b6304: context+0x3ad80c; 882 records, 8-byte stride",
+        "max_upgrade_serializer": "0x8b630c decoded; 0x8b6318 append",
+        "ui_side_save_wrapper_caller": "0x8593e0 -> 0x8b9fc8",
+        "ui_side_caller_directly_post_purchase_verified": False,
+        "disk_save_flush_completed_verified": False,
+        "save_reboot_reload_verified": False,
+        "independent_offline_local_authority_integrated": False,
+        "original_game_lv60_device_verified": False,
+    }
+
+
 def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict:
     digest = sha256(elf).hexdigest()
     if digest != expected_sha or expected_sha != NATIVE_SHA256:
@@ -613,6 +716,7 @@ def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict
         "original_unit_data_loader": _original_unit_data_loader(elf),
         "original_effective_level_cap_getter": _original_effective_level_cap_getter(elf),
         "original_upgrade_purchase_flow": _original_upgrade_purchase_flow(elf),
+        "original_save_data_serialization": _original_save_data_serialization(elf),
         "native_original_game_upgrader_getter_identified": True,
         "native_original_game_upgrade_purchase_hook_verified": False,
         "unit_cap_purchase_hook_attached": False,
