@@ -82,7 +82,7 @@
     "value_semantic_meaning": "UNKNOWN: original game stores a bytewise XOR-encoded value; value=1 selects first level-max popup; NOT yet proven per-unit level cap"
   },
   "source_code_tool": "tools/base_mod/trace_original_levelup_native.py",
-  "next_verified_code_task": "Determine whether every successful original normal-XP purchase must reach the save wrapper and whether writer completion actually commits durable local data; then integrate original UI/player-state with an independent offline-only profile. Do not change original restricted SAVE_DATA.",
+  "next_verified_code_task": "Original normal XP purchase direct paths now verified to reach save wrapper under modeled returning calls. Implement and verify fresh independent zero-egress local authority while preserving original engine/UI; investigate native writer disk durability/failure and boot-time restore, then one-cat Lv60 purchase/reboot with real device evidence. Do not reintroduce rejected official SAVE.",
   "release_status": {
     "original_ui_level_cap_patch_attached": false,
     "level_purchase_action_attached": false,
@@ -341,5 +341,34 @@
     "tests": "tests/test_trace_original_levelup_native.py",
     "preserved_original_binary": true,
     "protected_content_committed": false
+  },
+  "original_normal_xp_save_gate": {
+    "analysis_type": "BOUNDED_DIRECT_AARCH64_CFG_POSTDOMINATOR_STYLE_GATE",
+    "source": "original JP15.7.1 owner-owned ELF SHA256 333d2974ab2ff881fd70087fd62dea7d12d82addbc55cab2f2a675ad67e3a7e2",
+    "first_current_level_add_at": "0x8583b8",
+    "graph_range": [
+      "0x850000",
+      "0x85b000"
+    ],
+    "reachable_nodes": 244,
+    "non_save_nodes": 242,
+    "verified_original_saver_calls": [
+      "0x859a40",
+      "0x85a748"
+    ],
+    "early_direct_exits": 0,
+    "direct_cfg_cycles_without_saver": 0,
+    "observed_result": "ALL_BOUNDED_MODELED_DIRECT_PATHS_FROM_PLUS_ONE_MUST_PASS_ONE_OF_TWO_SAVE_CALLS",
+    "assumptions": [
+      "direct ARM64 CFG only",
+      "external BL/BLR calls modeled as returning normally",
+      "dynamic callback, exceptions, process termination and real branch feasibility not proven"
+    ],
+    "game_save_disk_commit_or_fsync_proven": false,
+    "safe_offline_local_authority_integrated": false,
+    "original_save_reboot_device_passed": false,
+    "original_binary_or_owner_SAVE_mutated": false,
+    "source_code": "tools/base_mod/trace_original_levelup_native.py::_original_xp_purchase_save_gate",
+    "regression": "tests/test_trace_original_levelup_native.py"
   }
 }
