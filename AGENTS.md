@@ -4,6 +4,18 @@ This repository contains device-facing PowerShell and Android tooling where an
 incorrect command can waste a long device/debug cycle. Coding agents must use
 the repository validation harness before handing terminal commands to a human.
 
+## P0 OWNER PRODUCT IDENTITY — NEVER SUBSTITUTE A LOOKALIKE
+
+**READ THIS BEFORE ANY CODING, RELEASE, INSTALLER, USER ANSWER OR AGENT HANDOFF:** [PRODUCT_IDENTITY.md](PRODUCT_IDENTITY.md). Owner explicitly re-confirmed on 2026-10-09: **「俺が遊びたいのはにゃんこ大戦争だ。絶対に間違えないで。」**
+
+- The requested product is the genuine **Battle Cats game experience**, based on the owner's original JP15.7.1 game assets, UI, animation, battle rules, units/enemies, stages, gacha and progression, with Kneekura customizations. **NOT a lookalike, demo, generic cat tower defense, or independent Stage Fidelity Alpha substituted for the actual game.**
+- **Both hard constraints are required**: exact original-game **fidelity** AND full **offline/network-independent** operation. Network independence NEVER authorizes simplifying/omitting Battle Cats gameplay. If the original runtime cannot be used safely, an independent compatibility engine is only a research path until it proves Battle Cats-grade parity. No silent change of product identity.
+- The repository's small Java Android `app/` and `jp.kneekura.whitenyankocats` packages currently represent an **engineering/test harness**, **not** the owner's intended playable Battle Cats. Do **not** promote them as a completed 1.01 or hand them to the owner as a substitute even if APK build, Android INTERNET-permission test, or i-button screens PASS.
+- Retain original JP15.7.1 gameplay data and original scene/animation feel wherever technically feasible, while preventing all external communication and requiring a private Kneekura save. No official account reconnect, no rejected JP SAVE_DATA reimport, no source assets or owner signing keys in GitHub.
+- Mandatory owner-approved changes must ultimately work **in the same real-equivalent game**: official per-unit max Lv cap (60/50/etc), Ultimate Madoka form3, Godzilla No703 form1, EoC1-3 + Future1 complete/Superior treasures, and local LiveOps notices/schedules. Separate research scripts and demo UI do not satisfy this.
+- Before calling anything "playable", "release", "full game", or "complete", check [product-identity-gates.json](docs/architecture/product-identity-gates.json): UI, original graphics/animations, actual battle, stage flow, character roster, gacha, custom performance, no-network, persistence and explicit owner acceptance. Missing evidence => research only, disclose gaps.
+- Older lines in `design-philosophy.md` or offline audit that permit an independent engine are **conditional research routes, not permission to ship a different game**. Source-of-truth precedence: `PRODUCT_IDENTITY.md` > all prior specs and tool convenience. **Changing this priority requires new explicit owner instruction.**
+
 ## Windows owner environment: mandatory compatibility contract
 
 **Treat this as a release-blocking contract for every new assistant/Codex session.** The owner uses Windows 11 with `powershell.exe` **5.1**, a Japanese-path project at `C:\Users\genki\Downloads\にーくらにゃんこ`, an existing Java 17 + Android SDK environment where `JAVA_HOME` can be missing, and prefers only **ZIP-overwrite into the existing project root + one `-Apply` command**. Read [the historic failure record](docs/research/failure-repair-history.md) before any installer edit.
