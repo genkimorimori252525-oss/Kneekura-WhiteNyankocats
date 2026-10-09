@@ -202,6 +202,17 @@ UNITBUY_BASE_CAP_LOAD_ANCHORS = {
 }
 
 
+UNITBUY_BOOT_CALLSITE_ANCHORS = {
+    0x9C5988: 0xAA1303E0,  # x0 = game context
+    0x9C598C: 0x97FB74A0,  # original per-cat data loader
+    0x9C5994: 0xAA1303E0,  # x0 = same context
+    0x9C5998: 0x2A1403E1,  # w1 = per-cat loop index
+    0x9C599C: 0x97FB7605,  # follow-on per-cat initializer
+    0x9C59A4: 0x710DCA9F,  # 882-count comparison
+    0x9C59A8: 0x54FFFF61,  # loop back
+}
+
+
 def _unitbuy_original_base_cap_loader(elf: bytes) -> dict[str, Any]:
     """Prove where original unitbuy.csv column 18 enters ORIGINAL native RAM.
 
@@ -211,6 +222,20 @@ def _unitbuy_original_base_cap_loader(elf: bytes) -> dict[str, Any]:
     """
     if len(elf) < 0x8A2ED8 or elf[0x1AB9A3:0x1AB9AF] != b"unitbuy.csv\x00":
         raise LevelUpNativeTraceError("original unitbuy loader bounds/string drifted")
+    if len(elf) < 0x9C59AC:
+        raise LevelUpNativeTraceError("original loader caller bounds drifted")
+    for at, expected in UNITBUY_BOOT_CALLSITE_ANCHORS.items():
+        if _u32(elf, at) != expected:
+            raise LevelUpNativeTraceError(
+                f"original unitbuy startup callsite drifted at {_hex(at)}"
+            )
+    if (_decode_relative_bl(elf, 0x9C598C) != 0x8A2C0C
+            or _decode_relative_bl(elf, 0x9C599C) != 0x8A31B0):
+        raise LevelUpNativeTraceError("original unitbuy initialization call targets drifted")
+    boot_branch = _u32(elf, 0x9C59A8)
+    boot_displacement = _sign_extend((boot_branch >> 5) & 0x7FFFF, 19) * 4
+    if 0x9C59A8 + boot_displacement != 0x9C5994:
+        raise LevelUpNativeTraceError("original unitbuy follow-on loop target drifted")
     for at, expected in UNITBUY_BASE_CAP_LOAD_ANCHORS.items():
         if _u32(elf, at) != expected:
             raise LevelUpNativeTraceError(
@@ -225,6 +250,9 @@ def _unitbuy_original_base_cap_loader(elf: bytes) -> dict[str, Any]:
     return {
         "data_file": "unitbuy.csv",
         "loader_entry": "0x8a2c0c",
+        "original_startup_caller": "0x9c598c -> 0x8a2c0c",
+        "follow_on_per_unit_initializer": "0x9c599c -> 0x8a31b0 (purpose of subsequent unit processing not yet proven)",
+
         "column_index_zero_based": 18,
         "column_parser_call": "0x8a2eb4",
         "column_parser_target": "0x363afc",
