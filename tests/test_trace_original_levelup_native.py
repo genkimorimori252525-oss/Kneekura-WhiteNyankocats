@@ -45,6 +45,7 @@ from tools.base_mod.trace_original_levelup_native import (
     _original_download_tsv_file_source_resolver,
     _original_download_tsv_resource_registration_chain,
     _original_download_batch_tsv_installed_local_coverage,
+    _additional_owner_list_coverage,
     _original_arm64_cfg_successors, _original_arm64_cfg_witness,
     _original_arm64_cfg_all_direct_paths_hit_save,
     _levelmax_popup_branch,
@@ -1036,6 +1037,85 @@ class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
             with self.subTest(site=hex(pc)):
                 with self.assertRaises(LevelUpNativeTraceError):
                     _original_download_tsv_resource_registration_chain(bytes(corrupted))
+
+
+    def test_extra_owned_list_scan_identifies_names_without_private_pack_bytes(self):
+        from pathlib import Path
+        import tempfile
+        from tools.base_mod.battlecats_pack_writer import encrypt_manifest_bytes
+
+        def encrypt_names(names):
+            raw = str(len(names)) + "\n"
+            raw += "".join(
+                f"{name},{index*16},16\n" for index, name in enumerate(names)
+            )
+            return encrypt_manifest_bytes(raw.encode("utf-8"))
+
+        with tempfile.TemporaryDirectory() as name:
+            root = Path(name)
+            (root / "MNumberServer.list").write_bytes(
+                encrypt_names(["download_0.tsv", "download_34.tsv", "PRIVATE_ACCOUNT_NOT_LOGGED"])
+            )
+            (root / "WImageDataServer.list").write_bytes(
+                encrypt_names(["download_12.tsv"])
+            )
+            (root / "DO_NOT_READ.pack").write_bytes(b"PRIVATE_PACK_NEVER_READ")
+            report = _additional_owner_list_coverage(root)
+            self.assertEqual(report["family_count"], 2)
+            self.assertEqual(report["total_declared_entries"], 4)
+            self.assertEqual(
+                report["matched_download_batch_tsv_names"],
+                ["download_0.tsv", "download_12.tsv", "download_34.tsv"],
+            )
+            self.assertEqual(len(report["missing_download_batch_tsv_names"]), 32)
+            self.assertFalse(report["all_35_tsv_names_listed"])
+            self.assertFalse(report["all_35_tsv_content_bytes_present_and_valid"])
+            self.assertFalse(report["native_registry_92_entries_cover_names"])
+            self.assertFalse(report["original_game_offline_first_boot_and_Lv60_verified"])
+            self.assertNotIn("PRIVATE_ACCOUNT_NOT_LOGGED", repr(report))
+            self.assertNotIn("PRIVATE_PACK_NEVER_READ", repr(report))
+            self.assertEqual(report["families"]["MNumberServer"]["declared_entries"], 3)
+
+    def test_owned_additional_list_scan_rejects_missing_duplicate_or_symlink(self):
+        from pathlib import Path
+        import tempfile
+        from tools.base_mod.battlecats_pack_writer import encrypt_manifest_bytes
+
+        with tempfile.TemporaryDirectory() as name:
+            root = Path(name)
+            with self.assertRaisesRegex(
+                LevelUpNativeTraceError, "1..64 encrypted manifests"
+            ):
+                _additional_owner_list_coverage(root)
+            one = encrypt_manifest_bytes(b"1\ndownload_1.tsv,0,16\n")
+            (root / "OwnedServer.list").write_bytes(one)
+            self.assertEqual(
+                _additional_owner_list_coverage(root)["matched_download_batch_tsv_names"],
+                ["download_1.tsv"],
+            )
+            (root / "ownedserver.list").write_bytes(one)
+            with self.assertRaisesRegex(LevelUpNativeTraceError, "duplicate"):
+                _additional_owner_list_coverage(root)
+            (root / "ownedserver.list").unlink()
+            (root / "Unsafe-Path.list").write_bytes(one)
+            with self.assertRaisesRegex(LevelUpNativeTraceError, "safe family name"):
+                _additional_owner_list_coverage(root)
+            (root / "Unsafe-Path.list").unlink()
+            (root / "BrokenServer.list").write_bytes(b"not encrypted")
+            with self.assertRaises(ValueError):
+                _additional_owner_list_coverage(root)
+            (root / "BrokenServer.list").unlink()
+            symlink = root / "LinkServer.list"
+            if hasattr(symlink, "symlink_to"):
+                try:
+                    symlink.symlink_to(root / "OwnedServer.list")
+                except (OSError, NotImplementedError):
+                    pass
+                else:
+                    with self.assertRaisesRegex(
+                        LevelUpNativeTraceError, "not a regular safe"
+                    ):
+                        _additional_owner_list_coverage(root)
 
     def test_real_game_original_upgrader_cues_are_not_fabricated_hooks(self):
         self.assertEqual(len(NATIVE_SHA256), 64)
