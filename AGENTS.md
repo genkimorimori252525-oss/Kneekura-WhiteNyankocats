@@ -1,8 +1,8 @@
-# Agent terminal validation contract
+# AGENTS.md — にーくら大戦争 AI作業入口
 
-This repository contains device-facing PowerShell and Android tooling where an
-incorrect command can waste a long device/debug cycle. Coding agents must use
-the repository validation harness before handing terminal commands to a human.
+**FIRST: READ [CURRENT.md](CURRENT.md).** That file is the ONLY design entry point and links to [PRODUCT_IDENTITY.md](PRODUCT_IDENTITY.md) and the [four-feature active implementation roadmap](docs/roadmap/2026-10-09-original-battle-cats-delivery.md). Do **not** search all older design docs, open a new foundational spec series, continue the standalone lookalike Alpha as product work, or hand over an APK whose only achievement is passing basic CI. **The next implementation task is the first real original-game UI level-cap vertical slice, with full offline engineering investigated in parallel.**
+
+This repository contains device-facing PowerShell and Android tooling where an incorrect command can waste a long device/debug cycle. Coding agents must use the repository validation harness before handing terminal commands to a human.
 
 ## P0 OWNER PRODUCT IDENTITY — NEVER SUBSTITUTE A LOOKALIKE
 
@@ -60,7 +60,7 @@ the repository validation harness before handing terminal commands to a human.
 - **Zero external egress is a release requirement, not a future feature flag.** A build with `android.permission.INTERNET`, original `super.newHttpRequest(...)` fallthrough, unvetted analytics/advertising SDK initializers or untested native transport must not be called complete offline.
 - **No modified official SAVE_DATA as the local game's authority.** The redesigned game must own a separate versioned local schema and must not rely on original account/inquiry tokens, client/server legality flags or official-save checks.
 - Run the read-only `tools/base_mod/audit_offline_egress.py` against owner source/artifacts. Its findings reflect capability, **not proof that data was sent or that a ban was server-enforced**. A static clean result does not replace first-run device egress/IPC testing.
-- Any requirement to preserve original UI or native loader is subordinate to the hard offline contract. Where that contract fails, investigate independent local host rather than bypassing a restriction dialog or reconnecting edited saves to official services.
+- **Both original Battle Cats fidelity AND strict offline are hard product requirements** per CURRENT.md/PRODUCT_IDENTITY.md. The original UI/native host is a first-choice technical candidate only where it passes offline isolation; if impossible, investigate another implementation as a compatibility research path, but do NOT substitute the separate Java lookalike Alpha for the user's game or bypass original account restrictions.
 - [Authoritative investigation/architecture reset](docs/architecture/2026-10-09-complete-local-offline-audit.md), [tracker issue #5](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/issues/5). No owner screenshot/account metadata in public GitHub.
 
 ## Jolly offline operations / LiveOps management (2026-10-09)
