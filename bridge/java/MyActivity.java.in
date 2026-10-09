@@ -137,6 +137,46 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
         }
     }
 
+    // Once per process: metadata-only diagnosis of the ORIGINAL native
+    // DownloadBatchTask's 35 "download_%d.tsv" candidates. The native
+    // 0x320be0 resolver also checks its own source index; a bare file here
+    // is NOT proof the original engine accepts or even requests it.
+    private static boolean localDownloadTsvProbeCompleted;
+
+    private static void probeLocalDownloadBatchTsvFiles(File root) {
+        if (!LOCAL_RESEARCH_FRESH_ROOT || !DEBUG_RESEARCH_LOG) {
+            return;
+        }
+        synchronized (MyActivity.class) {
+            if (localDownloadTsvProbeCompleted) {
+                return;
+            }
+            int present = 0;
+            int absent = 0;
+            int unsafe = 0;
+            try {
+                String trusted = root.getCanonicalPath() + File.separator;
+                for (int index = 0; index < 35; index++) {
+                    File candidate = new File(root, "download_" + index + ".tsv");
+                    if (!candidate.getCanonicalPath().startsWith(trusted)) {
+                        unsafe++;
+                    } else if (candidate.isFile()) {
+                        present++;
+                    } else {
+                        absent++;
+                    }
+                }
+                debugResearch("original-download-tsv-loose-v1 present=" + present
+                        + " absent=" + absent + " unsafe=" + unsafe);
+            } catch (IOException error) {
+                debugResearch("original-download-tsv-loose-v1 unavailable");
+            }
+            // Logging source-file presence once on first getFilesDir() keeps
+            // the original frame/render loop free of repeated disk scans.
+            localDownloadTsvProbeCompleted = true;
+        }
+    }
+
     private File newLocalOriginalGameRoot() {
         // The local-research PACKAGE ALREADY has its own Android app-data root.
         // Its first observed use must not silently reuse a previous experiment's
@@ -180,6 +220,7 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
                 throw new IllegalStateException("original local research origin root unavailable", error);
             }
             probeLocalGameSaveFiles(root);
+            probeLocalDownloadBatchTsvFiles(root);
             debugResearch("original-local-fresh-package-root active");
             return root;
         }
