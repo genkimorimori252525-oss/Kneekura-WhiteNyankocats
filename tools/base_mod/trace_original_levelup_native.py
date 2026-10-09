@@ -35,6 +35,8 @@ ELF_APK_NAME = "lib/arm64-v8a/libnative-lib.so"
 # Only exact original text identifiers. No speculative native function names.
 CUES = {
     "unit_data_file": "unitbuy.csv",
+    "unit_level_file": "unitlevel.csv",
+    "unit_xp_file": "unitexp.csv",
     "catseye_screen_resource": "BcResCatsEyeLevelUp",
     "catseye_levelup_name": "CatsEyeLevelUp",
     "max_level_popup_first": "drop_popup_chara_levelmax1",
@@ -185,87 +187,149 @@ def _levelmax_popup_branch(elf: bytes) -> dict:
 
 
 
-# This is the ORIGINAL game's loader-to-memory seam, NOT the upgrade-click hook.
-# Keep these opcodes pinned to the owner's exact JP15.7.1 native build.
-UNITBUY_BASE_CAP_LOAD_ANCHORS = {
-    0x8A2C30: 0xAA0003F3,  # mov x19,x0 (game context on entry)
-    0x8A2C60: 0xB0FFC848,  # ADRP for unitbuy.csv
-    0x8A2C64: 0x91268D08,  # ADD for unitbuy.csv
+# Original-game asset loader evidence, pinned to JP15.7.1 exact native hash.
+# Important: the three source files share this one function but target DIFFERENT
+# in-memory arrays. NEVER confuse unitlevel.csv col18 with unitbuy.csv col18.
+ORIGINAL_UNIT_DATA_ANCHORS = {
+    0x8A2C30: 0xAA0003F3,  # game context x0 saved in x19
+    0x8A2C60: 0xB0FFC848,  # unitbuy.csv ADRP
+    0x8A2C64: 0x91268D08,  # unitbuy.csv ADD
+    0x8A2C88: 0x94042B0C,  # open unitbuy.csv
+    0x8A2CB8: 0x91018318,  # per-cat encoded unitbuy data (context+0x4b060)
+    0x8A2CBC: 0x91018739,  # decoded destination (context+0x4b061)
+    0x8A2CC8: 0x8B17231A,  # index*256
+    0x8A2CD8: 0x2A1303E1,  # w1 = col number (0..62)
+    0x8A2CDC: 0x97EB0388,  # read unitbuy col
+    0x8A2CE0: 0x3943F348,  # load XOR key byte0 at record+0xfc
+    0x8A2CEC: 0x4A000108,  # XOR parsed byte with key
+    0x8A2CF0: 0x381FF368,  # write decoded byte0
+    0x8A2D18: 0x9100137B,  # dest pointer += 4
+    0x8A2D1C: 0x54FFFDC1,  # next col while index<63
+    0x8A2D24: 0x91040339,  # next cat record +=256
+    0x8A2D28: 0xF10DCAFF,  # 882 cat records
+    0x8A2D38: 0x90FFC789,  # unitlevel.csv ADRP
+    0x8A2D3C: 0x91253929,  # unitlevel.csv ADD
+    0x8A2D6C: 0x94042AD3,  # open unitlevel.csv
+    0x8A2D80: 0x52806E53,  # 882 unitlevel rows
     0x8A2C94: 0x91513E6A,  # x10=context+0x44f000
     0x8A2C9C: 0x9133B156,  # x22=context+0x44fcec
-    0x8A2D80: 0x52806E53,  # w19=882 rows
-    0x8A2EB0: 0x52800241,  # w1=18 (zero-based CSV column)
-    0x8A2EB4: 0x97EB0312,  # BL parser
-    0x8A2EB8: 0xB90022C0,  # STR w0,[x22,#0x20]
-    0x8A2ED0: 0x910142D6,  # x22+=0x50
-    0x8A2ED4: 0x54FFF581,  # B.NE next row
+    0x8A2EB0: 0x52800241,  # unitlevel col 18
+    0x8A2EB4: 0x97EB0312,  # parse unitlevel col18
+    0x8A2EB8: 0xB90022C0,  # store unitlevel col18 [x22,#0x20]
+    0x8A2ED0: 0x910142D6,  # unitlevel row stride = 80
+    0x8A2ED4: 0x54FFF581,  # loop unitlevel
+    0x8A2EE0: 0xB0FFC7C9,  # unitexp.csv ADRP
+    0x8A2EE4: 0x9116F929,  # unitexp.csv ADD
+    0x8A2F18: 0x94042A68,  # open unitexp.csv
+    0x8A2F2C: 0x52806E53,  # 882 unitexp rows
+    0x8A305C: 0x52800241,  # unitexp col 18
+    0x8A3060: 0x97EB02A7,  # parse unitexp col18
+    0x8A3064: 0xB90022A0,  # store unitexp col18 [x21,#0x20]
+    0x8A307C: 0x910142B5,  # unitexp row stride = 80
+    0x8A3080: 0x54FFF581,  # loop unitexp
 }
 
-
-UNITBUY_BOOT_CALLSITE_ANCHORS = {
+ORIGINAL_UNIT_DATA_BOOT_ANCHORS = {
     0x9C5988: 0xAA1303E0,  # x0 = game context
-    0x9C598C: 0x97FB74A0,  # original per-cat data loader
-    0x9C5994: 0xAA1303E0,  # x0 = same context
-    0x9C5998: 0x2A1403E1,  # w1 = per-cat loop index
+    0x9C598C: 0x97FB74A0,  # original loader
+    0x9C5994: 0xAA1303E0,  # same game context
+    0x9C5998: 0x2A1403E1,  # per-cat index
     0x9C599C: 0x97FB7605,  # follow-on per-cat initializer
     0x9C59A4: 0x710DCA9F,  # 882-count comparison
-    0x9C59A8: 0x54FFFF61,  # loop back
+    0x9C59A8: 0x54FFFF61,  # loop
+}
+ORIGINAL_UNIT_SOURCE_STRINGS = {
+    "unitbuy.csv": 0x1AB9A3,
+    "unitlevel.csv": 0x19294E,
+    "unitexp.csv": 0x19B5BE,
 }
 
 
-def _unitbuy_original_base_cap_loader(elf: bytes) -> dict[str, Any]:
-    """Prove where original unitbuy.csv column 18 enters ORIGINAL native RAM.
+def _original_unit_data_loader(elf: bytes) -> dict[str, Any]:
+    """Pin three original asset loads and their DIFFERENT per-cat RAM layouts.
 
-    This is a verified data-store seam suitable for following consumers; it
-    DOES NOT establish the click-to-upgrade check, Catseye/XP debit, persistence,
-    or a safe original-offline runtime. Never patch a SAVE based on this alone.
+    In unitbuy.csv the native code XOR-decodes 63 integer columns using the
+    4-byte per-row key. For this pinned exact build, decoded column 18 lands at
+    context+0x4b0a8+asset_index*0x100; the effective level-cap getter,
+    clicked purchase and local save writer are still UNKNOWN.
+
+    Meanwhile the 0x8a2eb4 plain parse/store belongs to **unitlevel.csv**,
+    followed by a distinct **unitexp.csv** table. Those must not be mislabeled
+    as the official base-level cap from unitbuy.csv.
     """
-    if len(elf) < 0x8A2ED8 or elf[0x1AB9A3:0x1AB9AF] != b"unitbuy.csv\x00":
-        raise LevelUpNativeTraceError("original unitbuy loader bounds/string drifted")
     if len(elf) < 0x9C59AC:
-        raise LevelUpNativeTraceError("original loader caller bounds drifted")
-    for at, expected in UNITBUY_BOOT_CALLSITE_ANCHORS.items():
+        raise LevelUpNativeTraceError("original unit-data loader bounds drifted")
+    for name, where in ORIGINAL_UNIT_SOURCE_STRINGS.items():
+        literal = name.encode("ascii") + b"\x00"
+        if elf[where:where + len(literal)] != literal:
+            raise LevelUpNativeTraceError(f"{name} original file string drifted")
+    for at, expected in ORIGINAL_UNIT_DATA_ANCHORS.items():
         if _u32(elf, at) != expected:
             raise LevelUpNativeTraceError(
-                f"original unitbuy startup callsite drifted at {_hex(at)}"
+                f"original unit-data opcode drifted at {_hex(at)}"
             )
+    for at, expected in ORIGINAL_UNIT_DATA_BOOT_ANCHORS.items():
+        if _u32(elf, at) != expected:
+            raise LevelUpNativeTraceError(
+                f"original unit-data startup callsite drifted at {_hex(at)}"
+            )
+    for address in (0x8A2C88, 0x8A2D6C, 0x8A2F18):
+        if _decode_relative_bl(elf, address) != 0x9AD8B8:
+            raise LevelUpNativeTraceError("original file opener call target drifted")
+    for address in (0x8A2CDC, 0x8A2EB4, 0x8A3060):
+        if _decode_relative_bl(elf, address) != 0x363AFC:
+            raise LevelUpNativeTraceError("original CSV parser target drifted")
     if (_decode_relative_bl(elf, 0x9C598C) != 0x8A2C0C
             or _decode_relative_bl(elf, 0x9C599C) != 0x8A31B0):
-        raise LevelUpNativeTraceError("original unitbuy initialization call targets drifted")
-    boot_branch = _u32(elf, 0x9C59A8)
-    boot_displacement = _sign_extend((boot_branch >> 5) & 0x7FFFF, 19) * 4
-    if 0x9C59A8 + boot_displacement != 0x9C5994:
-        raise LevelUpNativeTraceError("original unitbuy follow-on loop target drifted")
-    for at, expected in UNITBUY_BASE_CAP_LOAD_ANCHORS.items():
-        if _u32(elf, at) != expected:
+        raise LevelUpNativeTraceError("original unit initialization call targets drifted")
+    for at, target in (
+        (0x8A2D1C, 0x8A2CD4),
+        (0x8A2D2C, 0x8A2CC0),
+        (0x8A2ED4, 0x8A2D84),
+        (0x8A3080, 0x8A2F30),
+        (0x9C59A8, 0x9C5994),
+    ):
+        instruction = _u32(elf, at)
+        displacement = _sign_extend((instruction >> 5) & 0x7FFFF, 19) * 4
+        if at + displacement != target:
             raise LevelUpNativeTraceError(
-                f"original unitbuy column18 loader opcode drifted at {_hex(at)}"
+                f"original unit-data loop target drifted at {_hex(at)}"
             )
-    if _decode_relative_bl(elf, 0x8A2EB4) != 0x363AFC:
-        raise LevelUpNativeTraceError("unitbuy column18 read target drifted")
-    branch = _u32(elf, 0x8A2ED4)
-    offset = _sign_extend((branch >> 5) & 0x7FFFF, 19) * 4
-    if 0x8A2ED4 + offset != 0x8A2D84:
-        raise LevelUpNativeTraceError("unitbuy 882-row loop target drifted")
     return {
-        "data_file": "unitbuy.csv",
-        "loader_entry": "0x8a2c0c",
         "original_startup_caller": "0x9c598c -> 0x8a2c0c",
-        "follow_on_per_unit_initializer": "0x9c599c -> 0x8a31b0 (purpose of subsequent unit processing not yet proven)",
-
-        "column_index_zero_based": 18,
-        "column_parser_call": "0x8a2eb4",
-        "column_parser_target": "0x363afc",
-        "native_store_instruction": "0x8a2eb8",
-        "native_context_base": "entry x0 saved in x19, then x22 set before row loop",
-        "first_row_value_offset_from_context": "0x44fd0c",
-        "row_stride_bytes": 80,
-        "row_count": 882,
-        "next_row_branch": "0x8a2ed4 -> 0x8a2d84",
-        "verified": "ORIGINAL_NATIVE_CSV_COLUMN18_TO_MEMORY_STORE",
+        "loader_entry": "0x8a2c0c",
+        "source_file_order": ["unitbuy.csv", "unitlevel.csv", "unitexp.csv"],
+        "unitbuy": {
+            "open_call": "0x8a2c88",
+            "source_field_count_per_cat": 63,
+            "row_count": 882,
+            "row_stride_bytes": 256,
+            "decoded_column18_ram_offset":
+                "context+0x4b0a8+asset_index*0x100",
+            "field_encoding": "bytewise XOR with each row's last four bytes",
+            "actual_effective_cap_getter_confirmed": False,
+        },
+        "unitlevel": {
+            "open_call": "0x8a2d6c",
+            "column18_parser_call": "0x8a2eb4",
+            "column18_store_callsite": "0x8a2eb8",
+            "column18_ram_offset": "context+0x44fd0c+asset_index*0x50",
+            "row_count": 882,
+            "row_stride_bytes": 80,
+        },
+        "unitexp": {
+            "open_call": "0x8a2f18",
+            "column18_parser_call": "0x8a3060",
+            "column18_store_callsite": "0x8a3064",
+            "column18_ram_offset": "context+0x4610ac+asset_index*0x50",
+            "row_count": 882,
+            "row_stride_bytes": 80,
+        },
+        "follow_on_per_unit_initializer": "0x9c599c -> 0x8a31b0",
         "levelup_ui_getter_identified": False,
         "upgrade_purchase_or_xp_debit_identified": False,
         "offline_original_save_attached": False,
+        "safe_original_game_patch_attached": False,
     }
 
 
@@ -315,12 +379,12 @@ def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict
         "references": refs,
         "levelmax_popup_branch_candidate": _levelmax_popup_branch(elf),
         "levelmax_popup_value_call_chain": _popup_value_call_chain(elf),
-        "unitbuy_native_base_cap_loader": _unitbuy_original_base_cap_loader(elf),
+        "original_unit_data_loader": _original_unit_data_loader(elf),
         "native_original_game_upgrader_getter_identified": False,
         "unit_cap_purchase_hook_attached": False,
         "scope": "READ_ONLY_EXACT_OWNER_SOURCE",
         "notes": [
-            "unitbuy.csv col18 is verified to enter 882-row native memory, but its upgrade/UI consumer is still unverified",
+            "unitbuy.csv column18 is XOR-decoded to the original 256-byte-per-unit native table; separate unitlevel.csv and unitexp.csv plain 80-byte rows must not be confused",
             "CatsEyeLevelUp and levelmax popups are original-game native code location leads",
             "Further control-flow and original-game UI behavior must be verified before patching",
         ],
