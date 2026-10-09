@@ -12,9 +12,10 @@ class FamiliarOverlayUpdateTests(unittest.TestCase):
         self.assertIn("[switch]$Apply", source)
         self.assertIn("if (-not $Apply)", source)
         self.assertIn("Get-FileHash", source)
-        self.assertIn("9fc91ad09da1f242669404b86abbb53030aca133206f27c2cfb501a443a9ec3b", source)
+        self.assertIn("491bf95fe1f494460c280ef1c253ccd25a303bfc31b5dd916f23564d4e30c3c1", source)
         self.assertIn("jp.kneekura.whitenyankocats", source)
         self.assertIn("independent_alpha_20261009", source)
+        self.assertIn("433e7d684b27f2d27e3b2250103521f996a4f5b9", source)
         self.assertIn("& $installer @installerArgs", source)
         self.assertIn("[switch]$TransferOwnedExport", source)
         self.assertIn("nyanko_battlecats_2026-10-06.zip", source)
@@ -29,7 +30,7 @@ class FamiliarOverlayUpdateTests(unittest.TestCase):
         parsed = raw.decode("utf-8-sig")
         self.assertTrue(parsed.startswith("param("))
         self.assertIn(
-            "a2f6f8f011275296340fcaec15e49eb498e0f4bd77096ce92ad8d5ee59c08bc4",
+            "b7302c34b18f705bab5c374935572f250ce9e221ba400dfcc522ba7fa76186ec",
             parsed,
         )
         self.assertNotIn("5f2b19732ee61913863b3bf8147137706f284b85d837e0e9886e68e0965b0b25", parsed)
@@ -47,7 +48,7 @@ class FamiliarOverlayUpdateTests(unittest.TestCase):
         self.assertIn("$jdkInstallDirectory", source)
         self.assertIn("throw 'Java JDK keytool.exe not found", source)
         wrapper = WRAPPER.read_text(encoding="utf-8-sig")
-        self.assertIn("a2f6f8f011275296340fcaec15e49eb498e0f4bd77096ce92ad8d5ee59c08bc4", wrapper)
+        self.assertIn("b7302c34b18f705bab5c374935572f250ce9e221ba400dfcc522ba7fa76186ec", wrapper)
         self.assertIn("d3f7f6c1af84690a444887d0b5dbeb85e3b4b4679cb31abcb7a47ae431472ac7", wrapper)
         self.assertNotIn("fe32e0b9010449fd8ea747521d215ff052b59a3f4dae8cdd263698ba755250f6", wrapper)
 
