@@ -22,7 +22,7 @@ if (-not (Test-Path -LiteralPath (Join-Path $repo 'tools/base_mod') -PathType Co
 }
 $expectedFiles = @{
     'INSTALL-ALPHA.ps1' = 'a2f6f8f011275296340fcaec15e49eb498e0f4bd77096ce92ad8d5ee59c08bc4'
-    'resolve_java_keytool.ps1' = '6f9ab5a9164f9ce1005c9cb961cc2e1c61bfc13b24cd29ba74c9fd44d9fbedbf'
+    'resolve_java_keytool.ps1' = 'd3f7f6c1af84690a444887d0b5dbeb85e3b4b4679cb31abcb7a47ae431472ac7'
     'independent-alpha.apk' = '9fc91ad09da1f242669404b86abbb53030aca133206f27c2cfb501a443a9ec3b'
 }
 foreach ($item in $expectedFiles.GetEnumerator()) {
