@@ -164,6 +164,7 @@ def _synthetic_scene97_download_task_fixture() -> bytearray:
     blob[0x1DB616:0x1DB616 + len(ORIGINAL_DOWNLOAD_BATCH_RTTI)] = (
         ORIGINAL_DOWNLOAD_BATCH_RTTI
     )
+    blob[0x197B44:0x197B54] = b"download_%d.tsv\x00"
     for pc, opcode in ORIGINAL_SCENE97_DOWNLOAD_BATCH_ANCHORS.items():
         struct.pack_into("<I", blob, pc, opcode)
     for idx, (slot, dest) in enumerate(
@@ -861,6 +862,11 @@ class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
         self.assertFalse(result["remote_data_required_proven"])
         self.assertFalse(result["615mb_additional_assets_locally_available_proven"])
         self.assertFalse(result["task_is_new_game_save_generator_proven"])
+        self.assertEqual(result["tsv_template"], "download_%d.tsv (native 0x197b44)")
+        self.assertEqual(result["indexed_manifest_entries"], 35)
+        self.assertIn("0x73ca68 BEQ -> 0x73cb40", result["native_index_loop"])
+        self.assertIn("0x320be0", result["per_index_source_lookup"])
+        self.assertIn("context+0x2fb8+idx*4", result["per_index_native_storage"])
 
     def test_original_download_batch_task_drift_fails_closed(self):
         intact = _synthetic_scene97_download_task_fixture()
@@ -871,7 +877,7 @@ class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
             with self.subTest(opcode=hex(pc)):
                 with self.assertRaises(LevelUpNativeTraceError):
                     _original_scene97_download_batch_task(bytes(other))
-        for where in (0x1DB616,
+        for where in (0x1DB616, 0x197B44,
                       ORIGINAL_RELA_DYN_OFFSET,
                       ORIGINAL_RELA_DYN_OFFSET+8):
             other = bytearray(intact)
