@@ -42,7 +42,7 @@ CI: Windows Powershell 5.1 tests missing JAVA_HOME/LOCALAPPDATA. Actual user USB
 ### 2026-10-09 release candidate fingerprint and mandatory actual ZIP audit
 
 **User-facing repaired owner ZIP ONLY**: `kneekura-alpha-existing-folder-overlay-java-fixed-20261009.zip`
-- Verified final ZIP SHA256: `4f12a5b1dfa75975fac4e95a54bb45e1e235b49adae5e8914e8b79eae3e72431`.
+- Verified final ZIP SHA256: `486dddd998895de91526e8acaebe68e65e072bdaa2ce21360d1746d127c5ac06`.
 - Contains exactly 7 files. APK remains `9fc91ad09da1f242669404b86abbb53030aca133206f27c2cfb501a443a9ec3b` (no game-content changes).
 - Source wrapper, nested installer and Java resolver are all UTF-8 BOM; null-safe JDK search, `-CheckJava` and `-CheckPrerequisites` before the optional USB `-Apply`.
 - SHA256 of nested installer: `a2f6f8f011275296340fcaec15e49eb498e0f4bd77096ce92ad8d5ee59c08bc4`; Java helper: `6f9ab5a9164f9ce1005c9cb961cc2e1c61bfc13b24cd29ba74c9fd44d9fbedbf`; outer wrapper: `9023beed724e8763916797a9ee54cc3af1b7e5c392b06571c74700d070bb55fe`.
@@ -53,3 +53,11 @@ python -m tools.base_mod.audit_owner_overlay_zip .\kneekura-alpha-existing-folde
 ```
 
 This is a read-only audit only. It must pass ZIP integrity, all manifest SHA digests, actual nested PowerShell BOM, JAVA_HOME-null regression, no-uninstall contract and outer-wrapper digest pinning. Windows 5.1 parser/JDK resolver CI is an additional gate. Failure means **NO RELEASE**. The completed Android device install remains a separate owner USER_GATE.
+
+### Release correction: exact shipped ZIP audit (2026-10-09)
+
+The initial JAVA_HOME-fix ZIP still had a stale outer SHA256 pin for the Java resolver. This **was detected by running** `tools/base_mod/audit_owner_overlay_zip.py` on the actual distribution ZIP (the prior source-only tests did not catch it). The bad intermediate ZIP is WITHDRAWN. Use only `kneekura-alpha-overwrite-verified-v3-20261009.zip` (SHA256 `486dddd998895de91526e8acaebe68e65e072bdaa2ce21360d1746d127c5ac06`).
+
+Release verification actually performed on this exact ZIP: ZIP CRC PASS, seven entry SHA256 digests PASS, three PowerShell UTF-8 BOM headers PASS, APK original digest unchanged, nested installer a2f6f8... and keytool resolver 6f9ab5... pinned in the OUTER entrypoint. The exact wrapper matches the GitHub tracked source blob `7cb832abb76320ae8dde6da02653ed36426cc5b4`, resolver matches blob `4200d83974e06b8f1fcb5f8f7bb4476a683777be`.
+
+This static check does **not** prove successful USB install. All future releases must include the ZIP-level auditor result, not just PowerShell parser/CI PASS.
