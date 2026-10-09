@@ -214,3 +214,96 @@ def patch_boolean_attribute(
             f"expected exactly one {element_name}.{attribute_name}, got {matches}"
         )
     return bytes(mutable), matches
+
+
+RES_XML_END_ELEMENT_TYPE = 0x0103
+TYPE_STRING = 0x03
+
+
+def remove_exact_uses_permission(
+    data: bytes, permission: str,
+) -> tuple[bytes, dict[str, int]]:
+    """Remove ONE concrete <uses-permission> element from compiled AXML.
+
+    Strictly intended for original-JP *research-only* app manifest quarantine.
+    Preserves the entire string pool and all other chunks byte-for-byte.
+    Aborts if the target is absent, duplicated, malformed, nested or not
+    represented by a directly paired START/END element. This neither removes
+    third-party SDK code nor certifies actual zero-egress.
+    """
+    if not isinstance(permission, str) or not permission:
+        raise ValueError("permission must be a nonempty exact literal")
+    if len(data) < 36 or struct.unpack_from("<HH", data, 0) != (3, 8):
+        raise ValueError("not an Android AXML permission manifest")
+    total_size = struct.unpack_from("<I", data, 4)[0]
+    if total_size != len(data):
+        raise ValueError("AXML declared size mismatch")
+    values = {slot.index: slot.value for slot in manifest_string_slots(data)}
+    cursor = 8
+    ranges: list[tuple[int,int]] = []
+    while cursor < len(data):
+        if cursor + 8 > len(data):
+            raise ValueError("truncated AXML chunk header")
+        kind, header, size = struct.unpack_from("<HHI", data, cursor)
+        if size < 8 or cursor + size > len(data):
+            raise ValueError("invalid AXML chunk size")
+        if kind == RES_XML_START_ELEMENT_TYPE:
+            if header < 16 or size < 36:
+                raise ValueError("invalid AXML start element")
+            name_index = struct.unpack_from("<I", data, cursor + 20)[0]
+            tag_name = values.get(name_index)
+            if tag_name == "uses-permission":
+                attr_start, attr_size, attr_count = struct.unpack_from(
+                    "<HHH", data, cursor + 24
+                )
+                if attr_size < 20 or attr_count > 4096:
+                    raise ValueError("invalid AXML permission attribute layout")
+                attr_base = cursor + 16 + attr_start
+                found_names: list[str] = []
+                for idx in range(attr_count):
+                    at = attr_base + idx * attr_size
+                    if at < cursor + 16 or at + 20 > cursor + size:
+                        raise ValueError("AXML permission attribute escaped chunk")
+                    _, attr_id, raw_id = struct.unpack_from("<III", data, at)
+                    if values.get(attr_id) != "name":
+                        continue
+                    data_type = data[at + 15]
+                    value_id = struct.unpack_from("<I", data, at + 16)[0]
+                    selected = raw_id if raw_id != NO_INDEX else (
+                        value_id if data_type == TYPE_STRING else NO_INDEX
+                    )
+                    if selected != NO_INDEX and selected in values:
+                        found_names.append(values[selected])
+                if permission in found_names:
+                    if found_names != [permission]:
+                        raise ValueError("ambiguous original AXML permission attributes")
+                    next_at = cursor + size
+                    if next_at + 24 > len(data):
+                        raise ValueError("permission element has no closing tag")
+                    close_kind, close_header, close_size = struct.unpack_from(
+                        "<HHI", data, next_at
+                    )
+                    close_name = struct.unpack_from("<I", data, next_at + 20)[0]
+                    if (close_kind != RES_XML_END_ELEMENT_TYPE
+                        or close_header != 16 or close_size != 24
+                        or close_name != name_index):
+                        raise ValueError("permission must have an immediate paired end tag")
+                    ranges.append((cursor, next_at + close_size))
+        cursor += size
+    if len(ranges) != 1:
+        raise ValueError(
+            f"expected exactly one original <uses-permission {permission}>, got {len(ranges)}"
+        )
+    first, last = ranges[0]
+    patched = bytearray(data[:first] + data[last:])
+    struct.pack_into("<I", patched, 4, len(patched))
+    if len(patched) != len(data) - (last - first):
+        raise AssertionError("AXML permission-removal size drifted")
+    return bytes(patched), {
+        "removed_elements": 1,
+        "removed_byte_count": last - first,
+        "source_xml_size": len(data),
+        "candidate_xml_size": len(patched),
+    }
+
+
