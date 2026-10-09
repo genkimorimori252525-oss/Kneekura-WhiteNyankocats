@@ -1937,14 +1937,91 @@ def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict
     }
 
 
+
+# Fixed, exact SHA version-pinned INSTALLPACK_LOCAL .list family counts.
+# These figures are from the owner's JP15.7.1 APK, *NOT* from PONOS remote
+# packs, optional WImageDataServer/MNumberServer assets, or any official SAVE.
+JP15_7_1_ORIGINAL_LOCAL_LIST_COUNTS = {
+    "DataLocal": 8955,
+    "DownloadLocal": 6,
+    "HtmlLocal": 0,
+    "ImageDataLocal": 8725,
+    "ImageLocal": 583,
+    "MapLocal": 608,
+    "NumberLocal": 166,
+    "UnitLocal": 159,
+    "resLocal": 1158,
+}
+
+
+def _original_download_batch_tsv_installed_local_coverage(
+    manifests: dict[str, bytes], *,
+    require_exact_owner_counts: bool = True,
+) -> dict[str, Any]:
+    """Read-only encrypted InstallPack local-list coverage for 35 native TSVs.
+
+    Uses the existing audited Battle Cats pack manifest decoder, not a
+    reverse-engineered byte pattern or downloaded server data. Never extracts
+    plaintext game assets, alters archives, or infers server availability.
+    """
+    from tools.battlecats_pack import parse_manifest
+    if set(manifests) != set(JP15_7_1_ORIGINAL_LOCAL_LIST_COUNTS):
+        raise LevelUpNativeTraceError("original InstallPack local family set changed")
+    wanted = {f"download_{index}.tsv" for index in range(35)}
+    rows: dict[str, dict[str, Any]] = {}
+    discovered: set[str] = set()
+    for family, expected_count in JP15_7_1_ORIGINAL_LOCAL_LIST_COUNTS.items():
+        original_encrypted_list = manifests[family]
+        if not isinstance(original_encrypted_list, bytes):
+            raise LevelUpNativeTraceError("original InstallPack list must be bytes")
+        declared, entries = parse_manifest(original_encrypted_list)
+        if require_exact_owner_counts and declared != expected_count:
+            raise LevelUpNativeTraceError(
+                f"original owner {family}.list declared count drifted"
+            )
+        present = sorted({item.name for item in entries} & wanted)
+        discovered.update(present)
+        rows[family] = {
+            "declared_entries": declared,
+            "download_batch_tsv_entries": present,
+        }
+    return {
+        "status": "ORIGINAL_JP_LOCAL_INSTALLPACK_35_DOWNLOAD_TSV_COVERAGE",
+        "native_source_filename_template": "download_%d.tsv",
+        "native_source_expected_indices": list(range(35)),
+        "checked_bundled_local_family_count": len(rows),
+        "checked_bundled_local_entry_count": sum(
+            row["declared_entries"] for row in rows.values()
+        ),
+        "present_bundled_local_tsv": sorted(discovered),
+        "missing_bundled_local_tsv": sorted(wanted - discovered),
+        "all_35_download_tsv_bundled_locally": discovered == wanted,
+        "family_counts": rows,
+        "owner_original_SAVED_read_or_written": False,
+        "actual_remote_server_packs_examined": False,
+        "actual_615mb_download_completed": False,
+        "local_engine_boot_and_download_fallback_verified": False,
+        "source_owner_binary_modified": False,
+    }
+
+
 def trace_from_owner_export(owner_zip: Path) -> dict:
     if sha256(owner_zip.read_bytes()).hexdigest() != SOURCE_EXPORT_SHA256:
         raise LevelUpNativeTraceError("owner export SHA256 differs from pinned JP15.7.1")
     with ZipFile(owner_zip) as z:
         with ZipFile(BytesIO(z.read(SOURCE_APK_NAME))) as split:
             elf = split.read(ELF_APK_NAME)
+        # Read *only* local encrypted .list files (not .pack payload bytes).
+        with ZipFile(BytesIO(z.read("apk/split_InstallPack.apk"))) as install:
+            source_manifests = {
+                family: install.read(f"assets/{family}.list")
+                for family in JP15_7_1_ORIGINAL_LOCAL_LIST_COUNTS
+            }
     report = trace_exact_native(elf)
     report["owner_export_sha256"] = SOURCE_EXPORT_SHA256
+    report["original_download_batch_bundled_local_tsv_coverage"] = (
+        _original_download_batch_tsv_installed_local_coverage(source_manifests)
+    )
     return report
 
 
