@@ -1972,6 +1972,122 @@ def _original_download_tsv_file_source_resolver(elf: bytes) -> dict[str, Any]:
     }
 
 
+
+# Source-backed original JP15.7.1 resource lookup and registration seam.
+# The preceding 0x320be0 -> 0x321138 is NOT a stand-alone external
+# server-pack index. 0x321138 constructs/uses a native resource stream from
+# the supplied name via 0x364950. That stream consults the game's shared
+# registration table via 0x34d014 and 0x34d8e4; a separate original native
+# loop registers 92 rows at 0x741b74..0x741b90, stride 0x30.
+#
+# It is NOT proven that the 92 rows refer to the download_%d.tsv names,
+# that this loop runs before scene97 under no-INTERNET, or that loose files
+# are sufficient. No registered file source or protected save is changed.
+ORIGINAL_RESOURCE_REGISTRY_NATIVE_ANCHORS = {
+    0x321138: 0xD10743FF,  # resource-backed TSV reader/record parser
+    0x321170: 0x94010B9C,  # construct auxiliary stream state
+    0x321184: 0xAA1303E1,  # x1 = resource name string
+    0x321188: 0x94010DF2,  # lookup/open via resource stream helper
+    0x321190: 0x36000740,  # resource not found -> return false
+    0x321198: 0x94010A55,  # parse/read row state
+    0x3211A4: 0x94010A56,  # parse value 1
+    0x3211C4: 0x94010A4E,  # parse value 2
+    0x3211E8: 0x94001811,  # populate parsed lookup rows
+    0x321318: 0x12000260,  # return boolean bit
+    0x364950: 0xD102C3FF,  # opens registered resource by key
+    0x364980: 0x97FFA1A5,  # obtain shared resource registry singleton
+    0x364990: 0x97FFA3D5,  # lookup named key in shared registry
+    0x3649F8: 0x97FFFE07,  # consume registered file stream
+    0x34D014: 0xA9BF7BFD,  # shared resource registry singleton entry
+    0x34D0F4: 0xA9BA7BFD,  # registration function
+    0x741B68: 0xD0001EB3,  # 92 record source-array ADRP
+    0x741B6C: 0x52800B94,  # w20 = 92
+    0x741B70: 0xF946BE73,  # x19 = records array pointer
+    0x741B74: 0x97F02D28,  # resource registry singleton getter
+    0x741B78: 0x91006262,  # x2=x19+0x18
+    0x741B7C: 0xAA1303E1,  # x1=x19 resource filename/name
+    0x741B80: 0x2A1F03E3,  # argument w3=0
+    0x741B84: 0x97F02D5C,  # register one native resource mapping
+    0x741B88: 0xF1000694,  # decrement loop counter
+    0x741B8C: 0x9100C273,  # x19 += 0x30 record stride
+    0x741B90: 0x54FFFF21,  # b.ne -> repeat from 0x741b74
+    0x71C6F4: 0x97F0C248,  # scene101 singleton getter
+    0x71C748: 0x97F0C26B,  # scene101 additional native registration
+}
+
+
+def _original_download_tsv_resource_registration_chain(elf: bytes) -> dict[str, Any]:
+    """Verify exact original resource registration -> named stream parser.
+
+    This is the narrow next step after the existing 0x320be0 file-source
+    evidence, not proof that additional 615MB or 35 TSV assets are present.
+    """
+    if len(elf) < 0x741B94:
+        raise LevelUpNativeTraceError("original resource registry source truncated")
+    for pc, opcode in ORIGINAL_RESOURCE_REGISTRY_NATIVE_ANCHORS.items():
+        if _u32(elf, pc) != opcode:
+            raise LevelUpNativeTraceError(
+                f"original resource registry instruction drift at {_hex(pc)}"
+            )
+    original_calls = {
+        0x321170: 0x363FE0,
+        0x321188: 0x364950,
+        0x321198: 0x363AEC,
+        0x3211A4: 0x363AFC,
+        0x3211C4: 0x363AFC,
+        0x3211E8: 0x32722C,
+        0x364980: 0x34D014,
+        0x364990: 0x34D8E4,
+        0x3649F8: 0x364214,
+        0x741B74: 0x34D014,
+        0x741B84: 0x34D0F4,
+        0x71C6F4: 0x34D014,
+        0x71C748: 0x34D0F4,
+    }
+    for pc, target in original_calls.items():
+        if _decode_relative_bl(elf, pc) != target:
+            raise LevelUpNativeTraceError(
+                f"original resource registry BL target drift at {_hex(pc)}"
+            )
+    if _original_arm64_cfg_successors(elf, 0x321190) != (
+        0x321278, 0x321194
+    ):
+        raise LevelUpNativeTraceError(
+            "original resource stream not-found branch drift"
+        )
+    if _original_arm64_cfg_successors(elf, 0x741B90) != (
+        0x741B74, 0x741B94
+    ):
+        raise LevelUpNativeTraceError("original 92-row registry loop drift")
+    return {
+        "status": "ORIGINAL_NATIVE_NAMED_RESOURCE_REGISTRY_CONSUMER_AND_92_ROW_PRODUCER",
+        "download_tsv_call_chain": (
+            "0x73caa8 -> 0x320be0 -> 0x321138 -> 0x364950 -> "
+            "0x34d014/0x34d8e4"
+        ),
+        "resource_reader_entry": "0x321138",
+        "named_stream_open": "0x321188 -> 0x364950",
+        "registered_resource_lookup": "0x364980 -> 0x34d014; 0x364990 -> 0x34d8e4",
+        "reader_no_registered_resource": "0x321190 TBZ -> 0x321278",
+        "row_numeric_or_token_reader": "0x3211a4/0x3211c4 -> 0x363afc",
+        "reader_parsed_row_insertion": "0x3211e8 -> 0x32722c",
+        "registry_registration_function": "0x34d0f4",
+        "registry_registration_loop": (
+            "0x741b6c count92; 0x741b74 getter; 0x741b84 register; "
+            "0x741b8c stride48; 0x741b90 B.NE -> 0x741b74"
+        ),
+        "scene101_additional_registration": "0x71c6f4 getter; 0x71c748 register",
+        "all_35_download_tsv_registered_proven": False,
+        "92_registry_names_enumerated_proven": False,
+        "registry_initialized_before_offline_scene97_proven": False,
+        "loose_original_app_files_dir_tsv_accepted_proven": False,
+        "additional_owner_server_packs_present_in_zip": False,
+        "independent_fresh_local_profile_attached": False,
+        "original_device_offline_gameplay_Lv60_verified": False,
+        "original_apk_art_and_save_unchanged": True,
+    }
+
+
 def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict:
     digest = sha256(elf).hexdigest()
     if digest != expected_sha or expected_sha != NATIVE_SHA256:
@@ -2035,6 +2151,7 @@ def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict
         "original_app_launch_target_scene_entries": _original_app_launch_target_scene_entries(elf),
         "original_scene97_download_batch_task": _original_scene97_download_batch_task(elf),
         "original_download_tsv_file_source_resolver": _original_download_tsv_file_source_resolver(elf),
+        "original_download_tsv_resource_registration_chain": _original_download_tsv_resource_registration_chain(elf),
         "native_original_game_upgrader_getter_identified": True,
         "native_original_game_upgrade_purchase_hook_verified": False,
         "original_native_conditional_xp_purchase_to_save_calls_proven": True,
