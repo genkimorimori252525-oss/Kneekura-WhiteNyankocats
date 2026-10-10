@@ -190,7 +190,7 @@ class OriginalNativeSceneWitnessPackagingTests(unittest.TestCase):
             "research_shadowhook_sha256",
             "verify_mapped_original_scene_image",
             "repackaged_original_native_scene_layout",
-            "unexpectedly changed",
+            "reviewed exact-address scene hook ABI changed",
         ):
             with self.subTest(needle=needle):
                 self.assertIn(needle, verifier)
