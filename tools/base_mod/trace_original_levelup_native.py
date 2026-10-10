@@ -2311,6 +2311,15 @@ def _original_server_registry_constructor_initialized_on_load(elf: bytes) -> dic
     }
 
 
+def _original_verified_player_init_and_title_save_paths(elf: bytes) -> dict:
+    """Real original 882 level default initialization and native title SAVE;
+    still not a proof of legitimate virgin game startup."""
+    from tools.base_mod.trace_original_player_init_save import (
+        trace_exact_original_player_init_save,
+    )
+    return trace_exact_original_player_init_save(elf)
+
+
 def _original_verified_virgin_save_failure_path(elf: bytes) -> dict:
     """Original empty-SAVE worker failure, not a newly created player profile."""
     from tools.base_mod.trace_original_virgin_save_gate import (
@@ -2420,6 +2429,7 @@ def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict
         "original_resource_duplicate_key_registration_policy": _original_verified_native_resource_collision_policy(elf),
         "original_native_server_list_root_and_resource_fallback": _original_verified_native_resource_root_path(elf),
         "original_virgin_save_worker_error_witness": _original_verified_virgin_save_failure_path(elf),
+        "original_native_player_init_and_title_reset_save": _original_verified_player_init_and_title_save_paths(elf),
         "native_original_game_upgrader_getter_identified": True,
         "native_original_game_upgrade_purchase_hook_verified": False,
         "original_native_conditional_xp_purchase_to_save_calls_proven": True,
