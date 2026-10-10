@@ -1144,6 +1144,66 @@
     "original_game_Lv60_MAX_Madoka_Godzilla_Jolly_ops_zero_egress_all_verified": false,
     "source_code": "tools/base_mod/trace_original_virgin_save_gate.py::inspect_original_cold_scene102_to_101",
     "synthetic_regression": "tests/test_original_virgin_save_gate.py",
-    "original_owner_APK_binary_PACK_SAVE_or_keys_modified": false
+    "original_owner_APK_binary_PACK_SAVE_or_keys_modified": false,
+    "exploratory_static_direct_BL_FDE_analysis": {
+      "ELF_eh_frame_FDE_count": 23086,
+      "root": "0x724544..0x725744",
+      "root_direct_BL_count": 175,
+      "root_indirect_BLR_count": 4,
+      "root_unique_callee_addresses": 81,
+      "bounded_direct_call_graph_depth": 4,
+      "direct_BL_only_path_to_original_SAVE_writer_or_state_initializer_or_reset_found": false,
+      "includes_indirect_BLR_calls": false,
+      "proof_no_deeper_or_indirect_save_exists": false,
+      "execution_type": "private read-only ELF FDE and direct BL source graph exploration, not instrumentation",
+      "original_android_gameplay_boot_verified": false
+    }
+  },
+  "original_complete_direct_state_initializer_caller_census": {
+    "status": "EXHAUSTIVE_DIRECT_ARM64_BL_SITES_FOR_PINNED_INITIALIZER_AND_RESET",
+    "source_exact_native_sha256": "333d2974ab2ff881fd70087fd62dea7d12d82addbc55cab2f2a675ad67e3a7e2",
+    "code_range": "0x317370..0xad751c (end exclusive)",
+    "game_state_defaults_entry": "0x719044",
+    "all_four_direct_BL_callers": [
+      "0x492b98",
+      "0x71f338",
+      "0x89386c",
+      "0x934028"
+    ],
+    "four_site_roles": {
+      "0x492b98": "AppLaunchLoad worker seeds native RAM before existing SAVE load",
+      "0x71f338": "MyApplication native initializer",
+      "0x89386c": "shared subsystem reset helper",
+      "0x934028": "MyApplication TitleUpdate restart/reset path"
+    },
+    "subsystem_reset_entry": "0x89385c",
+    "all_six_direct_reset_callers": [
+      "0x748b38",
+      "0x74906c",
+      "0x749444",
+      "0x74962c",
+      "0x749e80",
+      "0x776584"
+    ],
+    "transfer_or_error_source_proven_original_literals": {
+      "0x748ad8": "kisyuhen_02_kisyuhen02 (rodata 0x1a6756)",
+      "0x74902c": "transfer_backup (rodata 0x1ae9f9)",
+      "0x749420": "data_download_error_could_not_load (rodata 0x191993)",
+      "0x749e28": "kisyuhen_03_hikitugi02 (rodata 0x1afb46)",
+      "0x7765d4": "AccountDelete_error02 (rodata 0x1a82bd)"
+    },
+    "original_SAVE_writer_entry": "0x8b9fc8",
+    "direct_SAVE_writer_BL_callsite_count_across_all_original_text": 158,
+    "original_SAVE_loader_wrapper": "0x9bb764",
+    "direct_SAVE_loader_callers": [
+      "0x492be8"
+    ],
+    "original_transfer_or_account_delete_is_not_genuine_virgin_initializer": true,
+    "all_indirect_virtual_or_different_native_initializers_excluded": false,
+    "positive_no_account_first_game_SAVE_created_proven": false,
+    "source_analyzer": "tools/base_mod/trace_original_player_init_callers.py; tools/base_mod/trace_original_levelup_native.py",
+    "synthetic_regression": "tests/test_original_player_init_callers.py",
+    "source_runtime_evidence_type": "static original SHA-validated ARM64 and literal xrefs; no device runtime",
+    "owner_APK_binary_SAVE_pack_account_or_keys_modified": false
   }
 }
