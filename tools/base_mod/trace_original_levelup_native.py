@@ -2311,6 +2311,21 @@ def _original_server_registry_constructor_initialized_on_load(elf: bytes) -> dic
     }
 
 
+def _original_verified_92_registration_row_order(elf: bytes) -> dict:
+    """Reconstruct all 92 actual original registered filename pairs in row order.
+
+    This separate exact-SHA, bounded virtual .bss replay replaces guessing
+    runtime order from sorted .rodata literals. No downloaded pack is read.
+    """
+    from tools.base_mod.original_server_registry_rows import (
+        recover_original_92_server_rows,
+    )
+    original_catalog = set(
+        _original_registered_server_family_catalog(elf)["original_server_family_stems"]
+    )
+    return recover_original_92_server_rows(elf, original_catalog=original_catalog)
+
+
 def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict:
     digest = sha256(elf).hexdigest()
     if digest != expected_sha or expected_sha != NATIVE_SHA256:
@@ -2377,6 +2392,7 @@ def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict
         "original_download_tsv_resource_registration_chain": _original_download_tsv_resource_registration_chain(elf),
         "original_registered_server_family_catalog": _original_registered_server_family_catalog(elf),
         "original_server_registry_load_time_constructor": _original_server_registry_constructor_initialized_on_load(elf),
+        "original_native_server_registration_row_order": _original_verified_92_registration_row_order(elf),
         "native_original_game_upgrader_getter_identified": True,
         "native_original_game_upgrade_purchase_hook_verified": False,
         "original_native_conditional_xp_purchase_to_save_calls_proven": True,
