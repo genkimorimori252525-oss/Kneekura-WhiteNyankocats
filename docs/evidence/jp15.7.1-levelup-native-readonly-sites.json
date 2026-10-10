@@ -1378,5 +1378,44 @@
     "original_native_level60_resources_max_madoka_godzilla_liveops_combat_finished": false,
     "independent_SDK_IPC_zero_egress_hardware_verified": false,
     "user_original_binary_SAVE_assets_or_signing_key_committed_or_overwritten": false
+  },
+  "original_level_observer_direct_bl_census_2026_10_10": {
+    "original_source_type": "exact owner JP15.7.1 ZIP and native ARM64, read-only",
+    "owner_export_sha256": "38c3bbb8d2cf2101793c9462617d4293e19fc99588b6655fd40299fd61a0ef56",
+    "native_sha256": "333d2974ab2ff881fd70087fd62dea7d12d82addbc55cab2f2a675ad67e3a7e2",
+    "observed_original_17_critical_arm64_words_matched": true,
+    "original_direct_BL_census": {
+      "0x53b2bc_effective_cap_text_getter": {
+        "callers": [
+          "0x821904"
+        ],
+        "all_callers_packed_uint32LE_sha256": "9f091e657001dd7e767d742ec7da96c6f953bd44fcb660b3bbbd1051aaa0f5c6"
+      },
+      "0x53be0c_purchase_eligibility": {
+        "callers": [
+          "0x8581fc",
+          "0x85c734",
+          "0x860224",
+          "0x88cb00",
+          "0x88e884"
+        ],
+        "all_callers_packed_uint32LE_sha256": "49730332c05914ae281116973102821777cc3c507fe6e8c08537fa79eec86e34"
+      },
+      "0x8b9fc8_generic_save_wrapper": {
+        "direct_BL_caller_count": 158,
+        "all_callers_packed_uint32LE_sha256": "995c80e5263feb86555ad12b92fd30a5a1d60e2223dc9f5cbd7d38ad70bfd3c9"
+      }
+    },
+    "original_purchase_source_proved": {
+      "upgrade_predicate_direct_BL_at": "0x8581fc",
+      "XP_encoded_decrement_direct_BL_at": "0x858390",
+      "CURRENT_level_increment_direct_BL_at": "0x8583b8"
+    },
+    "upgrade_gate_then_SAVE_wrapper_log_order_is_only_observation": true,
+    "original_native_level60_UI_purchase_and_SAVE_same_transaction_proven": false,
+    "original_OFFLINE_fresh_SAVE_created_and_reloaded_on_device": false,
+    "original_game_binaries_SAVE_or_assets_written_to_public_repo": false,
+    "source_code": "tools/base_mod/trace_original_levelup_native.py::_original_level_observer_direct_call_census",
+    "static_native_17_pinned_opcode_gate": "tools/base_mod/original_scene_native_image_gate.py::ORIGINAL_SCENE_ANCHORS"
   }
 }
