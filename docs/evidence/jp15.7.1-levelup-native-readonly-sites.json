@@ -1608,5 +1608,76 @@
       "tests/test_original_scene_native_image_gate.py",
       "tests/test_collect_original_local_first_boot.py"
     ]
+  },
+  "original_offline_virgin_SAVE_one_time_trial_2026_10_11": {
+    "status": "SOURCE_COMMITTED_REAL_NDK_COMPILE_AND_SYNTHETIC_C_SAVE_ROUNDTRIP_PASS_DEVICE_UNVERIFIED",
+    "owner_source_version": "JP15.7.1 original arm64",
+    "owner_source_native_sha256": "333d2974ab2ff881fd70087fd62dea7d12d82addbc55cab2f2a675ad67e3a7e2",
+    "exact_original_call_flow": [
+      "AppLaunchLoad 0x492b98->0x719044 RAM initializer",
+      "AppLaunchLoad 0x492bd4->0x9bbbf4 data initializer",
+      "AppLaunchLoad 0x492be8->0x9bb764 original SAVE reader",
+      "worker 0x492bec TBZ W0,#0 to original error",
+      "original SAVE_DATA writer 0x8b9fc8; matching context x0"
+    ],
+    "implementation": {
+      "original_hook_c": "native/kneekura-shim/src/kneekura_original_scene_witness.c",
+      "original_hook_CMake": "native/kneekura-shim/CMakeLists.txt",
+      "actual_original_java_subclass": "bridge/java/MyActivity.java.in",
+      "native_java_bridge_renderer": "tools/base_mod/inject_java_http_bridge.py",
+      "owner_six_split_builder": "tools/base_mod/build_owned_static_http_bridge.py",
+      "paired_binary_contract": "tools/base_mod/prepare_original_scene_witness.py",
+      "native_trial_control": "KNEEKURA_RESEARCH_VIRGIN_SAVE_TRIAL=ON (OFF default, original source-only research)"
+    },
+    "strict_first_run_requirements": [
+      "exact isolated jp.kn.local.battlecats process / manifest INTERNET denied",
+      "original JP15.7.1 BuildID and 19/19 original opcode pins, unique VMA uniform shift",
+      "five all-or-none original ShadowHook trampolines installed",
+      "independently reviewed exact-SHA supplied libshadowhook.so",
+      "Java only attests if this process created a new empty marker under original separate package data root",
+      "JNI confirms canonical isolated app-data root, same UID, empty owned marker",
+      "original SAVE_DATA, SAVE_DATA4, SAVE_DATA8 and all SAVE_DATA-prefixed variants absent",
+      "original loader returned failure and original AppLaunchLoad BL return-site is exactly source pinned",
+      "atomic once-only native trial state, writer calls original serializer with actual original game context",
+      "original SAVE_DATA file must be newly generated regular nonzero-length same UID in verified private root",
+      "original loader retries at most once; original full return is preserved; failures never forged into successes"
+    ],
+    "observability": {
+      "events": [
+        "original-native-virgin-save-trial-v1 root-attested",
+        "original-native-virgin-save-trial-v1 writer-rejected",
+        "original-native-virgin-save-trial-v1 read-rejected",
+        "original-native-virgin-save-trial-v1 read-accepted"
+      ],
+      "collector": "tools/base_mod/collect_original_local_first_boot.py",
+      "only_allowed_events_same_original_hook_PID_after_root_attestation": true,
+      "not_durable_or_reboot_proof": true
+    },
+    "synthetic_test": "tests/test_original_native_virgin_save_trial.py",
+    "synthetic_test_cases": [
+      "new isolated synthetic original SAVE files => mocked original loader fail, mocked original writer once, original loader re-read accepted",
+      "original hook partially installed => no native writer ever called",
+      "second native reader call => no repeated original writer",
+      "native writer returning failure => original loader failure preserved",
+      "SAVE_DATA.bak after earlier directory scan => detected and refused (real bug fixed by re-opening fresh FD)"
+    ],
+    "actual_ANDROID_NDK_native_trial_build_pass": "https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/actions/runs/38065539742",
+    "actual_ANDROID_D8_virgin_trial_java_build_pass": "https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/actions/runs/38065662027",
+    "synthetic_full_tooling_tests_pass": "https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/actions/runs/38065663834",
+    "synthetic_total_tests": 582,
+    "synthetic_passed_tests": 581,
+    "synthetic_skipped_tests": 1,
+    "windows_ubuntu_agent_validation": "https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/actions/runs/38065663835",
+    "actual_user_owned_Android_original_native_first_SAVE_trial_executed": false,
+    "original_first_game_SAVE_accepted_and_reloaded_after_cold_reboot": false,
+    "original_game_native_Lv60_XP_CatsEye_original_power_up_UI_verified": false,
+    "original_game_full_20_initial_resources_MAX_verified": false,
+    "original_Jolly_base_i_liveops_Madoka_Godzilla_verified": false,
+    "all_original_download_35_TSV_and_assets_on_device_verified": false,
+    "zero_sdk_ipc_egress_on_device_verified": false,
+    "owner_original_publisher_APK_SAVE_or_signing_key_modified": false,
+    "experimental_full_six_split_APK_safely_installed_on_phone": false,
+    "default_six_split_original_scene_research_build_virgin_writer_enabled": false,
+    "ready_to_ship": false
   }
 }
