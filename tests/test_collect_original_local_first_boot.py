@@ -363,6 +363,26 @@ class OriginalNativeLocalFirstBootMetadataTests(TestCase):
                     **{**params, **variant}
                 )
 
+    def test_original_hook_bootstrap_error_code_is_bounded_and_pid_scoped(self):
+        # Neither an SDK failure marker nor source-root metadata can be
+        # upgraded into original gameplay/native hook installation proof.
+        raw = "".join([
+            safe_thread(PID + 1, "original-native-scene-hook-v1 hook-init-status=777"),
+            safe_thread(PID, "original-native-scene-hook-v1 hook-api-missing"),
+            safe_thread(PID, "original-native-scene-hook-v1 hook-runtime-init-failed"),
+            safe_thread(PID, "original-native-scene-hook-v1 hook-init-status=23"),
+            safe_thread(PID, "original-native-scene-hook-v1 hook-init-status=99999"),
+            safe_thread(PID, "original-native-scene-hook-v1 hook-init-status=9 token=secret"),
+        ])
+        parsed = obs.sanitized_original_activity_events(raw, pid=PID)
+        self.assertEqual(parsed["last_shadowhook_init_status_code"], 23)
+        self.assertEqual(
+            parsed["allowlisted_event_counts"].get(
+                "original-native-scene-hook-v1 hook-runtime-init-failed"), 1)
+        self.assertFalse(parsed["optional_native_hook_installed_marker_seen"])
+        self.assertNotIn("secret", repr(parsed))
+        self.assertNotIn("777", repr(parsed))
+
     def test_loose_tsv_coverage_must_sum_to_exact_original_35(self):
         raw = (
             safe_thread(PID, "original-download-tsv-loose-v1 present=2 absent=33 unsafe=0")
