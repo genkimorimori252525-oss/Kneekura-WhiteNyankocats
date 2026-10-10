@@ -46,6 +46,8 @@ class OriginalNativeSceneResearchObserverTests(unittest.TestCase):
         self.assertIn("source_words_match_exact_original", code)
         self.assertIn("hook_sym_name", code)
         self.assertIn("research_draw_proxy", code)
+        self.assertIn("shadowhook_unhook", code)
+        self.assertIn("original-native-scene-hook-v1 partial-unhook-failed", code)
         self.assertIn("original_draw(jni_env, jni_class);", code)
         self.assertIn("get_game_context()", code)
         self.assertIn("original-native-scene-v1 id=%u", code)
