@@ -7,6 +7,9 @@ from tools.base_mod.trace_original_virgin_save_gate import (
     OriginalVirginSaveGateError, WRITER_TARGET, _bl_target, _cond_target,
     inspect_original_virgin_save_failure, trace_exact_original_virgin_save_gate,
     ONCREATE_STATUS_ANCHORS, ONCREATE_RELOCATIONS, ONCREATE_RTTI,
+    COLD_SCENE102_ANCHORS, COLD_SCENE102_DIRECT_CALLS,
+    COLD_SCENE102_CONDITIONAL_BRANCHES, _cold_scene_branch_target,
+    inspect_original_cold_scene102_to_101,
     ONCREATE_RELA_START, ONCREATE_RELA_STEP,
     inspect_original_oncreate_save_status_callback,
 )
@@ -28,7 +31,7 @@ def _oncreate_status_fixture():
     target_size = max(ONCREATE_STATUS_ANCHORS) + 4
     if len(image) < target_size:
         image.extend(bytes(target_size - len(image)))
-    for pc, opcode in ONCREATE_STATUS_ANCHORS.items():
+    for pc, opcode in {**ONCREATE_STATUS_ANCHORS, **COLD_SCENE102_ANCHORS}.items():
         struct.pack_into("<I", image, pc, opcode)
     for pc, literal in ONCREATE_RTTI.items():
         image[pc:pc + len(literal)] = literal
@@ -154,6 +157,62 @@ class OriginalVirginSaveGateTests(unittest.TestCase):
                          first, 0x403, target)
         with self.assertRaises(OriginalVirginSaveGateError):
             inspect_original_oncreate_save_status_callback(bytes(changed))
+
+    def test_cold_native_app_init_uses_original_scene102_before_101(self):
+        fixture = _oncreate_status_fixture()
+        initial = bytes(fixture)
+        report = inspect_original_cold_scene102_to_101(initial)
+        self.assertEqual(
+            report["status"],
+            "PINNED_ORIGINAL_COLD_SCENE102_GUARDED_SCENE101_TRANSITION",
+        )
+        self.assertIn("vtable+0 -> 0x71bf30", report["original_cold_app_virtual_init"])
+        self.assertIn("w1=102", report["initial_scene"])
+        self.assertIn("CMP #102", report["original_frame_scene102"])
+        self.assertIn("counter #99", report["guard_for_scene101"])
+        self.assertIn("vtable+0x38 -> 0x724544",
+                      report["application_virtual_before_scene101"])
+        self.assertIn("w1=101", report["conditional_next_scene"])
+        self.assertIn("0x71c9b0", report["scene101_save_probe"])
+        self.assertFalse(report["frame_counter_gate_guaranteed_to_pass_in_real_offline_app"])
+        self.assertFalse(report["native_missing_save_creates_valid_virgin_player"])
+        self.assertFalse(report["real_original_scene102_or_101_seen_on_device"])
+        self.assertEqual(bytes(fixture), initial)
+
+    def test_cold_scene102_direct_calls_and_counter_branch_edges(self):
+        fixture = bytes(_oncreate_status_fixture())
+        for pc, expected in COLD_SCENE102_DIRECT_CALLS.items():
+            with self.subTest(call=hex(pc)):
+                self.assertEqual(_bl_target(fixture, pc), expected)
+        for pc, (kind, expected) in COLD_SCENE102_CONDITIONAL_BRANCHES.items():
+            with self.subTest(branch=hex(pc)):
+                self.assertEqual(_cold_scene_branch_target(fixture, pc, kind), expected)
+
+    def test_cold_scene102_corrupt_condition_transition_or_virtual_fails_closed(self):
+        fixture = _oncreate_status_fixture()
+        for pc in (
+            0x9C8AFC, 0x9C8B00, 0x9C8B04, 0x9C8B08,
+            0x9C8B10, 0x71C3B0, 0x71C3B4, 0x722CE8,
+            0x722CEC, 0x723034, 0x723044, 0x723048,
+            0x723058, 0x72305C, 0x723060, 0x723064,
+            0x7231AC, 0x7231B0, 0x7231BC, 0x7231C0,
+            0x7231C8, 0x7231CC, 0x71C9B0, 0x71C9C8,
+        ):
+            with self.subTest(pc=hex(pc)):
+                corrupted = bytearray(fixture)
+                corrupted[pc] ^= 1
+                with self.assertRaises(OriginalVirginSaveGateError):
+                    inspect_original_cold_scene102_to_101(bytes(corrupted))
+
+    def test_source_only_cold_path_does_not_call_save_writer_and_require_existing_data(self):
+        receipt = inspect_original_cold_scene102_to_101(
+            bytes(_oncreate_status_fixture())
+        )
+        self.assertTrue(receipt["conditional_source_control_flow_reaches_scene101"])
+        self.assertFalse(receipt["native_missing_save_creates_valid_virgin_player"])
+        self.assertFalse(receipt["real_native_game_first_run_or_SAVE_written"])
+        self.assertFalse(receipt["original_APK_SAVE_or_owner_assets_modified"])
+
 
     def test_only_exact_owner_native_hash_is_authorized(self):
         with self.assertRaisesRegex(OriginalVirginSaveGateError, "exact JP15.7.1"):
