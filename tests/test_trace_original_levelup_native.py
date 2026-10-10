@@ -28,6 +28,10 @@ from tools.base_mod.trace_original_levelup_native import (
     ORIGINAL_DOWNLOAD_TSV_FILE_RESOLVER_ANCHORS,
     ORIGINAL_RESOURCE_REGISTRY_NATIVE_ANCHORS,
     ORIGINAL_SERVER_FAMILY_CATALOG_ANCHORS,
+    ORIGINAL_RESOURCE_TABLE_LOAD_INIT_ARRAY_ANCHORS,
+    ORIGINAL_INIT_ARRAY_RELOCATION_SLOT,
+    ORIGINAL_INIT_ARRAY_SOURCE_START,
+    ORIGINAL_INIT_ARRAY_FILE_OFFSET,
     JP15_7_1_ORIGINAL_LOCAL_LIST_COUNTS,
     ORIGINAL_SCENE97_DOWNLOAD_BATCH_RELOCS, ORIGINAL_DOWNLOAD_BATCH_RTTI,
     ORIGINAL_RELA_DYN_OFFSET, ORIGINAL_RELA_DYN_COUNT,
@@ -46,6 +50,7 @@ from tools.base_mod.trace_original_levelup_native import (
     _original_download_tsv_file_source_resolver,
     _original_download_tsv_resource_registration_chain,
     _original_registered_server_family_catalog,
+    _original_server_registry_constructor_initialized_on_load,
     _original_download_batch_tsv_installed_local_coverage,
     _additional_owner_list_coverage,
     _original_arm64_cfg_successors, _original_arm64_cfg_witness,
@@ -222,6 +227,20 @@ def _synthetic_original_server_family_catalog_fixture() -> bytearray:
         synthetic += f"Test{i:03d}Server.list\x00".encode()
         synthetic += f"Test{i:03d}Server.pack\x00".encode()
     blob[0x1A0000:0x1A0000 + len(synthetic)] = synthetic
+    return blob
+
+
+
+def _synthetic_native_resource_ctor_init_array() -> bytearray:
+    """One synthetic ELF .init_array R_RELATIVE and seven exact opcodes."""
+    blob = bytearray(0xB12CC0)
+    for pc, opcode in ORIGINAL_RESOURCE_TABLE_LOAD_INIT_ARRAY_ANCHORS.items():
+        struct.pack_into("<I", blob, pc, opcode)
+    blob[0x1918D1:0x1918E3] = b"XImageServer.list\x00"
+    struct.pack_into(
+        "<QQq", blob, ORIGINAL_RELA_DYN_OFFSET,
+        ORIGINAL_INIT_ARRAY_RELOCATION_SLOT, 0x403, 0x714AE8,
+    )
     return blob
 
 
@@ -1207,6 +1226,51 @@ class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
         corrupted[cursor + len(b"Test089Server.pac")] = ord("x")
         with self.assertRaisesRegex(LevelUpNativeTraceError, "92 paired"):
             _original_registered_server_family_catalog(bytes(corrupted))
+
+
+    def test_original_server_table_ctor_runs_from_ELF_init_array(self):
+        owner_like = bytes(_synthetic_native_resource_ctor_init_array())
+        result = _original_server_registry_constructor_initialized_on_load(
+            owner_like
+        )
+        self.assertEqual(result["ELF_init_array_slot"], "0xb16cb8")
+        self.assertEqual(result["ELF_relative_ctor"], "0x714ae8")
+        self.assertEqual(result["original_first_literal_loaded"],
+                         "XImageServer.list")
+        self.assertEqual(result["BSS_store_site"], "0x7159c0")
+        self.assertEqual(result["runtime_BSS_table_source"], "0xf98d38")
+        self.assertEqual(result["subsequent_92_row_registration"],
+                         "0x741b68..0x741b90")
+        self.assertFalse(result["all_92_registered_native_rows_resolved"])
+        self.assertFalse(result["owned_additional_Server_pack_available"])
+        self.assertFalse(result["native_first_game_initializer_or_save_attached"])
+        self.assertFalse(result["original_offline_Lv60_UI_and_reboot_tested"])
+
+    def test_original_native_resource_ctor_fail_closed_on_relocation_or_literal_drift(self):
+        pristine = _synthetic_native_resource_ctor_init_array()
+        for at in (0x714AE8, 0x71599C, 0x7159A0,
+                   0x7159A4, 0x7159AC, 0x7159C0):
+            corrupted = bytearray(pristine)
+            corrupted[at] ^= 1
+            with self.subTest(opcode=hex(at)):
+                with self.assertRaises(LevelUpNativeTraceError):
+                    _original_server_registry_constructor_initialized_on_load(
+                        bytes(corrupted)
+                    )
+        for off in (0x1918D1,
+                    ORIGINAL_RELA_DYN_OFFSET,
+                    ORIGINAL_RELA_DYN_OFFSET + 8,
+                    ORIGINAL_RELA_DYN_OFFSET + 16,
+                    ORIGINAL_INIT_ARRAY_FILE_OFFSET
+                    + ORIGINAL_INIT_ARRAY_RELOCATION_SLOT
+                    - ORIGINAL_INIT_ARRAY_SOURCE_START):
+            corrupted = bytearray(pristine)
+            corrupted[off] ^= 1
+            with self.subTest(offset=hex(off)):
+                with self.assertRaises(LevelUpNativeTraceError):
+                    _original_server_registry_constructor_initialized_on_load(
+                        bytes(corrupted)
+                    )
 
     def test_real_game_original_upgrader_cues_are_not_fabricated_hooks(self):
         self.assertEqual(len(NATIVE_SHA256), 64)
