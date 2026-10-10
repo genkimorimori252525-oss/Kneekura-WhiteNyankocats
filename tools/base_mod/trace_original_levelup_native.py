@@ -2244,6 +2244,8 @@ def _original_server_registry_constructor_initialized_on_load(elf: bytes) -> dic
 
     if len(elf) < 0xB12CC0:
         raise LevelUpNativeTraceError("original resource ctor ELF section truncated")
+    if elf[0x1918D1:0x1918E3] != b"XImageServer.list\x00":
+        raise LevelUpNativeTraceError("original ctor XImageServer.list literal drift")
     for at, opcode in ORIGINAL_RESOURCE_TABLE_LOAD_INIT_ARRAY_ANCHORS.items():
         if _u32(elf, at) != opcode:
             raise LevelUpNativeTraceError(
