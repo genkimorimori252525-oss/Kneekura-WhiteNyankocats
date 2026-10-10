@@ -644,6 +644,57 @@ static int32_t research_original_app_launch_read_proxy(void *game_context) {
     return result;
 }
 
+/*
+ * Called ONLY after checking the exact original game Build ID, 19 words,
+ * unique ELF text mapping and source VMA shift. Two distinct ShadowHook
+ * entrypoints are essential: the exported JNI symbol can use sym_addr,
+ * but four original stripped LEVEL/SAVE functions MUST use func_addr.
+ * Exposing the dispatcher separately allows an executable host-C probe
+ * with fake hook APIs, without loading any proprietary game code.
+ */
+static void attach_exact_original_witness_hooks(
+        ShadowHookSymAddrFn hook_sym_fn,
+        ShadowHookFuncAddrFn hook_func_fn,
+        uintptr_t original_base,
+        uintptr_t validated_shift) {
+    if (hook_sym_fn == NULL || hook_func_fn == NULL) {
+        return;
+    }
+    /* Hook only the loaded library with verified BuildID/opcodes. All
+     * observers are REQUIRED together so a partial research report is
+     * never misread as one coherent upgrade/save lifecycle. */
+    gHookStub = hook_sym_fn(
+        (void *)(original_base + ORIGINAL_JNI_DRAW + validated_shift),
+        (void *)&research_draw_proxy, &gOriginalDraw
+    );
+    if (gHookStub != NULL && gOriginalDraw != NULL) {
+        gCapHookStub = hook_func_fn(
+            (void *)(original_base + ORIGINAL_UNIT_CAP_GETTER + validated_shift),
+            (void *)&research_original_cap_getter_proxy, &gOriginalCapGetter
+        );
+    }
+    if (gCapHookStub != NULL && gOriginalCapGetter != NULL) {
+        gUpgradeHookStub = hook_func_fn(
+            (void *)(original_base + ORIGINAL_UPGRADE_GATE + validated_shift),
+            (void *)&research_original_upgrade_gate_proxy, &gOriginalUpgradeGate
+        );
+    }
+    if (gUpgradeHookStub != NULL && gOriginalUpgradeGate != NULL) {
+        gSaveHookStub = hook_func_fn(
+            (void *)(original_base + ORIGINAL_SAVE_WRAPPER + validated_shift),
+            (void *)&research_original_save_wrapper_proxy, &gOriginalSaveWrapper
+        );
+    }
+    if (gSaveHookStub != NULL && gOriginalSaveWrapper != NULL) {
+        gAppLaunchReadHookStub = hook_func_fn(
+            (void *)(original_base + ORIGINAL_APP_LAUNCH_LOADER + validated_shift),
+            (void *)&research_original_app_launch_read_proxy,
+            &gOriginalAppLaunchLoader
+        );
+    }
+
+}
+
 __attribute__((constructor))
 static void kneekura_init_scene_witness_research_only(void) {
     if (!current_process_is_isolated_original_research()) {
@@ -692,38 +743,9 @@ static void kneekura_init_scene_witness_research_only(void) {
     }
     gOriginalLoadBias = witness.base;
     gOriginalVmaShift = validated_shift;
-    /* Hook only the loaded library with verified BuildID/opcodes. All
-     * observers are REQUIRED together so a partial research report is
-     * never misread as one coherent upgrade/save lifecycle. */
-    gHookStub = hook_sym_fn(
-        (void *)(witness.base + ORIGINAL_JNI_DRAW + validated_shift),
-        (void *)&research_draw_proxy, &gOriginalDraw
-    );
-    if (gHookStub != NULL && gOriginalDraw != NULL) {
-        gCapHookStub = hook_func_fn(
-            (void *)(witness.base + ORIGINAL_UNIT_CAP_GETTER + validated_shift),
-            (void *)&research_original_cap_getter_proxy, &gOriginalCapGetter
-        );
-    }
-    if (gCapHookStub != NULL && gOriginalCapGetter != NULL) {
-        gUpgradeHookStub = hook_func_fn(
-            (void *)(witness.base + ORIGINAL_UPGRADE_GATE + validated_shift),
-            (void *)&research_original_upgrade_gate_proxy, &gOriginalUpgradeGate
-        );
-    }
-    if (gUpgradeHookStub != NULL && gOriginalUpgradeGate != NULL) {
-        gSaveHookStub = hook_func_fn(
-            (void *)(witness.base + ORIGINAL_SAVE_WRAPPER + validated_shift),
-            (void *)&research_original_save_wrapper_proxy, &gOriginalSaveWrapper
-        );
-    }
-    if (gSaveHookStub != NULL && gOriginalSaveWrapper != NULL) {
-        gAppLaunchReadHookStub = hook_func_fn(
-            (void *)(witness.base + ORIGINAL_APP_LAUNCH_LOADER + validated_shift),
-            (void *)&research_original_app_launch_read_proxy,
-            &gOriginalAppLaunchLoader
-        );
-    }
+    /* Source-pinned hook dispatcher: 1 exported JNI, 4 stripped funcs. */
+    attach_exact_original_witness_hooks(
+        hook_sym_fn, hook_func_fn, witness.base, validated_shift);
     if (gHookStub == NULL || gOriginalDraw == NULL
         || gCapHookStub == NULL || gOriginalCapGetter == NULL
         || gUpgradeHookStub == NULL || gOriginalUpgradeGate == NULL

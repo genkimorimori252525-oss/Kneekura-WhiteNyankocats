@@ -75,6 +75,8 @@ class OriginalNativeSceneResearchObserverTests(unittest.TestCase):
         ):
             self.assertIn(symbolless + " = hook_func_fn(", code)
         self.assertEqual(code.count("= hook_func_fn("), 4)
+        self.assertIn("attach_exact_original_witness_hooks(", code)
+        self.assertIn("hook_sym_fn, hook_func_fn, witness.base, validated_shift", code)
         self.assertNotIn("= hook_fn(", code)
         self.assertNotIn('"shadowhook_hook_sym_name"', code)
         self.assertIn("witness.base + ORIGINAL_JNI_DRAW", code)
@@ -284,8 +286,57 @@ int __android_log_write(int priority, const char *tag, const char *msg) {
     }
     return 0;
 }
+static uintptr_t hook_expected_base = 0x10000000u;
+static uintptr_t hook_expected_shift = 0x1000u;
+static int mock_symbol_hook_calls = 0;
+static int mock_stripped_hook_calls = 0;
+static void *fake_symbol_hook(void *entry, void *proxy, void **orig) {
+    if (entry != (void *)(hook_expected_base + hook_expected_shift
+                          + ORIGINAL_JNI_DRAW)
+        || proxy != (void *)&research_draw_proxy
+        || mock_symbol_hook_calls != 0 || orig == NULL) return NULL;
+    mock_symbol_hook_calls++;
+    *orig = (void *)&original_loader;  // only non-null matters for test
+    return (void *)0x11;
+}
+static void *fake_stripped_hook(void *entry, void *proxy,
+                                void **orig, ...) {
+    const uintptr_t pcs[] = {
+        ORIGINAL_UNIT_CAP_GETTER, ORIGINAL_UPGRADE_GATE,
+        ORIGINAL_SAVE_WRAPPER, ORIGINAL_APP_LAUNCH_LOADER
+    };
+    const void *proxies[] = {
+        (void *)&research_original_cap_getter_proxy,
+        (void *)&research_original_upgrade_gate_proxy,
+        (void *)&research_original_save_wrapper_proxy,
+        (void *)&research_original_app_launch_read_proxy,
+    };
+    const void *original[] = {
+        (void *)&original_cap,
+        (void *)&original_gate,
+        (void *)&original_save,
+        (void *)&original_loader,
+    };
+    int i = mock_stripped_hook_calls;
+    if (i < 0 || i >= 4
+        || entry != (void *)(hook_expected_base+hook_expected_shift+pcs[i])
+        || proxy != proxies[i] || orig == NULL) return NULL;
+    *orig = (void *)original[i];
+    mock_stripped_hook_calls++;
+    return (void *)(uintptr_t)(0x21 + i);
+}
 int main(void) {
     int sentinel = 42;
+    attach_exact_original_witness_hooks(
+        &fake_symbol_hook, &fake_stripped_hook,
+        hook_expected_base, hook_expected_shift
+    );
+    if (mock_symbol_hook_calls != 1 || mock_stripped_hook_calls != 4
+        || gHookStub != (void *)0x11
+        || gCapHookStub != (void *)0x21
+        || gUpgradeHookStub != (void *)0x22
+        || gSaveHookStub != (void *)0x23
+        || gAppLaunchReadHookStub != (void *)0x24) return 19;
     gOriginalCapGetter = (void *)&original_cap;
     gOriginalUpgradeGate = (void *)&original_gate;
     gOriginalSaveWrapper = (void *)&original_save;
