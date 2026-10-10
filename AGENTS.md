@@ -6,6 +6,16 @@
 
 This repository contains device-facing PowerShell and Android tooling where an incorrect command can waste a long device/debug cycle. Coding agents must use the repository validation harness before handing terminal commands to a human.
 
+## 2026-10-11 原作6分割・黒画面実機障害と研究用ビルドの現行ゲート
+
+- 本人Androidで原作JP15.7.1の別パッケージ `jp.kn.local.battlecats` 6分割インストールが成功したが、黒画面と短時間のプロセス再起動を実測。所有者の04:04のプライベートなログを厳格に再集計すると **研究アプリ起動86件／死亡85件／古いShadowHook初期化失敗85件**（古い「87起動・87死亡」報告には他アプリ混入あり）。フックエラーと死亡の因果・SIGSEGV発生PCは未確定。
+- 旧ダウンロードキット `kneekura-original-owner-trial-kit/BUILD-ORIGINAL-RESEARCH.ps1` に含まれた単独 `libshadowhook.so` 組込みを、再検証目的でそのまま使わない。現行ビルドは **同一公式Maven 2.0.1 AARから `libshadowhook.so` と `libshadowhook_nothing.so` の両方をハッシュで検証**し、必ず同じARM64 splitへ同梱する。片方しかない候補はFAIL CLOSED。
+- 研究用候補の作成は `tools/base_mod/BUILD-OWNER-RESEARCH-PAIR.ps1`（**build-only**、既存プライベート署名鍵を再利用、virgin SAVE writerなし）。実機更新**前**に `tools/base_mod/CHECK-OWNER-RESEARCH-DEVICE-SIGNER.ps1` が呼ぶ `tools/base_mod/preflight_original_device_update.py` で、**実際にAndroidへインストール済みの研究版** `base.apk` と新候補6本の証明書を照合する。古いPC上の署名済みAPKと一致しても実機署名一致とは言えない。
+- これら2つは勝手にアプリを更新しない。本人の明示的な端末更新判断が別途必要。元PONOSアプリとSAVEには触れず、アンインストール・データ消去・root化・別署名インストールは禁止。公式APKやSAVEの中身をGit/ChatGPTへ出さない。
+- 現在のPASSはCI/合成パック/Windows構文/公式AAR照合まで。**元ゲーム初回起動、Lv60/XP/MAX、原作SAVEの生成・読込、基地i運営、まどか/ゴジラ実戦、全通信ゼロの実機受入は未達**。手順・原因・証拠の詳細は [Issue #12](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/issues/12) と並行 [#15 OFFLINE](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/issues/15)。新しい基礎ロードマップ・別ゲームAlphaを作らず、原作実起動ゲートに集中する。
+
+
+
 ## P0 OWNER PRODUCT IDENTITY — NEVER SUBSTITUTE A LOOKALIKE
 
 **READ THIS BEFORE ANY CODING, RELEASE, INSTALLER, USER ANSWER OR AGENT HANDOFF:** [PRODUCT_IDENTITY.md](PRODUCT_IDENTITY.md). Owner explicitly re-confirmed on 2026-10-09: **「俺が遊びたいのはにゃんこ大戦争だ。絶対に間違えないで。」**
