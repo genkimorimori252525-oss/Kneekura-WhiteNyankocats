@@ -174,7 +174,13 @@ def _rewrite_model(raw: bytes, *, sprite_part_count: int) -> tuple[bytes, dict[s
             raise OriginalGodzillaRigPreviewError(
                 "mamodel uses another atlas image ID; not safe to auto-convert"
             )
-        if not 0 <= numeric[2] < sprite_part_count:
+        # Source-verified original JP15.7.1 ImageDataLocal has four
+        # genuine image-less internal nodes with image_id=cut_id=-1
+        # (000_g00_1.mamodel). Preserve these; an atlas-backed part
+        # must still reference a real imgcut piece.
+        if (image_id == -1 and numeric[2] == -1):
+            pass  # native pseudo-bone with no sprite; preserve both sentinels
+        elif not 0 <= numeric[2] < sprite_part_count:
             raise OriginalGodzillaRigPreviewError(
                 "mamodel references sprite index outside original imgcut"
             )
@@ -210,6 +216,7 @@ def _rewrite_model(raw: bytes, *, sprite_part_count: int) -> tuple[bytes, dict[s
         "atlas_rows_rebased": source_models,
         "rows_changed": converted_models,
         "root_was_reoriented": mirrored_root,
+        "native_imageless_bones_id_minus_one_preserved": True,
         "extra_collision_and_model_footer_bytes_preserved": True,
         "renderer_orientation_correct_on_real_android": False,
     }
