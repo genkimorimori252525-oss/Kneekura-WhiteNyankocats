@@ -38,6 +38,60 @@ class OriginalResearchSameSignerHandoffTests(unittest.TestCase):
         self.assertIn("if ($before -ne $after)", source)
         self.assertIn("Do NOT install this build", source)
 
+    def test_private_password_name_resolves_in_python_without_stdout_leak(self):
+        import contextlib
+        import io
+        import os
+        import sys
+        from unittest.mock import patch
+        from tools.base_mod import build_owned_static_http_bridge as original_builder
+
+        captured = {}
+        def mock_build(*args, **kwargs):
+            captured.update(kwargs)
+            return {"status": "SOURCE_ONLY_CLI_PASSWORD_TEST"}
+
+        argv = [
+            "builder", "synthetic-owner.zip", "--flavor", "local-research",
+            "--shim", "synthetic-shim.so", "--keystore", "synthetic.p12",
+            "--alias", "private", "--output", "synthetic-output",
+            "--storepass-env", "KNEEKURA_UNITTEST_SIGN_PASS",
+            "--keypass-env", "KNEEKURA_UNITTEST_SIGN_PASS",
+        ]
+        output = io.StringIO()
+        with patch.dict(os.environ, {"KNEEKURA_UNITTEST_SIGN_PASS": "SECRET_CLI_NEVER_ECHO"}), \
+             patch.object(sys, "argv", argv), \
+             patch.object(original_builder, "build_owned_static_http_bridge",
+                          side_effect=mock_build), \
+             contextlib.redirect_stdout(output):
+            self.assertEqual(original_builder.main(), 0)
+        self.assertEqual(captured["storepass"], "SECRET_CLI_NEVER_ECHO")
+        self.assertEqual(captured["keypass"], "SECRET_CLI_NEVER_ECHO")
+        self.assertNotIn("SECRET_CLI_NEVER_ECHO", output.getvalue())
+
+    def test_private_password_env_validation_does_not_print_value(self):
+        import contextlib
+        import io
+        import os
+        import sys
+        from unittest.mock import patch
+        from tools.base_mod import build_owned_static_http_bridge as original_builder
+
+        argv = [
+            "builder", "synthetic-owner.zip", "--flavor", "local-research",
+            "--shim", "synthetic-shim.so", "--keystore", "synthetic.p12",
+            "--alias", "private", "--output", "synthetic-output",
+            "--storepass-env", "KNEEKURA_UNITTEST_MISSING",
+        ]
+        stderr = io.StringIO()
+        with patch.object(sys, "argv", argv), \
+             patch.dict(os.environ, {"KNEEKURA_UNITTEST_MISSING": ""}), \
+             contextlib.redirect_stderr(stderr):
+            with self.assertRaises(SystemExit):
+                original_builder.main()
+        self.assertIn("required private password environment variable not set",
+                      stderr.getvalue())
+
     def test_preflight_pins_owner_original_and_official_public_archive(self):
         source = SCRIPT.read_text(encoding="utf-8-sig")
         from tools.base_mod.extract_owned_splits import EXPECTED_EXPORT_SHA256
