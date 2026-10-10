@@ -56,6 +56,25 @@ def _run_smoke(sdk: Path, *, output: Path | None = None) -> dict:
     if not android_jar.is_file():
         raise AssertionError("public Android API 35 android.jar unavailable")
     keytool = shutil.which("keytool") or shutil.which("keytool.exe")
+    if keytool is None and os.name == "nt":
+        # Owner Windows 11 often has Android Studio JBR but not keytool on
+        # PATH. Run the *public synthetic* signer smoke using the existing
+        # Android Studio JDK; never probe a research keystore/password.
+        roots = [
+            Path(os.environ["JAVA_HOME"]) if os.environ.get("JAVA_HOME") else None,
+            (Path(os.environ.get("PROGRAMFILES", r"C:\\Program Files"))
+             / "Android" / "Android Studio" / "jbr"),
+        ]
+        javac = shutil.which("javac.exe")
+        if javac:
+            roots.insert(0, Path(javac).resolve().parent.parent)
+        for root in roots:
+            if root is None:
+                continue
+            candidate = root / "bin" / "keytool.exe"
+            if candidate.is_file():
+                keytool = str(candidate)
+                break
     if keytool is None:
         raise AssertionError("public synthetic Java JDK keytool unavailable")
 
