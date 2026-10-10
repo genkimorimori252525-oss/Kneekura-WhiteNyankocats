@@ -23,6 +23,7 @@ import tempfile
 from typing import Any, Callable
 
 from tools.base_mod import fetch_godzilla_server_assets as recovery
+from tools.battlecats_pack import PackReader
 
 SOURCE_REPOSITORY = "fieryhenry/BCData"
 SOURCE_PATH = "jp_server"
@@ -59,6 +60,36 @@ def _error_code(message: str) -> str:
     if "manifest" in clean or "contiguous" in clean or "pack" in clean:
         return "ORIGINAL_PACK_FORMAT_NOT_SUPPORTED"
     return "UNKNOWN_SOURCE_OR_FORMAT_FAILURE"
+
+
+def _private_original_model_root_summary(raw: bytes) -> dict[str, Any]:
+    """Read-only sparse model metadata, NEVER output source model lines."""
+    if not 0 < len(raw) <= 8 * 1024 * 1024:
+        raise ValueError("original model outside bounded research input")
+    try:
+        rows = raw.decode("utf-8-sig").splitlines()
+        if (len(rows) < 4
+            or rows[0] not in ("[modelanim:model]", "[modelanim:model2]")
+            or not 1 <= int(rows[2]) <= 30000):
+            raise ValueError("original model header is not understood")
+        count = int(rows[2])
+        if len(rows) < count + 3:
+            raise ValueError("original model nodes truncated")
+        first = rows[3].split(",")
+        if len(first) < 13 or [int(x) for x in first[:2]] != [-1, -1]:
+            raise ValueError("original first model part is not root")
+        scale = int(first[8])
+        if scale == 0:
+            raise ValueError("original model root horizontal scale is zero")
+    except (UnicodeError, IndexError, TypeError, OverflowError) as exc:
+        raise ValueError("original model numeric metadata unreadable") from exc
+    return {
+        "model_format": rows[0],
+        "node_count": count,
+        "horizontal_root_scale_sign": -1 if scale < 0 else 1,
+        "horizontal_root_scale_abs": abs(scale),
+        "raw_original_model_sha256": sha256(raw).hexdigest(),
+    }
 
 
 def _base_receipt() -> dict[str, Any]:
@@ -227,6 +258,43 @@ def verify_public_mirror_volatile(
                     != candidates["702_f" + suffix]["sha256"]):
                     raise ValueError("original Godzilla PNG or animation bytes changed")
             receipt["PNG_and_four_maanim_SHA256_all_unchanged"] = True
+            # The historical WImage source also includes the ORIGINAL
+            # allied 702_f and second-form 702_c native models. Compare
+            # their actual root horizontal orientation to the newly
+            # generated enemy->ally 702_f model without exposing any source
+            # model bytes or assuming the renderer's facing rules.
+            original_family = recovery.FILES
+            if set(KNOWN_SAFE_FILES) != set(original_family):
+                raise ValueError("source family definition changed")
+            stream = PackReader(
+                "WImageDataServer",
+                (source / "WImageDataServer.list").read_bytes(),
+                (source / "WImageDataServer.pack").read_bytes(),
+                region="jp",
+            )
+            original_first = _private_original_model_root_summary(
+                stream.read("702_f.mamodel")[0]
+            )
+            original_second = _private_original_model_root_summary(
+                stream.read("702_c.mamodel")[0]
+            )
+            original_enemy = _private_original_model_root_summary(
+                stream.read("550_e.mamodel")[0]
+            )
+            converted_first = _private_original_model_root_summary(
+                (output["ally"] / "702_f.mamodel").read_bytes()
+            )
+            receipt["original_allied_model_comparison"] = {
+                "original_enemy_550_e": original_enemy,
+                "original_ally_702_f": original_first,
+                "original_second_form_702_c": original_second,
+                "candidate_ally_702_f": converted_first,
+                "candidate_matches_original_friendly_root_scale_sign":
+                    converted_first["horizontal_root_scale_sign"]
+                    == original_first["horizontal_root_scale_sign"],
+                "source_and_candidate_model_contents_preserved_except_recorded_fields":
+                    ally["mamodel_conversion"]["extra_collision_and_model_footer_bytes_preserved"],
+            }
             receipt["private_staging_worked_without_original_game_mutation"] = True
             receipt["status"] = "PASS_ORIGINAL_PUBLIC_ARCHIVE_MATCHED_AND_PRIVATE_PREVIEW_BUILT"
             receipt["last_stage"] = "metadata-only-receipt"
