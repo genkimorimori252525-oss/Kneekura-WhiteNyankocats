@@ -10,6 +10,9 @@ from tools.base_mod.trace_original_virgin_save_gate import (
     COLD_SCENE102_ANCHORS, COLD_SCENE102_DIRECT_CALLS,
     COLD_SCENE102_CONDITIONAL_BRANCHES, _cold_scene_branch_target,
     inspect_original_cold_scene102_to_101,
+    SCENE102_VIRTUAL_FDE, SCENE102_VIRTUAL_SHARED_RELEASE_BLR,
+    SCENE102_RELEASE_WEAK_TARGET, SCENE102_SHARED_DEC_TARGET,
+    inspect_scene102_virtual_indirect_release_sites,
     ONCREATE_RELA_START, ONCREATE_RELA_STEP,
     inspect_original_oncreate_save_status_callback,
 )
@@ -33,6 +36,25 @@ def _oncreate_status_fixture():
         image.extend(bytes(target_size - len(image)))
     for pc, opcode in {**ONCREATE_STATUS_ANCHORS, **COLD_SCENE102_ANCHORS}.items():
         struct.pack_into("<I", image, pc, opcode)
+    def put_original_call(pc, target):
+        delta = target - pc
+        assert delta % 4 == 0
+        struct.pack_into(
+            "<I", image, pc, 0x94000000 | ((delta // 4) & 0x03FFFFFF)
+        )
+    for pc, reg in SCENE102_VIRTUAL_SHARED_RELEASE_BLR.items():
+        shared_release_words = {
+            pc - 16: 0xB50000E0,
+            pc - 12: 0xF9400008 | (reg << 5),
+            pc - 8: 0xAA0003E0 | (reg << 16),
+            pc - 4: 0xF9400908,
+            pc: 0xD63F0100,
+            pc + 4: 0xAA0003E0 | (reg << 16),
+        }
+        for at, word in shared_release_words.items():
+            struct.pack_into("<I", image, at, word)
+        put_original_call(pc - 20, SCENE102_SHARED_DEC_TARGET)
+        put_original_call(pc + 8, SCENE102_RELEASE_WEAK_TARGET)
     for pc, literal in ONCREATE_RTTI.items():
         image[pc:pc + len(literal)] = literal
     for i, (slot, value) in enumerate(ONCREATE_RELOCATIONS.items()):
@@ -217,6 +239,40 @@ class OriginalVirginSaveGateTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(OriginalVirginSaveGateError, "directly writes"):
             inspect_original_cold_scene102_to_101(bytes(synthetic))
+
+    def test_every_scene102_root_indirect_call_is_shared_ref_release(self):
+        witness = inspect_scene102_virtual_indirect_release_sites(
+            bytes(_oncreate_status_fixture())
+        )
+        self.assertEqual(witness["root_BLR_site_count"], 4)
+        self.assertEqual(witness["root_BLR_shared_ref_release_sites"],
+                         ["0x724720", "0x72475c", "0x7247d4", "0x72515c"])
+        self.assertEqual(witness["all_root_BLR_use_object_vtable_offset"], 16)
+        self.assertEqual(witness["root_level_unclassified_BLR_count"], 0)
+        self.assertFalse(witness["root_BLR_are_identified_as_gameplay_save_writers"])
+        self.assertFalse(witness["transitive_or_other_gameplay_save_creators_excluded"])
+        self.assertEqual(SCENE102_VIRTUAL_FDE, (0x724544, 0x725744))
+
+    def test_unknown_extra_root_blr_does_not_pass_as_understood(self):
+        fixture = _oncreate_status_fixture()
+        struct.pack_into("<I", fixture, 0x724908, 0xD63F0100)
+        with self.assertRaisesRegex(
+            OriginalVirginSaveGateError, "unclassified or missing"
+        ):
+            inspect_scene102_virtual_indirect_release_sites(bytes(fixture))
+
+    def test_each_weak_count_release_control_flow_mutation_rejected(self):
+        original = _oncreate_status_fixture()
+        for pc in SCENE102_VIRTUAL_SHARED_RELEASE_BLR:
+            for at in (pc - 20, pc - 16, pc - 12, pc - 8,
+                       pc - 4, pc, pc + 4, pc + 8):
+                with self.subTest(pc=hex(pc), instruction=hex(at)):
+                    mutated = bytearray(original)
+                    mutated[at] ^= 1
+                    with self.assertRaises(OriginalVirginSaveGateError):
+                        inspect_scene102_virtual_indirect_release_sites(
+                            bytes(mutated)
+                        )
 
     def test_source_only_cold_path_does_not_call_save_writer_and_require_existing_data(self):
         receipt = inspect_original_cold_scene102_to_101(
