@@ -29,6 +29,17 @@ ORIGINAL_NATIVE_TEXT_END = 0xAD751C
 ORIGINAL_NATIVE_TEXT_SHA256 = (
     "c696e73028669cfeed82ab3c4ceb216eff5dddd919101c3b4ec488580ecb6b15"
 )
+# Original JP15.7.1 native ELF bounded source section hashes. Unlike
+# rebuilt .dynstr / .dynamic, these must retain their exact bytes and their
+# exact relative VMA spacing under any permitted uniform LIEF rebase.
+ORIGINAL_PINNED_MAPPED_RANGES = {
+    "gnu_note": (0x2D0, 0x24, "3514bdcd4f01ba1d879537a9c00a27e34b604118b470409588156f9c0e1116c1"),
+    "rodata": (0x18F2C0, 0x6E784, "2e471f7dfcdfb9bb5e2bac68ab3d400ccc318aaab8daf0989a6526dc92126852"),
+    "eh_frame": (0x22ABC0, 0xEC7B0, "0114d3eea2ed0315707957afa0016eb4f702e649558dd7097cc01deed7a92fec"),
+    "lcxx_override": (0xAD751C, 0x10C, "a761a6710c195e92a9e8395970814288089fcedb11d2c2c78d156eacc7d28c62"),
+    "plt": (0xAD7630, 0x7020, "2ed884a4ab2697036f71cd3255f000463cca6d80311faa7427cbf93ba0738050"),
+}
+ORIGINAL_MAX_ALLOWED_UNIFORM_VMA_REBASE = 0x10000
 # Exactly the source words also pinned by the optional research hook.
 ORIGINAL_SCENE_ANCHORS = {
     0x31755C: 0xD10143FF,  # static JNI MyActivity.appUpdateDraw()V
@@ -116,7 +127,7 @@ def _mapped_opcode(native: bytes, loads: list[dict[str, int]], vma: int) -> int:
 
 
 def _original_executable_text_sha256(
-    native: bytes, loads: list[dict[str, int]],
+    native: bytes, loads: list[dict[str, int]], *, vma_shift: int = 0,
 ) -> str:
     """Hash the FULL original JP .text through unambiguous executable PT_LOAD.
 
@@ -126,7 +137,8 @@ def _original_executable_text_sha256(
     mappings or a single byte's drift. No original text is logged, returned
     or persisted; only its SHA256 appears in metadata.
     """
-    start, end = ORIGINAL_NATIVE_TEXT_START, ORIGINAL_NATIVE_TEXT_END
+    start = ORIGINAL_NATIVE_TEXT_START + vma_shift
+    end = ORIGINAL_NATIVE_TEXT_END + vma_shift
     if start % 4 or end % 4 or start >= end:
         raise OriginalSceneNativeImageError("original .text VMA bounds invalid")
     mapped = [
@@ -157,6 +169,38 @@ def _original_executable_text_sha256(
     if not _bounded_offset(len(native), at, size):
         raise OriginalSceneNativeImageError("original executable .text extent unsafe")
     return sha256(native[at:at + size]).hexdigest()
+
+
+def _pinned_mapped_range_sha256(
+    native: bytes, loads: list[dict[str, int]], *,
+    vma: int, size: int, require_exec: bool | None = None,
+) -> str:
+    """Use ELF PT_LOAD mappings, never raw file offsets as shifted VMAs.
+
+    Reject overlapping/unbacked mappings or unexpected permissions.
+    No native source bytes are exported, only source SHA-256 receipts.
+    """
+    if (type(vma) is not int or type(size) is not int or size <= 0
+        or vma < 0 or vma + size > (1 << 64)):
+        raise OriginalSceneNativeImageError("native source mapped range invalid")
+    matched = [
+        seg for seg in loads
+        if seg["vaddr"] <= vma
+        and vma + size <= seg["vaddr"] + seg["filesz"]
+    ]
+    if len(matched) != 1:
+        raise OriginalSceneNativeImageError("original native source range unmapped")
+    seg = matched[0]
+    for other in loads:
+        if (other is not seg and other["vaddr"] < vma + size
+            and vma < other["vaddr"] + other["filesz"]):
+            raise OriginalSceneNativeImageError("original native source mappings overlap")
+    if require_exec is not None and bool(seg["flags"] & 1) != require_exec:
+        raise OriginalSceneNativeImageError("original native source mapping permissions drift")
+    offset = seg["offset"] + (vma - seg["vaddr"])
+    if not _bounded_offset(len(native), offset, size):
+        raise OriginalSceneNativeImageError("original native source range outside ELF")
+    return sha256(native[offset:offset + size]).hexdigest()
 
 
 def _dynsym_export_vma(native: bytes, symbol: str) -> int:
@@ -224,29 +268,53 @@ def verify_mapped_original_scene_image(native: bytes) -> dict[str, Any]:
     if build_id != ORIGINAL_JP1571_BUILD_ID:
         raise OriginalSceneNativeImageError("original JP15.7.1 ELF GNU Build ID drift")
     loads = _program_headers(native)
+    installed_draw_vma = _dynsym_export_vma(native, ORIGINAL_DRAW_SYMBOL)
+    vma_shift = installed_draw_vma - ORIGINAL_DRAW_VMA
+    if (vma_shift < 0
+        or vma_shift > ORIGINAL_MAX_ALLOWED_UNIFORM_VMA_REBASE
+        or vma_shift % 0x1000 != 0):
+        raise OriginalSceneNativeImageError(
+            "original JNI draw export has unsupported nonuniform VMA shift"
+        )
     for vma, expected in ORIGINAL_SCENE_ANCHORS.items():
-        actual = _mapped_opcode(native, loads, vma)
+        relocated_pc = vma + vma_shift
+        actual = _mapped_opcode(native, loads, relocated_pc)
         if actual != expected:
             raise OriginalSceneNativeImageError(
-                f"original mapped ARM64 instruction drift at 0x{vma:x}"
+                f"original mapped ARM64 instruction drift at 0x{relocated_pc:x}"
             )
-    if _dynsym_export_vma(native, ORIGINAL_DRAW_SYMBOL) != ORIGINAL_DRAW_VMA:
-        raise OriginalSceneNativeImageError("original JNI draw export VMA changed")
-    full_text_digest = _original_executable_text_sha256(native, loads)
+    full_text_digest = _original_executable_text_sha256(
+        native, loads, vma_shift=vma_shift
+    )
     if full_text_digest != ORIGINAL_NATIVE_TEXT_SHA256:
         raise OriginalSceneNativeImageError(
             "complete original JP15.7.1 executable .text SHA256 drift"
         )
+    verified_nontext = {}
+    for label, (vma, size, original_sha) in ORIGINAL_PINNED_MAPPED_RANGES.items():
+        actual = _pinned_mapped_range_sha256(
+            native, loads, vma=vma + vma_shift, size=size,
+            require_exec=True,
+        )
+        if actual != original_sha:
+            raise OriginalSceneNativeImageError(
+                "original JP15.7.1 mapped source section SHA256 drift: " + label
+            )
+        verified_nontext[label] = actual
     return {
         "status": "PINNED_REPACKAGED_JP1571_ORIGINAL_SCENE_VMA_AND_EXPORT_VERIFIED",
         "mapped_source_native_sha256": sha256(native).hexdigest(),
         "pinned_original_build_id": build_id,
-        "original_JNI_draw_export_vma": f"0x{ORIGINAL_DRAW_VMA:x}",
+        "original_JNI_draw_export_vma": f"0x{installed_draw_vma:x}",
+        "original_source_uniform_VMA_rebase_bytes": vma_shift,
+        "uniform_rebase_runtime_supported_by_device": False,
+        "verified_nontext_mapped_source_sections": verified_nontext,
         "verified_executable_instruction_anchors": len(ORIGINAL_SCENE_ANCHORS),
         "complete_original_text_bytes_verified":
             ORIGINAL_NATIVE_TEXT_END - ORIGINAL_NATIVE_TEXT_START,
         "complete_original_text_sha256": full_text_digest,
         "all_original_executable_text_bytes_unchanged_static": True,
+        "original_JP_build_data_only_repacked_dynamic_sections_allowed": True,
         "repacked_original_native_hook_layout_safe_static": True,
         "original_account_free_player_SAVE_generated": False,
         "actual_Android_inline_hook_attach_verified": False,

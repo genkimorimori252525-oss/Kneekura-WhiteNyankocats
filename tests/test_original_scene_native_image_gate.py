@@ -17,6 +17,7 @@ from zipfile import ZipFile
 from tools.base_mod import original_scene_native_image_gate as image_gate
 from tools.base_mod.original_scene_native_image_gate import (
     ORIGINAL_NATIVE_TEXT_START, ORIGINAL_NATIVE_TEXT_END,
+    ORIGINAL_PINNED_MAPPED_RANGES,
     ORIGINAL_JP1571_BUILD_ID, ORIGINAL_DRAW_SYMBOL,
     ORIGINAL_DRAW_VMA, ORIGINAL_SCENE_ANCHORS,
     OriginalSceneNativeImageError, verify_mapped_original_scene_image,
@@ -26,7 +27,8 @@ from tools.base_mod.original_scene_native_image_gate import (
 
 def fixture() -> bytes:
     data = bytearray(max(max(ORIGINAL_SCENE_ANCHORS),
-                         ORIGINAL_NATIVE_TEXT_END) + 0x1000)
+                         ORIGINAL_NATIVE_TEXT_END,
+                         0xAD7630 + 0x7020) + 0x1000)
     data[:4] = b"\x7fELF"
     data[4:6] = b"\x02\x01"  # ELF64 little
     struct.pack_into("<HHI", data, 16, 3, 183, 1)  # ET_DYN, AArch64
@@ -76,6 +78,18 @@ class OriginalSceneSourceRepackPreflightTests(unittest.TestCase):
         )
         original_pin.start()
         cls.addClassCleanup(original_pin.stop)
+        fixture_source_ranges = {
+            name: (vma, size, sha256(
+                cls.original_fixture[vma:vma + size]
+            ).hexdigest())
+            for name, (vma, size, _) in ORIGINAL_PINNED_MAPPED_RANGES.items()
+        }
+        ranges_pin = patch.object(
+            image_gate, "ORIGINAL_PINNED_MAPPED_RANGES",
+            fixture_source_ranges,
+        )
+        ranges_pin.start()
+        cls.addClassCleanup(ranges_pin.stop)
 
     def test_unchanged_synthetic_pinned_arm64_mapping_and_export(self):
         result = verify_mapped_original_scene_image(self.original_fixture)
@@ -140,6 +154,47 @@ class OriginalSceneSourceRepackPreflightTests(unittest.TestCase):
             "c696e73028669cfeed82ab3c4ceb216eff5dddd919101c3b4ec488580ecb6b15",
         )
 
+    def test_uniform_0x1000_native_rebase_keeps_original_mapped_content(self):
+        # Synthetic extra first memory page: unchanged byte source is mapped
+        # at VMA+0x1000 and JNI dynsym has the corresponding relocated value.
+        shifted = bytearray(self.original_fixture)
+        load_vma = struct.unpack_from("<Q", shifted, 0x40 + 16)[0]
+        struct.pack_into("<Q", shifted, 0x40 + 16, load_vma + 0x1000)
+        struct.pack_into("<Q", shifted, 0x400 + 24 + 8,
+                         ORIGINAL_DRAW_VMA + 0x1000)
+        report = verify_mapped_original_scene_image(bytes(shifted))
+        self.assertTrue(report["repacked_original_native_hook_layout_safe_static"])
+        self.assertEqual(report["original_source_uniform_VMA_rebase_bytes"], 0x1000)
+        self.assertEqual(report["original_JNI_draw_export_vma"],
+                         hex(ORIGINAL_DRAW_VMA + 0x1000))
+        self.assertFalse(report["uniform_rebase_runtime_supported_by_device"])
+        self.assertFalse(report["original_account_free_player_SAVE_generated"])
+
+    def test_rebased_native_non_text_bytes_still_must_match_original(self):
+        copy = bytearray(self.original_fixture)
+        copy[0x1F0000] ^= 1  # original .rodata outside .text
+        with self.assertRaisesRegex(
+            OriginalSceneNativeImageError, "mapped source section SHA256 drift"
+        ):
+            verify_mapped_original_scene_image(bytes(copy))
+
+    def test_rebased_jni_without_rebased_code_rejected(self):
+        copy = bytearray(self.original_fixture)
+        struct.pack_into("<Q", copy, 0x400 + 24 + 8,
+                         ORIGINAL_DRAW_VMA + 0x1000)
+        with self.assertRaises(OriginalSceneNativeImageError):
+            verify_mapped_original_scene_image(bytes(copy))
+
+    def test_unaligned_or_excessive_code_rebase_rejected(self):
+        for delta in (-0x1000, 123, 0x11000):
+            copy = bytearray(self.original_fixture)
+            struct.pack_into("<Q", copy, 0x400 + 24 + 8,
+                             ORIGINAL_DRAW_VMA + delta)
+            with self.subTest(delta=delta), self.assertRaisesRegex(
+                OriginalSceneNativeImageError, "unsupported nonuniform VMA shift"
+            ):
+                verify_mapped_original_scene_image(bytes(copy))
+
     def test_repacked_one_opcode_changed_is_refused(self):
         for at in ORIGINAL_SCENE_ANCHORS:
             with self.subTest(offset=hex(at)):
@@ -154,7 +209,7 @@ class OriginalSceneSourceRepackPreflightTests(unittest.TestCase):
     def test_changed_jni_export_name_or_value_is_refused_even_when_opcodes_match(self):
         corrupt_export = bytearray(self.original_fixture)
         corrupt_export[0x400+24+8] ^= 1  # st_value low byte
-        with self.assertRaisesRegex(OriginalSceneNativeImageError, "JNI draw export VMA"):
+        with self.assertRaises(OriginalSceneNativeImageError):
             verify_mapped_original_scene_image(bytes(corrupt_export))
         corrupt_name = bytearray(self.original_fixture)
         corrupt_name[0x501] ^= 1
