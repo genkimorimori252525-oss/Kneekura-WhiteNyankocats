@@ -1157,7 +1157,9 @@
       "proof_no_deeper_or_indirect_save_exists": false,
       "execution_type": "private read-only ELF FDE and direct BL source graph exploration, not instrumentation",
       "original_android_gameplay_boot_verified": false
-    }
+    },
+    "root_virtual_all_four_BLR_classified_as_shared_reference_cleanup": true,
+    "transitive_gameplay_new_player_creator_found": false
   },
   "original_complete_direct_state_initializer_caller_census": {
     "status": "EXHAUSTIVE_DIRECT_ARM64_BL_SITES_FOR_PINNED_INITIALIZER_AND_RESET",
@@ -1205,5 +1207,52 @@
     "synthetic_regression": "tests/test_original_player_init_callers.py",
     "source_runtime_evidence_type": "static original SHA-validated ARM64 and literal xrefs; no device runtime",
     "owner_APK_binary_SAVE_pack_account_or_keys_modified": false
+  },
+  "original_scene102_root_BLR_categorization": {
+    "owner_native_sha256": "333d2974ab2ff881fd70087fd62dea7d12d82addbc55cab2f2a675ad67e3a7e2",
+    "exact_original_method": "MyApplication vtable+0x38 0x724544..0x725744 (ELF unwind/FDE)",
+    "original_BLRS": [
+      "0x724720",
+      "0x72475c",
+      "0x7247d4",
+      "0x72515c"
+    ],
+    "all_four_same_control_block_pattern": true,
+    "arm64_before_BLR": "shared refcount decrement 0xad3520; if last reference load shared object's vtable+0x10 and BLR",
+    "arm64_after_BLR": "original shared weak release 0xad76b0",
+    "all_four_direct_operand_patterns_pinned_and_verified_against_original_elf": true,
+    "unclassified_indirect_BLR_inside_this_method": 0,
+    "all_other_transitive_or_indirect_original_save_writers_excluded": false,
+    "new_game_save_creation_by_any_bounded_BLR_confirmed": false,
+    "gameplay_runtime_unmodified": true,
+    "code": "tools/base_mod/trace_original_virgin_save_gate.py::inspect_scene102_virtual_indirect_release_sites",
+    "tests": "tests/test_original_virgin_save_gate.py",
+    "original_native_scene_run_observed_on_device": false
+  },
+  "original_original_host_passive_local_boot_observation": {
+    "status": "SOURCE_IMPLEMENTED_DEVICE_CAPTURE_NOT_YET_PERFORMED",
+    "exact_allowed_android_package": "jp.kn.local.battlecats",
+    "source": "tools/base_mod/collect_original_local_first_boot.py",
+    "source_java": "bridge/java/MyActivity.java.in",
+    "tests": "tests/test_collect_original_local_first_boot.py;tests/test_static_http_bridge.py",
+    "device_commands": [
+      "adb shell pm path jp.kn.local.battlecats",
+      "adb shell dumpsys package jp.kn.local.battlecats",
+      "adb shell pidof jp.kn.local.battlecats",
+      "adb logcat -d -v threadtime --pid=PID -s KNEEKURA_STATIC_HTTP:I *:S"
+    ],
+    "requires_already_running_original_engine_isolated_research_package": true,
+    "rejects_internet_permission_and_untrusted_package": true,
+    "only_logs_allowlisted_original_Java_Metadata": true,
+    "HTTP_denial_event_exposes_request_URL_or_body": false,
+    "saves_only_sanitized_aggregates_under_private": true,
+    "does_not_launch_install_force_stop_uninstall_clear_data_or_logs": true,
+    "does_not_read_or_write_game_SAVE_contents_or_software": true,
+    "can_independently_verify_original_native_scene102_or_101": false,
+    "can_independently_verify_native_SAVED_created_valid_and_reloaded": false,
+    "can_independently_prove_no_sdk_ipc_network": false,
+    "original_device_capture_executed": false,
+    "original_offline_native_game_playable_verified": false,
+    "original_private_APK_player_SAVE_signing_key_modified": false
   }
 }
