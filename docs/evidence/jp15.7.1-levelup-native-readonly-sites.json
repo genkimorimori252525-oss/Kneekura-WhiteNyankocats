@@ -1562,5 +1562,51 @@
     ],
     "test_tooling": "https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/actions/runs/38063113857",
     "owner_local_metadata_only_proof": "kneekura-original-six-split-private-static-proof-20261011.json"
+  },
+  "original_AppLaunchLoad_read_status_native_observer_2026_10_11": {
+    "status": "ORIGINAL_APP_LAUNCH_SAVE_READ_SOURCED_AND_RESEARCH_INSTRUMENTED_RUNTIME_NOT_VERIFIED",
+    "provenance": "exact user-owned JP15.7.1 original ARM64 libnative-lib.so read-only",
+    "original_native_sha256": "333d2974ab2ff881fd70087fd62dea7d12d82addbc55cab2f2a675ad67e3a7e2",
+    "source_19_opcode_anchors_checked_against_actual_native": 19,
+    "original_ram_initializer_entry": "0x719044",
+    "original_AppLaunchLoad_worker_entry": "0x492b80",
+    "original_AppLaunchLoad_normal_source_data_initializer": "0x492bd4 -> 0x9bbbf4",
+    "original_AppLaunchLoad_save_read_caller": "0x492be8",
+    "original_app_save_reader_entry": "0x9bb764",
+    "original_app_save_reader_initial_opcode": "0xd102c3ff",
+    "original_read_BL_source_opcode": "0x9414a2df",
+    "original_post_read_branch": "0x492bec TBZ W0 #0, failure -> 0x492d28",
+    "result_abi": "x0 pointer original state context; w0 bit0 success or failed",
+    "source_direct_SAVE_reader_callsite_census": "0x492be8 sole direct BL caller per existing pinned source census",
+    "instrumentation": {
+      "type": "isolated original-research Android ARM64 optional ShadowHook source; FIVE source-pinned hooks total (scene, getter, predicate, writer, reader)",
+      "source": "native/kneekura-shim/src/kneekura_original_scene_witness.c",
+      "collector": "tools/base_mod/collect_original_local_first_boot.py",
+      "fixed_log_events_only": [
+        "original-native-app-launch-save-read-v1 accepted",
+        "original-native-app-launch-save-read-v1 failed"
+      ],
+      "C_proxies_call_original_first_and_preserve_W0_unchanged": true,
+      "record_original_context_or_SAVE_bytes": false,
+      "default_shipping_shim_feature_enabled": false,
+      "root_research_package": "jp.kn.local.battlecats",
+      "all_or_none_native_hooks_and_exact_pinned_BuildID_19_opcodes": true,
+      "native_source_presign_image_gate_opcodes": 19,
+      "collector_filters_unrecognized_pid_or_log_content": true,
+      "collector_conflicting_outcomes_are_not_success": true
+    },
+    "normal_app_launch_native_SAVE_read_status_seen_on_owner_android": false,
+    "actual_legitimate_fresh_local_SAVE_writer_trigger_implemented": false,
+    "fresh_local_player_authority_initialized_and_reloaded": false,
+    "actual_original_native_Level60_and_XP_CatsEye_UI_tested": false,
+    "independent_ZERO_network_SDK_IPC_egress_verified": false,
+    "original_stage_download_35_TSVs_and_other_assets_runtime_accepted": false,
+    "signed_six_split_static_original_game_executable_present_from_prior_proof": true,
+    "original_owner_game_APK_SAVE_account_modified": false,
+    "source_code_regressions": [
+      "tests/test_original_native_scene_witness.py",
+      "tests/test_original_scene_native_image_gate.py",
+      "tests/test_collect_original_local_first_boot.py"
+    ]
   }
 }
