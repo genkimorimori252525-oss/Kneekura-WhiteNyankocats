@@ -1045,6 +1045,34 @@
     "real_original_android_virgin_boot_or_restart_success": false,
     "original_saved_player_data_or_account_modified": false,
     "trace_code": "tools/base_mod/trace_original_virgin_save_gate.py",
-    "regression": "tests/test_original_virgin_save_gate.py"
+    "regression": "tests/test_original_virgin_save_gate.py",
+    "other_native_game_state_initializers_have_been_found": true,
+    "title_reset_path_cannot_be_assumed_legitimate_fresh_start": true,
+    "original_legitimate_no_account_fresh_game_path_still_unproven": true
+  },
+  "original_native_player_zero_default_and_reset_save_paths": {
+    "source_sha256": "333d2974ab2ff881fd70087fd62dea7d12d82addbc55cab2f2a675ad67e3a7e2",
+    "status": "ORIGINAL_NATIVE_PLAYER_INITIALIZER_AND_TITLE_RESET_SAVER_STATIC",
+    "shared_state_initializer": "0x719044",
+    "original_MyApplication_vtable_placement": "0xafd4b8 R_AARCH64_RELATIVE->0x71f2d4; 0x71f338 BL->0x719044",
+    "original_xp_reset": "0x719434 w1=0; 0x71943c/0x719440 context+0xc3b8; 0x719444 encoded setter 0x9d86e4",
+    "original_current_level_reset": "0x71a1e0 current-level context+0x47ba4; 882 x 8-byte encoded-zero writes 0x71a214",
+    "original_cap_increment_reset": "0x71a4fc native cap-increment context+0x3ad80c; 882 x 8-byte encoded-zero writes 0x71a510",
+    "all_three_offsets_match_original_save_serializer": "0x8b48c8/0x8b4e38/0x8b630c documented earlier",
+    "subsystem_initializer": "0x89385c calls 0x719044 and 0x63b080/0x63b4bc/0x63b71c/0x63b8a8/0x63aa6c",
+    "title_event_original_RTTI": "MyApplication::TitleUpdate from 0xb09690/0xb096d8",
+    "title_own_dialog_source": "restart_reflect literal 0x191b9a, loaded 0x938d2c/0x938d30",
+    "title_callback_event5_reset": "0x938cc0 CMP5; 0x938cc4 BEQ; 0x938d18 CMP mode1; 0x938d28 -> 0x933fc8",
+    "title_initializer_to_original_save": "0x934028 -> 0x719044; 0x9345a4 -> 0x8b9fc8 SAVE_DATA writer",
+    "title_event5_mode1_save": "0x938de0 tail B -> 0x8b9fc8",
+    "separate_services_recovery_RTTI": "MyGameServicesDelegate 0xafea80; method 0xafea00 -> 0x749dd0",
+    "services_state9_reset_save": "0x749e70 CMP9; 0x749e78 TBZ skip; 0x749e80 -> 0x89385c; 0x749eb0 -> 0x8b9fc8",
+    "first_run_player_profile_not_assumed_from_title_or_services": true,
+    "full_original_game_fresh_local_authority_or_clean_first_boot_verified": false,
+    "original_native_game_playable_offline_lv60_xp_catseye_max_i_liveops_combat_reboot_verified": false,
+    "original_pack_or_apk_or_player_save_modified": false,
+    "implementation": "tools/base_mod/trace_original_player_init_save.py; tools/base_mod/trace_original_levelup_native.py",
+    "regression": "tests/test_original_player_init_save.py",
+    "original_private_binary_committed": false
   }
 }
