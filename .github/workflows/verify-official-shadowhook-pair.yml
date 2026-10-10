@@ -1,0 +1,94 @@
+name: Verify official ShadowHook two-library research pair (public only)
+on:
+  push:
+    branches:
+      - "jolly/**"
+    paths:
+      - ".github/workflows/verify-official-shadowhook-pair.yml"
+      - "tools/base_mod/prepare_original_scene_witness.py"
+      - "tests/test_original_scene_witness_packaging.py"
+      - "tools/base_mod/build_owned_static_http_bridge.py"
+      - "tools/base_mod/verify_static_http_bridge.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-exact-public-aar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check official ByteDance 2.0.1 AAR and six synthetic splits, no owner assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib
+          import json
+          import tempfile
+          from pathlib import Path
+          from urllib.request import urlopen
+          from zipfile import ZipFile
+          from tools.base_mod.prepare_original_scene_witness import (
+              _official_shadowhook_v201_arm64_pair,
+              include_reviewed_shadowhook_in_private_split_set,
+              APPROVED_OFFICIAL_SHADOWHOOK_V201_AAR_SHA256,
+              APPROVED_OFFICIAL_SHADOWHOOK_V201_ARM64_SHA256,
+              EXTRA_NATIVE_ENTRY,
+              EXTRA_NATIVE_COMPANION_ENTRY,
+          )
+          from tools.base_mod.repack import JP_15_7_1_SPLITS
+
+          url = "https://repo.maven.apache.org/maven2/com/bytedance/android/shadowhook/2.0.1/shadowhook-2.0.1.aar"
+          with tempfile.TemporaryDirectory(prefix="kn-official-public-pair-") as td:
+              folder = Path(td)
+              archive_path = folder / "public-shadowhook-v201.aar"
+              with urlopen(url, timeout=40) as response:
+                  assert response.status == 200
+                  body = response.read(40 * 1024 * 1024 + 1)
+              assert len(body) <= 40 * 1024 * 1024
+              assert hashlib.sha256(body).hexdigest() == APPROVED_OFFICIAL_SHADOWHOOK_V201_AAR_SHA256
+              archive_path.write_bytes(body)
+              main, companion, helper_sha = _official_shadowhook_v201_arm64_pair(archive_path)
+              assert hashlib.sha256(main).hexdigest() == APPROVED_OFFICIAL_SHADOWHOOK_V201_ARM64_SHA256
+              assert hashlib.sha256(companion).hexdigest() == helper_sha
+              source = folder / "six-synthetic-originals"
+              target = folder / "six-synthetic-pair-staged"
+              source.mkdir()
+              for split in JP_15_7_1_SPLITS:
+                  with ZipFile(source / split, "w") as z:
+                      z.writestr("AndroidManifest.xml", b"SYNTHETIC_TEST_ONLY")
+                      z.writestr("assets/stable.bin", b"NO_OWNED_GAME_DATA")
+              report = include_reviewed_shadowhook_in_private_split_set(
+                  source, target, official_aar=archive_path,
+              )
+              assert report["only_extra_entries"] == [
+                  EXTRA_NATIVE_ENTRY, EXTRA_NATIVE_COMPANION_ENTRY
+              ]
+              for split in JP_15_7_1_SPLITS:
+                  with ZipFile(target / split) as z:
+                      assert z.read("assets/stable.bin") == b"NO_OWNED_GAME_DATA"
+                      if split == "split_config.arm64_v8a.apk":
+                          assert z.read(EXTRA_NATIVE_ENTRY) == main
+                          assert z.read(EXTRA_NATIVE_COMPANION_ENTRY) == companion
+                      else:
+                          assert EXTRA_NATIVE_ENTRY not in z.namelist()
+                          assert EXTRA_NATIVE_COMPANION_ENTRY not in z.namelist()
+              print(json.dumps({
+                  "official_aar_sha256": APPROVED_OFFICIAL_SHADOWHOOK_V201_AAR_SHA256,
+                  "official_main_elf_sha256": APPROVED_OFFICIAL_SHADOWHOOK_V201_ARM64_SHA256,
+                  "official_companion_elf_sha256": helper_sha,
+                  "original_splits_used": False,
+                  "owner_save_used": False,
+                  "six_synthetic_splits_checked": len(JP_15_7_1_SPLITS),
+                  "native_pair_present": True,
+                  "android_runtime_test": False,
+              }, sort_keys=True))
+          PY
