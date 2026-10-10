@@ -39,6 +39,7 @@ from tools.base_mod.original_scene_native_image_gate import (
 from tools.base_mod.prepare_original_scene_witness import (
     check_original_scene_witness_build_contract,
     include_reviewed_shadowhook_in_private_split_set,
+    APPROVED_OFFICIAL_SHADOWHOOK_V201_ARM64_SHA256,
 )
 from tools.base_mod.verify_static_http_bridge import verify_static_http_bridge
 
@@ -58,6 +59,7 @@ def build_owned_static_http_bridge(
     research_shadowhook_so: Path | None = None,
     research_shadowhook_sha256: str | None = None,
     research_virgin_save_trial: bool = False,
+    research_shadowhook_aar: Path | None = None,
     keypass: str | None = None,
     zipalign: str | None = None,
     apksigner: str | None = None,
@@ -95,6 +97,7 @@ def build_owned_static_http_bridge(
         shim=shim, shadowhook=research_shadowhook_so,
         shadowhook_sha256=research_shadowhook_sha256,
         virgin_save_trial=research_virgin_save_trial,
+        shadowhook_aar=research_shadowhook_aar,
     )
     export_zip = export_zip.resolve()
     shim = shim.resolve()
@@ -126,11 +129,10 @@ def build_owned_static_http_bridge(
     )
     source_for_flavor = bootstrap
     native_witness_ledger = None
-    if research_shadowhook_so is not None:
+    if research_shadowhook_aar is not None:
         native_witness_ledger = include_reviewed_shadowhook_in_private_split_set(
             bootstrap, scene_paired,
-            shadowhook=research_shadowhook_so,
-            expected_sha256=research_shadowhook_sha256,
+            official_aar=research_shadowhook_aar,
             require_official_v201=research_virgin_save_trial,
         )
         source_for_flavor = scene_paired
@@ -194,7 +196,14 @@ def build_owned_static_http_bridge(
         replay_enabled=enable_backup_offline_replay,
         research_deny_internet=research_deny_internet,
         research_scene_witness=witness_contract["research_scene_witness_build_enabled"],
-        research_shadowhook_sha256=research_shadowhook_sha256,
+        research_shadowhook_sha256=(
+            APPROVED_OFFICIAL_SHADOWHOOK_V201_ARM64_SHA256
+            if native_witness_ledger is not None else None
+        ),
+        research_shadowhook_nothing_sha256=(
+            native_witness_ledger["reviewed_native_companion_sha256"]
+            if native_witness_ledger is not None else None
+        ),
     )
 
     ledgers = {
@@ -294,10 +303,12 @@ def main() -> int:
     parser.add_argument("--storepass", required=True)
     parser.add_argument("--keypass")
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--research-shadowhook-aar", type=Path,
+                        help="Owner-private official Maven 2.0.1 AAR (SHA pinned), includes BOTH ARM64 native .so")
     parser.add_argument("--research-shadowhook-so", type=Path,
-                        help="Opt-in owned arm64 hook library, ONLY local-research")
+                        help="REJECTED legacy single-library mode; use --research-shadowhook-aar")
     parser.add_argument("--research-shadowhook-sha256",
-                        help="Explicit SHA256 of reviewed owner-private libshadowhook.so")
+                        help="REJECTED legacy single-library SHA; use --research-shadowhook-aar")
     parser.add_argument("--research-virgin-save-trial", action="store_true",
                         help="EXPERIMENTAL: only clean isolated local no-INTERNET original new player")
     parser.add_argument("--enable-backup-offline-replay", action="store_true")
@@ -334,6 +345,7 @@ def main() -> int:
         research_shadowhook_so=args.research_shadowhook_so,
         research_shadowhook_sha256=args.research_shadowhook_sha256,
         research_virgin_save_trial=args.research_virgin_save_trial,
+        research_shadowhook_aar=args.research_shadowhook_aar,
         zipalign=args.zipalign,
         apksigner=args.apksigner,
         javac=args.javac,
