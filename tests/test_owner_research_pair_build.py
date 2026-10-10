@@ -33,6 +33,8 @@ class OriginalResearchSameSignerHandoffTests(unittest.TestCase):
         self.assertIn("--root', $repo", source)
         self.assertIn("original_save_writer_enabled -ne $false", source)
         self.assertIn("PreviouslySignedBaseApk", source)
+        self.assertIn("PASSIVE_SHIM_BUILD_SOURCE_RECEIPT.json", source)
+        self.assertIn("Copy-Item -LiteralPath $receiptPath -Destination $copiedReceipt", source)
         self.assertIn("SignerDigest $existingBase $apksigner", source)
         self.assertIn("SignerDigest $newBase $apksigner", source)
         self.assertIn("if ($before -ne $after)", source)
