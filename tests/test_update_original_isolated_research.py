@@ -20,11 +20,13 @@ from tools.base_mod import update_original_isolated_research as updater
 
 class UpdateFakeRunner(FakeRunner):
     def __init__(self, *args, live_process=False, install_timeout=False,
-                 candidate_mutation=None, **kwargs):
+                 candidate_mutation=None, install_output="Success\\n",
+                 **kwargs):
         super().__init__(*args, **kwargs)
         self.live_process = live_process
         self.install_timeout = install_timeout
         self.candidate_mutation = candidate_mutation
+        self.install_output = install_output
         self.installs = []
         self.did_mutate = False
 
@@ -44,7 +46,7 @@ class UpdateFakeRunner(FakeRunner):
                 raise AssertionError("Only exact six-split replace allowed")
             if self.install_timeout:
                 raise subprocess.TimeoutExpired(command, 180)
-            return subprocess.CompletedProcess(command, 0, "Success\n", "")
+            return subprocess.CompletedProcess(command, 0, self.install_output, "")
         # Try to substitute a candidate split *after* the signer preflight
         # had started. Installation must detect its SHA changed and abort.
         if (self.candidate_mutation is not None and not self.did_mutate
@@ -96,6 +98,23 @@ class ApprovedOriginalResearchUpdateTests(unittest.TestCase):
             self.assertNotIn(" pm clear ", args)
             self.assertNotIn(" force-stop ", args)
             self.assertNotIn(" -d ", args)
+
+    def test_real_adb_progress_then_final_success_is_accepted_but_not_playable(self):
+        runner = UpdateFakeRunner(install_output="Performing Push Install\\nSuccess\\n")
+        receipt, _ = self.execute(runner=runner)
+        self.assertEqual(receipt["status"],
+                         "SIX_SPLIT_UPDATE_CONFIRMED_SIGNER_ONLY_NOT_GAMEPLAY")
+        self.assertEqual(len(runner.installs), 1)
+        self.assertTrue(receipt["original_gameplay_black_screen_fix_unverified"])
+
+    def test_trailing_installer_failure_is_never_treated_as_success(self):
+        runner = UpdateFakeRunner(install_output="Success\\nFailure [INSTALL_FAILED]\\n")
+        with self.assertRaisesRegex(updater.ResearchUpdateBlocked,
+                                    "did not finish with exact Success"):
+            self.execute(runner=runner)
+        self.assertEqual(len(runner.installs), 1)
+        self.assertFalse(list((self.fixtures.repo/"private").glob(
+            "isolated-sixsplit-update-*.json")))
 
     def test_active_research_process_blocks_without_killing_it(self):
         runner = UpdateFakeRunner(live_process=True)
