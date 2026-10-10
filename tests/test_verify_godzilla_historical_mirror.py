@@ -206,6 +206,41 @@ class EphemeralRealGodzillaMirrorTests(unittest.TestCase):
                     Path(root) / "bad.json", very_large
                 )
 
+    def test_real_model_orientation_summary_is_numeric_and_never_exports_model_body(self):
+        source = (
+            b"[modelanim:model2]\n4\n2\n"
+            b"-1,-1,0,0,0,0,0,0,1790,1000,0,1000,0,OriginalRoot\n"
+            b"0,550,1,0,12,13,0,0,1000,1000,0,1000,0,OriginalHead\n"
+        )
+        positive = mirror._private_original_model_root_summary(source)
+        self.assertEqual(positive["horizontal_root_scale_sign"], 1)
+        self.assertEqual(positive["horizontal_root_scale_abs"], 1790)
+        self.assertEqual(positive["node_count"], 2)
+        self.assertNotIn("OriginalHead", repr(positive))
+        mirrored = source.replace(b",1790,1000", b",-1790,1000")
+        negative = mirror._private_original_model_root_summary(mirrored)
+        self.assertEqual(negative["horizontal_root_scale_sign"], -1)
+        self.assertEqual(negative["horizontal_root_scale_abs"], 1790)
+        self.assertNotEqual(
+            positive["raw_original_model_sha256"],
+            negative["raw_original_model_sha256"],
+        )
+
+    def test_model_orientation_summary_refuses_bad_root_or_zero_scale(self):
+        clean = (
+            b"[modelanim:model2]\n4\n1\n"
+            b"-1,-1,0,0,0,0,0,0,1250,1000,0,1000,0,Root\n"
+        )
+        for blob in (
+            b"not a model",
+            clean.replace(b"-1,-1,0", b"2,-1,0"),
+            clean.replace(b",1250,1000", b",0,1000"),
+            clean[:16],
+        ):
+            with self.subTest(source=blob[:19]):
+                with self.assertRaises(ValueError):
+                    mirror._private_original_model_root_summary(blob)
+
     def test_failure_codes_are_bounded_and_do_not_retain_paths_or_urls(self):
         cases = [
             ("JP15.7.1 size/MD5 mismatch: MNumberServer.list",
