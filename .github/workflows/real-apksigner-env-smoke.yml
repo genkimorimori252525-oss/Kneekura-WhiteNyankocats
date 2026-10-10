@@ -1,0 +1,69 @@
+name: Real public synthetic APK signer environment smoke
+on:
+  push:
+    branches:
+      - "jolly/**"
+    paths:
+      - "tools/base_mod/repack.py"
+      - "tools/base_mod/ci_real_apksigner_env_smoke.py"
+      - ".github/workflows/real-apksigner-env-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sign-six-synthetic-android-splits:
+    name: Real apksigner env-only, ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install official SDK35 Linux public build-only tools
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+            "platforms;android-35" "build-tools;35.0.0"
+      - name: Install official SDK35 Windows public build-only tools
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $sdk = if ($env:ANDROID_HOME) { $env:ANDROID_HOME } else { $env:ANDROID_SDK_ROOT }
+          if ([string]::IsNullOrWhiteSpace($sdk)) {
+            throw 'Runner Android SDK missing'
+          }
+          $manager = Join-Path $sdk 'cmdline-tools\latest\bin\sdkmanager.bat'
+          if (-not (Test-Path -LiteralPath $manager)) {
+            throw 'Runner Android SDK Manager missing'
+          }
+          & $manager 'platforms;android-35' 'build-tools;35.0.0'
+          if ($LASTEXITCODE -ne 0) {
+            throw 'Public Android SDK build tools installation failed'
+          }
+          "ANDROID_HOME=$sdk" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Exercise actual aapt2 zipalign keytool and apksigner using ONLY dummy six APKs
+        run: python -m tools.base_mod.ci_real_apksigner_env_smoke
+      - name: Upload SAFE metadata only (never APK, keystore or temporary password)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-real-apksigner-env-only-${{ runner.os }}
+          path: .agent-validation/reports/public-real-apksigner-environment-only.json
+          if-no-files-found: warn
+          retention-days: 5
