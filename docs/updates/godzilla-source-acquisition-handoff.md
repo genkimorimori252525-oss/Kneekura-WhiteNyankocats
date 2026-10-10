@@ -186,9 +186,27 @@ All **four** stages are gated in sequence:
 Outputs are Git-ignored, in four separate locations under \`private/\` and
 each output directory MUST NOT already exist. Existing source caches,
 original recovered archives, enemy 550_e, 702_c, player SAVE and game APK
-are never silently overwritten. If any output already exists, use the
-individual source/preview command with a new distinct private output path;
-do not delete prior data solely to rerun the research tool.
+are never silently overwritten.
+
+**NEW private four-stage transaction:** This exact \`--from-dir\` command
+verifies all four owner-original source sizes/MD5s before making any
+output. It finishes all decryption, original enemy rig validation, allied
+702_f preview and encrypted WImageDataServer candidate checks inside a
+new temporary directory under \`private/\`. **Only after every stage passes**
+does it publish the four output directories. A late source-format or model
+error deletes the temporary files automatically, and a filesystem
+publication error rolls back directories newly created by that invocation.
+It rejects symlinked original inputs/output parents, nested outputs,
+existing destinations and overlapping source/output paths.
+
+Four separate directory renames cannot be genuinely **power-loss/crash
+atomic**, so the receipt explicitly reports this limitation. This is not
+an original game runtime test. The complete four-stage candidate now
+requires \`--from-dir\`; \`--download\` and \`--verify-only\` cannot run all
+four steps directly. First recover/verify files into the owner cache,
+then use the command above. If any output already exists, use the
+individual source/preview command with a new distinct private output
+path; do not delete prior owner data solely to rerun.
 
 One fully synthetic encrypted-server end-to-end test now exercises ALL four
 steps together: \`tests/test_godzilla_full_private_pipeline.py\`, including
