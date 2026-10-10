@@ -39,7 +39,8 @@ jobs:
           $paths = @(
             'tools/base_mod/run_independent_alpha_update.ps1',
             'tools/base_mod/independent_alpha_20261009/INSTALL-ALPHA.ps1',
-            'tools/base_mod/BUILD-OWNER-RESEARCH-PAIR.ps1'
+            'tools/base_mod/BUILD-OWNER-RESEARCH-PAIR.ps1',
+            'tools/base_mod/CHECK-OWNER-RESEARCH-DEVICE-SIGNER.ps1'
           )
           foreach ($path in $paths) {
             if (-not (Test-Path -LiteralPath $path)) {
