@@ -39,6 +39,14 @@
 
 **実機安全条件：** `adb devices` が空なら端末を再接続しUSBデバッグ認証を確認する。過去に`device`表示があっても、接続中と断定しない。端末固有シリアルは永続記録しない。原作公式アプリ `jp.co.ponos.battlecats` / 元SAVEは `uninstall` / `pm clear` / 上書きの対象にしない。実験対象は別パッケージ `jp.kn.local.battlecats` のみ。**2026-10-11 実機更新（所有者の一次端末ログ）：** 元JP15.7.1の別パッケージ `jp.kn.local.battlecats` を原作6分割APKでビルド・署名し静的検証PASS。新規インストールで `adb install-multiple --no-streaming` は **`Success`**、`adb shell pm path jp.kn.local.battlecats` で6分割すべて検出。`adb shell am start -n jp.kn.local.battlecats/jp.kn.local.battlecats.MyActivity` は起動リクエスト受理（`Starting`）したが、**端末画面は黒のまま**。初回読み取り専用観測 `py -3.12 -m tools.base_mod.collect_original_local_first_boot --output private/original-first-process.json` は **`read-only adb command could not finish`** で停止し、元アプリが実際に動いたこと・本物の初回SAVEが生成されたことは未証明。**絶対に「起動PASS」「PLAYABLE」と宣言しない**。既存の公式アプリとSAVEを消さない。次に行うこと：現在接続中のPID/Android Activity状態と、`KNEEKURA_STATIC_HTTP` 固定タグのlogcatをADBで安全に診断する。端末シリアルは恒久保存しない。パスワード・秘密鍵をコミット/チャットに提出しない。
 
+### 2026-10-11 追跡更新 — 黒画面の実ログ、ShadowHook補助ライブラリと次の実機ゲート
+
+- 本人の `20261011-040424` プライベートlogcatを研究用パッケージID/PIDで再集計し、**研究版プロセス起動86、死亡85、`original-native-scene-hook-v1 hook-initialization-failed` 85**を確認。古い「87/87」には無関係な他アプリ起動が混入していたので訂正。SIGSEGV履歴と具体的な終了バックトレースの因果はまだ特定できていない。公式元ゲームの起動・SAVE生成・Lv60は未合格。
+- 原因候補の一つとして、旧研究版へのShadowHook 2.0.1 `libshadowhook.so` だけの同梱漏れを発見。現行PR#4では公式Maven AAR 1個から `libshadowhook.so` と `libshadowhook_nothing.so` を**両方必須**とし、AARと個別のSHA-256、原本ARM64実行命令を検証する。公式ヘッダーのinit UNIQUE=1 / hook UNIQUE flag=2は正しい。**ライブラリの同梱修正は静的CI PASSで、黒画面の実機修復PASSではない。**
+- 次の所有者PC側作業は `tools/base_mod/BUILD-OWNER-RESEARCH-PAIR.ps1` による**既存研究用署名鍵・CIのPASSIVE（virgin SAVE writer OFF）ARM64 `libkneekura.so`＋SHA受領書・本人ZIP・公式ShadowHook 2本**でのソース保全付き6分割再ビルド。署名パスワードはコマンド引数に載せず、プロセス内で一時的に環境変数へ渡して終了時削除する。署名/ソース一致を満たさなければ中断。
+- このビルドと端末アップデートは別工程。実機上の研究版 `jp.kn.local.battlecats` の実際のインストール済み証明書と候補6本を `tools/base_mod/CHECK-OWNER-RESEARCH-DEVICE-SIGNER.ps1`（内部の `preflight_original_device_update.py`）で**読み取り専用照合**するまで、`-r` インストールはしない。さらに候補 `libkneekura.so` はCIコンパイル済みの `PASSIVE_SHIM_BUILD_SOURCE_RECEIPT.json` のSHAと一致必須。
+- それらのゲートが実機で通った場合だけ、本人が明示的に選んで研究版6分割を上書き更新し、`CAPTURE-OWNER-ORIGINAL-CRASH.ps1` で研究版を1回のみ起動、`summarize_original_crash_capture.py` で機密抜きの集計JSONを生成する。古い単独ShadowHook研究キットを再実行しない。**公式 `jp.co.ponos.battlecats` やSAVEの削除・再利用・H01/BAN回避なし。** 具体的なコード/テストと成果は既存 [Issue #12](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/issues/12) に一本化。
+
 ## このファイルの後に読むもの（最大限絞る）
 
 **普段の新規AIセッション：** このファイル → PRODUCT_IDENTITY.md → 実装ロードマップの「実行順序と次の担当者向け開始地点」→ 今動かす1タスクのソース/証拠だけ。毎回すべてのdocs/を巡回する必要はない。
