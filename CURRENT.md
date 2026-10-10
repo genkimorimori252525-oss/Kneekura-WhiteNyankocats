@@ -63,6 +63,14 @@
 - **合格したのは署名前、かつ静的原作コード保全まで。** 現物研究版は `Android_APK_signed=false` / `Android_game_installed_or_launched=false`。元原作UI表示・黒画面解消・初回本物SAVE・育成Lv60/MAX・操作i/ガチャ/運営・まどか/シンゴジラ・真の外部通信ゼロはいずれも**実機受入未合格**。次に必要なオーナー側操作は、本人の秘密研究用署名鍵のパスワード入力を伴う候補署名と、実機上の現存署名一致を読み取り確認した後の**明示的な**研究版更新／1回の収集。本人の許可なしに署名・端末上書き・SAVE変更はせえへん。
 - 再現・検証の一次ソースは既存 `tools/base_mod/BUILD-OWNER-RESEARCH-PAIR.ps1`、`CHECK-OWNER-RESEARCH-DEVICE-SIGNER.ps1`、`INSTALL-OWNER-RESEARCH-PAIR.ps1`、`CAPTURE-OWNER-ORIGINAL-CRASH.ps1`。追加の署名前工程・合成テストは `prepare_original_research_presign.py` と `tests/test_prepare_original_research_presign.py`。旧ShadowHook単独`.so`トライアルに戻さない。
 
+### 2026-10-11 OWNER-READY — 署名ビルドだけ本人操作へ移管できる状態
+
+- 本人Windows privateに**原作JP15.7.1の署名前6分割APK（実物約166MiB、6/6個別SHA記録）**、公式ShadowHook 2本入りAAR、GitHub実NDKコンパイルのPASSIVE `libkneekura.so`＋公開SHA受領書を配置済み。原本ZIP・元SAVE・公式アプリは一切書き換えず、派生APK/秘密鍵の本文はGitHubへ出していない。
+- 新しい **`tools/base_mod/OWNER-READY-TO-SIGN.ps1`** は本人PCで実行確認済み。**既定は読み取り専用**。実原本SHA、補助AAR SHA、実コンパイルCライブラリSHAとancestor、既存研究用署名鍵ファイルの存在、以前の署名済み研究用`base.apk`（読み取り専用実`apksigner verify`）、原作6分割の静的命令保持PASSを確認し、`OWNER_PRIVATE_ORIGINAL_BUILD_INPUTS_READY_NO_DEVICE_OR_KEY_USED`と表示。Javaの無害なstderr警告をPowerShell5.1が致命的エラーにする不具合も修正し、アプリ更新・署名・パスワード取得なしの実Windows検証PASS。
+- **次の本人が必要な最小操作（現時点では未実施）：** `powershell -NoProfile -ExecutionPolicy Bypass -File "$HOME\\Downloads\\Kneekura-WhiteNyankocats\\tools\\base_mod\\OWNER-READY-TO-SIGN.ps1" -DoBuild` を本人のPowerShellで明示的に実行し、**既存研究用の署名鍵エイリアスとパスワードを端末内だけで入力**。これでも署名候補を作るだけで端末へは入れない。次に別のread-only installed signer gateを通り、本人承認の1回の原作研究版更新＋実機クラッシュ観測。チャットへパスワードやAPK/SAVEを送らない。
+- 新規ソースのテストも含む**本人Windows Python3.12.10の641件実行、634 PASS・7 skip・0 failure**、GitHubの [Test tooling #38087627686](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/actions/runs/38087627686) および [Windows/Ubuntu #38087627670](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/actions/runs/38087627670) PASS。**実原作アプリの初回起動・本当のSAVE/LEVEL/MAX・運営・まどか/シンゴジラ・完全通信ゼロはまだ未検証**。PR#4はDRAFT。
+- 技術原因と引継ぎは親 [Issue #12](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/issues/12) に記録。別系統Alphaへ置換しない。
+
 ## このファイルの後に読むもの（最大限絞る）
 
 **普段の新規AIセッション：** このファイル → PRODUCT_IDENTITY.md → 実装ロードマップの「実行順序と次の担当者向け開始地点」→ 今動かす1タスクのソース/証拠だけ。毎回すべてのdocs/を巡回する必要はない。
