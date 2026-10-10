@@ -1110,8 +1110,12 @@
     "native_Lv60_MAX_ops_madoka_godzilla_product_acceptance": false,
     "evidence_synthetic_tests": "tests/test_original_virgin_save_gate.py",
     "evidence_integrated_original_tracer": "tools/base_mod/trace_original_levelup_native.py -> tools/base_mod/trace_original_virgin_save_gate.py",
-    "original_exact_elf_check": "21 anchored instruction words, 5 BL destinations, 6 RELATIVE vtable/RTTI relocation slots, 3 original RTTI literals verified read-only",
+    "original_exact_elf_check": "24 pinned instruction words, 5 direct BL destinations + appInit tail B, 6 RELATIVE RTTI/vtable relocation slots, 3 type literals verified read-only",
     "proprietary_original_binary_or_user_SAVE_committed": false,
-    "original_user_APK_SAVE_private_file_bytes_modified": false
+    "original_user_APK_SAVE_private_file_bytes_modified": false,
+    "actual_original_JNI_appInit_cold_start": "Java_jp_co_ponos_battlecats_MyActivity_appInit (0x31748c) -> 0x31753c B 0x9c89cc",
+    "actual_original_JNI_draw_update_loop": "Java_jp_co_ponos_battlecats_MyActivity_appUpdateDraw (0x31755c) -> 0x3175ec BL 0x9c80c0",
+    "cold_init_and_oncreate_status_callback_not_same_entrypoint": true,
+    "native_cold_start_data_save_integration_traced_to_completion": false
   }
 }
