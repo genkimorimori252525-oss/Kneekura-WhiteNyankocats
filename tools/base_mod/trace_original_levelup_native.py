@@ -2589,10 +2589,14 @@ def _additional_owner_list_coverage(
                     if registered_family_indices is not None else None
                 ),
             })
-        if verify_paired_pack_tsv_payloads and conflicting_sources:
+        if (verify_paired_pack_tsv_payloads and conflicting_sources
+            and registered_family_indices is None):
             raise LevelUpNativeTraceError(
                 "ambiguous original TSV ciphertext source in multiple Server families"
             )
+        # With the verified original 92-index mapping, opt-in integrity
+        # inspection can validate ALL duplicate candidates without
+        # pretending that the original runtime selected a particular one.
         present.update(matches)
         payload_metadata: dict[str, Any] = {}
         if verify_paired_pack_tsv_payloads and matches:
@@ -2691,6 +2695,11 @@ def _additional_owner_list_coverage(
         "original_native_source_priority_or_duplicate_precedence_proven": False,
         "paired_pack_payload_check_explicitly_requested": verify_paired_pack_tsv_payloads,
         "download_tsv_payloads_decrypted": sorted(decrypted_tsvs),
+        "all_duplicate_candidate_payloads_decrypted": bool(conflicting_sources) and all(
+            all(filename in families[candidate["family"]]["targeted_decrypted_tsv_payloads"]
+                for candidate in sources_by_tsv[filename])
+            for filename in conflicting_sources
+        ),
         "all_35_payloads_decrypted_from_owner_paired_packs": decrypted_tsvs == expected,
         "all_35_tsv_content_bytes_present_and_valid": False,
         "original_native_tsv_semantics_accepted": False,
