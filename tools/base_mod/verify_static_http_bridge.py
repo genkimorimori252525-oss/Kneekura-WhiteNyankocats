@@ -301,8 +301,12 @@ def verify_static_http_bridge(
             review_lib = final_arm.read(EXTRA_NATIVE_ENTRY)
             if hashlib.sha256(review_lib).hexdigest() != research_shadowhook_sha256:
                 raise ValueError("research native inline hook dependency hash drift")
-            if b"shadowhook_init\x00" not in review_lib:
-                raise ValueError("reviewed native scene hook library unexpectedly changed")
+            if any(required not in review_lib for required in (
+                b"shadowhook_init\x00",
+                b"shadowhook_hook_sym_addr\x00",
+                b"shadowhook_unhook\x00",
+            )):
+                raise ValueError("reviewed exact-address scene hook ABI changed")
         for forbidden in (
             "lib/arm64-v8a/libfrida-gadget.so",
             "lib/arm64-v8a/libfrida-gadget.config.so",
