@@ -52,3 +52,36 @@ download-table MD5; the early native first-successful source precedence is
 not a proven accepted real device winner; there is no source-accurate original
 Android renderer, animation, castle1, Lv30 50k×3, independent player SAVE,
 or strict zero-SDK/IPC network runtime proof. No APK or device is patched.
+
+
+## 2026-10-10 — Source-owned JP15.7.1 image-less bones and full encrypted pipeline
+
+The original owner-supplied JP15.7.1 InstallPack's \`ImageDataLocal\` (not
+downloaded Server archives) was reexamined READ ONLY. Across 671 source
+\`.mamodel\` files, 4 legitimate model-node rows have atlas/image ID=-1
+**and** cut/sprite ID=-1, all within \`000_g00_1.mamodel\`. They represent
+image-less control bones. The first-form converter now allows exactly this
+sentinel pair in nonroot nodes, while still rejecting cut ID=-1 for an
+atlas-backed image. Both variants are verified by synthetic tests; no
+copyrighted original model rows or image bytes were uploaded.
+
+The existing Godzilla owner-only one-command acquisition tool gained the
+strictly opt-in \`--prepare-native-resource-candidate\` flag, chained AFTER
+\`--extract-original-godzilla-rig\` AND \`--prepare-ally-preview\`.
+This combines **four source-MD5 checks → 7 original encrypted rig assets →
+7 converted 702_f first-form assets → WImageDataServer 702_f candidate**,
+with each stage confined to NEW Git-ignored \`private/\` directories and
+never modifying user assets, SAVE, APK or account. All four stages were
+exercised end-to-end using independent self-created synthetic encrypted
+JP-style \`.list/.pack\` pairs in
+\`tests/test_godzilla_full_private_pipeline.py\`. The tests cover stage
+ordering, source and second-form 702_c byte immutability, candidate
+decryption/readback, source MD5 mismatch abort and required opt-in flags.
+
+**What this does not prove:** 4 actual owner-recovered Server file bytes
+remain on the owner's Windows PC, not in this execution environment. The
+synthetic test is NOT evidence that their actual 550_e rig was extracted,
+that original game source precedence selected 702_f, or that changing a
+Server pack passes the original download-table MD5. The actual native
+original Android renderer, 50,000×3 attack, 1 castle HP damage, SAVE,
+Lv60/MAX and network isolation remain unverified.
