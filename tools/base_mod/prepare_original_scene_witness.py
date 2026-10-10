@@ -4,10 +4,11 @@ Research-only: enable ONLY after the original JP15.7.1 shim is separately
 built with KNEEKURA_RESEARCH_SCENE_WITNESS=ON, using the owner's own signing
 keys and exactly isolated 'jp.kn.local.battlecats' no-INTERNET package.
 
-The third-party libshadowhook.so is NEVER downloaded, distributed or
-committed by this project. Its owner-supplied SHA-256 must be pinned, and
-only a validated ARM64 ELF shared library is accepted. Running this
-function never changes any original owner APK/SAVE/phone.
+The official ShadowHook 2.0.1 Maven AAR is supplied by the owner and
+verified by its exact SHA256. BOTH ARM64 libshadowhook.so and
+libshadowhook_nothing.so are required: the upstream runtime uses the helper
+for linker initialization (a missing helper can produce error 12). No
+third-party bytes are committed/published. This cannot change any owner SAVE.
 """
 from __future__ import annotations
 
@@ -23,12 +24,19 @@ from tools.base_mod.package_flavor import _clone_info, _is_signature_entry
 from tools.base_mod.repack import JP_15_7_1_SPLITS
 
 EXTRA_NATIVE_ENTRY = "lib/arm64-v8a/libshadowhook.so"
+EXTRA_NATIVE_COMPANION_ENTRY = "lib/arm64-v8a/libshadowhook_nothing.so"
+OFFICIAL_AAR_MAIN_ENTRY = "jni/arm64-v8a/libshadowhook.so"
+OFFICIAL_AAR_COMPANION_ENTRY = "jni/arm64-v8a/libshadowhook_nothing.so"
+APPROVED_OFFICIAL_SHADOWHOOK_V201_AAR_SHA256 = (
+    "2cad01ff4d59542958775e19f281981a7e84b39670b5fae75905b8511e10c7cd"
+)
 RESEARCH_PACKAGE = "jp.kn.local.battlecats"
 SCENE_WITNESS_COMPILED_MARKER = b"original-native-scene-v1 id=%u"
 VIRGIN_SAVE_TRIAL_MARKER = b"kneekura-original-virgin-save-trial-v1"
 SCENE_WITNESS_PACKAGE_MARKER = RESEARCH_PACKAGE.encode("ascii")
 APPROVED_FLAVOR = "local-research"
 MAX_EXTERNAL_LIBRARY_BYTES = 24 * 1024 * 1024
+MAX_OFFICIAL_AAR_BYTES = 40 * 1024 * 1024
 # Public Maven Central com.bytedance.android:shadowhook:2.0.1, source AAR
 # SHA256 2cad01ff4d59542958775e19f281981a7e84b39670b5fae75905b8511e10c7cd.
 # The ARM64 binary was directly read from jni/arm64-v8a/libshadowhook.so
@@ -147,10 +155,70 @@ def _safe_native_so(
     return data
 
 
+
+def _official_shadowhook_v201_arm64_pair(aar: Path) -> tuple[bytes, bytes, str]:
+    """Only the exact Maven Central v2.0.1 AAR, BOTH real ARM64 native entries.
+
+    A pinned archive checksum keeps the companion from an unrelated version
+    out of the original process. No network, owner APK, SAVE or account use.
+    """
+    if (not isinstance(aar, Path) or aar.is_symlink()
+        or not aar.is_file()
+        or not 0 < aar.stat().st_size <= MAX_OFFICIAL_AAR_BYTES):
+        raise OriginalSceneWitnessPackageError(
+            "official ShadowHook 2.0.1 AAR missing or unsafe")
+    if hashlib.sha256(aar.read_bytes()).hexdigest() != (
+        APPROVED_OFFICIAL_SHADOWHOOK_V201_AAR_SHA256
+    ):
+        raise OriginalSceneWitnessPackageError(
+            "official ShadowHook 2.0.1 AAR SHA256 mismatch")
+    try:
+        with ZipFile(aar) as archive:
+            names = archive.namelist()
+            if (names.count(OFFICIAL_AAR_MAIN_ENTRY) != 1
+                or names.count(OFFICIAL_AAR_COMPANION_ENTRY) != 1):
+                raise OriginalSceneWitnessPackageError(
+                    "official ShadowHook AAR must contain both unique ARM64 libraries")
+            for name in (OFFICIAL_AAR_MAIN_ENTRY,
+                         OFFICIAL_AAR_COMPANION_ENTRY):
+                entry = archive.getinfo(name)
+                if (entry.is_dir()
+                    or not 64 <= entry.file_size <= MAX_EXTERNAL_LIBRARY_BYTES
+                    or entry.flag_bits & 1):  # encrypted ZIP entry
+                    raise OriginalSceneWitnessPackageError(
+                        "official ShadowHook native library ZIP entry unsafe")
+            main = archive.read(OFFICIAL_AAR_MAIN_ENTRY)
+            companion = archive.read(OFFICIAL_AAR_COMPANION_ENTRY)
+    except (OSError, ValueError, EOFError, RuntimeError) as exc:
+        if isinstance(exc, OriginalSceneWitnessPackageError):
+            raise
+        raise OriginalSceneWitnessPackageError(
+            "official ShadowHook AAR archive could not be validated") from exc
+    if hashlib.sha256(main).hexdigest() != (
+        APPROVED_OFFICIAL_SHADOWHOOK_V201_ARM64_SHA256
+    ):
+        raise OriginalSceneWitnessPackageError(
+            "official ShadowHook main ARM64 library SHA256 mismatch")
+    for raw in (main, companion):
+        if (len(raw) < 64 or raw[:4] != b"\\x7fELF"
+            or raw[4] != 2 or raw[5] != 1
+            or int.from_bytes(raw[16:18], "little") != 3
+            or elf_machine(raw) != EM_AARCH64):
+            raise OriginalSceneWitnessPackageError(
+                "official ShadowHook pair must both be ELF64 AArch64 ET_DYN")
+    if not REQUIRED_SHADOWHOOK_EXPORTED_FUNCTIONS.issubset(
+        _verified_defined_shadowhook_functions(main)
+    ):
+        raise OriginalSceneWitnessPackageError(
+            "official ShadowHook main exact-address FUNC exports absent")
+    return main, companion, hashlib.sha256(companion).hexdigest()
+
+
 def check_original_scene_witness_build_contract(
     *, flavor: str, no_internet: bool, shim: Path,
     shadowhook: Path | None, shadowhook_sha256: str | None,
     virgin_save_trial: bool = False,
+    shadowhook_aar: Path | None = None,
 ) -> dict:
     """Reject a witness-enabled shim unless flavor/policy/dependency match.
 
@@ -163,7 +231,12 @@ def check_original_scene_witness_build_contract(
     source = shim.read_bytes()
     witness_present = SCENE_WITNESS_COMPILED_MARKER in source
     compiled_virgin_trial = VIRGIN_SAVE_TRIAL_MARKER in source
-    paired_dependency = shadowhook is not None or shadowhook_sha256 is not None
+    legacy_single = shadowhook is not None or shadowhook_sha256 is not None
+    paired_dependency = shadowhook_aar is not None or legacy_single
+    if legacy_single:
+        raise OriginalSceneWitnessPackageError(
+            "single ShadowHook .so is unsafe; supply pinned 2.0.1 AAR with both libraries"
+        )
     if compiled_virgin_trial != virgin_save_trial:
         raise OriginalSceneWitnessPackageError(
             "native virgin SAVE trial requires matching explicit Java opt-in"
@@ -192,19 +265,17 @@ def check_original_scene_witness_build_contract(
             raise OriginalSceneWitnessPackageError(
                 "reviewed native hook dependency ONLY allowed in local no-INTERNET research"
             )
-        if shadowhook is None or shadowhook_sha256 is None:
+        if shadowhook_aar is None:
             raise OriginalSceneWitnessPackageError(
-                "both native hook library and exact SHA256 must be explicit"
+                "native research requires official ShadowHook two-library AAR"
             )
-        _safe_native_so(
-            shadowhook, shadowhook_sha256,
-            require_official_v201=compiled_virgin_trial,
-        )
+        _official_shadowhook_v201_arm64_pair(shadowhook_aar)
     return {
         "research_scene_witness_build_enabled": witness_present,
         "research_virgin_SAVE_trial_compiled_and_explicit": compiled_virgin_trial,
         "original_virgin_first_SAVE_device_reloaded_verified": False,
         "research_original_native_scene_hook_runtime_supplied": paired_dependency,
+        "official_shadowhook_main_and_companion_supplied": paired_dependency,
         "research_scene_witness_package_constraint": RESEARCH_PACKAGE,
         "research_scene_witness_default_shipping": False,
         "native_scene101_102_runtime_observed": False,
@@ -214,23 +285,25 @@ def check_original_scene_witness_build_contract(
 
 
 def include_reviewed_shadowhook_in_private_split_set(
-    source_dir: Path, target_dir: Path, *, shadowhook: Path,
-    expected_sha256: str,
+    source_dir: Path, target_dir: Path, *, shadowhook: Path | None = None,
+    expected_sha256: str | None = None,
     require_official_v201: bool = False,
+    official_aar: Path | None = None,
 ) -> dict:
-    """Clone six unsigned split APKs, adding ONLY one reviewed library.
+    """Clone six unsigned splits; add the exact vetted official TWO-SO pair.
 
-    It is used inside the already-private research staging directory prior
-    to normal package flavor, zipalign, signer and final integrity gates.
+    Single-library ShadowHook staging is always rejected. This prevents the
+    on-device linker-init failure class without claiming a game-boot fix.
     """
     if (source_dir.is_symlink() or not source_dir.is_dir()
         or target_dir.is_symlink() or target_dir.exists()
         or source_dir.resolve() == target_dir.resolve()):
         raise OriginalSceneWitnessPackageError("unsafe or nonempty original witness staging")
-    raw = _safe_native_so(
-        shadowhook, expected_sha256,
-        require_official_v201=require_official_v201,
-    )
+    if shadowhook is not None or expected_sha256 is not None or official_aar is None:
+        raise OriginalSceneWitnessPackageError(
+            "research staging requires official complete ShadowHook AAR, not single .so")
+    raw, companion, companion_sha = _official_shadowhook_v201_arm64_pair(
+        official_aar)
     for name in JP_15_7_1_SPLITS:
         if not (source_dir / name).is_file() or (source_dir / name).is_symlink():
             raise OriginalSceneWitnessPackageError("missing or unsafe original JP split set")
@@ -243,9 +316,10 @@ def include_reviewed_shadowhook_in_private_split_set(
             shutil.copyfile(source, target)
             continue
         with ZipFile(source, "r") as src, ZipFile(target, "w", allowZip64=True) as dst:
-            if EXTRA_NATIVE_ENTRY in src.namelist():
+            if (EXTRA_NATIVE_ENTRY in src.namelist()
+                or EXTRA_NATIVE_COMPANION_ENTRY in src.namelist()):
                 raise OriginalSceneWitnessPackageError(
-                    "preexisting libshadowhook.so forbidden in exact research source"
+                    "preexisting ShadowHook native libraries forbidden in source"
                 )
             for info in src.infolist():
                 if info.is_dir() or _is_signature_entry(info.filename):
@@ -260,16 +334,23 @@ def include_reviewed_shadowhook_in_private_split_set(
             new.create_system = 3
             new.external_attr = 0o100644 << 16
             dst.writestr(new, raw)
-            changed += 1
-    if changed != 1:
+            extra = ZipInfo(EXTRA_NATIVE_COMPANION_ENTRY)
+            extra.compress_type = ZIP_STORED
+            extra.create_system = 3
+            extra.external_attr = 0o100644 << 16
+            dst.writestr(extra, companion)
+            changed += 2
+    if changed != 2:
         raise OriginalSceneWitnessPackageError(
-            "exactly one reviewed library entry must be included"
+            "exactly two reviewed ShadowHook native entries must be included"
         )
     return {
         "status": "EXACT_LOCAL_RESEARCH_ONLY_OPTIONAL_NATIVE_HOOK_SOURCE_STAGING",
         "original_split_count": len(JP_15_7_1_SPLITS),
-        "only_extra_entry": EXTRA_NATIVE_ENTRY,
-        "reviewed_native_dependency_sha256": expected_sha256,
+        "only_extra_entries": [EXTRA_NATIVE_ENTRY, EXTRA_NATIVE_COMPANION_ENTRY],
+        "reviewed_native_dependency_sha256": APPROVED_OFFICIAL_SHADOWHOOK_V201_ARM64_SHA256,
+        "reviewed_native_companion_sha256": companion_sha,
+        "approved_official_shadowhook_aar_sha256": APPROVED_OFFICIAL_SHADOWHOOK_V201_AAR_SHA256,
         "scene_observer_runtime_or_original_gameplay_verified": False,
         "source_original_splits_or_owner_player_SAVE_unchanged": True,
     }
