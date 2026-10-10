@@ -251,7 +251,7 @@ def complete_owner_private_godzilla_pipeline(
         if targets[key].is_symlink() or targets[key].exists():
             raise ValueError("Godzilla " + key + " output exists; refusing overwrite")
         if any(parent.is_symlink() for parent in (
-            target.parent, *list(target.parent.parents)
+            targets[key].parent, *tuple(targets[key].parents)
         )):
             raise ValueError("Godzilla pipeline output parent cannot be symlinked")
         for other_key, other_path in paths.items():
@@ -327,6 +327,10 @@ def complete_owner_private_godzilla_pipeline(
         "godzilla_WImageDataServer_research_candidate": native_receipt,
         "private_four_stage_validation_completed_before_publish": True,
         "published_new_directories": len(published),
+        # Four independent directory renames cannot be crash-atomic across
+        # abrupt power loss. Validation is all-or-nothing and program-level
+        # publication exceptions are rolled back, but OS crashes differ.
+        "multi_directory_filesystem_crash_atomic": False,
         "owner_original_Server_pack_or_SAVE_modified": False,
         "actual_original_Android_resource_winner_verified": False,
         "ready_to_install": False,
@@ -382,6 +386,12 @@ def main(argv: list[str] | None = None) -> int:
             "--extract-original-godzilla-rig AND --prepare-ally-preview"
         )
     chosen = "import" if args.from_dir else "download" if args.download else "verify"
+    if args.prepare_native_resource_candidate and chosen != "import":
+        parser.error(
+            "full four-stage private pipeline requires --from-dir with "
+            "four locally recovered and verified original Server files; "
+            "download/verify separately before the transactional import"
+        )
     try:
         if chosen == "import" and args.prepare_native_resource_candidate:
             # The full original-owner four-stage flow is now all-or-nothing:
