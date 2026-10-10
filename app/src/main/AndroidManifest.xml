@@ -8,6 +8,10 @@
         android:usesCleartextTraffic="false"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
         <activity
+            android:name=".NoticeActivity"
+            android:exported="false"
+            android:screenOrientation="landscape" />
+        <activity
             android:name=".BattleActivity"
             android:exported="false"
             android:screenOrientation="landscape" />

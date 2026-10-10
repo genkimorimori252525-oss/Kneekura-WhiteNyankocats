@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "anchor": "JP 15.7.1",
+  "status": "APPROVED_DESIGN_ONLY_NOT_APPLIED",
+  "sources": {
+    "DataLocal/unit289.csv": {
+      "sha256": "e48bc212537fe7949c74527f0a8212874e8595fd9414f6d9bc2b7a1e3aee1a82"
+    },
+    "DataLocal/unit703.csv": {
+      "sha256": "8caeff21c1c02918da708d06095def423d05f9df14da63b741ac78994b57dbad"
+    },
+    "DataLocal/t_unit.csv": {
+      "sha256": "d4fe8661e39a8f489e7549f03b5de4020acb6d7f8560438bdbb9490ec2f8cb04"
+    }
+  },
+  "updates": {
+    "UMDK-001": {
+      "title": "Ultimate Madoka / third form",
+      "catalog_no": 289,
+      "asset_id": 288,
+      "unit_csv": "unit289.csv",
+      "form_index": 2,
+      "approved": {
+        "level_reference": 30,
+        "attack_damage": 28000,
+        "standing_range": 750,
+        "production_cost_eoc2": 4550,
+        "recharge_frames": 4650
+      },
+      "preserve": {
+        "hp_at_level30": 55250,
+        "ld_minimum": 450,
+        "ld_maximum": 800,
+        "attack_cycle_frames": 271,
+        "first_hit_frame": 72,
+        "move_speed": 20,
+        "knockback_count": 4,
+        "special_abilities": "unchanged",
+        "form0_and_form1": "unchanged",
+        "death_animation": "unchanged"
+      },
+      "implementation_status": "NOT_IMPLEMENTED"
+    },
+    "UGOD-001": {
+      "title": "Godzilla enemy-inspired cat / form 0 (catalog first form)",
+      "catalog_no": 703,
+      "asset_id": 702,
+      "unit_csv": "unit703.csv",
+      "form_index": 0,
+      "original_form_name": "ゴジラにゃんこ",
+      "next_form_name": "シン・ゴジラにゃんこ",
+      "source_enemy_id": 552,
+      "approved": {
+        "production_cost_eoc2": 9800,
+        "recharge_frames": 15000,
+        "attack_cycle_frames": 450,
+        "attack_hit_frames": [
+          130,
+          170,
+          210
+        ],
+        "sequence_attack_damage": 150000,
+        "hit_attack_damage": [
+          50000,
+          50000,
+          50000
+        ],
+        "enemy_castle_damage_cap_per_sequence": 1,
+        "damage_vs_enemies": "unrestricted_by_castle_cap",
+        "level_reference": 30,
+        "standing_range": 2950
+      },
+      "enemy_raw_reference": {
+        "base_hp": 500,
+        "base_hit_attack_damage": [
+          200,
+          200,
+          200
+        ],
+        "range": 3800,
+        "ld_minimum": 2300,
+        "ld_maximum": 3800,
+        "speed": 3,
+        "knockback_count": 1,
+        "original_castle_multiplier": 4
+      },
+      "open_gates": [
+        "Resolve exact 50000 damage per hit at Lv30 and determine native level-scaling above/below Lv30; do not silently round.",
+        "Choose unapproved HP, LD hit min/max, attack traits and abilities independently: sensing range 2950 IS approved and should not remain pending.",
+        "Verify live original-scene hook can cap castle HP deduction at 1 across all three hit events.",
+        "Source original on-device visuals from owner-owned assets without committing binaries."
+      ],
+      "implementation_status": "NOT_IMPLEMENTED",
+      "form_target_confirmation": "USER_CONFIRMED_FIRST_FORM_2026-10-09"
+    }
+  },
+  "safety": {
+    "modify_save_data": false,
+    "change_progress": false,
+    "write_to_original_apk_in_git": false,
+    "requires_original_scene_device_proof": true,
+    "may_mark_released": false
+  },
+  "change_history": [
+    {
+      "date": "2026-10-09",
+      "update": "UGOD-001",
+      "change": "Confirmed No.703 first form (index 0). Replaced previous 1,200,000 total / 400,000 x3 with EXACT Lv30 150,000 total / 50,000 x3. Attack period, costs, production time and castle-HP cap remain unchanged."
+    },
+    {
+      "date": "2026-10-09",
+      "update": "UGOD-001",
+      "change": "User approved 2950 standing/sensing range for confirmed Godzilla No703 first form; balance design incorporated in proposed Kneekura Update 1.01 together with native level caps and Ultimate Madoka. No Android/apply claim."
+    }
+  ],
+  "release_intent": "KNEEKURA UPDATE 1.01",
+  "release_status": "PREPARING_OFFLINE_OWNER_LOCAL_KIT_NOT_SHIPPED",
+  "level_cap_feature": {
+    "existing_runner": "tools/base_mod/run_level_cap_unlock.ps1",
+    "goal": "Preserve current SAVE_DATA and unlock eligible units up to native JP15.7.1 maxima (323 at 60, 493 at 50, 11 at 20, 8 at 1).",
+    "device_validation": "USER_GATE",
+    "apply_not_automatic": true
+  }
+}

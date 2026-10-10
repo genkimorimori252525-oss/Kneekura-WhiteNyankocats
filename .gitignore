@@ -31,3 +31,7 @@ Thumbs.db
 *.jks
 *.keystore
 *.so
+
+# Owner device SAVE_DATA and APK backups (never publish)
+private/
+kneekura-update-1.01-owner-backups/

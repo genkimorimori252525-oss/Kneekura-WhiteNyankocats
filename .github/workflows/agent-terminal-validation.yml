@@ -31,6 +31,75 @@ jobs:
         run: >-
           python -m tools.agent_terminal.verify self-test
           --report .agent-validation/reports/self-test-${{ runner.os }}.json
+      - name: Verify Windows PowerShell 5.1 UTF-8 BOM and parsing
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $paths = @(
+            'tools/base_mod/run_independent_alpha_update.ps1',
+            'tools/base_mod/independent_alpha_20261009/INSTALL-ALPHA.ps1'
+          )
+          foreach ($path in $paths) {
+            if (-not (Test-Path -LiteralPath $path)) {
+              if ($path -like '*/INSTALL-ALPHA.ps1') { continue }
+              throw "Required PowerShell source missing: $path"
+            }
+            $bytes = [IO.File]::ReadAllBytes((Resolve-Path -LiteralPath $path))
+            if ($bytes.Length -lt 3 -or $bytes[0] -ne 239 -or
+                $bytes[1] -ne 187 -or $bytes[2] -ne 191) {
+              throw "Windows PowerShell 5.1 requires UTF8 BOM in $path"
+            }
+            $tokens = $null
+            $errors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile(
+              (Resolve-Path -LiteralPath $path).Path,
+              [ref]$tokens,
+              [ref]$errors
+            )
+            if ($errors.Count -gt 0) {
+              $errors | ForEach-Object { Write-Host $_.ToString() }
+              throw "Windows PowerShell 5.1 parsing failed for $path"
+            }
+            Write-Host "Windows PowerShell 5.1 syntax PASS: $path"
+          }
+      - name: Ensure deterministic JDK 17 on Windows
+        if: runner.os == 'Windows'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Regression – no JAVA_HOME, with and without LOCALAPPDATA
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $savedJava = $env:JAVA_HOME
+          $savedLocal = $env:LOCALAPPDATA
+          try {
+            $env:JAVA_HOME = $null
+            . .\tools\base_mod\resolve_java_keytool.ps1
+            $found = Resolve-JavaKeytool
+            if (-not (Test-Path -LiteralPath $found -PathType Leaf)) {
+              throw "Resolved a missing keytool executable: $found"
+            }
+            Write-Host "PASS: JAVA_HOME unset resolves: $found"
+            $env:LOCALAPPDATA = $null
+            $foundAgain = Resolve-JavaKeytool
+            if (-not (Test-Path -LiteralPath $foundAgain -PathType Leaf)) {
+              throw "LOCALAPPDATA fallback did not resolve keytool"
+            }
+            Write-Host "PASS: JAVA_HOME and LOCALAPPDATA unset"
+          } finally {
+            $env:JAVA_HOME = $savedJava
+            $env:LOCALAPPDATA = $savedLocal
+          }
+      - name: Reproduce readonly HOME alias and null JAVA_HOME in PowerShell 5.1
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          & .\tools\agent_terminal\check_windows_owner_jdk.ps1
+          if (-not $?) { throw "Actual Windows PowerShell 5.1 owner-JDK runtime regression failed" }
       - name: Run committed validation plan
         run: >-
           python -m tools.agent_terminal.verify plan .agent-validation/plan.json

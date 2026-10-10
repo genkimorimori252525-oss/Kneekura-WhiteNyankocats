@@ -1,5 +1,10 @@
 # にーくら大戦争 — Post-EoC / Offline-First LiveOps Design
 
+> **2026-10-09 OFFLINE OPERATIONS SUPERSESSION:** The content/progression policy below remains useful (Post-EoC play, stage-reward truth, login five-slot rotation, unlock-only event stages), but any proposal to automatically download a signed content channel at runtime is **deprecated**. The [new operator charter](kneekura-offline-operations-charter.md) and [zero-egress/local-save P0 policy](2026-10-09-complete-local-offline-audit.md) take precedence. GitHub is Jolly's authoring/approval/history service on the PC, **never an endpoint queried by the final offline Android game**. `KNEEKURA_SAVE_V1` replaces original JP SAVE_DATA for independent gameplay; only manual content import is allowed.
+
+
+> **2026-10-09 最新初期状態（オーナー承認済み）:** 完全オフライン独立版では**日本編1〜3章だけでなく未来編1章もクリア済み・最高のお宝全取得**から開始する。未来編2〜3章・宇宙編・SoLは初期未クリア。以下の「Future chapters remain untouched」は**過去の本家SAVE_DATA研究方針の履歴であり、独立版の最新値ではない**。新しい実装と検証は [独立版ストーリー初期状態v2](kneekura-independent-story-checkpoint-v2.md) を参照。
+
 Status: current mainline product direction as of 2026-10-07.
 
 ## Product identity

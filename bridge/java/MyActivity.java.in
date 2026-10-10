@@ -1,8 +1,10 @@
 package __KNEEKURA_PACKAGE__;
 
 import android.opengl.GLSurfaceView;
+import android.os.FileObserver;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.net.URL;
@@ -22,6 +24,43 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
     private static final boolean ENABLE_BACKUP_OFFLINE_REPLAY = __KNEEKURA_ENABLE_BACKUP_REPLAY__;
     private static final boolean DEBUG_RESEARCH_LOG = __KNEEKURA_DEBUG_LOG__;
     private static final boolean USE_EXTERNAL_FILES_DIR = __KNEEKURA_USE_EXTERNAL_FILES_DIR__;
+    // Research-only: redirect ORIGINAL native getFilesDir() consumers to a
+    // fresh, app-private versioned root. This is not an independent SAVE schema
+    // or proof that original game boot/level-up works without remote services.
+    private static final boolean ISOLATE_ORIGINAL_NATIVE_FILES_DIR =
+            __KNEEKURA_ISOLATE_ORIGINAL_NATIVE_FILES_DIR__;
+    private static final String ORIGINAL_NATIVE_FILES_LEAF = "kneekura-native-jp15-7-1";
+    // A DIFFERENT Android package has its own internal files directory.
+    // This exact-version local-research flavor is intentionally distinct
+    // from both PONOS and older jp.kn.trace.battlecats installations.
+    // It keeps the ORIGINAL native file root (no child redirection) to avoid
+    // hiding the game's non-SAVE_DATA assets. This gate is NOT a new save
+    // schema and does NOT yet certify original-game first-run compatibility.
+    private static final boolean LOCAL_RESEARCH_FRESH_ROOT =
+            __KNEEKURA_LOCAL_RESEARCH_FRESH_ROOT__;
+    private static final boolean LOCAL_RESEARCH_DENY_HTTP =
+            __KNEEKURA_LOCAL_RESEARCH_DENY_HTTP__;
+    // Extra explicit opt-in, absent from default and passive research builds.
+    private static final boolean RESEARCH_VIRGIN_SAVE_TRIAL =
+            __KNEEKURA_RESEARCH_VIRGIN_SAVE_TRIAL__;
+    private static native boolean kneekuraAttestVirginRoot(String canonicalRoot);
+    private static boolean virginMarkerCreatedInThisProcess;
+    private static boolean virginNativeRootAttested;
+    private static final String LOCAL_RESEARCH_MARKER = ".kneekura-virgin-local-jp15-7-1";
+    private static final String[] FORBIDDEN_PREEXISTING_SAVES = {
+            "SAVE_DATA", "SAVE_DATA4", "SAVE_DATA8"
+    };
+
+
+    // Debug-only metadata: no SAVE_DATA bytes or account identifiers are read.
+    // Used solely to witness whether the ORIGINAL native host created a new
+    // local SAVE file between getFilesDir calls/restarts.
+    private static volatile String lastLocalSavePresence;
+    // Only local-research: retain a FileObserver so changes made by the
+    // ORIGINAL native writer can be noticed after getFilesDir has returned.
+    // Initial snapshots alone cannot observe a late SAVE_DATA creation.
+    private static volatile FileObserver originalLocalSaveObserver;
+    private static volatile String originalLocalSaveObserverRoot;
 
     private static final String BACKUP_SCHEME = "https";
     private static final String BACKUP_HOST = "nyanko-backups.ponosgames.com";
@@ -67,8 +106,244 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
         }
     }
 
+    /**
+     * Existing JP15.7.1 native code references Activity.getFilesDir().
+     * Only research builds explicitly requesting the local-source seam use
+     * this isolated folder. Fail CLOSED instead of falling back to the
+     * original PONOS file root if this folder is unavailable/unsafe.
+     *
+     * IMPORTANT: the original native app may expect additional local assets
+     * under getFilesDir. This method alone neither seeds a fresh gameplay
+     * state nor implements a network-free game or independent player authority.
+     */
+    private static void probeLocalGameSaveFiles(File root) {
+        if (!LOCAL_RESEARCH_FRESH_ROOT || !DEBUG_RESEARCH_LOG) {
+            return;
+        }
+        // File metadata only. No original save content, inquiry code, token,
+        // resource/account data or absolute filesystem path is recorded.
+        StringBuilder status = new StringBuilder("original-save-presence-v1");
+        try {
+            String trusted = root.getCanonicalPath() + File.separator;
+            for (String filename : FORBIDDEN_PREEXISTING_SAVES) {
+                File candidate = new File(root, filename);
+                if (!candidate.getCanonicalPath().startsWith(trusted)) {
+                    status.append(" ").append(filename).append("=unsafe");
+                } else if (candidate.isFile()) {
+                    status.append(" ").append(filename).append("=present:");
+                    status.append(candidate.length());
+                } else {
+                    status.append(" ").append(filename).append("=absent");
+                }
+            }
+        } catch (IOException error) {
+            // Never inspect or export a path if canonical containment failed.
+            status = new StringBuilder("original-save-presence-v1 unavailable");
+        }
+        String snapshot = status.toString();
+        synchronized (MyActivity.class) {
+            if (!snapshot.equals(lastLocalSavePresence)) {
+                lastLocalSavePresence = snapshot;
+                debugResearch(snapshot);
+            }
+        }
+    }
+
+    // Once per process: metadata-only diagnosis of the ORIGINAL native
+    // DownloadBatchTask's 35 "download_%d.tsv" candidates. The native
+    // 0x320be0 resolver also checks its own source index; a bare file here
+    // is NOT proof the original engine accepts or even requests it.
+    private static boolean localDownloadTsvProbeCompleted;
+
+    private static void probeLocalDownloadBatchTsvFiles(File root) {
+        if (!LOCAL_RESEARCH_FRESH_ROOT || !DEBUG_RESEARCH_LOG) {
+            return;
+        }
+        synchronized (MyActivity.class) {
+            if (localDownloadTsvProbeCompleted) {
+                return;
+            }
+            int present = 0;
+            int absent = 0;
+            int unsafe = 0;
+            try {
+                String trusted = root.getCanonicalPath() + File.separator;
+                for (int index = 0; index < 35; index++) {
+                    File candidate = new File(root, "download_" + index + ".tsv");
+                    if (!candidate.getCanonicalPath().startsWith(trusted)) {
+                        unsafe++;
+                    } else if (candidate.isFile()) {
+                        present++;
+                    } else {
+                        absent++;
+                    }
+                }
+                debugResearch("original-download-tsv-loose-v1 present=" + present
+                        + " absent=" + absent + " unsafe=" + unsafe);
+            } catch (IOException error) {
+                debugResearch("original-download-tsv-loose-v1 unavailable");
+            }
+            // Logging source-file presence once on first getFilesDir() keeps
+            // the original frame/render loop free of repeated disk scans.
+            localDownloadTsvProbeCompleted = true;
+        }
+    }
+
+
+    private static void watchOriginalLocalSaveChanges(final File root) {
+        if (!LOCAL_RESEARCH_FRESH_ROOT || !DEBUG_RESEARCH_LOG) {
+            return;
+        }
+        synchronized (MyActivity.class) {
+            try {
+                final String canonicalRoot = root.getCanonicalPath();
+                if (originalLocalSaveObserver != null) {
+                    if (!canonicalRoot.equals(originalLocalSaveObserverRoot)) {
+                        throw new IllegalStateException(
+                                "research original files root changed during observation");
+                    }
+                    return;
+                }
+                FileObserver watcher = new FileObserver(
+                        canonicalRoot,
+                        FileObserver.CREATE | FileObserver.CLOSE_WRITE
+                                | FileObserver.MOVED_TO | FileObserver.DELETE
+                ) {
+                    @Override
+                    public void onEvent(int event, String filename) {
+                        if (filename == null || filename.contains("/")
+                                || filename.contains("\\")) {
+                            return;
+                        }
+                        boolean tracked = false;
+                        for (String known : FORBIDDEN_PREEXISTING_SAVES) {
+                            if (known.equals(filename)) {
+                                tracked = true;
+                                break;
+                            }
+                        }
+                        if (tracked) {
+                            // Re-use the existing metadata-only canonical
+                            // containment probe. Never inspect SAVE contents.
+                            probeLocalGameSaveFiles(root);
+                        }
+                    }
+                };
+                watcher.startWatching();
+                originalLocalSaveObserver = watcher;
+                originalLocalSaveObserverRoot = canonicalRoot;
+                debugResearch("original-save-event-observer-v1 active");
+            } catch (IOException | SecurityException error) {
+                // Research diagnostics must not corrupt the native game's
+                // SAVE or convert an unavailable watcher into a fake PASS.
+                debugResearch("original-save-event-observer-v1 unavailable");
+            }
+        }
+    }
+
+    private File newLocalOriginalGameRoot() {
+        // The local-research PACKAGE ALREADY has its own Android app-data root.
+        // Its first observed use must not silently reuse a previous experiment's
+        // SAVE_DATA. The marker records local-origin only; it is NOT an account,
+        // a game-save serializer, an authentication secret, or a format upgrade.
+        if (USE_EXTERNAL_FILES_DIR || ISOLATE_ORIGINAL_NATIVE_FILES_DIR) {
+            throw new IllegalStateException("conflicting original local research file modes");
+        }
+        synchronized (MyActivity.class) {
+            File root = super.getFilesDir();
+            if (root == null || !root.isDirectory()) {
+                throw new IllegalStateException("original local research private files unavailable");
+            }
+            File marker = new File(root, LOCAL_RESEARCH_MARKER);
+            try {
+                String exactMarkerPath = new File(
+                        root.getCanonicalPath(), LOCAL_RESEARCH_MARKER
+                ).getPath();
+                if (marker.exists()) {
+                    // Reject a symlink or replacement marker with foreign content.
+                    if (!marker.getCanonicalPath().equals(exactMarkerPath)
+                            || !marker.isFile() || marker.length() != 0L) {
+                        throw new IllegalStateException("untrusted local research origin marker");
+                    }
+                } else {
+                    for (String filename : FORBIDDEN_PREEXISTING_SAVES) {
+                        if (new File(root, filename).exists()) {
+                            throw new IllegalStateException("unowned prior SAVE_DATA in local research package");
+                        }
+                    }
+                    if (!marker.createNewFile()) {
+                        throw new IllegalStateException("local research origin marker creation failed");
+                    }
+                    // A marker from an earlier process must NEVER authorize
+                    // first-SAVE creation, even if the expected files are absent.
+                    virginMarkerCreatedInThisProcess = true;
+                }
+                // Canonical path check AFTER creation catches symlink relocation.
+                if (!marker.getCanonicalPath().equals(exactMarkerPath)
+                        || !marker.isFile() || marker.length() != 0L) {
+                    throw new IllegalStateException("local research origin marker changed");
+                }
+            } catch (IOException error) {
+                throw new IllegalStateException("original local research origin root unavailable", error);
+            }
+            if (RESEARCH_VIRGIN_SAVE_TRIAL
+                    && virginMarkerCreatedInThisProcess
+                    && !virginNativeRootAttested) {
+                // The native side also verifies the exact original source,
+                // hooks, no prior SAVE files, root UID and empty marker.
+                try {
+                    System.loadLibrary("kneekura");
+                    if (kneekuraAttestVirginRoot(root.getCanonicalPath())) {
+                        virginNativeRootAttested = true;
+                        debugResearch("original-virgin-root-attested-v1");
+                    }
+                } catch (UnsatisfiedLinkError | IOException unavailable) {
+                    // Original ELF hooks can be absent this early in startup.
+                    // No writer is authorized until native attestation succeeds.
+                    debugResearch("original-virgin-root-not-ready-v1");
+                }
+            }
+            probeLocalGameSaveFiles(root);
+            watchOriginalLocalSaveChanges(root);
+            probeLocalDownloadBatchTsvFiles(root);
+            debugResearch("original-local-fresh-package-root active");
+            return root;
+        }
+    }
+
     @Override
     public File getFilesDir() {
+        if (LOCAL_RESEARCH_FRESH_ROOT) {
+            return newLocalOriginalGameRoot();
+        }
+        if (ISOLATE_ORIGINAL_NATIVE_FILES_DIR) {
+            if (USE_EXTERNAL_FILES_DIR) {
+                throw new IllegalStateException("conflicting original save directory modes");
+            }
+            // Never cache an unchecked path: a later symlink replacement must
+            // not escape the original app-private storage boundary.
+            File base = super.getFilesDir();
+            if (base == null || !base.isDirectory()) {
+                throw new IllegalStateException("original app-private files directory unavailable");
+            }
+            File directory = new File(base, ORIGINAL_NATIVE_FILES_LEAF);
+            try {
+                String trusted = base.getCanonicalPath() + File.separator;
+                if (!directory.getCanonicalPath().startsWith(trusted)) {
+                    throw new IllegalStateException("original native private save root escaped");
+                }
+                if (!directory.isDirectory() && (!directory.mkdirs() || !directory.isDirectory())) {
+                    throw new IllegalStateException("original native private save root unavailable");
+                }
+                if (!directory.getCanonicalPath().startsWith(trusted)) {
+                    throw new IllegalStateException("original native private save root changed during creation");
+                }
+            } catch (IOException error) {
+                throw new IllegalStateException("original native private save root unresolved", error);
+            }
+            debugResearch("original-native-private-files-root active");
+            return directory;
+        }
         if (!USE_EXTERNAL_FILES_DIR) {
             return super.getFilesDir();
         }
@@ -145,6 +420,16 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
             String[] strings,
             boolean flag1,
             boolean flag2) {
+        if (LOCAL_RESEARCH_DENY_HTTP) {
+            // Strict local-research mode cannot return to original HTTP code.
+            // This intentionally surfaces a missing local service dependency
+            // instead of reconnecting a refused SAVE or PONOS account.
+            // Diagnostic is metadata-only: never emit URL, method, headers,
+            // body, response payload, credentials or player identifiers.
+            debugResearch("original-local-denied-http-v1");
+            throw new IllegalStateException("original local research HTTP disabled");
+        }
+
         if (!isExactBackupRequest(
                 method,
                 requestUrl,

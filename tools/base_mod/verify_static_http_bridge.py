@@ -3,16 +3,57 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 import zipfile
 
 from tools.base_mod.binary_axml import string_values
+from tools.base_mod.audit_offline_egress import manifest_components
 from tools.base_mod.dex_methods import defined_methods
 from tools.base_mod.inject_java_http_bridge import BRIDGE_DEX_ENTRY
 from tools.base_mod.inject_shim import NATIVE_ENTRY, SHIM_ENTRY, SHIM_SONAME
 from tools.base_mod.package_flavor import FLAVOR_PACKAGES, ORIGINAL_PACKAGE
+from tools.base_mod.prepare_original_scene_witness import (
+    EXTRA_NATIVE_ENTRY, SCENE_WITNESS_COMPILED_MARKER,
+)
+from tools.base_mod.original_scene_native_image_gate import (
+    verify_mapped_original_scene_image,
+)
 from tools.base_mod.verify_parity import _lief_binary, _split_diff
+
+
+ORIGINAL_DYNAMIC_RECEIVER_PERMISSION = (
+    ORIGINAL_PACKAGE + ".DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+)
+
+
+def expected_isolated_research_permissions(
+    original: list[str], *, package_name: str, deny_internet: bool,
+) -> list[str]:
+    """Pin the exact original uses-permission transform after flavor rename.
+
+    Removing INTERNET and renaming exactly ONE app-owned receiver permission
+    are legitimate, but no other declared permissions may silently change.
+    Neither condition alone guarantees independent SDK/IPC zero egress.
+    """
+    if (type(original) is not list or
+        any(type(x) is not str or not x for x in original) or
+        original.count(ORIGINAL_DYNAMIC_RECEIVER_PERMISSION) != 1 or
+        len(set(original)) != len(original) or
+        package_name not in FLAVOR_PACKAGES.values()):
+        raise ValueError("pinned original declared-permission set changed")
+    result = []
+    for name in original:
+        if name == "android.permission.INTERNET" and deny_internet:
+            continue
+        if name == ORIGINAL_DYNAMIC_RECEIVER_PERMISSION:
+            result.append(
+                package_name + ".DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+            )
+        else:
+            result.append(name)
+    return sorted(result)
 
 
 ORIGINAL_LAUNCHER = ORIGINAL_PACKAGE + ".MyActivity"
@@ -73,12 +114,26 @@ def verify_static_http_bridge(
     *,
     flavor: str,
     replay_enabled: bool,
+    research_deny_internet: bool = False,
+    research_scene_witness: bool = False,
+    research_shadowhook_sha256: str | None = None,
     allow_datalocal_patch: bool = False,
     allow_downloadlocal_patch: bool = False,
 ) -> dict:
     package_name = FLAVOR_PACKAGES.get(flavor)
     if package_name is None:
         raise ValueError(f"unknown flavor: {flavor!r}")
+    if flavor == "local-research" and not research_deny_internet:
+        raise ValueError("local-research original host must omit INTERNET permission")
+    if research_deny_internet and flavor not in ("research", "local-research"):
+        raise ValueError("original no-INTERNET bridge validation requires research flavor")
+    if research_scene_witness and (
+        flavor != "local-research" or not research_deny_internet
+        or research_shadowhook_sha256 is None
+    ):
+        raise ValueError("native scene hook audit requires isolated no-INTERNET local-research")
+    if not research_scene_witness and research_shadowhook_sha256 is not None:
+        raise ValueError("third-party inline hook forbidden without explicit scene witness")
 
     bridge_launcher = package_name + ".MyActivity"
     bridge_descriptor = "L" + package_name.replace(".", "/") + "/MyActivity;"
@@ -123,7 +178,11 @@ def verify_static_http_bridge(
                 raise ValueError(
                     f"bridge arm64 changed surface drifted: {diff['changed']}"
                 )
-            if diff["added"] != [SHIM_ENTRY]:
+            expected_added = sorted(
+                [SHIM_ENTRY, EXTRA_NATIVE_ENTRY]
+                if research_scene_witness else [SHIM_ENTRY]
+            )
+            if diff["added"] != expected_added:
                 raise ValueError(
                     f"bridge arm64 added surface drifted: {diff['added']}"
                 )
@@ -158,6 +217,7 @@ def verify_static_http_bridge(
         reports.append({"name": name, **diff})
 
     with zipfile.ZipFile(original_dir / "base.apk", "r") as original_base:
+        original_manifest = original_base.read("AndroidManifest.xml")
         original_classes4 = original_base.read("classes4.dex")
         original_method = _new_http_method(
             original_classes4,
@@ -205,6 +265,24 @@ def verify_static_http_bridge(
             raise ValueError("bridge launcher missing from final manifest")
         if ORIGINAL_LAUNCHER in manifest_values:
             raise ValueError("original launcher remained active in bridge manifest")
+        source_perms = manifest_components(
+            original_manifest
+        )["declared_permissions"]
+        actual_perms = manifest_components(
+            final_base.read("AndroidManifest.xml")
+        )["declared_permissions"]
+        expected_perms = expected_isolated_research_permissions(
+            source_perms,
+            package_name=package_name,
+            deny_internet=research_deny_internet,
+        )
+        if actual_perms != expected_perms:
+            raise ValueError("original bridge INTERNET research permission delta drifted")
+        if research_deny_internet:
+            if "android.permission.INTERNET" not in source_perms:
+                raise ValueError("pinned original manifest did not declare INTERNET")
+            if "android.permission.INTERNET" in actual_perms:
+                raise ValueError("research bridge still requests android.permission.INTERNET")
 
         final_classes4 = final_base.read("classes4.dex")
         final_original_method = _new_http_method(
@@ -240,6 +318,34 @@ def verify_static_http_bridge(
         final_native = final_arm.read(NATIVE_ENTRY)
         final_shim = final_arm.read(SHIM_ENTRY)
         names = set(final_arm.namelist())
+        actual_witness = SCENE_WITNESS_COMPILED_MARKER in final_shim
+        if actual_witness != research_scene_witness:
+            raise ValueError(
+                "compiled research native scene hook and APK presence contract differ"
+            )
+        original_scene_native_layout = None
+        if research_scene_witness or flavor == "local-research":
+            # LIEF can preserve .dynsym names while changing mapped VMAs.
+            # Check the POST-REPACKAGED original native bytes, not the
+            # known-good owner's original input APK. On any drift, refuse
+            # research package signing/installation before device use.
+            original_scene_native_layout = verify_mapped_original_scene_image(
+                final_native,
+                expected_research_native_package=(
+                    package_name if flavor == "local-research" else None
+                ),
+            )
+            if research_scene_witness:
+                review_lib = final_arm.read(EXTRA_NATIVE_ENTRY)
+                if hashlib.sha256(review_lib).hexdigest() != research_shadowhook_sha256:
+                    raise ValueError("research native inline hook dependency hash drift")
+                if any(required not in review_lib for required in (
+                    b"shadowhook_init\x00",
+                    b"shadowhook_hook_sym_addr_2\x00",
+                    b"shadowhook_hook_func_addr_2\x00",
+                    b"shadowhook_unhook\x00",
+                )):
+                    raise ValueError("reviewed exact-address scene hook ABI changed")
         for forbidden in (
             "lib/arm64-v8a/libfrida-gadget.so",
             "lib/arm64-v8a/libfrida-gadget.config.so",
@@ -276,8 +382,23 @@ def verify_static_http_bridge(
         "request_constructor_anchor_preserved": True,
         "offline_fallback_anchor_preserved": True,
         "original_scene_activity_subclassed": True,
-        "unknown_request_super_fallthrough": True,
+        "unknown_request_super_fallthrough": flavor != "local-research",
+        "local_research_http_requests_rejected_by_override": flavor == "local-research",
+        "research_no_internet_manifest": research_deny_internet,
+        "fresh_separate_original_game_package": flavor == "local-research",
+        "local_research_uses_original_activity_files_root": flavor == "local-research",
+        "original_player_save_freshly_initialized_verified": False,
+        "source_INTERNET_permission": True,
+        "final_INTERNET_permission": not research_deny_internet,
+        "third_party_sdk_ipc_egress_audited": False,
+        "original_game_zero_egress_proven": False,
         "shim_dependency_present": True,
+        "native_scene_hook_research_only": research_scene_witness,
+        "repackaged_original_native_scene_layout": original_scene_native_layout,
+        "reviewed_external_hook_binary_hash_pinned": (
+            research_shadowhook_sha256 if research_scene_witness else None
+        ),
+        "actual_native_scene_event_seen_on_device": False,
         "frida_absent": True,
         "datalocal_patch_allowed": allow_datalocal_patch,
         "downloadlocal_patch_allowed": allow_downloadlocal_patch,
@@ -291,6 +412,7 @@ def main() -> int:
     parser.add_argument("modified_dir", type=Path)
     parser.add_argument("--flavor", required=True, choices=sorted(FLAVOR_PACKAGES))
     parser.add_argument("--replay-enabled", action="store_true")
+    parser.add_argument("--research-no-internet-permission", action="store_true")
     parser.add_argument("--allow-datalocal-patch", action="store_true")
     parser.add_argument("--allow-downloadlocal-patch", action="store_true")
     parser.add_argument("--output", type=Path)
@@ -301,6 +423,7 @@ def main() -> int:
         args.modified_dir.resolve(),
         flavor=args.flavor,
         replay_enabled=args.replay_enabled,
+        research_deny_internet=args.research_no_internet_permission,
         allow_datalocal_patch=args.allow_datalocal_patch,
         allow_downloadlocal_patch=args.allow_downloadlocal_patch,
     )

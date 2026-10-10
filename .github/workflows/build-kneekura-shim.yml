@@ -57,6 +57,210 @@ jobs:
           cmake --build build/kneekura-shim --parallel
           test -f build/kneekura-shim/libkneekura.so
 
+      - name: Compile original-scene research observer with REAL Android NDK arm64
+        shell: bash
+        run: |
+          set -euo pipefail
+          NDK="$ANDROID_HOME/ndk/27.2.12479018"
+          cmake -S native/kneekura-shim -B build/kneekura-scene-research \
+            -DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI=arm64-v8a \
+            -DANDROID_PLATFORM=android-29 \
+            -DKNEEKURA_RESEARCH_SCENE_WITNESS=ON \
+            -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/kneekura-scene-research --parallel
+          test -f build/kneekura-scene-research/libkneekura.so
+          # Source-only ARM64 .so: no third-party hook binary or owner game.
+          readelf -h build/kneekura-scene-research/libkneekura.so | grep -F "AArch64"
+          readelf -d build/kneekura-scene-research/libkneekura.so | grep -F "liblog.so"
+          readelf -Ws build/kneekura-scene-research/libkneekura.so | grep -F "kneekura_scene_research_package_identity"
+          readelf -Ws build/kneekura-scene-research/libkneekura.so | grep -F "kneekura_scene_research_event_format"
+          strings build/kneekura-scene-research/libkneekura.so | grep -Fx "jp.kn.local.battlecats"
+          strings build/kneekura-scene-research/libkneekura.so | grep -Fx "original-native-scene-v1 id=%u"
+          for TAG in \
+            "original-native-level-cap-getter-v1 original-returned" \
+            "original-native-upgrade-gate-v1 original-returned" \
+            "original-native-save-wrapper-v1 original-returned" \
+            "original-native-app-launch-save-read-v1 accepted" \
+            "original-native-app-launch-save-read-v1 failed"; do
+            strings build/kneekura-scene-research/libkneekura.so | grep -Fx "$TAG"
+            ! strings build/kneekura-shim/libkneekura.so | grep -Fq "$TAG"
+          done
+          strings build/kneekura-scene-research/libkneekura.so | grep -Fx "shadowhook_hook_sym_addr_2"
+          strings build/kneekura-scene-research/libkneekura.so | grep -Fx "shadowhook_hook_func_addr_2"
+          ! strings build/kneekura-shim/libkneekura.so | grep -Fq "shadowhook_hook_func_addr"
+          ! strings build/kneekura-scene-research/libkneekura.so | grep -Fq "shadowhook_hook_sym_name"
+          ! strings build/kneekura-shim/libkneekura.so | grep -Fq "original-native-scene-v1 id=%u"
+          ! strings build/kneekura-shim/libkneekura.so | grep -Fq "jp.kn.local.battlecats"
+
+      - name: Prove real Android ARM64 LIEF DT_NEEDED code stability (own shim only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .agent-validation/reports
+          python - <<'PY'
+          from hashlib import sha256
+          import json
+          from pathlib import Path
+          from tempfile import TemporaryDirectory
+          import lief
+
+          from tools.base_mod.elf_anchor import EM_AARCH64, elf_machine
+          from tools.base_mod.inject_shim import add_needed_dependency
+
+          def inspect_text(data, tmp_path):
+              tmp_path.write_bytes(data)
+              binary = lief.parse(str(tmp_path))
+              if binary is None:
+                  raise ValueError("LIEF rejected generated native ARM64 ELF")
+              section = binary.get_section(".text")
+              if section is None or not section.content:
+                  raise ValueError("generated Android native .text not found")
+              reloc_sections = {}
+              for name in (".note.gnu.build-id", ".dynstr", ".rodata",
+                           ".eh_frame", ".text", ".plt", ".data.rel.ro",
+                           ".dynamic", ".got", ".got.plt", ".data",
+                           ".init_array", ".fini_array"):
+                  current = binary.get_section(name)
+                  if current is not None:
+                      reloc_sections[name] = {
+                          "vma": int(current.virtual_address),
+                          "size": int(current.size),
+                          "sha256": sha256(bytes(current.content)).hexdigest()
+                              if name in (".note.gnu.build-id", ".rodata",
+                                          ".eh_frame", ".plt") else None,
+                      }
+              return {
+                  "vma": int(section.virtual_address),
+                  "size": int(section.size),
+                  "sha256": sha256(bytes(section.content)).hexdigest(),
+                  "other_section_VMA_metadata": reloc_sections,
+              }
+
+          result = {
+              "schema": "kneekura-android-arm64-lief-dtneeded-self-test-v1",
+              "original_game_APK_native_or_SAVE_used": False,
+              "actual_owner_JP15_7_1_LIEF_rewrite_verified": False,
+              "android_original_gameplay_or_Lv60_verified": False,
+              "ready_to_install": False,
+              "cases": [],
+          }
+          with TemporaryDirectory(prefix="kneekura-owned-shim-lief-ci-") as temp:
+              work = Path(temp)
+              for path in (
+                  "build/kneekura-shim/libkneekura.so",
+                  "build/kneekura-scene-research/libkneekura.so",
+              ):
+                  source = Path(path).read_bytes()
+                  if elf_machine(source) != EM_AARCH64:
+                      raise ValueError("Android test requires real NDK AArch64 build")
+                  rewritten, ledger = add_needed_dependency(
+                      source, needed="libkneekura-source-only-lief-test.so"
+                  )
+                  if elf_machine(rewritten) != EM_AARCH64:
+                      raise ValueError("LIEF output changed ELF machine")
+                  original_text = inspect_text(source, work / "before.so")
+                  modified_text = inspect_text(rewritten, work / "after.so")
+                  delta = modified_text["vma"] - original_text["vma"]
+                  orig_layout = original_text["other_section_VMA_metadata"]
+                  new_layout = modified_text["other_section_VMA_metadata"]
+                  stable = (".note.gnu.build-id", ".rodata", ".eh_frame",
+                            ".text", ".plt", ".data.rel.ro", ".got",
+                            ".got.plt", ".data", ".init_array", ".fini_array")
+                  geometry = all(
+                      (name in orig_layout) == (name in new_layout)
+                      and (name not in orig_layout or (
+                          new_layout[name]["vma"] - orig_layout[name]["vma"] == delta
+                          and (orig_layout[name]["sha256"] is None or
+                               orig_layout[name]["sha256"] == new_layout[name]["sha256"])
+                      ))
+                      for name in stable
+                  )
+                  unchanged = (
+                      0 <= delta <= 0x10000
+                      and delta % 0x1000 == 0
+                      and original_text["sha256"] == modified_text["sha256"]
+                      and original_text["size"] == modified_text["size"]
+                      and geometry
+                  )
+                  if (not ledger["export_surface_preserved"]
+                      or "libkneekura-source-only-lief-test.so"
+                          not in ledger["libraries_after"]):
+                      raise ValueError("Android LIEF ELF export/NEEDED invariant failed")
+                  result["cases"].append({
+                      "source": path,
+                      "original_text": original_text,
+                      "after_LIEF_text": modified_text,
+                      "stable_uniform_mapped_source_rebase": unchanged,
+                      "original_to_LIEF_VMA_delta_bytes": delta,
+                      "DT_NEEDED_added": True,
+                      "export_surface_preserved": True,
+                  })
+          result["status"] = (
+              "PASS_OWN_ANDROID_ARM64_UNIFORM_REBASE_RESEARCH_ONLY"
+              if all(row["stable_uniform_mapped_source_rebase"] for row in result["cases"])
+              else "BLOCKED_OWN_ANDROID_ARM64_NONUNIFORM_SOURCE_REBASE"
+          )
+          target = Path(".agent-validation/reports/android-arm64-lief-selftest.json")
+          target.write_text(json.dumps(result, sort_keys=True, indent=2) + "\n",
+                            encoding="utf-8")
+          print(json.dumps(result, sort_keys=True))
+          if not result["status"].startswith("PASS_"):
+              raise SystemExit("LIEF changed source bytes or nonuniform mapped source; stop")
+          PY
+
+      - name: Upload metadata-only native LIEF report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kneekura-android-arm64-lief-metadata-ONLY
+          path: .agent-validation/reports/android-arm64-lief-selftest.json
+          if-no-files-found: warn
+          retention-days: 3
+
+      - name: Compile explicit isolated original virgin SAVE trial with real NDK ARM64
+        shell: bash
+        run: |
+          set -euo pipefail
+          NDK="$ANDROID_HOME/ndk/27.2.12479018"
+          cmake -S native/kneekura-shim -B build/kneekura-virgin-save-research \
+            -DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI=arm64-v8a \
+            -DANDROID_PLATFORM=android-29 \
+            -DKNEEKURA_RESEARCH_SCENE_WITNESS=ON \
+            -DKNEEKURA_RESEARCH_VIRGIN_SAVE_TRIAL=ON \
+            -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/kneekura-virgin-save-research --parallel
+          BIN=build/kneekura-virgin-save-research/libkneekura.so
+          test -s "$BIN"
+          readelf -h "$BIN" | grep -F 'AArch64'
+          readelf -Ws "$BIN" | grep -F 'Java_jp_kn_local_battlecats_MyActivity_kneekuraAttestVirginRoot'
+          strings "$BIN" | grep -Fx 'kneekura-original-virgin-save-trial-v1'
+          strings "$BIN" | grep -Fx 'original-native-virgin-save-trial-v1 read-accepted'
+          ! strings build/kneekura-shim/libkneekura.so | grep -Fq 'kneekura-original-virgin-save-trial-v1'
+          ! strings build/kneekura-scene-research/libkneekura.so | grep -Fq 'kneekura-original-virgin-save-trial-v1'
+          ! readelf -Ws build/kneekura-shim/libkneekura.so | grep -Fq 'kneekuraAttestVirginRoot'
+          ! readelf -Ws build/kneekura-scene-research/libkneekura.so | grep -Fq 'kneekuraAttestVirginRoot'
+          # An experiment without all original scene hooks must fail CMake.
+          if cmake -S native/kneekura-shim -B build/kneekura-virgin-without-hook \
+            -DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI=arm64-v8a \
+            -DANDROID_PLATFORM=android-29 \
+            -DKNEEKURA_RESEARCH_SCENE_WITNESS=OFF \
+            -DKNEEKURA_RESEARCH_VIRGIN_SAVE_TRIAL=ON \
+            -DCMAKE_BUILD_TYPE=Release >/dev/null 2>&1; then
+            echo 'ERROR: unsafe trial without original observer configured' >&2
+            exit 2
+          fi
+
+      - name: Keep public compiled opt-in research native trial for owner-private ABI test
+        uses: actions/upload-artifact@v4
+        with:
+          name: kneekura-arm64-virgin-trial-SOURCE-ONLY
+          path: build/kneekura-virgin-save-research/libkneekura.so
+          if-no-files-found: error
+          retention-days: 3
+
       - name: Verify shim ABI and default-off contract
         shell: bash
         run: |
@@ -72,6 +276,7 @@ jobs:
           grep -F "kneekura_sidecar_save_atomic" /tmp/kneekura-symbols.txt
           grep -F "kneekura_clock_observe_epoch_day" /tmp/kneekura-symbols.txt
           grep -F "kneekura_provider_gacha_cost" /tmp/kneekura-symbols.txt
+          grep -F "kneekura_battle101_castle_hit" /tmp/kneekura-symbols.txt
           grep -F "kneekura_provider_stage_cat_food" /tmp/kneekura-symbols.txt
           grep -F "kneekura_provider_login_template_id" /tmp/kneekura-symbols.txt
 
@@ -97,6 +302,21 @@ jobs:
             native/kneekura-shim/tests/kneekura_state_test.c \
             -o /tmp/kneekura-state-enabled
           /tmp/kneekura-state-enabled
+
+      - name: Test KNEEKURA 1.01 combat policy both OFF and ON
+        shell: bash
+        run: |
+          set -euo pipefail
+          for MASK in 0ull 128ull; do
+            cc -std=c11 -Wall -Wextra -Werror \
+              -DKNEEKURA_DEFAULT_FEATURE_MASK=$MASK \
+              -Inative/kneekura-shim/include \
+              native/kneekura-shim/src/kneekura_shim.c \
+              native/kneekura-shim/src/kneekura_battle101.c \
+              native/kneekura-shim/tests/kneekura_battle101_test.c \
+              -o /tmp/kneekura-battle101-$MASK
+            /tmp/kneekura-battle101-$MASK
+          done
 
       - name: Test provider ABI disabled and enabled semantics
         shell: bash
@@ -138,3 +358,268 @@ jobs:
             build/kneekura-shim/shim-import-audit.json
           if-no-files-found: error
           retention-days: 30
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kneekura-arm64-scene-research-COMPILE-ONLY
+          path: build/kneekura-scene-research/libkneekura.so
+          if-no-files-found: error
+          retention-days: 7
+
+  owner-lief-probe-wheel-windows:
+    name: Owner offline LIEF wheel Python 3.12 Windows x64
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          architecture: x64
+      - name: Download exactly one PUBLIC Windows wheel (no owner game files)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          New-Item -ItemType Directory -Path build/owner-lief-wheel -Force | Out-Null
+          python -m pip download --only-binary=:all: --no-deps --dest build/owner-lief-wheel "lief==0.17.6"
+          if ($LASTEXITCODE -ne 0) { throw "LIEF public wheel download failed" }
+          $wheels = @(Get-ChildItem -LiteralPath build/owner-lief-wheel -Filter "*.whl" -File)
+          if ($wheels.Count -ne 1 -or $wheels[0].Name -ne "lief-0.17.6-cp312-cp312-win_amd64.whl") {
+            throw "Not exactly one CPython 3.12 x64 Windows LIEF wheel"
+          }
+          $hash = (Get-FileHash -LiteralPath $wheels[0].FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          $metadata = [ordered]@{
+            schema = "kneekura-offline-win312-lief-wheel-v1"
+            wheel_name = $wheels[0].Name
+            sha256 = $hash
+            lief_version = "0.17.6"
+            target_python = "3.12"
+            target_platform = "win_amd64"
+            original_game_apk_or_save_downloaded = $false
+            ready_to_install_game = $false
+          }
+          $metadata | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath build/owner-lief-wheel/wheel-receipt.json -Encoding UTF8
+      - name: Confirm SHA256, ZIP integrity and offline Windows import
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $program = @'
+          from pathlib import Path
+          from zipfile import ZipFile
+          from hashlib import sha256
+          import json
+          folder = Path("build/owner-lief-wheel")
+          data = json.loads((folder / "wheel-receipt.json").read_text(encoding="utf-8-sig"))
+          wheel = folder / data["wheel_name"]
+          assert data["schema"] == "kneekura-offline-win312-lief-wheel-v1"
+          assert wheel.name == "lief-0.17.6-cp312-cp312-win_amd64.whl"
+          assert sha256(wheel.read_bytes()).hexdigest() == data["sha256"]
+          with ZipFile(wheel) as z:
+              assert z.testzip() is None
+              assert any(name.endswith(".pyd") for name in z.namelist())
+              assert any(name.endswith(".dist-info/WHEEL") for name in z.namelist())
+          print("OFFLINE WHEEL SHA256 / ZIP / WINDOWS ABI: PASS")
+          '@
+          $program | python -
+          if ($LASTEXITCODE -ne 0) { throw "Wheel content check failed" }
+          python -m venv build/owner-lief-wheel-validation
+          if ($LASTEXITCODE -ne 0) { throw "Windows Python 3.12 venv failed" }
+          $py = "build/owner-lief-wheel-validation/Scripts/python.exe"
+          & $py -m pip install --no-index --no-deps --no-cache-dir --find-links build/owner-lief-wheel "lief==0.17.6"
+          if ($LASTEXITCODE -ne 0) { throw "Offline wheel installation failed" }
+          & $py -c "import lief; from importlib.metadata import version; assert version('lief') == '0.17.6'"
+          if ($LASTEXITCODE -ne 0) { throw "Offline installed LIEF failed import" }
+          & $py -m unittest tests.test_original_scene_native_image_gate tests.test_owner_lief_probe_windows_contract -v
+          if ($LASTEXITCODE -ne 0) { throw "Native research unit tests failed" }
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path -LiteralPath tools/base_mod/run_owner_lief_probe.ps1).Path, [ref]$tokens, [ref]$errors) | Out-Null
+          if ($errors.Count -ne 0) { throw "Owner offline PowerShell probe syntax invalid" }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kneekura-owner-LIEF-0.17.6-win312-OFFLINE-WHEEL-ONLY
+          path: |
+            build/owner-lief-wheel/*.whl
+            build/owner-lief-wheel/wheel-receipt.json
+            tools/base_mod/run_owner_lief_probe.ps1
+          if-no-files-found: error
+          retention-days: 14
+
+  ephemeral-linux-lief-native-probe:
+    name: Public-only Linux LIEF for private original native verification
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Fetch public LIEF wheel (NO owner game, APK, SAVE or keys)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/owner-lief-linux-wheel
+          python -m pip download --only-binary=:all: --no-deps \
+            --dest build/owner-lief-linux-wheel "lief==0.17.6"
+          python - <<'PY'
+          from pathlib import Path
+          from hashlib import sha256
+          from zipfile import ZipFile
+          import json
+          items = list(Path("build/owner-lief-linux-wheel").glob("*.whl"))
+          if len(items) != 1:
+              raise ValueError("expected exactly one public Python 3.13 Linux wheel")
+          wheel = items[0]
+          if (not wheel.name.startswith("lief-0.17.6-cp313-cp313-")
+              or not wheel.name.endswith("x86_64.whl")
+              or "manylinux" not in wheel.name):
+              raise ValueError("unexpected platform ABI")
+          with ZipFile(wheel) as archive:
+              if archive.testzip() is not None or not any(
+                  name.endswith(".so") for name in archive.namelist()
+              ):
+                  raise ValueError("broken public LIEF wheel")
+          meta = {
+              "schema": "kneekura-linux-python313-lief-wheel-v1",
+              "wheel_name": wheel.name,
+              "sha256": sha256(wheel.read_bytes()).hexdigest(),
+              "lief_version": "0.17.6",
+              "original_jp15_7_1_game_bytes_sent_to_ci": False,
+              "ready_to_ship_game": False,
+          }
+          Path("build/owner-lief-linux-wheel/wheel-receipt.json").write_text(
+              json.dumps(meta, sort_keys=True, indent=2) + "\n", encoding="utf-8"
+          )
+          PY
+      - name: Install the public wheel OFFLINE and run exact research tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m venv build/owner-lief-linux-smoke
+          build/owner-lief-linux-smoke/bin/python -m pip install \
+            --no-index --no-deps --no-cache-dir \
+            --find-links build/owner-lief-linux-wheel "lief==0.17.6"
+          build/owner-lief-linux-smoke/bin/python -c \
+            "import lief; from importlib.metadata import version; assert version('lief') == '0.17.6'"
+          build/owner-lief-linux-smoke/bin/python -m unittest \
+            tests.test_original_scene_native_image_gate -v
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kneekura-public-LIEF-0.17.6-Linux-py313-owner-probe-tools
+          path: |
+            build/owner-lief-linux-wheel/*.whl
+            build/owner-lief-linux-wheel/wheel-receipt.json
+            tools/__init__.py
+            tools/base_mod/__init__.py
+            tools/base_mod/original_scene_native_image_gate.py
+            tools/base_mod/inject_shim.py
+            tools/base_mod/elf_anchor.py
+            tools/base_mod/repack.py
+          if-no-files-found: error
+          retention-days: 3
+
+  review-official-shadowhook-arm64:
+    name: Review official Maven Central ShadowHook v2.0.1 ARM64 ELF
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Download Maven Central PUBLIC MIT AAR and verify Maven SHA256
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/official-shadowhook-review
+          python - <<'PY'
+          from pathlib import Path
+          from hashlib import sha256
+          import re, json, subprocess
+          from urllib.request import urlopen
+          from zipfile import ZipFile
+          from io import BytesIO
+          version="2.0.1"
+          base="https://repo.maven.apache.org/maven2/com/bytedance/android/shadowhook/"+version
+          name="shadowhook-"+version+".aar"
+          def fetch(url,limit):
+              with urlopen(url,timeout=30) as response:
+                  data=response.read(limit+1)
+              if len(data)>limit: raise ValueError("public Maven response too large")
+              return data
+          original=fetch(base+"/"+name,8_000_000)
+          expected=fetch(base+"/"+name+".sha256",256).decode("ascii").strip().lower()
+          if not re.fullmatch("[0-9a-f]{64}",expected):
+              raise ValueError("missing public Maven AAR digest")
+          if sha256(original).hexdigest()!=expected:
+              raise ValueError("public Maven ShadowHook AAR SHA256 mismatch")
+          with ZipFile(BytesIO(original)) as archive:
+              candidates=[
+                  x for x in archive.infolist()
+                  if x.filename.endswith("/libshadowhook.so")
+                  and "arm64-v8a" in x.filename.split("/")
+                  and x.file_size>64 and x.file_size<4_000_000
+              ]
+              if len(candidates)!=1:
+                  raise ValueError("ambiguous official ARM64 ShadowHook in Maven AAR")
+              elf=archive.read(candidates[0])
+          if (elf[:6]!=b"\x7fELF\x02\x01"
+              or int.from_bytes(elf[16:18],"little")!=3
+              or int.from_bytes(elf[18:20],"little")!=183):
+              raise ValueError("official library is not ELF64 AArch64 ET_DYN")
+          out=Path("build/official-shadowhook-review")
+          arm=out/"libshadowhook.so"
+          arm.write_bytes(elf)
+          details=subprocess.run(["readelf","--dyn-syms","--wide",str(arm)],
+                                 capture_output=True,text=True,check=True).stdout
+          exports={}
+          for line in details.splitlines():
+              words=line.split()
+              if len(words)>=8 and words[3]=="FUNC" and words[6]!="UND":
+                  exports[words[7]]=line
+          required=["shadowhook_init", "shadowhook_hook_sym_addr_2",
+                    "shadowhook_hook_func_addr_2", "shadowhook_unhook"]
+          if not all(x in exports for x in required):
+              raise ValueError("actual Maven ARM64 dynamic FUNCTION exports missing")
+          dynamic=subprocess.run(["readelf","-d",str(arm)],
+                                 capture_output=True,text=True,check=True).stdout
+          needed=re.findall(r"\(NEEDED\).*?\[(.*?)\]",dynamic)
+          report={
+              "schema":"kneekura-official-shadowhook-arm64-review-v1",
+              "official_maven_coordinate":"com.bytedance.android:shadowhook:"+version,
+              "public_maven_aar_sha256":expected,
+              "arm64_native_sha256":sha256(elf).hexdigest(),
+              "arm64_native_size_bytes":len(elf),
+              "source_member_in_aar":candidates[0].filename,
+              "required_defined_func_symbols":required,
+              "defined_symbol_count":len(exports),
+              "DT_NEEDED":needed,
+              "actual_original_Battle_Cats_or_SAVE_in_CI":False,
+              "owner_device_runtime_hook_accepted":False,
+              "original_first_SAVE_and_Lv60_verified":False,
+              "ready_to_install_or_ship":False,
+              "status":"PASS_PUBLIC_OFFICIAL_ELF_STATIC_ONLY",
+          }
+          (out/"official-only-receipt.json").write_text(
+              json.dumps(report,sort_keys=True,indent=2)+"\n",encoding="utf-8"
+          )
+          print(json.dumps(report,sort_keys=True))
+          # Ensure the repo's TRUE ELF/dynsym/private-packaging parser
+          # accepts the official public binary, not only readelf strings.
+          from tools.base_mod.prepare_original_scene_witness import _safe_native_so
+          assert _safe_native_so(arm, report["arm64_native_sha256"],
+              require_official_v201=True) == elf
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kneekura-public-official-shadowhook-v2.0.1-arm64-review-ONLY
+          path: |
+            build/official-shadowhook-review/libshadowhook.so
+            build/official-shadowhook-review/official-only-receipt.json
+          if-no-files-found: error
+          retention-days: 5

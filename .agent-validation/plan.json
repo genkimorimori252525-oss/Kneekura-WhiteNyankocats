@@ -34,7 +34,7 @@
       "name": "windows-terminal-contract-tests",
       "platform": "windows",
       "cwd": ".",
-      "timeout_seconds": 300,
+      "timeout_seconds": 600,
       "argv": [
         "python",
         "-m",
@@ -43,6 +43,11 @@
         "tests.test_offline_max_bootstrap_runner",
         "tests.test_offline_max_persistence_gate",
         "tests.test_shipping_profile_parity",
+        "tests.test_godzilla_full_private_pipeline",
+        "tests.test_recovered_godzilla_one_step",
+        "tests.test_prepare_godzilla_ally_preview",
+        "tests.test_prepare_godzilla_native_resource_preview",
+        "tests.test_verify_godzilla_historical_mirror",
         "-v"
       ]
     },

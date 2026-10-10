@@ -1,0 +1,396 @@
+"""Synthetic 550_e source files only: no original art/animation/game binaries."""
+from __future__ import annotations
+
+from copy import deepcopy
+from hashlib import sha256
+from pathlib import Path
+import struct
+import tempfile
+import unittest
+import zlib
+
+from tools.base_mod import prepare_godzilla_ally_preview as preview
+
+
+def png(width: int = 64, height: int = 48) -> bytes:
+    def chunk(name: bytes, body: bytes) -> bytes:
+        return (
+            struct.pack(">I", len(body)) + name + body
+            + struct.pack(">I", zlib.crc32(name + body) & 0xFFFFFFFF)
+        )
+    header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
+    return (
+        b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", header)
+        + chunk(b"IDAT", zlib.compress(b"\0" * (height * (width * 4 + 1))))
+        + chunk(b"IEND", b"")
+    )
+
+
+def rig(*, bom: bool = True, eol: bytes = b"\r\n") -> dict[str, bytes]:
+    b = b"\xef\xbb\xbf" if bom else b""
+    cut = b + eol.join([
+        b"[imgcut]", b"0", b"550_e.png", b"2",
+        b"0,0,1,1,Null",
+        b"1,1,5,7,Tail",
+        b"",
+    ])
+    model = b + eol.join([
+        b"[modelanim:model2]", b"4", b"3",
+        b"-1,-1,0,0,0,0,0,0,-1000,1000,0,1000,0,Null",
+        b"0,550,1,0,0,0,0,0,1000,1000,0,1000,0,Head",
+        b"1,550,0,0,0,0,0,0,1000,1000,0,1000,0,Tail",
+        b"1000,3600,1000,1", b"1",
+        b"0,0,-48,350,10,0,collision",
+        b"",
+    ])
+    anim = b + eol.join([
+        b"[modelanim:animation2]", b"2", b"2",
+        b"1,5,-1,0,0,Move", b"2",
+        b"0,0,0,0", b"10,100,0,0",
+        b"1,11,-1,0,0,Attack", b"1",
+        b"0,0,0,0",
+        b"",
+    ])
+    return {
+        "550_e.png": png(),
+        "550_e.imgcut": cut,
+        "550_e.mamodel": model,
+        **{f"550_e0{i}.maanim": anim for i in range(4)}
+    }
+
+
+def fake_receipt(data: dict[str, bytes]) -> dict:
+    return {
+        "status": "EXTRACTED_OWNER_ONLY_NOT_MIRRORED_OR_INSTALLED",
+        "source_stem": "550_e",
+        "target_stem": "702_f",
+        "art": {
+            name: {"sha256": sha256(payload).hexdigest(), "size": len(payload)}
+            for name, payload in data.items()
+        },
+    }
+
+
+class GodzillaNo703FirstFormCandidateTests(unittest.TestCase):
+    def setUp(self):
+        self.source = rig()
+
+    def test_convert_enemy_into_only_first_form_without_modifying_original(self):
+        original = deepcopy(self.source)
+        outputs, record = preview.preview_converted_ally_rig(
+            self.source, source_receipt=fake_receipt(self.source)
+        )
+        self.assertEqual(set(outputs), {
+            "702_f.png", "702_f.imgcut", "702_f.mamodel",
+            "702_f00.maanim", "702_f01.maanim",
+            "702_f02.maanim", "702_f03.maanim",
+        })
+        self.assertEqual(outputs["702_f.png"], original["550_e.png"])
+        self.assertEqual(self.source, original)
+        self.assertIn(b"702_f.png\r\n", outputs["702_f.imgcut"])
+        self.assertNotIn(b"550_e.png", outputs["702_f.imgcut"])
+        self.assertIn(
+            b"-1,-1,0,0,0,0,0,0,1000,1000,0,1000,0,Null",
+            outputs["702_f.mamodel"],
+        )
+        self.assertIn(b"0,702,1,0,0,0,0,0,1000,1000", outputs["702_f.mamodel"])
+        self.assertNotIn(b"0,550,1,0,0,0,0,0", outputs["702_f.mamodel"])
+        self.assertTrue(outputs["702_f.mamodel"].endswith(
+            b"0,0,-48,350,10,0,collision\r\n"
+        ))
+        for i in range(4):
+            self.assertEqual(
+                outputs[f"702_f0{i}.maanim"], original[f"550_e0{i}.maanim"]
+            )
+        self.assertTrue(record["mamodel_conversion"]["root_was_reoriented"])
+        self.assertEqual(record["mamodel_conversion"]["atlas_rows_rebased"], 2)
+        self.assertEqual(record["imgcut_conversion"]["sprite_part_count"], 2)
+        self.assertFalse(record["ready_to_install"])
+        self.assertEqual(record["preserved_second_form"], "702_c")
+        self.assertFalse(record["second_form_bytes_changed"])
+        self.assertFalse(record["animation_renderer_frame_sync_verified"])
+
+    def test_already_correct_root_orientation_remains_unchanged(self):
+        model = self.source["550_e.mamodel"].replace(
+            b"-1000,1000,0,1000,0,Null", b"1000,1000,0,1000,0,Null"
+        )
+        self.source["550_e.mamodel"] = model
+        targets, record = preview.preview_converted_ally_rig(self.source)
+        self.assertFalse(record["mamodel_conversion"]["root_was_reoriented"])
+        self.assertIn(b"1000,1000,0,1000,0,Null", targets["702_f.mamodel"])
+
+    def test_utf8_bom_and_lf_variants_stay_parseable(self):
+        inputs = rig(bom=False, eol=b"\n")
+        out, receipt = preview.preview_converted_ally_rig(inputs)
+        self.assertTrue(out["702_f.imgcut"].startswith(b"[imgcut]\n"))
+        self.assertTrue(out["702_f.mamodel"].startswith(b"[modelanim:model2]\n"))
+        self.assertEqual(receipt["atlas_geometry"], {"width": 64, "height": 48})
+
+    def test_missing_source_or_wrong_receipt_hash_refuses_conversion(self):
+        broken = dict(self.source)
+        broken.pop("550_e02.maanim")
+        with self.assertRaisesRegex(preview.OriginalGodzillaRigPreviewError,
+                                     "exactly seven"):
+            preview.preview_converted_ally_rig(broken)
+        proof = fake_receipt(self.source)
+        proof["art"]["550_e.mamodel"]["sha256"] = "0" * 64
+        with self.assertRaisesRegex(preview.OriginalGodzillaRigPreviewError,
+                                     "art changed"):
+            preview.preview_converted_ally_rig(self.source, source_receipt=proof)
+
+    def test_original_model_unexpected_atlas_id_refused(self):
+        bad = dict(self.source)
+        bad["550_e.mamodel"] = bad["550_e.mamodel"].replace(
+            b"0,550,1,", b"0,551,1,"
+        )
+        with self.assertRaisesRegex(preview.OriginalGodzillaRigPreviewError,
+                                     "another atlas image ID"):
+            preview.preview_converted_ally_rig(bad)
+
+    def test_original_imgcut_missing_rows_bad_image_or_bounds_fail(self):
+        cases = [
+            ("550_e.png", b"not a png", "PNG"),
+            ("550_e.imgcut", self.source["550_e.imgcut"].replace(
+                b"550_e.png", b"702_f.png"), "header"),
+            ("550_e.imgcut", self.source["550_e.imgcut"].replace(
+                b"\r\n2\r\n", b"\r\n3\r\n"), "count"),
+            ("550_e.imgcut", self.source["550_e.imgcut"].replace(
+                b"1,1,5,7,Tail", b"60,1,5,7,Tail"), "outside"),
+        ]
+        for name, payload, reason in cases:
+            with self.subTest(name=name,reason=reason):
+                bad = dict(self.source)
+                bad[name] = payload
+                with self.assertRaises(preview.OriginalGodzillaRigPreviewError):
+                    preview.preview_converted_ally_rig(bad)
+
+    def test_source_proven_zero_keyframes_are_valid_and_untouched(self):
+        # The owned JP15.7.1 ImageDataLocal has 6 zero-keyframe tracks.
+        # Zero frames must not be mistaken for a corrupt model.
+        source = dict(self.source)
+        empty_track = (
+            b"[modelanim:animation2]\n"
+            b"2\n1\n"
+            b"1,11,-1,0,0,Empty\n"
+            b"0\n"
+        )
+        source["550_e03.maanim"] = empty_track
+        generated, report = preview.preview_converted_ally_rig(source)
+        self.assertEqual(generated["702_f03.maanim"], empty_track)
+        self.assertEqual(
+            report["animations_untouched"]["550_e03.maanim"]["keyframe_count"], 0
+        )
+
+    def test_model_sprite_part_index_must_be_within_imgcut(self):
+        bad = dict(self.source)
+        bad["550_e.mamodel"] = bad["550_e.mamodel"].replace(
+            b"0,550,1,", b"0,550,400,"
+        )
+        with self.assertRaisesRegex(preview.OriginalGodzillaRigPreviewError,
+                                     "sprite index outside"):
+            preview.preview_converted_ally_rig(bad)
+
+    def test_mamodel_only_changes_two_approved_fields_other_text_untouched(self):
+        source = dict(self.source)
+        before = source["550_e.mamodel"]
+        # Real model CSV comments and signed formatting aren't necessarily
+        # canonical decimal strings. Don't rewrite unrelated coordinates.
+        before = before.replace(
+            b"0,550,1,0,0,0,0,0,1000,1000",
+            b"0,550,1,0,+000,0,0,0,1000,1000", 1,
+        )
+        source["550_e.mamodel"] = before
+        output, _ = preview.preview_converted_ally_rig(source)
+        model = output["702_f.mamodel"]
+        self.assertIn(b"0,702,1,0,+000,0,0,0,1000,1000", model)
+        self.assertNotIn(b"0,702,1,0,0,0,0,0,1000,1000", model)
+        self.assertEqual(source["550_e.mamodel"], before)
+        self.assertIn(b"0,0,-48,350,10,0,collision", model)
+
+    def test_imageless_original_model_bone_minus_one_sprite_is_kept(self):
+        """Owned JP15.7.1 local rig contains valid -1/-1 sprite-less nodes."""
+        source = dict(self.source)
+        source["550_e.mamodel"] = source["550_e.mamodel"].replace(
+            b"1,550,0,0,0,0,0,0,1000,1000",
+            b"1,-1,-1,0,0,0,0,0,1000,1000",
+        )
+        created, proof = preview.preview_converted_ally_rig(source)
+        self.assertIn(
+            b"1,-1,-1,0,0,0,0,0,1000,1000",
+            created["702_f.mamodel"],
+        )
+        self.assertTrue(
+            proof["mamodel_conversion"]["native_imageless_bones_id_minus_one_preserved"]
+        )
+        self.assertFalse(proof["ready_to_install"])
+
+    def test_real_atlas_with_sentinel_minus_one_cut_still_rejected(self):
+        source = dict(self.source)
+        source["550_e.mamodel"] = source["550_e.mamodel"].replace(
+            b"1,550,0,0,0,0,0,0,1000,1000",
+            b"1,550,-1,0,0,0,0,0,1000,1000",
+        )
+        with self.assertRaisesRegex(
+            preview.OriginalGodzillaRigPreviewError,
+            "sprite index outside",
+        ):
+            preview.preview_converted_ally_rig(source)
+
+    def test_original_empty_animation_zero_tracks_is_valid(self):
+        # Owner JP ImageDataLocal contains eight entire .maanim files
+        # with zero tracks. This is a legitimate original state.
+        original = b"[modelanim:animation2]\n2\n0\n"
+        source = dict(self.source)
+        source["550_e03.maanim"] = original
+        out, receipt = preview.preview_converted_ally_rig(source)
+        self.assertEqual(out["702_f03.maanim"], original)
+        summary = receipt["animations_untouched"]["550_e03.maanim"]
+        self.assertEqual(summary["track_count"], 0)
+        self.assertEqual(summary["keyframe_count"], 0)
+        self.assertTrue(summary["empty_animation_tracks_accepted"])
+        self.assertTrue(summary["model_node_references_validated"])
+
+    def test_valid_original_negative_frames_and_minus_two_sentinel_preserved(self):
+        # The user-owned original corpus uses signed negative keyframes
+        # and a -2 node sentinel for a few special non-unit animations.
+        source = dict(self.source)
+        negative = source["550_e00.maanim"].replace(
+            b"0,0,0,0\r\n", b"-10,0,0,0\r\n", 1
+        )
+        negative = negative.replace(
+            b"1,11,-1,0,0,Attack\r\n",
+            b"-2,11,-1,0,0,Attack\r\n", 1,
+        )
+        source["550_e00.maanim"] = negative
+        converted, result = preview.preview_converted_ally_rig(source)
+        self.assertEqual(converted["702_f00.maanim"], negative)
+        stats = result["animations_untouched"]["550_e00.maanim"]
+        self.assertEqual(stats["negative_frame_key_count"], 1)
+        self.assertEqual(stats["special_minus_two_node_track_count"], 1)
+        self.assertTrue(stats["model_node_references_validated"])
+
+    def test_invalid_animation_track_node_or_keyframe_shape_is_rejected(self):
+        base = self.source["550_e00.maanim"]
+        invalid_tracks = [
+            base.replace(b"1,5,-1,0,0,Move", b"330,5,-1,0,0,Move"),
+            base.replace(b"1,5,-1,0,0,Move", b"-1,5,-1,0,0,Move"),
+            base.replace(b"1,5,-1,0,0,Move", b"junk,5,-1,0,0,Move"),
+            base.replace(b"0,0,0,0", b"0,0,0", 1),
+            base.replace(b"0,0,0,0", b"0,junk,0,0", 1),
+            base.replace(b"0,0,0,0", b"1000001,0,0,0", 1),
+        ]
+        for i, modified in enumerate(invalid_tracks):
+            with self.subTest(modification=i):
+                source = dict(self.source)
+                source["550_e00.maanim"] = modified
+                with self.assertRaises(preview.OriginalGodzillaRigPreviewError):
+                    preview.preview_converted_ally_rig(source)
+
+    def test_truncated_model_and_animations_fail_before_output(self):
+        one = dict(self.source)
+        one["550_e.mamodel"] = one["550_e.mamodel"].replace(
+            b"\r\n3\r\n", b"\r\n8\r\n"
+        )
+        with self.assertRaises(preview.OriginalGodzillaRigPreviewError):
+            preview.preview_converted_ally_rig(one)
+        two = dict(self.source)
+        two["550_e02.maanim"] = two["550_e02.maanim"].replace(
+            b"1,5,-1,0,0,Move\r\n2\r\n", b"1,5,-1,0,0,Move\r\n999\r\n"
+        )
+        with self.assertRaises(preview.OriginalGodzillaRigPreviewError):
+            preview.preview_converted_ally_rig(two)
+
+    def test_directory_staged_once_and_original_7_files_stay_identical(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / "original-enemy"
+            output = root / "ally-preview"
+            source.mkdir()
+            for filename, raw in self.source.items():
+                (source / filename).write_bytes(raw)
+            (source / "rig-receipt.json").write_text(
+                __import__("json").dumps(fake_receipt(self.source)),
+                encoding="utf-8",
+            )
+            receipt = preview.prepare_from_private_source(source, output)
+            self.assertEqual(receipt["target_stem"], "702_f")
+            self.assertTrue((output / "rig-conversion-preview-receipt.json").exists())
+            self.assertFalse((output / "702_c.mamodel").exists())
+            for name, blob in self.source.items():
+                self.assertEqual((source / name).read_bytes(), blob)
+            with self.assertRaisesRegex(preview.OriginalGodzillaRigPreviewError,
+                                         "must not exist"):
+                preview.prepare_from_private_source(source, output)
+
+    def test_invalid_input_does_not_make_output_dir_or_write_half_a_rig(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / "enemy"
+            output = root / "target"
+            source.mkdir()
+            for name, blob in self.source.items():
+                (source / name).write_bytes(blob)
+            (source / "550_e03.maanim").write_bytes(b"broken")
+            with self.assertRaises(preview.OriginalGodzillaRigPreviewError):
+                preview.prepare_from_private_source(source, output)
+            self.assertFalse(output.exists())
+            self.assertFalse(list(root.glob(".kneekura-ally-rig-preview-*")))
+
+    def test_numeric_timeline_summary_is_bounded_and_not_native_hit_proof(self):
+        # Fixture labels/content must never leak through numeric metadata.
+        source = b"\n".join([
+            b"[modelanim:animation2]", b"2", b"3",
+            b"1,5,-1,0,0,SECRET_LABEL", b"4",
+            b"-10,1,2,3", b"0,9,8,7", b"130,3,2,1", b"210,4,5,6",
+            b"-2,11,-1,0,0,OTHER_SECRET", b"3",
+            b"0,2,3,4", b"170,4,5,6", b"210,7,8,9",
+            b"0,9,0,0,0,THIRD_SECRET", b"0", b"",
+        ])
+        stats = preview._inspect_animation(source, name="fixture.maanim", model_node_count=3)
+        self.assertEqual(stats["track_count"], 3)
+        self.assertEqual(stats["keyframe_count"], 7)
+        self.assertEqual(stats["first_nonnegative_frame_number"], 0)
+        self.assertEqual(stats["last_nonnegative_frame_number"], 210)
+        self.assertEqual(stats["earliest_negative_frame_number"], -10)
+        self.assertEqual(stats["nonnegative_frame_key_count"], 6)
+        self.assertEqual(stats["unique_nonnegative_frame_indices"], 4)
+        self.assertEqual(stats["tracks_with_nonnegative_keys"], 2)
+        self.assertEqual(stats["tracks_with_negative_keys"], 1)
+        self.assertEqual(stats["tracks_reaching_last_nonnegative_frame"], 2)
+        self.assertEqual(stats["zero_keyframe_track_count"], 1)
+        self.assertEqual(stats["special_minus_two_node_track_count"], 1)
+        self.assertEqual(stats["most_keyed_nonnegative_frames"][0],
+                         {"frame": 0, "key_count": 2})
+        self.assertEqual(stats["candidate_hit_timing_130_170_210_exact_key_counts_only"],
+                         {"130": 1, "170": 1, "210": 2})
+        self.assertFalse(stats["hit_events_proven_from_maanim"])
+        summary = __import__("json").dumps(stats)
+        self.assertNotIn("SECRET", summary)
+        self.assertNotIn("OTHER_SECRET", summary)
+
+    def test_negative_only_and_empty_timelines_have_null_positive_bounds(self):
+        samples = [
+            (b"[modelanim:animation2]\n2\n1\n0,5,-1,0,0,SECRET\n2\n-9,0,0,0\n-1,0,0,0\n",
+             2, -1, -9),
+            (b"[modelanim:animation2]\n2\n0\n", 0, None, None),
+        ]
+        for blob, keys, max_frame, earliest in samples:
+            with self.subTest(keys=keys):
+                stats = preview._inspect_animation(blob, name="fixture.maanim",
+                                                   model_node_count=3)
+                self.assertEqual(stats["keyframe_count"], keys)
+                self.assertEqual(stats["largest_frame_number"], max_frame)
+                self.assertEqual(stats["earliest_negative_frame_number"], earliest)
+                self.assertIsNone(stats["first_nonnegative_frame_number"])
+                self.assertIsNone(stats["last_nonnegative_frame_number"])
+                self.assertEqual(stats["tracks_reaching_last_nonnegative_frame"], 0)
+                self.assertEqual(stats["most_keyed_nonnegative_frames"], [])
+                self.assertEqual(
+                    stats["candidate_hit_timing_130_170_210_exact_key_counts_only"],
+                    {"130": 0, "170": 0, "210": 0},
+                )
+
+
+
+if __name__ == "__main__":
+    unittest.main()

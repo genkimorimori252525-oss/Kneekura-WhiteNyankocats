@@ -274,3 +274,91 @@ anchors use the derived internal IDs. A dedicated unit test pins:
 No public unit number may be used as a raw SAVE_DATA array index without an
 explicit namespace conversion. Gameplay parameter filenames, public catalog
 numbers, and cat-array IDs must all state their numbering convention.
+
+---
+
+## 2026-10-09 — Owner Alpha installer failed again (UTF-8 BOM, then missing JAVA_HOME)
+
+**Real user log #1:** run_independent_alpha_update.ps1 displayed broken Japanese and PowerShell ParserError before executing because the UTF-8 source lacked BOM in Windows PowerShell 5.1. Corrected by shipping both entrypoint and nested installer with UTF-8 BOM.
+
+**Real user log #2:** after BOM repair, the entrypoint passed APK SHA and manifest checks and delegated to independent_alpha_20261009/INSTALL-ALPHA.ps1, which failed around line 92: Join-Path received null Path from env:JAVA_HOME when Get-Command keytool.exe was unavailable. **No APK installation or game SAVE edit occurred in that failed command.**
+
+**Actual root cause:** CI exercised repo entrypoint and Python tooling, but not all shipped nested PowerShell code and realistic Windows environment defaults. A default-unset JAVA_HOME is valid even on a machine that has Java installed.
+
+**Permanent repair:** Shared UTF-8-BOM tools/base_mod/resolve_java_keytool.ps1 searches PATH keytool, JAVA_HOME, JDK_HOME, executable's JDK and guarded local Java installations. Nested owner-only installer now dot-sources resolver and has safe -CheckJava / -CheckPrerequisites with no USB writes. The entrypoint checks exact helper/installer/APK SHA. Existing program and SAVE_DATA remain unmodified, and mismatched signer is refused.
+
+**Non-negotiable regression:** GitHub Windows PowerShell 5.1 CI with JAVA_HOME absent and LOCALAPPDATA absent; parse actual distributed scripts as PS5.1, and compare final packaged ZIP entry hashes. No CI green from an unrelated older script can be described as proof of the shipped installer. Device/password/USB remain USER_GATE.
+
+**Distribution history:** Original overlay `kneekura-alpha-existing-folder-overlay-20261009.zip` failed BOM parsing; intermediate `kneekura-alpha-existing-folder-overlay-ps51-fixed-20261009.zip` corrected BOM but had null-JAVA_HOME defect; the new repaired owner overlay fixes both. Do NOT re-use either faulty ZIP or their recorded installer hashes.
+
+
+**Additional release-verification catch:** The first JAVA_HOME fix had a stale SHA for `resolve_java_keytool.ps1` in the outer launcher. The new `tools/base_mod/audit_owner_overlay_zip.py` was executed against the actual ZIP, caught this before another USB attempt, and led to a repaired final distribution `kneekura-alpha-overwrite-verified-v3-20261009.zip` (SHA256 `486dddd998895de91526e8acaebe68e65e072bdaa2ce21360d1746d127c5ac06`). All outer/nested digests now match. Regression tests: `tests/test_audit_owner_overlay_zip.py` rejects stale hashes, null-JAVA_HOME code, missing BOM, missing nested helper and destructive commands. `AGENTS.md` mandates running this exact ZIP-level validator on every future handoff. No Android user device was connected during this static validation.
+
+---
+
+## 2026-10-09 — CRITICAL: shipped resolver assigned read-only `$HOME` through lowercase `$home`
+
+**Real owner execution / actual environment**
+
+- Shell: Windows PowerShell 5.1 launched via `powershell -ExecutionPolicy Bypass -File`, not PowerShell 7. PC project path `C:\Users\genki\Downloads\にーくらにゃんこ` contains Japanese characters; Java 17 and Android SDK tooling are installed, but `JAVA_HOME` is **not required to be set**.
+- The owner extracted `kneekura-alpha-existing-folder-overlay-java-fixed-20261009.zip` into that existing project and invoked `tools/base_mod/independent_alpha_20261009/INSTALL-ALPHA.ps1 -CheckJava`.
+- It failed at `Resolve-JavaKeytool` before any install: `変数 HOME は読み取り専用または定数であるため、上書きできません`.
+
+**Exact cause**
+
+The helper `tools/base_mod/resolve_java_keytool.ps1` assigned to `$home` in seven places. In PowerShell 5.1 **variable names are case-insensitive**, so `$home` is the built-in, read-only automatic `$HOME`. A static parser PASS cannot detect this runtime semantic failure. Prior CI with `JAVA_HOME` unset was insufficient because `keytool.exe` remained on PATH and the function returned BEFORE evaluating the bad `$home` statements. The user had already lost time to an earlier BOM ParserError and a null `JAVA_HOME` `Join-Path` failure on the same update.
+
+**Permanent source repair**
+
+- Rename **all seven** `$home` references to `$jdkInstallDirectory`; preserve BOM and unchanged APK and signer logic.
+- `tools/agent_terminal/check_windows_owner_jdk.ps1`: execute a **real Windows PowerShell 5.1** test with empty `JAVA_HOME`, empty `LOCALAPPDATA`, tightly scoped PATH (no keytool), and an isolated fake `JDK_HOME/bin/keytool.exe` so the previously untested branch is definitely exercised. Scan assignment AST for common PowerShell automatic/reserved variable names.
+- `tools/base_mod/audit_owner_overlay_zip.py` rejects any distributed outer/inner/helper script that assigns to `$home`, `$host`, `$pid`, `$pshome`, etc. `tests/test_audit_owner_overlay_zip.py` includes negative fixtures for lowercase HOME and uppercase HOST.
+- SHA256 of the helper, wrapper, installer, original APK and both manifests must match the **final ZIP bytes**, not a past repository head. Run the actual ZIP auditor after the LAST edit.
+
+**Environment compatibility contract for every future agent/session**
+
+1. Read this history and the uploaded 89-page previous-session PDF if available **before** changing the installer. The PDF documents earlier H01, missing optional SAVE_DATA4, PowerShell StrictMode optional fields, Japanese ADB paths, variable SAVE sizes, and overaggressive fixed hash assumptions. Do not repeat those mistakes in the new independent client.
+2. Windows PowerShell 5.1 + UTF-8 BOM for ALL distributed .ps1; search for read-only automatic variable name collisions case-insensitively. Do not use `$home`/`$host`/`$pid` as local variables.
+3. `JAVA_HOME`, `JDK_HOME`, `LOCALAPPDATA`, `TEMP` can be unset; fallback must be explicit or stop with a useful error **before device mutation**, never call `Join-Path` on null.
+4. Simulate the user's JDK discovery branch with no keytool on PATH, not just null `JAVA_HOME`; invoke the nested `-CheckJava` if the real nested installer is available in the distribution, never skip it silently.
+5. Japanese project paths are expected. Stage tools/APK paths into an ASCII-only temporary directory only where ADB/SDK requires it, and preserve unchanged SHA-256.
+6. The owner uses ONLY `ZIP extract-overwrite into existing にーくらにゃんこ root → one -Apply PowerShell command`. Never make the owner repeatedly search/download/reinstall tooling merely because CI did not exercise a predictable branch.
+7. A successful helper unit test, Python build, or an unrelated Android build is **not** a passing owner installer end-to-end run. The actual physical USB/keystore test is explicitly USER_GATE. No uninstall, `pm clear`, SAVE_DATA rewrite, secret upload or unsigned different-key overwrite.
+8. **Do not offer another owner ZIP while relevant CI is red**. Fix failures, rerun, audit exact published ZIP, and preserve the failure report.
+
+This repair is on the independent app (`jp.kneekura.whitenyankocats`); the photographed original game's restricted save and the legacy `jp.kn.*` packages are out of scope. This `-CheckJava` error never reached `adb install` and did not alter the device.
+
+
+
+---
+
+## 2026-10-10 — Original research scene hook: signing order and target selection
+
+**Observed**
+
+The optional JP15.7.1 no-INTERNET research scene-witness packaging initially
+checked the repackaged native JNI VMAs only in its post-sign parity audit. It
+also used ShadowHook's basename-based hook_sym_name API; that API can register
+a future-load hook, even though the original native ELF's entry VMA is known.
+
+**Repair**
+
+- verify_staged_original_scene_before_signing() now checks the final unsigned
+  ARM64 split, including original Build ID, mapped executable instructions
+  and its exact JNI dynsym VMA, before baseline_resign(). The post-sign parity
+  gate stays in place as independent defense in depth.
+- For the isolated no-INTERNET research package only, the source-pinned
+  scene observer now calls shadowhook_hook_sym_addr() on the address from the
+  unique loaded original ELF plus JNI VMA 0x31755c. Reviewed native dependency
+  SHA and hook-init/hook-address/unhook API anchors are mandatory.
+- Synthetic regression tests cover the unsigned APK gate and mismatches,
+  optimized research-only native ELF identity, and optional hook packaging.
+  The optimized host ELF test does not shell out to nm (a slow runner
+  previously timed out). Actual ARM64 CI uses readelf for export checking.
+
+**Regression rule**
+
+Any native hook remains DEFAULT OFF and research-only. Original address drift
+must block before signing. Source tests and unrelated Android debug APK success
+must NEVER be described as a live original game/first-save/device pass.
+No original owner APK, SAVE, asset, account or signing key is modified.

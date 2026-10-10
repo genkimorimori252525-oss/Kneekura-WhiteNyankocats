@@ -39,6 +39,7 @@ from tools.base_mod.verify_parity import _lief_binary
 
 PRODUCT_FLAVORS = ("personal", "practice")
 RESEARCH_PACKAGE = FLAVOR_PACKAGES["research"]
+FRESH_LOCAL_RESEARCH_PACKAGE = FLAVOR_PACKAGES["local-research"]
 
 FORBIDDEN_ENTRY_NAMES = {
     GADGET_ENTRY,
@@ -57,6 +58,7 @@ FORBIDDEN_BINARY_MARKERS = (
     b"libbc_script.js.so",
     b"frida-java-bridge",
     b"jp.kn.trace.battlecats",
+    b"jp.kn.local.battlecats",
 )
 
 
@@ -91,8 +93,10 @@ def audit_repository(root: Path) -> dict:
     injector = (
         root / "tools/base_mod/inject_java_http_bridge.py"
     ).read_text(encoding="utf-8")
-    if '"true" if flavor == "research" else "false"' not in injector:
+    if '"true" if flavor in ("research", "local-research") else "false"' not in injector:
         failures.append("static bridge research-log flavor gate drift")
+    if '"true" if flavor == "local-research" else "false"' not in injector:
+        failures.append("fresh local research bridge provenance/HTTP gate missing")
 
     template = (
         root / "bridge/java/MyActivity.java.in"
@@ -129,7 +133,7 @@ def audit_repository(root: Path) -> dict:
         package = FLAVOR_PACKAGES[flavor]
         if package not in package_flavor:
             failures.append(f"{flavor} package id missing")
-        if package == RESEARCH_PACKAGE:
+        if package in (RESEARCH_PACKAGE, FRESH_LOCAL_RESEARCH_PACKAGE):
             failures.append(f"{flavor} package aliases research package")
 
     if failures:
@@ -142,9 +146,11 @@ def audit_repository(root: Path) -> dict:
         "mode": "shipping-boundary-repository-audit",
         "product_flavors": list(PRODUCT_FLAVORS),
         "research_package": RESEARCH_PACKAGE,
+        "fresh_local_research_package": FRESH_LOCAL_RESEARCH_PACKAGE,
         "shipping_builders_reference_frida": False,
         "research_gadget_path_isolated": True,
         "research_log_compiled_only_for_research": True,
+        "local_research_never_shipping_flavor": True,
         "original_http_fallthrough_required": True,
         "external_files_dir_default_off": True,
         "external_files_dir_research_only": True,
@@ -234,7 +240,7 @@ def audit_signed_split_set(
         names = set(base.namelist())
         if package not in values:
             raise ValueError("product package missing from base manifest")
-        if RESEARCH_PACKAGE in values:
+        if RESEARCH_PACKAGE in values or FRESH_LOCAL_RESEARCH_PACKAGE in values:
             raise ValueError("research package leaked into product manifest")
         if expected_launcher not in values:
             raise ValueError(

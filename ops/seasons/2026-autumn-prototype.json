@@ -1,0 +1,345 @@
+{
+  "schema_version": 1,
+  "channel": "kneekura-main-offline",
+  "revision": 1,
+  "status": "draft",
+  "timezone": "Asia/Tokyo",
+  "season": {
+    "id": "kneekura:season:2026-autumn-prototype",
+    "title": "にーくら秋季・運営試作（未公開）",
+    "start": "2026-10-01T00:00:00+09:00",
+    "end": "2026-12-01T00:00:00+09:00"
+  },
+  "policy": {
+    "network": "forbidden",
+    "owner_save": "KNEEKURA_SAVE_V1",
+    "stage_availability_is_clear": false,
+    "login_active_slots": 5,
+    "real_money": false
+  },
+  "catalog": {
+    "gacha": [
+      {
+        "id": "kneekura:gacha:local-rotation-a",
+        "title": "にーくら試作ガチャA（排出表未確定）",
+        "source": "kneekura-local",
+        "ready": false,
+        "catalog_status": "POOL_NOT_VALIDATED",
+        "currency": "local_tickets_only"
+      },
+      {
+        "id": "kneekura:gacha:local-rotation-b",
+        "title": "にーくら試作ガチャB（排出表未確定）",
+        "source": "kneekura-local",
+        "ready": false,
+        "catalog_status": "POOL_NOT_VALIDATED",
+        "currency": "local_tickets_only"
+      }
+    ],
+    "stage": [
+      {
+        "id": "kneekura:stage:weekly-test-map",
+        "title": "週替りイベントステージ（未実装）",
+        "source": "kneekura-local",
+        "ready": false,
+        "stage_pack_status": "NOT_IMPORTED"
+      }
+    ],
+    "event": [
+      {
+        "id": "kneekura:event:autumn-campaign",
+        "title": "秋季ローカル企画（未公開）",
+        "source": "kneekura-local",
+        "ready": false
+      }
+    ],
+    "login": [
+      {
+        "id": "kneekura:login:slot-a",
+        "title": "ログインキャンペーンA（試作）",
+        "source": "kneekura-local",
+        "ready": false,
+        "reward_plan": "UNAPPROVED"
+      },
+      {
+        "id": "kneekura:login:slot-b",
+        "title": "ログインキャンペーンB（試作）",
+        "source": "kneekura-local",
+        "ready": false,
+        "reward_plan": "UNAPPROVED"
+      },
+      {
+        "id": "kneekura:login:slot-c",
+        "title": "ログインキャンペーンC（試作）",
+        "source": "kneekura-local",
+        "ready": false,
+        "reward_plan": "UNAPPROVED"
+      },
+      {
+        "id": "kneekura:login:slot-d",
+        "title": "ログインキャンペーンD（試作）",
+        "source": "kneekura-local",
+        "ready": false,
+        "reward_plan": "UNAPPROVED"
+      },
+      {
+        "id": "kneekura:login:slot-e",
+        "title": "ログインキャンペーンE（試作）",
+        "source": "kneekura-local",
+        "ready": false,
+        "reward_plan": "UNAPPROVED"
+      }
+    ],
+    "mission": [
+      {
+        "id": "kneekura:mission:weekly-test",
+        "title": "週次ミッション（報酬・条件未定）",
+        "source": "kneekura-local",
+        "ready": false,
+        "reward_plan": "UNAPPROVED"
+      }
+    ],
+    "notice": [
+      {
+        "id": "kneekura:notice:prototype",
+        "title": "にーくら運営室、始動！",
+        "source": "kneekura-local",
+        "ready": true,
+        "message": "ガチャ・ステージ・イベントのお知らせを、これからジョリーが管理するで。",
+        "category": "運営情報",
+        "published_at": "2026-10-09T09:00:00+09:00",
+        "pinned": true,
+        "body": "にーくら大戦争の独立運営室を開設したで。\n\nガチャ・イベント・期間限定ステージ・ログインボーナスなどの情報を、ひとつの運営カレンダーで管理していく。広告や外部アカウント連携は再現せえへん。\n\n掲載されるお知らせは端末に取り込んだ運営データだけで表示する。オフラインでも読めるようにするで。\n\nなお、現在は開発試作段階。ガチャやステージの中身がまだ完成してへんものは、開催中として誤表示せず準備中にする。"
+      },
+      {
+        "id": "kneekura:notice:update-101-status",
+        "title": "にーくらアップデート1.01 — 開発状況",
+        "category": "更新情報",
+        "published_at": "2026-10-09T10:00:00+09:00",
+        "ready": true,
+        "source": "kneekura-local",
+        "pinned": false,
+        "message": "アルティメットまどか・ゴジラにゃんこの調整は設計済み。現在は独立版への移植を進めているで。",
+        "body": "にーくらアップデート1.01の開発状況をお知らせするで。\n\nアルティメットまどかはLv30攻撃力28,000・感知射程750・生産コスト4,550・再生産155秒、ゴジラにゃんこの第1形態はLv30合計150,000の3連撃・感知射程2,950・生産コスト9,800・再生産500秒という仕様が確定している。\n\n一方、完全ローカル独立Android版での戦闘処理・アニメーション適用はまだ未完成や。実装済みのように表示せず、動作検証が終わるまでは開発中として扱う。"
+      },
+      {
+        "id": "kneekura:notice:offline-update-guide",
+        "title": "お知らせ・開催予定はオフラインで更新できるで",
+        "category": "重要",
+        "published_at": "2026-10-09T10:00:00+09:00",
+        "ready": true,
+        "source": "kneekura-local",
+        "pinned": true,
+        "message": "運営データを1つのファイルで取り込む新方式を準備したで。インターネット接続は要らへん。",
+        "body": "これからの運営情報は、にーくら独自の署名付きZIPをスマホに保存して取り込む方式にするで。\n\n端末のファイル選択画面からZIPを選ぶと、署名・ファイル内容・更新順序を確認してから適用する。以前の運営データへ戻すこともできる。\n\nゲーム本体はPONOSやGitHubにアクセスしない。元ゲームのセーブや所持キャラの進行データを書き換える操作でもない。\n\n現在は運営データの取り込み画面とお知らせ表示の基礎を試作中。実機検証が済んだものだけ完成版と案内するで。"
+      }
+    ],
+    "modifier": [
+      {
+        "id": "kneekura:modifier:treasure-test",
+        "title": "トレジャー獲得率企画（未実装）",
+        "source": "kneekura-local",
+        "ready": false,
+        "modifier_engine_status": "NOT_CONNECTED"
+      }
+    ]
+  },
+  "schedule": [
+    {
+      "id": "kneekura:schedule:gacha-a",
+      "kind": "gacha",
+      "content_id": "kneekura:gacha:local-rotation-a",
+      "slot": "rare-1",
+      "priority": 10,
+      "rule": {
+        "mode": "weekly",
+        "valid_from": "2026-10-01",
+        "valid_until": "2026-12-01",
+        "weekdays": [
+          1,
+          3,
+          5
+        ],
+        "from_time": "11:00",
+        "to_time": "23:00"
+      }
+    },
+    {
+      "id": "kneekura:schedule:gacha-b",
+      "kind": "gacha",
+      "content_id": "kneekura:gacha:local-rotation-b",
+      "slot": "rare-1",
+      "priority": 20,
+      "rule": {
+        "mode": "once",
+        "start": "2026-10-10T11:00:00+09:00",
+        "end": "2026-10-12T11:00:00+09:00"
+      }
+    },
+    {
+      "id": "kneekura:schedule:stage-fridays",
+      "kind": "stage",
+      "content_id": "kneekura:stage:weekly-test-map",
+      "slot": "event-map-1",
+      "priority": 10,
+      "rule": {
+        "mode": "weekly",
+        "valid_from": "2026-10-01",
+        "valid_until": "2026-12-01",
+        "weekdays": [
+          4
+        ],
+        "from_time": "18:00",
+        "to_time": "23:00"
+      }
+    },
+    {
+      "id": "kneekura:schedule:event-autumn",
+      "kind": "event",
+      "content_id": "kneekura:event:autumn-campaign",
+      "slot": "festival-1",
+      "priority": 10,
+      "rule": {
+        "mode": "once",
+        "start": "2026-10-09T00:00:00+09:00",
+        "end": "2026-11-01T00:00:00+09:00"
+      }
+    },
+    {
+      "id": "kneekura:schedule:weekly-mission",
+      "kind": "mission",
+      "content_id": "kneekura:mission:weekly-test",
+      "slot": "weekly-mission-1",
+      "priority": 10,
+      "rule": {
+        "mode": "daily",
+        "valid_from": "2026-10-01",
+        "valid_until": "2026-12-01",
+        "from_time": "00:00",
+        "to_time": "00:00"
+      }
+    },
+    {
+      "id": "kneekura:schedule:notice",
+      "kind": "notice",
+      "content_id": "kneekura:notice:prototype",
+      "slot": "notice-1",
+      "priority": 10,
+      "rule": {
+        "mode": "once",
+        "start": "2026-10-01T00:00:00+09:00",
+        "end": "2026-12-01T00:00:00+09:00"
+      }
+    },
+    {
+      "id": "kneekura:schedule:treasure",
+      "kind": "modifier",
+      "content_id": "kneekura:modifier:treasure-test",
+      "slot": "treasure",
+      "priority": 10,
+      "rule": {
+        "mode": "weekly",
+        "valid_from": "2026-10-01",
+        "valid_until": "2026-12-01",
+        "weekdays": [
+          1,
+          3
+        ],
+        "from_time": "12:00",
+        "to_time": "14:00"
+      }
+    },
+    {
+      "id": "kneekura:schedule:login-a",
+      "kind": "login",
+      "content_id": "kneekura:login:slot-a",
+      "slot": "login-1",
+      "priority": 10,
+      "rule": {
+        "mode": "once",
+        "start": "2026-10-01T00:00:00+09:00",
+        "end": "2026-12-01T00:00:00+09:00"
+      }
+    },
+    {
+      "id": "kneekura:schedule:login-b",
+      "kind": "login",
+      "content_id": "kneekura:login:slot-b",
+      "slot": "login-2",
+      "priority": 10,
+      "rule": {
+        "mode": "once",
+        "start": "2026-10-01T00:00:00+09:00",
+        "end": "2026-12-01T00:00:00+09:00"
+      }
+    },
+    {
+      "id": "kneekura:schedule:login-c",
+      "kind": "login",
+      "content_id": "kneekura:login:slot-c",
+      "slot": "login-3",
+      "priority": 10,
+      "rule": {
+        "mode": "once",
+        "start": "2026-10-01T00:00:00+09:00",
+        "end": "2026-12-01T00:00:00+09:00"
+      }
+    },
+    {
+      "id": "kneekura:schedule:login-d",
+      "kind": "login",
+      "content_id": "kneekura:login:slot-d",
+      "slot": "login-4",
+      "priority": 10,
+      "rule": {
+        "mode": "once",
+        "start": "2026-10-01T00:00:00+09:00",
+        "end": "2026-12-01T00:00:00+09:00"
+      }
+    },
+    {
+      "id": "kneekura:schedule:login-e",
+      "kind": "login",
+      "content_id": "kneekura:login:slot-e",
+      "slot": "login-5",
+      "priority": 10,
+      "rule": {
+        "mode": "once",
+        "start": "2026-10-01T00:00:00+09:00",
+        "end": "2026-12-01T00:00:00+09:00"
+      }
+    },
+    {
+      "id": "kneekura:schedule:notice-update-101",
+      "kind": "notice",
+      "content_id": "kneekura:notice:update-101-status",
+      "slot": "notice-2",
+      "priority": 10,
+      "rule": {
+        "mode": "once",
+        "start": "2026-10-09T10:00:00+09:00",
+        "end": "2026-12-01T00:00:00+09:00"
+      }
+    },
+    {
+      "id": "kneekura:schedule:notice-offline-guide",
+      "kind": "notice",
+      "content_id": "kneekura:notice:offline-update-guide",
+      "slot": "notice-3",
+      "priority": 10,
+      "rule": {
+        "mode": "once",
+        "start": "2026-10-09T10:00:00+09:00",
+        "end": "2026-12-01T00:00:00+09:00"
+      }
+    }
+  ],
+  "meta": {
+    "author": "Jolly (operator)",
+    "release_gate": "NOT_APPROVED_FOR_ANDROID",
+    "source": "Kneekura-owned prototype only; NOT PONOS live schedule",
+    "no_real_money": true,
+    "progression_migration": false,
+    "notices_status": "SAMPLE_EDITORIAL_DRAFT_NOT_RELEASED"
+  }
+}

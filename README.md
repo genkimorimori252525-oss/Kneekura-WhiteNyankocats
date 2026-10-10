@@ -1,5 +1,15 @@
 # Kneekura-WhiteNyankocats
 
+**[START HERE — CURRENT.md](CURRENT.md)** is the **only required design entry point**. It gives the source-of-truth order and links to the [active four-feature implementation plan](docs/roadmap/2026-10-09-original-battle-cats-delivery.md). Do not restart level-zero planning by independently reading all `docs/` files; past materials are scoped technical references.
+
+## Important — User-confirmed product identity (2026-10-09)
+
+**The owner wants the genuine gameplay experience of PONOS's にゃんこ大戦争 (The Battle Cats), not a lookalike cat game.** The complete offline environment and Kneekura customization must retain original game UI/scene transitions, battles, characters, assets and animations, stages, gacha and progression. Neither a runnable simplified Android prototype nor a network-disconnected mock game fulfills the request.
+
+**[Authoritative PRODUCT_IDENTITY.md](PRODUCT_IDENTITY.md)** (owner's non-negotiable acceptance contract), **[product fidelity + offline release gates](docs/architecture/product-identity-gates.json)**.
+
+**Current status:** the small independent Java Android `app/` ("Stage Fidelity Alpha") is strictly a *research harness*, **not the actual Battle Cats game** or an owner-ready full 1.01 update. Some prior replies mistakenly presented the harness as playable replacement. Do not repeat or recommend it as one. The preferred research direction is preserving as much original JP15.7.1 game engine/UI and behavior as safely possible while establishing verified complete offline independence. A separate engine remains research-only until original-game parity is demonstrated and the owner approves it.
+
 PC-capable, offline-first Battle Cats compatibility sandbox for personal research and custom content.
 
 The project is designed around two goals:
@@ -69,15 +79,13 @@ python -m tools.audit_unit_assets nyanko_battlecats_2026-10-06.zip \\
 
 The real JP 15.7.1 audit now reports **879/882 strict catalog rows complete**. The three residual rows are explained nonstandard cases (one documented single-form cheat unit plus two JP placeholder/regional slots), so the **JP reconstruction assessment is GO** while the raw strict number intentionally remains 879/882. No original game asset bytes are committed.
 
-## Design source of truth
+## Design source of truth — single current index
 
-- `docs/architecture/design-philosophy.md` — approved preservation-first product principles\n- `docs/architecture/current-design.md`
-- `docs/architecture/runtime-contracts.md`
-- `docs/foundation/README.md`
-- `docs/foundation/release-access-2026-10-06.md`
-- `docs/foundation/android-export-15.7.1.md`
+1. [CURRENT.md](CURRENT.md) — **one first-read / authoritative reference order and active task**.
+2. [PRODUCT_IDENTITY.md](PRODUCT_IDENTITY.md) — owner non-negotiable actual Battle Cats experience.
+3. [Active implementation roadmap](docs/roadmap/2026-10-09-original-battle-cats-delivery.md) — level caps, Madoka, Godzilla first form, strict offline (concurrent).
 
-The exact original logical canvas size, simulation tick rate, and internal data meanings remain evidence-driven until measured.
+All other docs (older "current-design", design-philosophy, Phase-C, Post-EoC, harness, evidence) are historical or task-specific evidence. They do **not** override the above. Reference files only when the concrete implementation requires them.
 
 ## Android playable-stage checkpoint
 
