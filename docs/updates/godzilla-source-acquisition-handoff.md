@@ -100,3 +100,63 @@ Evidence: [2026-10-10 source recovery research](../research/2026-10-10-original-
 - [ ] Agent in its own target workspace has acquired and checked the actual files.
 - [ ] Original 7 asset bytes extracted and verified via existing extractor.
 - [ ] Original-compatible Android battle and approved Godzilla stats proven on-device.
+
+
+## No703 first-form private preview — one owner-local command (2026-10-10)
+
+The four original JP15.7.1 Server files have matching sizes and MD5 on the
+owner's Windows PC. Do **not** upload original .pack/.list/PNG/models/animations
+to this repository, an issue, PR or CI.
+
+The existing one-command recovery tool now supports a NON-INSTALLABLE allied
+first-form preview after verifying the 4/4 sources:
+
+~~~powershell
+$owned = Join-Path $env:USERPROFILE 'Downloads\kneekura-server-recovery-jp1571\kneekura_server_recovery\server_archive_cache\files'
+py -3 -m tools.base_mod.fetch_godzilla_server_assets --from-dir "$owned" --extract-original-godzilla-rig --prepare-ally-preview
+~~~
+
+After success, the private/ Git-ignored paths are:
+
+~~~text
+private/server-jp1571/godzilla/                 4 original Server files + MD5 receipt
+private/godzilla-550_e-original/                7 unmodified enemy 550_e assets
+private/godzilla-702_f-preview/                 7 No703 first-form preview files
+private/godzilla-702_f-preview/
+  rig-conversion-preview-receipt.json           metadata only
+~~~
+
+The converter changes the .imgcut PNG reference from 550_e to 702_f, rebases
+the .mamodel original image ID from 550 to 702, and makes a negative root
+horizontal scale positive if necessary for allied-facing. It preserves
+the PNG **pixel bytes**, all 4 .maanim **keyframe bytes**, model geometry apart
+from the two recorded fields, and original collision-footer data. It checks
+PNG cut rectangles against actual IHDR dimensions, validates source model
+part indices and animation track/keyframe counts, and refuses malformed
+or unexpected model image IDs before writing anything. Every output SHA256
+and all orientation assumptions are recorded in the conversion receipt.
+
+The original owner ZIP's ImageDataLocal was used read-only to corroborate
+the format: 671 model examples including original enemy 730_e and allied
+799_f; 1,814 animation files with six legitimate zero-keyframe tracks.
+**Those original sample bytes are not checked into Git.**
+
+If a prior 550_e rig has already been extracted, do NOT rerun with the same
+existing destination (the tool refuses overwrites). Use the dedicated step:
+
+~~~powershell
+py -3 -m tools.base_mod.prepare_godzilla_ally_preview --source private/godzilla-550_e-original --output private/godzilla-702_f-preview
+~~~
+
+Both commands refuse an existing candidate output. Do not delete the original
+enemy rig or the second form 702_c to make the command pass; use a distinct
+new private preview name if appropriate.
+
+This is **not** native Android animation/render acceptance, not a rig
+mirror guaranteed by the original runtime, and not an installable APK.
+Original cat 702_c second form remains completely unchanged. Still open:
+Godzilla 50,000x3 native damage, castle sequence HP debit max 1, 450-frame
+cycle, in-game facing/animation frame sync, and full offline original engine
+SAVE/battle confirmation. Separate extra 35 download_N.tsv payloads are not
+made available by these two Server family pairs; never equate the two-pair
+recovery with a complete 615 MiB original game local asset cache.
