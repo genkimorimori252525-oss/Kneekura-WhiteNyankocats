@@ -94,6 +94,24 @@ class OriginalResearchSameSignerHandoffTests(unittest.TestCase):
         self.assertIn("required private password environment variable not set",
                       stderr.getvalue())
 
+    def test_owner_one_command_handoff_refuses_signing_by_default(self):
+        path = ROOT / "tools/base_mod/OWNER-READY-TO-SIGN.ps1"
+        raw = path.read_bytes()
+        self.assertTrue(raw.startswith(bytes((239, 187, 191))))
+        source = raw.decode("utf-8-sig")
+        self.assertIn("[switch]$DoBuild", source)
+        self.assertIn("if (-not $DoBuild)", source)
+        self.assertIn("OWNER_PRIVATE_ORIGINAL_BUILD_INPUTS_READY_NO_DEVICE_OR_KEY_USED", source)
+        self.assertIn("BUILD-OWNER-RESEARCH-PAIR.ps1", source)
+        self.assertIn("PASS_PRIVATE_UNSIGNED_ORIGINAL_SIX_SPLITS_NOT_INSTALLABLE", source)
+        self.assertIn("PINNED_REPACKAGED_JP1571_ORIGINAL_SCENE_VMA_AND_EXPORT_VERIFIED",
+                      source)
+        self.assertIn("original_save_writer_enabled -ne $false", source)
+        self.assertIn("Read-only PREPARED state only.", source)
+        self.assertNotIn("install-multiple", source)
+        self.assertNotIn("pm clear", source)
+        self.assertNotIn(" -Password ", source)
+
     def test_preflight_pins_owner_original_and_official_public_archive(self):
         source = SCRIPT.read_text(encoding="utf-8-sig")
         from tools.base_mod.extract_owned_splits import EXPECTED_EXPORT_SHA256
