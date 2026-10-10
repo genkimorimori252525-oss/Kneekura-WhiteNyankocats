@@ -42,6 +42,11 @@ jobs:
           cp "$ANDROID_HOME/build-tools/35.0.0/apksigner" "$SDK/build-tools/35.0.0/apksigner"
           cp "$ANDROID_HOME/build-tools/35.0.0/zipalign" "$SDK/build-tools/35.0.0/zipalign"
           cp -R "$ANDROID_HOME/build-tools/35.0.0/lib" "$SDK/build-tools/35.0.0/lib"
+          # zipalign links against the SDK's libc++.so on Ubuntu. It is not
+          # bundled with a plain Android platform or d8/apksigner jars.
+          mkdir -p "$SDK/build-tools/35.0.0/lib64"
+          cp "$ANDROID_HOME/build-tools/35.0.0/lib64/libc++.so"              "$SDK/build-tools/35.0.0/lib64/libc++.so"
+          test -s "$SDK/build-tools/35.0.0/lib64/libc++.so"
           cp -R tools/base_mod "$OUT/tools/base_mod"
           cp tools/__init__.py "$OUT/tools/__init__.py"
           cp -R bridge "$OUT/bridge"
