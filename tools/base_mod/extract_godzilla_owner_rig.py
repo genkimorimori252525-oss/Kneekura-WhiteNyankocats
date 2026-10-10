@@ -11,10 +11,6 @@ import json
 from pathlib import Path
 from typing import Any
 from tools.battlecats_pack import PackReader
-from tools.base_mod.fetch_godzilla_server_assets import (
-    FILES as EXPECTED_JP1571_SERVER_FILES,
-    verify as verify_exact_owner_server_file,
-)
 
 SOURCE_STEM = "550_e"
 TARGET_STEM = "702_f"  # cat No703 first form only
@@ -78,6 +74,13 @@ def export_owner_rig(png_reader: PackReader, anim_reader: PackReader,
 
 
 def main(argv: list[str] | None = None) -> int:
+    # Imported at invocation only: the one-step recovery module imports
+    # export_owner_rig, so a module-level reverse import would create a
+    # circular dependency and break both original extraction and preview.
+    from tools.base_mod.fetch_godzilla_server_assets import (
+        FILES as EXPECTED_JP1571_SERVER_FILES,
+        verify as verify_exact_owner_server_file,
+    )
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--m-number-list", type=Path, required=True)
     p.add_argument("--m-number-pack", type=Path, required=True)
