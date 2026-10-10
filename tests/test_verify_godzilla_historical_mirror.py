@@ -90,21 +90,40 @@ class EphemeralRealGodzillaMirrorTests(unittest.TestCase):
             },
         }
         original_secret = b"NEVER_EXPOSE_ORIGINAL_PNG_BYTES_88"
+        model = (
+            b"[modelanim:model2]\n4\n1\n"
+            b"-1,-1,0,0,0,0,0,0,1000,1000,0,1000,0,Control\n"
+        )
         called = []
         def fake_download(mode, directory, *args, **kwargs):
             called.append(("download", mode, directory))
             self.assertEqual(mode, "download")
             self.assertTrue(directory.is_relative_to(Path(directory.parents[1])))
+            directory.mkdir(parents=True, exist_ok=True)
+            (directory / "WImageDataServer.list").write_bytes(b"MOCKED_TEST_MANIFEST")
+            (directory / "WImageDataServer.pack").write_bytes(b"MOCKED_TEST_PACK")
             return {"files": source}
         def fake_private_pipeline(source_dir, **kwargs):
             called.append(("private", source_dir, kwargs["private_root"]))
             self.assertTrue(source_dir.is_dir() or not source_dir.exists())
             self.assertEqual(source_dir.name, "mirror")
+            target = kwargs["ally_output"] if "ally_output" in kwargs else kwargs.get("ally_output", kwargs.get("ally_output"))
+            # Pipeline accepts ally_output as a keyword, and keeps this
+            # fixture entirely under TemporaryDirectory for deletion.
+            target.mkdir(parents=True, exist_ok=True)
+            (target / "702_f.mamodel").write_bytes(model)
             return expected
 
+        class MockPackReader:
+            def __init__(self, *args, **kwargs):
+                pass
+            def read(self, name):
+                self.last_name = name
+                return model, None
         with patch.object(owner, "acquire", side_effect=fake_download), \
              patch.object(owner, "complete_owner_private_godzilla_pipeline",
-                          side_effect=fake_private_pipeline):
+                          side_effect=fake_private_pipeline), \
+             patch.object(mirror, "PackReader", MockPackReader):
             report = mirror.verify_public_mirror_volatile(
                 allow_mirror_download=True
             )
@@ -115,6 +134,10 @@ class EphemeralRealGodzillaMirrorTests(unittest.TestCase):
         self.assertEqual(len(report["original_enemy_art_550e"]), 7)
         self.assertEqual(len(report["candidate_first_form_702f"]), 7)
         self.assertTrue(report["PNG_and_four_maanim_SHA256_all_unchanged"])
+        self.assertTrue(
+            report["original_allied_model_comparison"]
+                ["candidate_matches_original_friendly_root_scale_sign"]
+        )
         self.assertEqual(report["real_model_conversion"]["atlas_550_to_702_rows"], 44)
         self.assertFalse(report["ready_to_install_or_ship"])
         self.assertFalse(report["actual_original_Android_renderer_accepted"])
