@@ -1,6 +1,7 @@
 package __KNEEKURA_PACKAGE__;
 
 import android.opengl.GLSurfaceView;
+import android.os.FileObserver;
 
 import java.io.File;
 import java.io.IOException;
@@ -49,6 +50,11 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
     // Used solely to witness whether the ORIGINAL native host created a new
     // local SAVE file between getFilesDir calls/restarts.
     private static volatile String lastLocalSavePresence;
+    // Only local-research: retain a FileObserver so changes made by the
+    // ORIGINAL native writer can be noticed after getFilesDir has returned.
+    // Initial snapshots alone cannot observe a late SAVE_DATA creation.
+    private static volatile FileObserver originalLocalSaveObserver;
+    private static volatile String originalLocalSaveObserverRoot;
 
     private static final String BACKUP_SCHEME = "https";
     private static final String BACKUP_HOST = "nyanko-backups.ponosgames.com";
@@ -177,6 +183,58 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
         }
     }
 
+
+    private static void watchOriginalLocalSaveChanges(final File root) {
+        if (!LOCAL_RESEARCH_FRESH_ROOT || !DEBUG_RESEARCH_LOG) {
+            return;
+        }
+        synchronized (MyActivity.class) {
+            try {
+                final String canonicalRoot = root.getCanonicalPath();
+                if (originalLocalSaveObserver != null) {
+                    if (!canonicalRoot.equals(originalLocalSaveObserverRoot)) {
+                        throw new IllegalStateException(
+                                "research original files root changed during observation");
+                    }
+                    return;
+                }
+                FileObserver watcher = new FileObserver(
+                        canonicalRoot,
+                        FileObserver.CREATE | FileObserver.CLOSE_WRITE
+                                | FileObserver.MOVED_TO | FileObserver.DELETE
+                ) {
+                    @Override
+                    public void onEvent(int event, String filename) {
+                        if (filename == null || filename.contains("/")
+                                || filename.contains("\\")) {
+                            return;
+                        }
+                        boolean tracked = false;
+                        for (String known : FORBIDDEN_PREEXISTING_SAVES) {
+                            if (known.equals(filename)) {
+                                tracked = true;
+                                break;
+                            }
+                        }
+                        if (tracked) {
+                            // Re-use the existing metadata-only canonical
+                            // containment probe. Never inspect SAVE contents.
+                            probeLocalGameSaveFiles(root);
+                        }
+                    }
+                };
+                watcher.startWatching();
+                originalLocalSaveObserver = watcher;
+                originalLocalSaveObserverRoot = canonicalRoot;
+                debugResearch("original-save-event-observer-v1 active");
+            } catch (IOException | SecurityException error) {
+                // Research diagnostics must not corrupt the native game's
+                // SAVE or convert an unavailable watcher into a fake PASS.
+                debugResearch("original-save-event-observer-v1 unavailable");
+            }
+        }
+    }
+
     private File newLocalOriginalGameRoot() {
         // The local-research PACKAGE ALREADY has its own Android app-data root.
         // Its first observed use must not silently reuse a previous experiment's
@@ -220,6 +278,7 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
                 throw new IllegalStateException("original local research origin root unavailable", error);
             }
             probeLocalGameSaveFiles(root);
+            watchOriginalLocalSaveChanges(root);
             probeLocalDownloadBatchTsvFiles(root);
             debugResearch("original-local-fresh-package-root active");
             return root;
