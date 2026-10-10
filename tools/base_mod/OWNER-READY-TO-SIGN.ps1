@@ -1,0 +1,129 @@
+﻿# Owner Windows 11 private research preparation; safe by default.
+# No -DoBuild: read-only validation only, no signing key/password input,
+# no ADB, publisher game/SAVE, uninstall, signed APK output, or download.
+# -DoBuild: passes vetted local inputs to BUILD-OWNER-RESEARCH-PAIR.ps1,
+# which interactively requests the owner's EXISTING research signing password.
+[CmdletBinding()]
+param(
+    [switch]$DoBuild,
+    [string]$SigningAlias,
+    [string]$RepositoryRoot = (Join-Path $HOME 'Downloads\Kneekura-WhiteNyankocats')
+)
+$ErrorActionPreference = 'Stop'
+function Require-One([array]$paths, [string]$label) {
+    if ($paths.Count -ne 1) {
+        throw ('Expected exactly one existing private ' + $label +
+               ' (found ' + $paths.Count + '); no action performed')
+    }
+    $item = $paths[0]
+    if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+        throw ('Untrusted symlink found in private ' + $label)
+    }
+    return $item.FullName
+}
+function Digest([string]$file) {
+    return (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant()
+}
+$repo = (Resolve-Path -LiteralPath $RepositoryRoot -ErrorAction Stop).Path
+if ((git -C $repo branch --show-current).Trim() -ne 'jolly/balance-madoka-godzilla-2026-10-09') {
+    throw 'Not the CURRENT.md active original-game research branch'
+}
+$private = Join-Path $repo 'private'
+if (-not (Test-Path -LiteralPath $private -PathType Container)) {
+    throw 'Owner private source folder unavailable'
+}
+if (((Get-Item -LiteralPath $private).Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+    throw 'Owner private source folder is a symlink'
+}
+$ownerExport = Join-Path $HOME 'Downloads\にーくらにゃんこ\nyanko_battlecats_2026-10-06.zip'
+if (-not (Test-Path -LiteralPath $ownerExport -PathType Leaf)) {
+    throw 'Existing owned original JP15.7.1 export absent'
+}
+if ((Digest $ownerExport) -ne '38c3bbb8d2cf2101793c9462617d4293e19fc99588b6655fd40299fd61a0ef56') {
+    throw 'Original game source checksum does not match CURRENT.md'
+}
+$official = Join-Path $private 'official-shadowhook-2.0.1.aar'
+if (-not (Test-Path -LiteralPath $official -PathType Leaf) -or
+    (Digest $official) -ne '2cad01ff4d59542958775e19f281981a7e84b39670b5fae75905b8511e10c7cd') {
+    throw 'Official paired ShadowHook AAR is missing or does not match verified hash'
+}
+$nativeFolders = @(Get-ChildItem -LiteralPath $private -Directory -Filter 'passive-arm64-public-*')
+$nativeFolder = Require-One $nativeFolders 'PASSIVE ARM64 compiler artifact folder'
+$native = Join-Path $nativeFolder 'libkneekura.so'
+$receipt = Join-Path $nativeFolder 'PUBLIC_PASSIVE_SHIM_RECEIPT.json'
+if (-not (Test-Path -LiteralPath $native -PathType Leaf) -or
+    -not (Test-Path -LiteralPath $receipt -PathType Leaf)) {
+    throw 'CI-built passive ARM64 native receipt and binary are incomplete'
+}
+$nativeProof = Get-Content -LiteralPath $receipt -Raw -Encoding UTF8 | ConvertFrom-Json
+if ($nativeProof.schema -ne 'public-original-research-passive-shim-v1' -or
+    $nativeProof.original_save_writer_enabled -ne $false -or
+    $nativeProof.fixed_error_markers_compiled -ne $true -or
+    (Digest $native) -ne $nativeProof.sha256) {
+    throw 'The pinned no-SAVE-writer native artifact does not match its source receipt'
+}
+& git -C $repo merge-base --is-ancestor $nativeProof.git_commit HEAD
+if ($LASTEXITCODE -ne 0) { throw 'PASSIVE ARM64 compiler source not in current Git history' }
+$keystore = Require-One @(
+    Get-ChildItem -LiteralPath $private -Recurse -File -ErrorAction Stop |
+        Where-Object { $_.Extension -in @('.p12', '.jks', '.keystore') }
+) 'existing research signing key'
+# Avoid confusing the UNSIGNED source-preserving test outputs with an
+# already installed research baseline signed base APK.
+$previousBase = Require-One @(
+    Get-ChildItem -LiteralPath $private -Recurse -File -Filter 'base.apk' |
+        Where-Object {
+            $_.FullName -notlike '*\unsigned-original-native-pair-*' -and
+            $_.FullName -notlike '*\passive-arm64-public-*'
+        }
+) 'previously signed local research base.apk'
+$sdk = Join-Path $env:LOCALAPPDATA 'Android\Sdk'
+$signer = Join-Path $sdk 'build-tools\35.0.0\apksigner.bat'
+if (-not (Test-Path -LiteralPath $signer -PathType Leaf)) {
+    throw 'Owner confirmed Android SDK35 apksigner not found'
+}
+& $signer verify --print-certs $previousBase 1>$null 2>$null
+if ($LASTEXITCODE -ne 0) {
+    throw 'The proposed old research base APK is not a valid signed APK'
+}
+$unsigned = @(Get-ChildItem -LiteralPath $private -Directory -Filter 'unsigned-original-native-pair-*')
+if ($unsigned.Count -ne 1) {
+    throw 'Exactly one complete private original unsigned validation output is required'
+}
+$presignReport = Join-Path $unsigned[0].FullName 'UNSIGNED-RESEARCH-RECEIPT.json'
+if (-not (Test-Path -LiteralPath $presignReport -PathType Leaf)) {
+    throw 'Missing private original unsigned build evidence'
+}
+$proof = Get-Content -LiteralPath $presignReport -Raw -Encoding UTF8 | ConvertFrom-Json
+if ($proof.status -ne 'PASS_PRIVATE_UNSIGNED_ORIGINAL_SIX_SPLITS_NOT_INSTALLABLE' -or
+    $proof.exact_original_native_presign_status -ne 'PINNED_REPACKAGED_JP1571_ORIGINAL_SCENE_VMA_AND_EXPORT_VERIFIED' -or
+    ($proof.unsigned_original_splits_sha256 | Get-Member -MemberType NoteProperty).Count -ne 6) {
+    throw 'Private JP15.7.1 original native source parity is not yet accepted'
+}
+Write-Host 'OWNER_PRIVATE_ORIGINAL_BUILD_INPUTS_READY_NO_DEVICE_OR_KEY_USED' -ForegroundColor Green
+Write-Host 'Verified: 6 real original unsigned research APKs, official 2-native ShadowHook, CI passive ARM64.'
+if (-not $DoBuild) {
+    Write-Host 'Read-only PREPARED state only. No signing or Android updates performed.'
+    Write-Host 'When personally ready: run this script again with -DoBuild (then enter original research alias and private password).'
+    return
+}
+if ([string]::IsNullOrWhiteSpace($SigningAlias)) {
+    $SigningAlias = Read-Host 'Alias of the EXISTING research keystore key (not its password)'
+}
+if ($SigningAlias -notmatch '^[A-Za-z0-9._-]{1,80}$') {
+    throw 'Invalid existing research signing alias'
+}
+$buildScript = Join-Path $PSScriptRoot 'BUILD-OWNER-RESEARCH-PAIR.ps1'
+if (-not (Test-Path -LiteralPath $buildScript -PathType Leaf)) {
+    throw 'Existing private build-only owner script unavailable'
+}
+# This call signs ONLY local derived original research APKs. It does NOT install
+# anything or access the phone. The target script asks for the private password.
+& $buildScript -RepositoryRoot $repo -OwnerExportZip $ownerExport `
+    -PassiveShimSo $native -PassiveShimReceipt $receipt `
+    -ResearchKeystore $keystore -PreviouslySignedBaseApk $previousBase `
+    -SigningAlias $SigningAlias -OfficialShadowHookAar $official
+if (-not $?) {
+    throw 'Existing-signer original build was not successful; nothing installed'
+}
+Write-Host 'Private signing completed, but REAL DEVICE SIGNER PREFLIGHT is still required.' -ForegroundColor Yellow
