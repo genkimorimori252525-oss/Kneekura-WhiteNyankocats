@@ -93,11 +93,17 @@ int main(void) {
     gOriginalLoadBias = 1;
     gOriginalVmaShift = 0;
     gShadowHookLibrary = (void *)1;
+    gAllOriginalHooksInstalled = 1;
     gOriginalAppLaunchLoader = (void *)&fake_original_loader;
     gOriginalSaveWrapper = (void *)&fake_original_writer;
     if (!virgin_source_root_remains_trusted()) return 5;
 
     int sentinel = 1001;
+    // Partial hook-chain state must not attempt original writer.
+    gAllOriginalHooksInstalled = 0;
+    if (research_original_app_launch_read_proxy(&sentinel) != 0
+        || native_write_calls != 0) return 21;
+    gAllOriginalHooksInstalled = 1;
     if (research_original_app_launch_read_proxy(&sentinel) != 1) return 6;
     if (native_read_calls != 2 || native_write_calls != 1
         || native_events != 1 || gVirginTrialState != VIRGIN_TRIAL_COMPLETED)
