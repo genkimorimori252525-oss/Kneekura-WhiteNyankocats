@@ -93,6 +93,19 @@ class OriginalResearchDeviceSignerGateTests(unittest.TestCase):
             },
         }
         (self.candidate / "parity-report.json").write_text(json.dumps(parity))
+        shim = (b"PASSIVE" + b"\n".join(gate.MARKERS)
+                + (b"kneekura-original-virgin-save-trial-v1"
+                   if writer else b""))
+        proof = {
+            "schema": "public-original-research-passive-shim-v1",
+            "sha256": hashlib.sha256(shim).hexdigest(),
+            "git_commit": "a" * 40,
+            "elf_abi": "arm64-v8a",
+            "original_save_writer_enabled": False,
+            "fixed_error_markers_compiled": True,
+        }
+        (self.candidate / "PASSIVE_SHIM_BUILD_SOURCE_RECEIPT.json").write_text(
+            json.dumps(proof))
         for name in gate.SPLITS:
             with ZipFile(self.candidate / name, "w") as z:
                 z.writestr("AndroidManifest.xml", b"SYNTHETIC_ONLY"*80)
@@ -102,9 +115,7 @@ class OriginalResearchDeviceSignerGateTests(unittest.TestCase):
                     if not no_helper:
                         z.writestr(gate.COMPANION, (
                             self.companion if not bad_hash else b"BAD_AUX"))
-                    z.writestr(gate.SHIM, b"PASSIVE" + b"\n".join(gate.MARKERS)
-                               + (b"kneekura-original-virgin-save-trial-v1"
-                                  if writer else b""))
+                    z.writestr(gate.SHIM, shim)
 
     def invoke(self, runner=None, **kwargs):
         return gate.preflight(
@@ -116,6 +127,7 @@ class OriginalResearchDeviceSignerGateTests(unittest.TestCase):
         runner = FakeRunner()
         receipt, destination = self.invoke(runner)
         self.assertTrue(receipt["candidate_signer_matches_installed_research_base"])
+        self.assertTrue(receipt["compiled_passive_arm64_sha256_receipt_verified"])
         self.assertEqual(receipt["installed_research_splits"], 6)
         self.assertFalse(receipt["device_install_launch_stop_or_clear_executed"])
         self.assertFalse(receipt["actual_game_boot_or_Level60_passed"])
@@ -157,6 +169,29 @@ class OriginalResearchDeviceSignerGateTests(unittest.TestCase):
                     self.invoke(runner)
                 self.assertEqual(runner.calls, [])
         self.make_signed_synthetic_six()
+
+    def test_missing_or_tampered_passive_native_ci_receipt_blocks_before_adb(self):
+        self.make_signed_synthetic_six()
+        proof_path = self.candidate / "PASSIVE_SHIM_BUILD_SOURCE_RECEIPT.json"
+        baseline = proof_path.read_bytes()
+        try:
+            proof_path.unlink()
+            runner = FakeRunner()
+            with self.assertRaises(gate.PreflightBlocked):
+                self.invoke(runner)
+            self.assertEqual(runner.calls, [])
+            proof_path.write_bytes(baseline)
+            proof = json.loads(proof_path.read_text())
+            proof["sha256"] = "0" * 64
+            proof_path.write_text(json.dumps(proof))
+            runner = FakeRunner()
+            with self.assertRaisesRegex(
+                gate.PreflightBlocked, "compiled passive ARM64 research binary SHA"
+            ):
+                self.invoke(runner)
+            self.assertEqual(runner.calls, [])
+        finally:
+            proof_path.write_bytes(baseline)
 
     def test_offline_unauthorized_two_and_missing_pull_fail_closed(self):
         for state in ("offline", "unauthorized", "two", "none"):
