@@ -156,6 +156,14 @@ try {
     $secure.Dispose()
 }
 $signed = Join-Path $out 'local-research-static-http-signed-splits'
+# Bind the signed 6-split candidate to the same validated public-only
+# PASSIVE native shim/CI receipt. Never put the owner's game or passwords
+# in this receipt. The independent read-only device preflight requires it.
+$copiedReceipt = Join-Path $signed 'PASSIVE_SHIM_BUILD_SOURCE_RECEIPT.json'
+if (Test-Path -LiteralPath $copiedReceipt) {
+    throw 'Unexpected existing signed candidate source receipt; do not overwrite'
+}
+Copy-Item -LiteralPath $receiptPath -Destination $copiedReceipt -ErrorAction Stop
 $newBase = RequireFile (Join-Path $signed 'base.apk') 'newly signed research base APK'
 $before = SignerDigest $existingBase $apksigner
 $after = SignerDigest $newBase $apksigner
