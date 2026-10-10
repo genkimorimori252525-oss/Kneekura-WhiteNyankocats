@@ -106,6 +106,32 @@ def _candidate(repo: Path, candidate: Path) -> Path:
     if (b"kneekura-original-virgin-save-trial-v1" in shim
             or not all(marker in shim for marker in MARKERS)):
         raise PreflightBlocked("unsafe/missing passive original scene observer")
+    # The original signed ARM64 split MUST contain the exact passive shim
+    # compiled by the validated public-only Android NDK CI. Markers alone
+    # are insufficient evidence of binary provenance or virgin-writer OFF.
+    native_proof = _owned_file(
+        p / "PASSIVE_SHIM_BUILD_SOURCE_RECEIPT.json",
+        "original passive compiled shim source receipt",
+    )
+    if native_proof.stat().st_size > 16_384:
+        raise PreflightBlocked("original passive shim source receipt oversized")
+    try:
+        proof = json.loads(native_proof.read_text(encoding="utf-8-sig"))
+    except (OSError, ValueError) as exc:
+        raise PreflightBlocked("invalid original passive source receipt") from exc
+    if not (
+        type(proof) is dict
+        and proof.get("schema") == "public-original-research-passive-shim-v1"
+        and proof.get("original_save_writer_enabled") is False
+        and proof.get("fixed_error_markers_compiled") is True
+        and proof.get("elf_abi") == "arm64-v8a"
+        and type(proof.get("sha256")) is str
+        and re.fullmatch(r"[a-f0-9]{64}", proof["sha256"])
+        and hashlib.sha256(shim).hexdigest() == proof["sha256"]
+        and type(proof.get("git_commit")) is str
+        and re.fullmatch(r"[a-f0-9]{40}", proof["git_commit"])
+    ):
+        raise PreflightBlocked("compiled passive ARM64 research binary SHA/provenance drift")
     return p
 
 
@@ -228,6 +254,7 @@ def preflight(*, repo: Path, candidate: Path, adb: Path, apksigner: Path,
         "candidate_research_splits": len(SPLITS),
         "both_official_shadowhook_arm64_libraries_verified": True,
         "candidate_signer_matches_all_six_splits": True,
+        "compiled_passive_arm64_sha256_receipt_verified": True,
         "candidate_signer_matches_installed_research_base": True,
         "temporary_copy_of_installed_APK_removed": True,
         "original_game_or_player_SAVE_read_or_modified": False,
