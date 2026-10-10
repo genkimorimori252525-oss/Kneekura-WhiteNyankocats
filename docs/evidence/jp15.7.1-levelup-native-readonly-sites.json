@@ -1073,6 +1073,18 @@
     "original_pack_or_apk_or_player_save_modified": false,
     "implementation": "tools/base_mod/trace_original_player_init_save.py; tools/base_mod/trace_original_levelup_native.py",
     "regression": "tests/test_original_player_init_save.py",
-    "original_private_binary_committed": false
+    "original_private_binary_committed": false,
+    "account_delete_callback_identity": "MyUtilityListener::miniBrowserLinkClicked lambda$_6 from ELF .rela.dyn 0xb01ba0 -> 0x1e3552 and vtable callback 0xb01be8 -> 0x776530",
+    "account_delete_error_literals": [
+      "0x1a82bd AccountDelete_error02",
+      "0x1a74ce AccountDelete_error03"
+    ],
+    "account_delete_success_reinit": "0x77657c status == 1, 0x776580 B.NE error, 0x776584 -> 0x89385c",
+    "account_delete_success_save": "0x7765a4 -> 0x8b9fc8",
+    "account_delete_success_scene": "0x776594-0x77659c game flag context+0x10d9=1; 0x7765bc scene 104; 0x7765d0 -> 0x71c408",
+    "account_deletion_callback_would_not_justify_clean_no_account_first_run": true,
+    "title_or_service_or_account_deletion_flow_is_safe_virgin_creation_proven": false,
+    "synthetic_account_deletion_regressions": "tests/test_original_player_init_save.py",
+    "no_original_account_service_called_or_reused": true
   }
 }
