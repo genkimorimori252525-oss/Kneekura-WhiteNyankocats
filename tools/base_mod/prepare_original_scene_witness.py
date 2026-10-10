@@ -50,10 +50,15 @@ def _safe_native_so(source: Path, expected_sha256: str) -> bytes:
         raise OriginalSceneWitnessPackageError(
             "research native hook must be ELF64 AArch64 ET_DYN"
         )
-    if (b"shadowhook_init\x00" not in data
-        or b"shadowhook_hook_sym_name\x00" not in data):
+    # Local source-only policy: verify the exact-address hook API and
+    # its removal API, not the basename-based hook_sym_name entrypoint.
+    if any(anchor not in data for anchor in (
+        b"shadowhook_init\x00",
+        b"shadowhook_hook_sym_addr\x00",
+        b"shadowhook_unhook\x00",
+    )):
         raise OriginalSceneWitnessPackageError(
-            "research native hook exported-function identifier anchors absent"
+            "research exact-address hook ABI identifier anchors absent"
         )
     return data
 
