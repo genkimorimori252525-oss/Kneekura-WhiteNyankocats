@@ -80,7 +80,9 @@ jobs:
           for TAG in \
             "original-native-level-cap-getter-v1 original-returned" \
             "original-native-upgrade-gate-v1 original-returned" \
-            "original-native-save-wrapper-v1 original-returned"; do
+            "original-native-save-wrapper-v1 original-returned" \
+            "original-native-app-launch-save-read-v1 accepted" \
+            "original-native-app-launch-save-read-v1 failed"; do
             strings build/kneekura-scene-research/libkneekura.so | grep -Fx "$TAG"
             ! strings build/kneekura-shim/libkneekura.so | grep -Fq "$TAG"
           done

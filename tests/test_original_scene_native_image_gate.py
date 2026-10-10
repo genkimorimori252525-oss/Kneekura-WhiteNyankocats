@@ -99,7 +99,7 @@ class OriginalSceneSourceRepackPreflightTests(unittest.TestCase):
     def test_unchanged_synthetic_pinned_arm64_mapping_and_export(self):
         result = verify_mapped_original_scene_image(self.original_fixture)
         self.assertTrue(result["repacked_original_native_hook_layout_safe_static"])
-        self.assertEqual(result["verified_executable_instruction_anchors"], 17)
+        self.assertEqual(result["verified_executable_instruction_anchors"], 19)
         self.assertEqual(result["complete_original_text_bytes_verified"],
                          ORIGINAL_NATIVE_TEXT_END - ORIGINAL_NATIVE_TEXT_START)
         self.assertTrue(result["all_original_executable_text_bytes_unchanged_static"])
@@ -396,7 +396,7 @@ class OriginalSceneSourceRepackPreflightTests(unittest.TestCase):
             self.assertEqual(
                 baseline["status"], "PASS_ORIGINAL_JP1571_NATIVE_SOURCE_BASELINE_ONLY"
             )
-            self.assertEqual(baseline["original_instruction_anchor_count"], 17)
+            self.assertEqual(baseline["original_instruction_anchor_count"], 19)
             self.assertEqual(
                 baseline["original_executable_text_bytes"], 8_126_892
             )
@@ -426,7 +426,7 @@ class OriginalSceneSourceRepackPreflightTests(unittest.TestCase):
             self.assertEqual(outcome["source_original_JNI_draw_VMA"], "0x31755c")
             self.assertEqual(outcome["candidate_original_JNI_draw_VMA"], "0x31755c")
             self.assertEqual(outcome["candidate_uniform_source_VMA_rebase_bytes"], 0)
-            self.assertEqual(outcome["candidate_verified_original_instruction_anchors"], 17)
+            self.assertEqual(outcome["candidate_verified_original_instruction_anchors"], 19)
             self.assertEqual(
                 outcome["candidate_verified_nontext_source_sections"],
                 ["eh_frame", "gnu_note", "lcxx_override", "plt", "rodata"],

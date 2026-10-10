@@ -56,6 +56,12 @@ NATIVE_LEVEL_EVENTS = frozenset({
     "original-native-upgrade-gate-v1 original-returned",
     "original-native-save-wrapper-v1 original-returned",
 })
+# The original reader returns status bit0; the collector NEVER upgrades this
+# to proof of account-free first SAVE, file persistence or original UI.
+NATIVE_APP_LAUNCH_READ_EVENTS = frozenset({
+    "original-native-app-launch-save-read-v1 accepted",
+    "original-native-app-launch-save-read-v1 failed",
+})
 ALLOWED_STANDALONE_EVENTS = {
     "original-local-fresh-package-root active",
     "original-save-event-observer-v1 active",
@@ -106,6 +112,7 @@ def sanitized_original_activity_events(logcat: str, *, pid: int) -> dict[str, An
     last_download_coverage: dict[str, int] | None = None
     scene_events: list[int] = []
     level_event_order: list[str] = []
+    app_launch_read_outcomes: list[str] = []
     hook_install_marker_seen = False
     for line in logcat.splitlines():
         match = LOG_LINE.fullmatch(line)
@@ -116,6 +123,12 @@ def sanitized_original_activity_events(logcat: str, *, pid: int) -> dict[str, An
             counts[msg] += 1
             if msg == "original-native-scene-hook-v1 installed":
                 hook_install_marker_seen = True
+            continue
+        if msg in NATIVE_APP_LAUNCH_READ_EVENTS:
+            if hook_install_marker_seen:
+                counts[msg] += 1
+                if msg not in app_launch_read_outcomes:
+                    app_launch_read_outcomes.append(msg)
             continue
         if msg in NATIVE_LEVEL_EVENTS:
             if hook_install_marker_seen:
@@ -174,6 +187,16 @@ def sanitized_original_activity_events(logcat: str, *, pid: int) -> dict[str, An
         ),
         "denied_HTTP_calls_observed": counts["original-local-denied-http-v1"],
         "optional_native_hook_installed_marker_seen": hook_install_marker_seen,
+        "source_pinned_app_launch_save_read_outcomes": app_launch_read_outcomes,
+        "native_app_launch_save_read_accepted_only": (
+            app_launch_read_outcomes
+            == ["original-native-app-launch-save-read-v1 accepted"]
+        ),
+        "native_app_launch_save_read_failed_only": (
+            app_launch_read_outcomes
+            == ["original-native-app-launch-save-read-v1 failed"]
+        ),
+        "native_app_launch_save_read_conflicting": len(app_launch_read_outcomes) > 1,
         "original_level_observer_event_order_uncorrelated": level_event_order,
         "upgrade_gate_log_precedes_SAVE_wrapper_log_same_PID_only": (
             "original-native-upgrade-gate-v1 original-returned" in level_event_order
@@ -259,6 +282,13 @@ def build_original_local_boot_metadata_receipt(
             root_seen and observation["optional_native_hook_installed_marker_seen"]
         ),
         "native_scene_witness_is_current_process_log_only": True,
+        "observed_original_AppLaunchLoad_SAVE_read_accepted": (
+            root_seen and observation["native_app_launch_save_read_accepted_only"]
+        ),
+        "observed_original_AppLaunchLoad_SAVE_read_failed": (
+            root_seen and observation["native_app_launch_save_read_failed_only"]
+        ),
+        "original_AppLaunchLoad_source_read_status_is_not_fresh_save_proof": True,
         "observed_original_level_cap_getter_call": (
             root_seen and observation["original_level_cap_getter_called"]
         ),

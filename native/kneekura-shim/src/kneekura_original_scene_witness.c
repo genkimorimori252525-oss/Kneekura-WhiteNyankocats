@@ -76,6 +76,9 @@ enum {
     ORIGINAL_UNIT_CAP_GETTER = 0x53B2BC,
     ORIGINAL_UPGRADE_GATE = 0x53BE0C,
     ORIGINAL_SAVE_WRAPPER = 0x8B9FC8,
+    /* AppLaunchLoad's one source-proven direct SAVE reader site. */
+    ORIGINAL_APP_LAUNCH_LOADER = 0x9BB764,
+    ORIGINAL_APP_LAUNCH_READ_CALL = 0x492BE8,
     ORIGINAL_NATIVE_TEXT_BEGIN = 0x317370,
     ORIGINAL_NATIVE_TEXT_END_EXCLUSIVE = 0xAD751C,
     MAX_SOURCE_VMA_REBASE = 0x10000,
@@ -83,6 +86,7 @@ enum {
 typedef void (*OriginalDrawFn)(void *, void *);
 typedef int32_t (*OriginalIndexResultFn)(int32_t);
 typedef int32_t (*OriginalSaveWrapperFn)(void *);
+typedef int32_t (*OriginalAppLaunchLoaderFn)(void *);
 /* Hook the exact already-mapped ELF address, never a basename-driven
  * future/pending symbol match that could attach to another library. */
 typedef void *(*ShadowHookSymAddrFn)(void *, void *, void **);
@@ -93,16 +97,20 @@ static void *gOriginalDraw = NULL;
 static void *gOriginalCapGetter = NULL;
 static void *gOriginalUpgradeGate = NULL;
 static void *gOriginalSaveWrapper = NULL;
+static void *gOriginalAppLaunchLoader = NULL;
 static uintptr_t gOriginalLoadBias = 0u;
 static uintptr_t gOriginalVmaShift = 0u;
 static _Atomic uint32_t gLastScene = UINT32_MAX;
 static _Atomic uint32_t gSawCapGetter = 0u;
 static _Atomic uint32_t gSawUpgradeGate = 0u;
 static _Atomic uint32_t gSawSaveReturned = 0u;
+static _Atomic uint32_t gSawAppLaunchReadAccepted = 0u;
+static _Atomic uint32_t gSawAppLaunchReadFailed = 0u;
 static void *gHookStub = NULL;
 static void *gCapHookStub = NULL;
 static void *gUpgradeHookStub = NULL;
 static void *gSaveHookStub = NULL;
+static void *gAppLaunchReadHookStub = NULL;
 static void *gShadowHookLibrary = NULL;
 
 static int current_process_is_isolated_original_research(void) {
@@ -226,6 +234,8 @@ static const struct OriginalCodeWordAnchor kSourceWordAnchors[] = {
     {ORIGINAL_UNIT_CAP_GETTER, 0xA9BB7BFDu},
     {ORIGINAL_UPGRADE_GATE, 0xA9BA7BFDu},
     {ORIGINAL_SAVE_WRAPPER, 0xD10103FFu},
+    {ORIGINAL_APP_LAUNCH_LOADER, 0xD102C3FFu},
+    {ORIGINAL_APP_LAUNCH_READ_CALL, 0x9414A2DFu},
     /* Original direct-call graph; cap getter is NOT a proven purchase
      * call. 0x8581fc is the original actual upgrade predicate call. */
     {0x821904u, 0x97F4666Eu},
@@ -345,7 +355,7 @@ static void research_draw_proxy(void *jni_env, void *jni_class) {
 }
 
 /*
- * Three extra EXACT-VMA research witnesses for original LEVEL #12.
+ * Four extra EXACT-VMA research witnesses for original LEVEL #12.
  * Do not log unit IDs, levels, cap numbers, XP, SAVE names, or paths.
  * Calls always forward FIRST and preserve the original return register.
  * This is neither a purchase implementation nor a first-SAVE generator.
@@ -392,6 +402,31 @@ static int32_t research_original_save_wrapper_proxy(void *context) {
      * persistence, fresh player or restart acceptance is thereby proven. */
     record_native_event_once(&gSawSaveReturned,
                              "original-native-save-wrapper-v1 original-returned");
+    return result;
+}
+
+/*
+ * Source exact call: AppLaunchLoad 0x492be8 BL -> 0x9bb764.
+ * The caller checks bit0 of W0 at 0x492bec. A returned bit0 is NOT
+ * proof of a new account-free SAVE, disk persistence, or a successful reboot.
+ * This is an OBSERVER ONLY and never creates/truncates/touches a SAVE.
+ */
+static int32_t research_original_app_launch_read_proxy(void *game_context) {
+    OriginalAppLaunchLoaderFn original = NULL;
+    memcpy(&original, &gOriginalAppLaunchLoader, sizeof(original));
+    if (original == NULL) {
+        return 0;
+    }
+    int32_t result = original(game_context);
+    if ((result & 1) != 0) {
+        record_native_event_once(
+            &gSawAppLaunchReadAccepted,
+            "original-native-app-launch-save-read-v1 accepted");
+    } else {
+        record_native_event_once(
+            &gSawAppLaunchReadFailed,
+            "original-native-app-launch-save-read-v1 failed");
+    }
     return result;
 }
 
@@ -465,15 +500,24 @@ static void kneekura_init_scene_witness_research_only(void) {
             (void *)&research_original_save_wrapper_proxy, &gOriginalSaveWrapper
         );
     }
+    if (gSaveHookStub != NULL && gOriginalSaveWrapper != NULL) {
+        gAppLaunchReadHookStub = hook_fn(
+            (void *)(witness.base + ORIGINAL_APP_LAUNCH_LOADER + validated_shift),
+            (void *)&research_original_app_launch_read_proxy,
+            &gOriginalAppLaunchLoader
+        );
+    }
     if (gHookStub == NULL || gOriginalDraw == NULL
         || gCapHookStub == NULL || gOriginalCapGetter == NULL
         || gUpgradeHookStub == NULL || gOriginalUpgradeGate == NULL
-        || gSaveHookStub == NULL || gOriginalSaveWrapper == NULL) {
+        || gSaveHookStub == NULL || gOriginalSaveWrapper == NULL
+        || gAppLaunchReadHookStub == NULL || gOriginalAppLaunchLoader == NULL) {
         /* A partially patched JNI/level/save path can corrupt execution
          * if left behind. Undo in reverse order. Any failed unhook keeps
          * ShadowHook mapped; logging must not claim coherent attachment. */
         void *installed[] = {
-            gSaveHookStub, gUpgradeHookStub, gCapHookStub, gHookStub
+            gAppLaunchReadHookStub, gSaveHookStub, gUpgradeHookStub,
+            gCapHookStub, gHookStub
         };
         int rollback_failed = 0;
         for (size_t i = 0; i < sizeof(installed) / sizeof(installed[0]); ++i) {
@@ -493,6 +537,7 @@ static void kneekura_init_scene_witness_research_only(void) {
         gCapHookStub = NULL;
         gUpgradeHookStub = NULL;
         gSaveHookStub = NULL;
+        gAppLaunchReadHookStub = NULL;
         __android_log_write(
             ANDROID_LOG_INFO, WITNESS_TAG,
             "original-native-scene-hook-v1 hook-unavailable");
@@ -500,7 +545,8 @@ static void kneekura_init_scene_witness_research_only(void) {
         return;
     }
     /* Keep the trampoline library alive. Never log 'installed' until
-     * ALL exact original-level and original-SAVE observers are usable. */
+     * ALL source-exact scene, LEVEL, SAVE-WRITER and app-launch READ
+     * observers are usable. The read hook never writes player state. */
     gShadowHookLibrary = library;
     __android_log_write(
         ANDROID_LOG_INFO, WITNESS_TAG,

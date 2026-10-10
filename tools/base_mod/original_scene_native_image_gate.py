@@ -53,6 +53,8 @@ ORIGINAL_SCENE_ANCHORS = {
     0x53B2BC: 0xA9BB7BFD,  # original unit effective-cap getter(int)
     0x53BE0C: 0xA9BA7BFD,  # original upgrade-allowed predicate(int)
     0x8B9FC8: 0xD10103FF,  # original SAVE_DATA serializer wrapper(void*)
+    0x9BB764: 0xD102C3FF,  # AppLaunchLoad original SAVE loader (context*)
+    0x492BE8: 0x9414A2DF,  # only direct BL -> original loader 0x9bb764
     # Exact original caller edges. Getter's only direct caller builds a level
     # text; eligibility has five callers, including actual upgrade 0x8581FC.
     0x821904: 0x97F4666E,  # BL -> 0x53B2BC (label-related caller)
