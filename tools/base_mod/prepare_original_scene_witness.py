@@ -14,6 +14,7 @@ from __future__ import annotations
 import hashlib
 from pathlib import Path
 import re
+import struct
 import shutil
 from zipfile import ZipFile, ZipInfo, ZIP_STORED
 
@@ -28,13 +29,92 @@ VIRGIN_SAVE_TRIAL_MARKER = b"kneekura-original-virgin-save-trial-v1"
 SCENE_WITNESS_PACKAGE_MARKER = RESEARCH_PACKAGE.encode("ascii")
 APPROVED_FLAVOR = "local-research"
 MAX_EXTERNAL_LIBRARY_BYTES = 24 * 1024 * 1024
+# Public Maven Central com.bytedance.android:shadowhook:2.0.1, source AAR
+# SHA256 2cad01ff4d59542958775e19f281981a7e84b39670b5fae75905b8511e10c7cd.
+# The ARM64 binary was directly read from jni/arm64-v8a/libshadowhook.so
+# and independently checked for ELF64 AArch64 defined FUNC exports.
+APPROVED_OFFICIAL_SHADOWHOOK_V201_ARM64_SHA256 = (
+    "fc84287eac46e3bade2f7e07e3c9efdca005822e21191d6db5b8cb222d53e8a0"
+)
+REQUIRED_SHADOWHOOK_EXPORTED_FUNCTIONS = frozenset({
+    "shadowhook_init", "shadowhook_hook_sym_addr_2",
+    "shadowhook_hook_func_addr_2", "shadowhook_unhook",
+})
 
 
 class OriginalSceneWitnessPackageError(ValueError):
     """Reject any source that cannot be proven research-only and local."""
 
 
-def _safe_native_so(source: Path, expected_sha256: str) -> bytes:
+def _verified_defined_shadowhook_functions(native: bytes) -> set[str]:
+    """Only declared, defined dynamic ELF64 FUNC exports count as callable.
+
+    Merely embedding ShadowHook API names as arbitrary binary strings is
+    NOT evidence that dlsym() can resolve a usable function pointer.
+    """
+    if len(native) < 64:
+        raise OriginalSceneWitnessPackageError("reviewed ARM64 ELF section table absent")
+    shoff = struct.unpack_from("<Q", native, 40)[0]
+    shentsize, shnum = struct.unpack_from("<HH", native, 58)
+    if (shentsize != 64 or not 3 <= shnum <= 2048
+        or shoff < 64 or shoff + shnum * shentsize > len(native)):
+        raise OriginalSceneWitnessPackageError("reviewed ARM64 ELF section table invalid")
+    sections = []
+    for i in range(shnum):
+        fields = struct.unpack_from("<IIQQQQIIQQ", native, shoff+i*shentsize)
+        sections.append({
+            "type": fields[1], "offset": fields[4], "size": fields[5],
+            "link": fields[6], "entsize": fields[9],
+        })
+    exports = set()
+    found_dynsym = False
+    for section in sections:
+        if section["type"] != 11:  # SHT_DYNSYM, never private .symtab
+            continue
+        if found_dynsym:
+            raise OriginalSceneWitnessPackageError("ambiguous reviewed ARM64 dynsym")
+        found_dynsym = True
+        if (section["link"] >= len(sections)
+            or section["entsize"] != 24
+            or section["size"] % 24
+            or section["size"] > 8*1024*1024
+            or section["offset"] + section["size"] > len(native)):
+            raise OriginalSceneWitnessPackageError("invalid reviewed ARM64 dynsym range")
+        names_section = sections[section["link"]]
+        if (names_section["type"] != 3
+            or names_section["size"] > 4*1024*1024
+            or names_section["offset"] + names_section["size"] > len(native)):
+            raise OriginalSceneWitnessPackageError("invalid reviewed ARM64 dynstr range")
+        strings = native[names_section["offset"]:
+                         names_section["offset"]+names_section["size"]]
+        for off in range(section["offset"],
+                         section["offset"] + section["size"], 24):
+            name_off, info, _, section_index, value, _ = struct.unpack_from(
+                "<IBBHQQ", native, off
+            )
+            if ((info & 0x0f) != 2 or (info >> 4) not in (1,2)
+                or section_index == 0 or value == 0):
+                continue
+            if name_off >= len(strings):
+                raise OriginalSceneWitnessPackageError("reviewed dynamic symbol name invalid")
+            stop = strings.find(b"\x00", name_off)
+            if stop < 0:
+                raise OriginalSceneWitnessPackageError("unterminated reviewed dynamic FUNC name")
+            try:
+                exports.add(strings[name_off:stop].decode("ascii"))
+            except UnicodeDecodeError as exc:
+                raise OriginalSceneWitnessPackageError(
+                    "reviewed dynamic FUNC name not ASCII"
+                ) from exc
+    if not found_dynsym:
+        raise OriginalSceneWitnessPackageError("reviewed ARM64 dynsym missing")
+    return exports
+
+
+def _safe_native_so(
+    source: Path, expected_sha256: str, *,
+    require_official_v201: bool = False,
+) -> bytes:
     if not isinstance(source, Path) or source.is_symlink() or not source.is_file():
         raise OriginalSceneWitnessPackageError("research libshadowhook must be an owned regular file")
     if not re.fullmatch("[a-f0-9]{64}", expected_sha256 or ""):
@@ -53,14 +133,16 @@ def _safe_native_so(source: Path, expected_sha256: str) -> bytes:
         )
     # Local source-only policy: verify the exact-address hook API and
     # its removal API, not the basename-based hook_sym_name entrypoint.
-    if any(anchor not in data for anchor in (
-        b"shadowhook_init\x00",
-        b"shadowhook_hook_sym_addr\x00",
-        b"shadowhook_hook_func_addr\x00",
-        b"shadowhook_unhook\x00",
-    )):
+    exports = _verified_defined_shadowhook_functions(data)
+    if not REQUIRED_SHADOWHOOK_EXPORTED_FUNCTIONS.issubset(exports):
         raise OriginalSceneWitnessPackageError(
-            "research exact-address hook ABI identifier anchors absent"
+            "reviewed exact-address hook ABI FUNC exports absent"
+        )
+    if (require_official_v201
+        and hashlib.sha256(data).hexdigest()
+            != APPROVED_OFFICIAL_SHADOWHOOK_V201_ARM64_SHA256):
+        raise OriginalSceneWitnessPackageError(
+            "virgin writer requires SHA-pinned official ShadowHook 2.0.1 ARM64"
         )
     return data
 
@@ -114,7 +196,10 @@ def check_original_scene_witness_build_contract(
             raise OriginalSceneWitnessPackageError(
                 "both native hook library and exact SHA256 must be explicit"
             )
-        _safe_native_so(shadowhook, shadowhook_sha256)
+        _safe_native_so(
+            shadowhook, shadowhook_sha256,
+            require_official_v201=compiled_virgin_trial,
+        )
     return {
         "research_scene_witness_build_enabled": witness_present,
         "research_virgin_SAVE_trial_compiled_and_explicit": compiled_virgin_trial,
@@ -131,6 +216,7 @@ def check_original_scene_witness_build_contract(
 def include_reviewed_shadowhook_in_private_split_set(
     source_dir: Path, target_dir: Path, *, shadowhook: Path,
     expected_sha256: str,
+    require_official_v201: bool = False,
 ) -> dict:
     """Clone six unsigned split APKs, adding ONLY one reviewed library.
 
@@ -141,7 +227,10 @@ def include_reviewed_shadowhook_in_private_split_set(
         or target_dir.is_symlink() or target_dir.exists()
         or source_dir.resolve() == target_dir.resolve()):
         raise OriginalSceneWitnessPackageError("unsafe or nonempty original witness staging")
-    raw = _safe_native_so(shadowhook, expected_sha256)
+    raw = _safe_native_so(
+        shadowhook, expected_sha256,
+        require_official_v201=require_official_v201,
+    )
     for name in JP_15_7_1_SPLITS:
         if not (source_dir / name).is_file() or (source_dir / name).is_symlink():
             raise OriginalSceneWitnessPackageError("missing or unsafe original JP split set")

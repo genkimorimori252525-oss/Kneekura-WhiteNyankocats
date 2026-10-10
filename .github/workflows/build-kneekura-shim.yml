@@ -574,8 +574,8 @@ jobs:
               words=line.split()
               if len(words)>=8 and words[3]=="FUNC" and words[6]!="UND":
                   exports[words[7]]=line
-          required=["shadowhook_init", "shadowhook_hook_sym_addr",
-                    "shadowhook_hook_func_addr", "shadowhook_unhook"]
+          required=["shadowhook_init", "shadowhook_hook_sym_addr_2",
+                    "shadowhook_hook_func_addr_2", "shadowhook_unhook"]
           if not all(x in exports for x in required):
               raise ValueError("actual Maven ARM64 dynamic FUNCTION exports missing")
           dynamic=subprocess.run(["readelf","-d",str(arm)],
@@ -601,6 +601,11 @@ jobs:
               json.dumps(report,sort_keys=True,indent=2)+"\n",encoding="utf-8"
           )
           print(json.dumps(report,sort_keys=True))
+          # Ensure the repo's TRUE ELF/dynsym/private-packaging parser
+          # accepts the official public binary, not only readelf strings.
+          from tools.base_mod.prepare_original_scene_witness import _safe_native_so
+          assert _safe_native_so(arm, report["arm64_native_sha256"],
+              require_official_v201=True) == elf
           PY
       - uses: actions/upload-artifact@v4
         with:

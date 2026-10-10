@@ -131,6 +131,7 @@ def build_owned_static_http_bridge(
             bootstrap, scene_paired,
             shadowhook=research_shadowhook_so,
             expected_sha256=research_shadowhook_sha256,
+            require_official_v201=research_virgin_save_trial,
         )
         source_for_flavor = scene_paired
     flavor_ledger = apply_package_flavor(
