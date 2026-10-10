@@ -178,20 +178,23 @@ def _rewrite_model(raw: bytes, *, sprite_part_count: int) -> tuple[bytes, dict[s
             raise OriginalGodzillaRigPreviewError(
                 "mamodel references sprite index outside original imgcut"
             )
+        # Only the changed fields are serialized anew; preserve every
+        # other source column's original textual representation and labels.
+        replaced = list(values)
         if image_id == SOURCE_IMAGE_ID:
-            numeric[1] = TARGET_IMAGE_ID
+            replaced[1] = str(TARGET_IMAGE_ID)
             source_models += 1
         # The true root row is the only row whose scale is changed, and
         # only if its horizontal scale is negative. Never modify attack
         # keyframes, bone rotations, collision sections or offsets.
         if index == 3 and numeric[8] < 0:
-            numeric[8] = -numeric[8]
+            replaced[8] = str(-numeric[8])
             mirrored_root = True
         if index == 3 and numeric[8] == 0:
             raise OriginalGodzillaRigPreviewError("mamodel root has zero horizontal scale")
-        # Existing original model, animations and sprite parts often store
-        # a label in column14. Preserve that UTF-8 text exactly.
-        target = ",".join(str(value) for value in numeric) + "," + values[13]
+        # Original comments/labels, geometry, orientation-independent
+        # fields and spacing are untouched at the byte-value level.
+        target = ",".join(replaced)
         if target != line:
             lines[index] = target.encode("utf-8") + _newline_of(lines[index])
             converted_models += 1
