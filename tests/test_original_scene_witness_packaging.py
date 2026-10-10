@@ -3,11 +3,13 @@ from __future__ import annotations
 
 import hashlib
 from pathlib import Path
+from unittest.mock import patch as mock_patch
 import struct
 import tempfile
 import unittest
 from zipfile import ZipFile, ZIP_STORED
 
+from tools.base_mod import prepare_original_scene_witness as official_checker
 from tools.base_mod.prepare_original_scene_witness import (
     APPROVED_FLAVOR, EXTRA_NATIVE_ENTRY, OriginalSceneWitnessPackageError,
     check_original_scene_witness_build_contract,
@@ -17,21 +19,41 @@ from tools.base_mod.repack import JP_15_7_1_SPLITS
 
 
 def synthetic_reviewed_arm64_so() -> bytes:
-    """One synthetic *non-executable* ELF stub with only the guard identifiers."""
-    data = bytearray(4096)
-    data[:4] = b"\x7fELF"
-    data[4] = 2
-    data[5] = 1
-    struct.pack_into("<H", data, 16, 3)       # ET_DYN
-    struct.pack_into("<H", data, 18, 183)     # AArch64
-    data[100:116] = b"shadowhook_init\x00"
-    data[180:205] = b"shadowhook_hook_sym_addr\x00"
-    data[410:410+len(b"shadowhook_hook_func_addr\x00")] = (
-        b"shadowhook_hook_func_addr\x00"
-    )
-    data[300:318] = b"shadowhook_unhook\x00"
-    return bytes(data)
+    """Pure SYNTHETIC ELF64 with six correctly defined FUNC dynsyms.
 
+    Unlike arbitrary name strings in a fake ELF, the actual reviewed
+    library must export these functions from .dynsym so dlsym() can find
+    them. No owner's APK, SAVE, assets or a real third-party library used.
+    """
+    data = bytearray(4096)
+    data[:6] = b"\x7fELF\x02\x01"
+    struct.pack_into("<HHI", data, 16, 3, 183, 1)  # ET_DYN / AARCH64
+    struct.pack_into("<Q", data, 40, 0x800)
+    struct.pack_into("<HH", data, 58, 64, 3)
+    names = (
+        "shadowhook_init", "shadowhook_hook_sym_addr",
+        "shadowhook_hook_func_addr", "shadowhook_hook_sym_addr_2",
+        "shadowhook_hook_func_addr_2", "shadowhook_unhook",
+    )
+    names_blob = bytearray(b"\x00")
+    for idx, name in enumerate(names, start=1):
+        name_offset = len(names_blob)
+        names_blob.extend(name.encode("ascii") + b"\x00")
+        struct.pack_into(
+            "<IBBHQQ", data, 0x200 + idx * 24,
+            name_offset, 0x12, 0, 1, 0x1000 + idx * 16, 24
+        )
+    data[0x400:0x400 + len(names_blob)] = names_blob
+    # Section 1 .dynsym (null + six GLOBAL/FUNC entries), section 2 dynstr.
+    struct.pack_into(
+        "<IIQQQQIIQQ", data, 0x800 + 64,
+        0, 11, 0, 0, 0x200, (1+len(names))*24, 2, 0, 8, 24,
+    )
+    struct.pack_into(
+        "<IIQQQQIIQQ", data, 0x800 + 128,
+        0, 3, 0, 0, 0x400, len(names_blob), 0, 0, 1, 0,
+    )
+    return bytes(data)
 
 def mock_shim(*, observer: bool, virgin_trial: bool = False) -> bytes:
     blob = bytearray(2048)
@@ -61,6 +83,14 @@ class OriginalNativeSceneWitnessPackagingTests(unittest.TestCase):
         self.reviewed = self.root / "libshadowhook.so"
         self.reviewed.write_bytes(synthetic_reviewed_arm64_so())
         self.sha = hashlib.sha256(self.reviewed.read_bytes()).hexdigest()
+        # A synthetic test fixture cannot match a REAL official Maven
+        # binary SHA. Override only during these explicit fixture tests.
+        pinned = mock_patch.object(
+            official_checker,
+            "APPROVED_OFFICIAL_SHADOWHOOK_V201_ARM64_SHA256", self.sha,
+        )
+        pinned.start()
+        self.addCleanup(pinned.stop)
 
     def contract(self, **changes):
         kwargs = dict(
@@ -129,18 +159,48 @@ class OriginalNativeSceneWitnessPackagingTests(unittest.TestCase):
         # func_addr entrypoint. The four original stripped functions must
         # never attempt the sym_addr fallback.
         good = synthetic_reviewed_arm64_so()
-        needle = b"shadowhook_hook_func_addr\\x00"
-        # Source uses a literal ASCII identifier terminated by NUL.
-        needle = b"shadowhook_hook_func_addr" + bytes((0,))
+        needle = b"shadowhook_hook_func_addr_2" + bytes((0,))
         self.assertEqual(good.count(needle), 1)
         self.reviewed.write_bytes(good.replace(needle, bytes(len(needle))))
         broken_digest = hashlib.sha256(self.reviewed.read_bytes()).hexdigest()
         with self.assertRaisesRegex(
-            OriginalSceneWitnessPackageError, "hook ABI identifier anchors absent"
+            OriginalSceneWitnessPackageError, "hook ABI FUNC exports absent"
         ):
             self.contract(shadowhook_sha256=broken_digest)
         self.reviewed.write_bytes(good)
         self.assertTrue(self.contract()["research_scene_witness_build_enabled"])
+
+    def test_fake_ELF_with_embedded_API_strings_but_no_dynsym_is_rejected(self):
+        from tools.base_mod.prepare_original_scene_witness import _safe_native_so
+        corrupted = bytearray(synthetic_reviewed_arm64_so())
+        # Names still literally exist in the ELF, but the dynamic symbol
+        # section is removed. Binary substring matching alone would PASS.
+        struct.pack_into("<I", corrupted, 0x800 + 64 + 4, 0)
+        self.reviewed.write_bytes(corrupted)
+        digest = hashlib.sha256(corrupted).hexdigest()
+        with self.assertRaisesRegex(
+            OriginalSceneWitnessPackageError, "dynsym missing"
+        ):
+            _safe_native_so(self.reviewed, digest)
+
+    def test_virgin_save_trial_requires_actual_audited_official_SHA(self):
+        from tools.base_mod.prepare_original_scene_witness import (
+            _safe_native_so,
+        )
+        # Artificial fixture digest accepted ONLY while test monkeypatch
+        # replaces the production pin. Here explicitly restore true pin,
+        # to guarantee no arbitrary signed-but-unreviewed library can write.
+        with mock_patch.object(
+            official_checker, "APPROVED_OFFICIAL_SHADOWHOOK_V201_ARM64_SHA256",
+            "fc84287eac46e3bade2f7e07e3c9efdca005822e21191d6db5b8cb222d53e8a0",
+        ):
+            with self.assertRaisesRegex(
+                OriginalSceneWitnessPackageError,
+                "SHA-pinned official ShadowHook 2.0.1",
+            ):
+                _safe_native_so(
+                    self.reviewed, self.sha, require_official_v201=True
+                )
 
     def test_bad_hash_elf_arch_and_exports_fail_before_staging(self):
         with self.assertRaisesRegex(OriginalSceneWitnessPackageError, "hash mismatched"):
@@ -157,7 +217,10 @@ class OriginalNativeSceneWitnessPackagingTests(unittest.TestCase):
             if mutate == "not_dso":
                 struct.pack_into("<H", bad, 16, 2)
             if mutate == "missing_export":
-                bad[180] ^= 1
+                needle = b"shadowhook_hook_sym_addr_2\x00"
+                at = bad.find(needle)
+                self.assertGreater(at, 0)
+                bad[at] ^= 1
             self.reviewed.write_bytes(bad)
             with self.subTest(mutation=mutate), self.assertRaises(
                 OriginalSceneWitnessPackageError
