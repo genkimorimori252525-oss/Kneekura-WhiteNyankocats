@@ -14,6 +14,7 @@ from unittest.mock import patch
 
 from tools.battlecats_pack import PackReader
 from tools.base_mod import fetch_godzilla_server_assets as recovery
+from tools.base_mod import prepare_godzilla_native_resource_preview as native_preview
 from tools.base_mod.battlecats_pack_writer import (
     _encrypt_entry, encrypt_manifest_bytes,
 )
@@ -124,7 +125,11 @@ class OriginalGodzillaFirstFormOneCommandIntegration(unittest.TestCase):
             "--prepare-native-resource-candidate",
             "--resource-preview-output", str(overlay),
         ]
+        # The candidate also independently rechecks the owner's exact
+        # MD5 metadata (immutable in production). Only synthetic tests
+        # temporarily bind their own synthetic encrypted fixture hashes.
         with (patch.object(recovery, "FILES", self.expected),
+              patch.object(native_preview, "EXACT_FILES", self.expected),
               patch.object(recovery, "PRIVATE_ROOT", self.private)):
             result = recovery.main(args)
         return result, rig, ally, overlay
