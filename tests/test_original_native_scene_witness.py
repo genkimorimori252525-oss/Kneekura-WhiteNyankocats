@@ -79,7 +79,10 @@ class OriginalNativeSceneResearchObserverTests(unittest.TestCase):
         self.assertIn("hook_sym_fn, hook_func_fn, witness.base, validated_shift", code)
         self.assertNotIn("= hook_fn(", code)
         self.assertNotIn('"shadowhook_hook_sym_name"', code)
-        self.assertIn("witness.base + ORIGINAL_JNI_DRAW", code)
+        self.assertIn("original_base + ORIGINAL_JNI_DRAW", code)
+        self.assertIn(
+            "hook_sym_fn, hook_func_fn, witness.base, validated_shift", code
+        )
         self.assertIn("research_draw_proxy", code)
         self.assertIn("shadowhook_unhook", code)
         self.assertIn("original-native-scene-hook-v1 partial-unhook-failed", code)
