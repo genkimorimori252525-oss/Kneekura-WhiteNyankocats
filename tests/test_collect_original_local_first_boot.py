@@ -161,6 +161,74 @@ class OriginalNativeLocalFirstBootMetadataTests(TestCase):
         self.assertNotIn("secret.example", repr(events))
         self.assertTrue(events["optional_native_scene102_then101_reported"])
 
+    def test_exact_original_AppLaunchLoad_SAVE_read_status_is_only_native_result(self):
+        events = "".join([
+            safe_thread(PID, "original-native-app-launch-save-read-v1 accepted"),
+            safe_thread(PID+1, "original-native-app-launch-save-read-v1 accepted"),
+            safe_thread(PID, "original-native-scene-hook-v1 installed"),
+            safe_thread(PID, "original-native-app-launch-save-read-v1 failed"),
+            safe_thread(PID, "original-native-app-launch-save-read-v1 failed"),
+            safe_thread(PID, "original-native-app-launch-save-read-v1 accepted url=LEAK"),
+        ])
+        receipt = obs.build_original_local_boot_metadata_receipt(
+            pm_paths=PM_PATHS, dumpsys_package=DUMPSYS,
+            pid_output=str(PID), logcat=SAMPLE + events,
+        )
+        self.assertTrue(receipt["observed_original_AppLaunchLoad_SAVE_read_failed"])
+        self.assertFalse(receipt["observed_original_AppLaunchLoad_SAVE_read_accepted"])
+        self.assertEqual(
+            receipt["signals"]["source_pinned_app_launch_save_read_outcomes"],
+            ["original-native-app-launch-save-read-v1 failed"],
+        )
+        self.assertEqual(
+            receipt["signals"]["allowlisted_event_counts"]
+                ["original-native-app-launch-save-read-v1 failed"], 2
+        )
+        self.assertNotIn("LEAK", repr(receipt))
+        self.assertFalse(receipt["original_gameplay_SAVE_validated_or_generated"])
+        self.assertFalse(receipt["finished_original_game_offline_product"])
+
+    def test_exact_original_AppLaunchLoad_SAVE_accepted_is_not_first_SAVE_proof(self):
+        events = "".join([
+            safe_thread(PID, "original-native-scene-hook-v1 installed"),
+            safe_thread(PID, "original-native-app-launch-save-read-v1 accepted"),
+        ])
+        receipt = obs.build_original_local_boot_metadata_receipt(
+            pm_paths=PM_PATHS, dumpsys_package=DUMPSYS,
+            pid_output=str(PID), logcat=SAMPLE + events,
+        )
+        self.assertTrue(receipt["observed_original_AppLaunchLoad_SAVE_read_accepted"])
+        self.assertFalse(receipt["observed_original_AppLaunchLoad_SAVE_read_failed"])
+        self.assertTrue(
+            receipt["original_AppLaunchLoad_source_read_status_is_not_fresh_save_proof"]
+        )
+        self.assertFalse(receipt["original_gameplay_SAVE_validated_or_generated"])
+        self.assertFalse(receipt["independent_sdk_ipc_external_network_egress_measured_zero"])
+        self.assertFalse(receipt["finished_original_game_offline_product"])
+
+    def test_multiple_original_AppLaunchLoad_SAVE_read_outcomes_fail_closed(self):
+        both = "".join([
+            safe_thread(PID, "original-native-scene-hook-v1 installed"),
+            safe_thread(PID, "original-native-app-launch-save-read-v1 failed"),
+            safe_thread(PID, "original-native-app-launch-save-read-v1 accepted"),
+        ])
+        receipt = obs.build_original_local_boot_metadata_receipt(
+            pm_paths=PM_PATHS, dumpsys_package=DUMPSYS,
+            pid_output=str(PID), logcat=SAMPLE + both,
+        )
+        self.assertTrue(receipt["signals"]["native_app_launch_save_read_conflicting"])
+        self.assertFalse(receipt["observed_original_AppLaunchLoad_SAVE_read_accepted"])
+        self.assertFalse(receipt["observed_original_AppLaunchLoad_SAVE_read_failed"])
+        no_root = obs.build_original_local_boot_metadata_receipt(
+            pm_paths=PM_PATHS, dumpsys_package=DUMPSYS,
+            pid_output=str(PID),
+            logcat=both,
+        )
+        self.assertFalse(no_root["observed_original_AppLaunchLoad_SAVE_read_accepted"])
+        self.assertFalse(no_root["observed_original_AppLaunchLoad_SAVE_read_failed"])
+        self.assertEqual(no_root["status"],
+                         "BLOCKED_NO_CURRENT_PROCESS_RESEARCH_ROOT_WITNESS")
+
     def test_original_level_and_save_events_require_full_hook_before_recording(self):
         events = "".join([
             safe_thread(PID, "original-native-level-cap-getter-v1 original-returned"),

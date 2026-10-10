@@ -234,6 +234,13 @@ class OriginalNativeSceneResearchObserverTests(unittest.TestCase):
 static int cap_arg = -1, gate_arg = -1;
 static void *save_arg = NULL;
 static int cap_count = 0, gate_count = 0, save_count = 0;
+static void *read_arg = NULL;
+static int32_t read_return = 0;
+static int read_accept_count = 0, read_fail_count = 0;
+static int32_t original_loader(void *context) {
+    read_arg = context;
+    return read_return;
+}
 static int32_t original_cap(int32_t idx) {
     cap_arg = idx;
     return idx + 170;
@@ -257,6 +264,12 @@ int __android_log_write(int priority, const char *tag, const char *msg) {
     } else if (strcmp(msg,
               "original-native-save-wrapper-v1 original-returned") == 0) {
         save_count++;
+    } else if (strcmp(msg,
+              "original-native-app-launch-save-read-v1 accepted") == 0) {
+        read_accept_count++;
+    } else if (strcmp(msg,
+              "original-native-app-launch-save-read-v1 failed") == 0) {
+        read_fail_count++;
     }
     return 0;
 }
@@ -273,6 +286,21 @@ int main(void) {
         save_arg != &sentinel) return 5;
     if (research_original_save_wrapper_proxy(&sentinel) != 1) return 6;
     if (cap_count != 1 || gate_count != 1 || save_count != 1) return 7;
+    // The original AppLaunchLoad loader returns its source ABI bit0 result.
+    // Never invent positive SAVE load when original returned a failure.
+    gOriginalAppLaunchLoader = (void *)&original_loader;
+    read_return = 0;
+    if (research_original_app_launch_read_proxy(&sentinel) != 0 ||
+        read_arg != &sentinel) return 12;
+    read_return = 2; // still fails original TBZ W0,#0 check
+    if (research_original_app_launch_read_proxy(&sentinel) != 2) return 13;
+    read_return = 3; // bit0 set, preserve ALL bits on return
+    if (research_original_app_launch_read_proxy(&sentinel) != 3) return 14;
+    if (research_original_app_launch_read_proxy(&sentinel) != 3) return 15;
+    if (read_fail_count != 1 || read_accept_count != 1) return 16;
+    gOriginalAppLaunchLoader = NULL;
+    if (research_original_app_launch_read_proxy(&sentinel) != 0) return 17;
+    if (read_fail_count != 1 || read_accept_count != 1) return 18;
     // Only a synthetic mapped image is used; source oracle is these 17
     // public opcode anchors, NOT any game binary or real owner SAVE.
     size_t bytes = ORIGINAL_NATIVE_TEXT_END_EXCLUSIVE + MAX_SOURCE_VMA_REBASE
