@@ -16,7 +16,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
+import re
 import shutil
 
 from tools.base_mod.extract_owned_splits import (
@@ -300,8 +302,16 @@ def main() -> int:
     parser.add_argument("--shim", required=True, type=Path)
     parser.add_argument("--keystore", required=True, type=Path)
     parser.add_argument("--alias", required=True)
-    parser.add_argument("--storepass", required=True)
-    parser.add_argument("--keypass")
+    password_source = parser.add_mutually_exclusive_group(required=True)
+    password_source.add_argument("--storepass",
+                                 help="LEGACY INSECURE CLI: secret visible in OS argv")
+    password_source.add_argument("--storepass-env",
+                                 help="Environment variable NAME containing existing research keystore password")
+    key_password_source = parser.add_mutually_exclusive_group()
+    key_password_source.add_argument("--keypass",
+                                     help="LEGACY INSECURE CLI: secret visible in OS argv")
+    key_password_source.add_argument("--keypass-env",
+                                     help="Environment variable NAME containing existing research key password")
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--research-shadowhook-aar", type=Path,
                         help="Owner-private official Maven 2.0.1 AAR (SHA pinned), includes BOTH ARM64 native .so")
@@ -330,14 +340,29 @@ def main() -> int:
     parser.add_argument("--root", type=Path, default=Path("."))
     args = parser.parse_args()
 
+    def private_password_env(name: str) -> str:
+        # Only a VARIABLE NAME is permitted on the command line.
+        # The private value is read from the owner-local child environment,
+        # never echoed or serialized into diagnostic receipts.
+        if not re.fullmatch(r"[A-Za-z_][A-Za-z_0-9]{0,127}", name):
+            parser.error("invalid private password environment variable name")
+        value = os.environ.get(name)
+        if not value:
+            parser.error("required private password environment variable not set")
+        return value
+
+    storepass = (private_password_env(args.storepass_env)
+                 if args.storepass_env else args.storepass)
+    keypass = (private_password_env(args.keypass_env)
+               if args.keypass_env else args.keypass)
     result = build_owned_static_http_bridge(
         args.export_zip,
         flavor=args.flavor,
         shim=args.shim,
         keystore=args.keystore,
         alias=args.alias,
-        storepass=args.storepass,
-        keypass=args.keypass,
+        storepass=storepass,
+        keypass=keypass,
         output_dir=args.output,
         enable_backup_offline_replay=args.enable_backup_offline_replay,
         research_isolate_original_native_files_dir=args.research_isolate_original_native_files_dir,
