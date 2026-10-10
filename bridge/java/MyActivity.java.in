@@ -297,7 +297,7 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
                         virginNativeRootAttested = true;
                         debugResearch("original-virgin-root-attested-v1");
                     }
-                } catch (UnsatisfiedLinkError unavailable) {
+                } catch (UnsatisfiedLinkError | IOException unavailable) {
                     // Original ELF hooks can be absent this early in startup.
                     // No writer is authorized until native attestation succeeds.
                     debugResearch("original-virgin-root-not-ready-v1");
