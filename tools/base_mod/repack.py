@@ -19,6 +19,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+import uuid
 import zipfile
 
 
@@ -125,13 +126,17 @@ def find_android_tool(name: str, explicit: str | None = None) -> str:
     return str(sorted(candidates)[-1])
 
 
-def _run(command: list[str]) -> subprocess.CompletedProcess[str]:
+def _run(
+    command: list[str], *, environment: dict[str, str] | None = None,
+) -> subprocess.CompletedProcess[str]:
+    """Launch child tools without recording secrets in the argv/exception."""
     return subprocess.run(
         command,
         check=True,
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
+        env=environment,
     )
 
 
@@ -182,6 +187,21 @@ def baseline_resign(
     ledger_splits: list[dict] = []
     signer_digests: set[str] = set()
 
+    # The Android SDK apksigner officially supports --ks-pass env:<VAR>.
+    # Putting pass:<secret> in argv exposes the owner's key password in OS
+    # process listings and Python CalledProcessError.cmd. Use private,
+    # per-run child environment values instead. No password goes to Git/JSON.
+    if not isinstance(storepass, str) or not storepass:
+        raise ValueError("nonempty private signing password required")
+    if keypass is not None and (not isinstance(keypass, str) or not keypass):
+        raise ValueError("nonempty private signing key password required")
+    env_store_name = "KNEEKURA_APKSIGN_STORE_" + uuid.uuid4().hex.upper()
+    env_key_name = "KNEEKURA_APKSIGN_KEY_" + uuid.uuid4().hex.upper()
+    signer_env = os.environ.copy()
+    signer_env[env_store_name] = storepass
+    if keypass is not None:
+        signer_env[env_key_name] = keypass
+
     with tempfile.TemporaryDirectory(prefix="kneekura-baseline-") as temp_name:
         temp = Path(temp_name)
         for source in sources:
@@ -200,7 +220,7 @@ def baseline_resign(
                 "--ks-key-alias",
                 alias,
                 "--ks-pass",
-                f"pass:{storepass}",
+                f"env:{env_store_name}",
                 "--v1-signing-enabled",
                 "true",
                 "--v2-signing-enabled",
@@ -211,9 +231,9 @@ def baseline_resign(
                 str(target),
             ]
             if keypass is not None:
-                sign_command.extend(["--key-pass", f"pass:{keypass}"])
+                sign_command.extend(["--key-pass", f"env:{env_key_name}"])
             sign_command.append(str(aligned))
-            _run(sign_command)
+            _run(sign_command, environment=signer_env)
 
             _run([apksigner_bin, "verify", "--verbose", str(target)])
             signer = _cert_digest(apksigner_bin, target)
