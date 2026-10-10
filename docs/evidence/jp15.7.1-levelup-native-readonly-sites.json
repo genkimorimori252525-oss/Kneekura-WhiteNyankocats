@@ -82,7 +82,7 @@
     "value_semantic_meaning": "UNKNOWN: original game stores a bytewise XOR-encoded value; value=1 selects first level-max popup; NOT yet proven per-unit level cap"
   },
   "source_code_tool": "tools/base_mod/trace_original_levelup_native.py",
-  "next_verified_code_task": "Native original 92 Server .list/.pack families now cataloged and linked by one original runtime table initializer, and 92-row registration loop + named-resource parser pinned. Next audit OWNER-SUPPLIED additional MNumberServer/WImageDataServer/etc encrypted .list manifests (and paired payload validity privately), then prove original native per-TSV key registration at scene97 before any real offline first boot. User export here has no additional Server .list/.pack; do not infer 35 TSVs are available. Separately locate first-run no-account original SAVE initializer and implement original Lv60+MAX/reload/battle with no SDK/IPC egress.",
+  "next_verified_code_task": "Original Server family BSS table initialization now pinned to ELF .init_array native ctor, and paired owner extra Server .list/.pack targeted decryption validated only on synthetic fixtures; local-research Activity can also observe native SAVE file changes without contents. Next prioritize original native first-game initializer + real original offline boot, while privately sourcing genuine additional owner Server packs to provide the exact 35 download_N.tsv through native registry; then actual original Lv60/XP/CatsEye/MAX/reboot, Jolly original base i/LiveOps and Madoka/Godzilla. No publisher SAVE reimport or H01/integrity/ban bypass.",
   "release_status": {
     "original_ui_level_cap_patch_attached": false,
     "level_purchase_action_attached": false,
@@ -113,7 +113,12 @@
     "original_native_92_server_family_catalog_and_registry_lookup_static_proven": true,
     "original_extra_server_35_tsv_contents_available": false,
     "original_native_fresh_player_save_initialized": false,
-    "original_game_lv60_actual_screen_reboot_accepted": false
+    "original_game_lv60_actual_screen_reboot_accepted": false,
+    "original_server_source_registry_init_array_proven": true,
+    "paired_owner_Server_target_TSV_selected_payload_mode_synthetic_tested": true,
+    "local_research_native_SAVE_event_monitor_JVM_tested": true,
+    "original_game_fresh_account_free_SAVE_and_Lv60_device_passed": false,
+    "original_game_zero_sdk_ipc_network_egress_passed": false
   },
   "restrictions": "No full proprietary data, disassembly dumps, source APK, original SAVE_DATA, private signing keys or bypass code committed; this is metadata only.",
   "unit_native_source_table_sequence": {
@@ -787,5 +792,60 @@
     "contents_validated_by_original_game": false,
     "native_original_offline_gameplay_boot_passed": false,
     "original_SAVE_APK_or_assets_modified": false
+  },
+  "original_server_registry_static_constructor": {
+    "pinned_original_SHA256": "333d2974ab2ff881fd70087fd62dea7d12d82addbc55cab2f2a675ad67e3a7e2",
+    "provenance": "Read-only original owner JP15.7.1 native ELF source, direct relocations and opcode/rodata checks",
+    "original_init_array_section_VA": "0xb16800..0xb170d0",
+    "original_init_array_relative_relocation": "0xb16cb8 R_AARCH64_RELATIVE -> 0x714ae8",
+    "original_ctor_unwind_PC_range": "0x714ae8..0x719044",
+    "original_ctor_literal_source": "XImageServer.list, original .rodata 0x1918d1",
+    "original_ctor_source_opcode_sites": "0x71599c/0x7159a0",
+    "original_ctor_BSS_destination": "0xf98d38, write opcode 0x7159c0",
+    "separate_runtime_registry_activation_loop": "0x741b68..0x741b90, exactly 92 rows of 0x30 bytes",
+    "static_92_list_pack_source_family_names_paired": true,
+    "all_92_BSS_row_contents_recovered": false,
+    "all_92_registry_names_activated_at_original_device_boot": false,
+    "original_35_native_download_TSV_entries_locally_loaded": false,
+    "provenance_code": "tools/base_mod/trace_original_levelup_native.py::_original_server_registry_constructor_initialized_on_load",
+    "synthetic_regression": "tests/test_trace_original_levelup_native.py"
+  },
+  "owner_extra_server_pair_research_verification": {
+    "status": "SYNTHETIC_PAIRED_PACK_CIPHERTEXT_ROUNDTRIP_TESTS_PASS_NO_OWNER_EXTRA_PACKS_PRESENT",
+    "original_pack_input_available": false,
+    "optional_explicit_mode": "--verify-owner-extra-pack-tsv-payloads with --owner-extra-list-dir",
+    "default_names_only": true,
+    "targeted_decode": "only download_0.tsv..download_34.tsv ciphertext slices in explicitly supplied corresponding Server.pack",
+    "authenticated_or_proprietary_player_SAVE_read": false,
+    "source_report": "sha256 and payload length only; no plaintext, no private unrelated ciphertext",
+    "duplicate_names_in_one_manifest": "fail closed",
+    "duplicate_target_TSV_across_families": "names-only reports ambiguity; opt-in payload verification fails closed until original lookup precedence known",
+    "empty_or_missing_paired_pack": "fail closed on matching target names in opt-in mode",
+    "truncated_or_bad_padding": "fail closed",
+    "original_source_files_mutated": false,
+    "actual_jp15_7_1_game_native_asset_source_accepted": false,
+    "synthetic_tests_executed": true,
+    "test_workflow": "Test tooling #38018709389 (394 total/1 unrelated LIEF skipped)",
+    "actual_owner_game_loop_connected": false
+  },
+  "original_research_save_file_event_monitor": {
+    "source_file": "bridge/java/MyActivity.java.in::watchOriginalLocalSaveChanges",
+    "research_package": "jp.kn.local.battlecats ONLY",
+    "activated": "first valid original getFilesDir() in local-research branch",
+    "retained_process_lifetime": "static FileObserver reference",
+    "watched_native_SAVE_file_events": [
+      "CREATE",
+      "CLOSE_WRITE",
+      "MOVED_TO",
+      "DELETE"
+    ],
+    "path_filter": "exact SAFE_DATA family filenames SAVE_DATA, SAVE_DATA4, SAVE_DATA8, no '../' or nested paths",
+    "emitted_log": "reuses original-save-presence-v1 snapshot with file presence/byte length/unsafe only",
+    "reads_file_content": false,
+    "logs_player_account_identifier": false,
+    "original_owned_jp_SAVE_accessed_or_imported": false,
+    "tested": "JVM-compiled original MyActivity subclass with Android FileObserver stub emits simulated original-native file event and logs new local-only fixture",
+    "real_android_FileObserver_native_SAVE_event_observed": false,
+    "original_native_game_first_boot_verified": false
   }
 }
