@@ -38,9 +38,11 @@ set_target_properties(kneekura PROPERTIES
 # Isolated original JP15.7.1 native scene observer.
 # OFF by default, NEVER silently enabled for a Personal/Practice build.
 # The opt-in runtime checks /proc/self/cmdline == jp.kn.local.battlecats,
-# original ELF GNU BuildID and pinned ARM64 instructions. libshadowhook.so
-# must be reviewed and bundled separately, from its official distribution;
-# it is NOT fetched/vendored by CMake or by this project.
+# original ELF GNU BuildID and pinned ARM64 instructions. OFFICIAL
+# libshadowhook.so AND libshadowhook_nothing.so MUST both be staged from the
+# SHA-pinned 2.0.1 Maven AAR in the PRIVATE owner research split. Omitting the
+# companion can cause ShadowHook linker init failures (upstream Issue #113).
+# CMake never fetches/vendors this archive or touches the owner game/SAVE.
 option(KNEEKURA_RESEARCH_SCENE_WITNESS
        "Isolated research-only original scene numbers (never shipping)" OFF)
 if(KNEEKURA_RESEARCH_SCENE_WITNESS)
