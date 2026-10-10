@@ -62,3 +62,30 @@ Retain exact hash manifest. Search owner-held caches, past explicitly distributa
 - [ ] Owner PC actual HEAD/GET endpoint response
 - [ ] Original archive MD5 and four member MD5 comparisons on returned real content
 - [ ] Owner-private Godzilla 550_e rig decoding + original game UI integration
+
+
+## 2026-10-10 owner real HTTP test and rediscovered historical mirror
+
+**Live proof:** Owner Windows PC probed and attempted GET on both reconstructed historical PONOS CDN ZIP URLs; **both returned HTTP 403** (`battlecats_100900_18_00.zip`, `battlecats_140600_33_00.zip`). There was **no archive downloaded or validated**. A 403 is a denial for these requests, not proof of permanent removal. Do not fabricate CDN success or suggest bypassing its authentication.
+
+**New, independently observed metadata:** [fieryhenry/BCData `jp_server`](https://github.com/fieryhenry/BCData/tree/main/jp_server) includes four original-filename candidates **with byte sizes that exactly match the source JP15.7.1 download manifest**:
+
+| Name | GitHub mirror byte size | Owner JP15.7.1 expected MD5 |
+|---|---:|---|
+| MNumberServer.list | 2,832 | `34219ad4ddebe715ddaa3af4244697b1` |
+| MNumberServer.pack | 10,637,344 | `0c23c4defa077d2e97fbbb1b28a0de4d` |
+| WImageDataServer.list | 451,888 | `1ddee28c515a52ebd0a09d655745945c` |
+| WImageDataServer.pack | 79,788,272 | `cebd0898a2c9d68fa3c7631afa9dd0d2` |
+
+Mirror file contents and their **MD5 are NOT yet verified in any real download**. Public availability of the mirror at the owner's PC is also USER_GATE. The third-party mirror is not an authorized PONOS CDN endpoint; only copy for owner-local private research, do not redistribute copyrighted file bodies in Git.
+
+**Owner fallback add-on ZIP:** `kneekura-server-bcdata-recovery-jp1571.zip`, SHA256 `6c73f57e942e998d996b5b50f117bf425054c071b4e9b439e0fa9ca7c4bc3b23`. This is source/tooling only, not a pack-byte archive. Overlay onto prior `kneekura-server-recovery-jp1571` directory and run from `kneekura_server_recovery`:
+
+```powershell
+py -3 .\download_bcdata_server.py --download
+py -3 .\download_bcdata_server.py --verify-only
+```
+
+The script fetches four literal historical mirror filenames via raw.githubusercontent.com; checks exact byte count + MD5 using the user's 35-lane owner-manifest; stages in temporary .part files, atomically promotes verified content, never replaces a conflicting existing file, and stores a **metadata-only verification receipt** under `server_archive_cache/files`. No ADB/root/install/network-account/SAVE manipulation.
+
+**Local validation completed**: 7 unittest cases PASS, Python syntax PASS, ZIP CRC PASS, unpacked ZIP tests PASS; actual mirror HTTP access and real four MD5 matches remain OPEN. The offline `--verify-only` properly rejects a missing file set. Status: **POTENTIAL ASSET SOURCE IDENTIFIED, USER DOWNLOAD + FOUR MD5 VERIFICATION REQUIRED**.
