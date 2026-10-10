@@ -398,6 +398,9 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
             // Strict local-research mode cannot return to original HTTP code.
             // This intentionally surfaces a missing local service dependency
             // instead of reconnecting a refused SAVE or PONOS account.
+            // Diagnostic is metadata-only: never emit URL, method, headers,
+            // body, response payload, credentials or player identifiers.
+            debugResearch("original-local-denied-http-v1");
             throw new IllegalStateException("original local research HTTP disabled");
         }
 
