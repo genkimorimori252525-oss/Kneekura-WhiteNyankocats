@@ -125,6 +125,11 @@ try {
 } finally {
     [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
 }
+# A fresh process-only variable name avoids passing the owner's password in
+# PowerShell/Python/apksigner command lines. Never persist it to disk/registry.
+$secretEnvName = 'KNEEKURA_OWNER_SIGN_' + [Guid]::NewGuid().ToString('N').ToUpperInvariant()
+[Environment]::SetEnvironmentVariable($secretEnvName, $password, 'Process')
+$password = $null
 try {
     Push-Location $repo
     try {
@@ -132,7 +137,8 @@ try {
             '-3.12', '-m', 'tools.base_mod.build_owned_static_http_bridge',
             $zip, '--flavor', 'local-research',
             '--shim', $shim, '--keystore', $keystore,
-            '--alias', $SigningAlias, '--storepass', $password, '--keypass', $password,
+            '--alias', $SigningAlias,
+            '--storepass-env', $secretEnvName, '--keypass-env', $secretEnvName,
             '--research-no-internet-permission',
             '--research-shadowhook-aar', $aar,
             '--zipalign', $zipalign, '--apksigner', $apksigner,
@@ -145,6 +151,7 @@ try {
         Pop-Location
     }
 } finally {
+    [Environment]::SetEnvironmentVariable($secretEnvName, $null, 'Process')
     $password = $null
     $secure.Dispose()
 }
