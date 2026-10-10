@@ -70,6 +70,8 @@ class UnsignedOriginalResearchBuilderTests(unittest.TestCase):
         owner_zip.write_bytes(b"NO_OWNER_APK")
         aar = self.repo / "private" / "synthetic.aar"
         aar.write_bytes(b"FAKE_NOT_OFFICIAL")
+        self.metadata["sha256"] = "0" * 64
+        self.proof.write_text(json.dumps(self.metadata))
         with patch.object(presign, "extract_owned_splits") as read_owner:
             with self.assertRaises(presign.UnsignedOriginalBuildBlocked):
                 presign.prepare_unsigned_research(
