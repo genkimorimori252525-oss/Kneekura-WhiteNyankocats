@@ -33,6 +33,27 @@ RESULT_LIMIT = 100 * 1024
 PINNED_MIRROR_BASE = (
     "https://raw.githubusercontent.com/fieryhenry/BCData/main/jp_server/"
 )
+# Real downloaded, fully decoded JP15.7.1 historical receipts, not synthetic
+# test assumptions. Numeric version/candidate changes must be reviewed.
+EXPECTED_REAL_SERVER_SHA256 = {
+    "MNumberServer.list": "bab4918070e3256db4d47fa2ed2e3fa8882cf39c52c25096e3645e3d9af70fbc",
+    "MNumberServer.pack": "8bd808f44c10064cb7ba8cbff02278251fb5af594caaf3e42fc6bac4fb84361a",
+    "WImageDataServer.list": "136b6dec2833818766394a6eed45749d3fb640a631efa9439ee2d9ef2f23671a",
+    "WImageDataServer.pack": "87befd4bf41ae829221fcaf53f97dc4bd4a3ee24441206a4e2a6a16f6ab119ea",
+}
+EXPECTED_REAL_550E_ART_SHA256 = {
+    "550_e.png": "f168a34a23d8097f6a8b6cd5f2eb6daab8135fad3009205880155a94df15526d",
+    "550_e.imgcut": "c5706f0b4948787f12b82daf1efd95dab3dd8b50cb7c22a7370dbcf626df2ac7",
+    "550_e.mamodel": "5cb882947ac80c91e56ee5dce0ba7c35534fa3dce1960198dc4f063e2b749d44",
+    "550_e00.maanim": "21e3e497e1c1c80ab976d253737da24267014839cb7dc4b332bd61f5b01d84de",
+    "550_e01.maanim": "22e617f31066c17fd6d1e9cff8c741d30dbec93f74b27c597c0add1fe37a904c",
+    "550_e02.maanim": "4b26668480db0e53ac7aa0afaf431332d40e0456d7ccc7ed48acc689922a0bf8",
+    "550_e03.maanim": "c810a20851049257978a40e492beb8f14ddee41efbf7084342c2a765d909541c",
+}
+EXPECTED_REAL_CANDIDATE_SHA256 = {
+    "manifest": "b7bb1409297662749f048cbfbfb9b12518a5ea4f3cd8e3b708799f5babaa2828",
+    "pack": "3ead8f8c9b53250f4f4966fe427df48b947e6f894d938b7c052a7b6432277881",
+}
 
 
 def _sha(path: Path) -> str:
@@ -47,6 +68,8 @@ def _error_code(message: str) -> str:
     """Do not leak a URL, dynamic local path, binary or secret in receipts."""
     clean = re.sub(r"[^a-zA-Z0-9_]+", "_", message.casefold())
     # Known, stable implementation diagnostic category; not full messages.
+    if "sha256" in clean or "sha_drift" in clean:
+        return "ORIGINAL_SOURCE_OR_PREVIEW_SHA256_DRIFT"
     if "md5_mismatch" in clean or "oversized" in clean:
         return "ORIGINAL_SOURCE_SIZE_OR_MD5_MISMATCH"
     if "not_found" in clean or "http_error_404" in clean:
@@ -171,6 +194,12 @@ def verify_public_mirror_volatile(
             if not all(row["historical_MD5_matches"] for row in
                        receipt["source_original_archives"].values()):
                 raise ValueError("historical original source MD5 mismatch")
+            if (set(receipt["source_original_archives"])
+                != set(EXPECTED_REAL_SERVER_SHA256)):
+                raise ValueError("historical original Server source SHA drift")
+            for name, proof in receipt["source_original_archives"].items():
+                if proof["sha256"] != EXPECTED_REAL_SERVER_SHA256[name]:
+                    raise ValueError("historical original source SHA256 drift")
 
             receipt["last_stage"] = "original-decrypt-and-first-form-candidate"
             finished = recovery.complete_owner_private_godzilla_pipeline(
@@ -205,6 +234,16 @@ def verify_public_mirror_volatile(
                 name: {"bytes": row["bytes"], "sha256": row["sha256"]}
                 for name, row in sorted(ally["candidate_ally_art"].items())
             }
+            if set(receipt["original_enemy_art_550e"]) != set(EXPECTED_REAL_550E_ART_SHA256):
+                raise ValueError("actual original enemy rig asset set SHA drift")
+            for name, row in receipt["original_enemy_art_550e"].items():
+                if row["sha256"] != EXPECTED_REAL_550E_ART_SHA256[name]:
+                    raise ValueError("actual original enemy rig SHA256 drift")
+            if (candidate["candidate_manifest_sha256"]
+                != EXPECTED_REAL_CANDIDATE_SHA256["manifest"]
+                or candidate["candidate_pack_sha256"]
+                != EXPECTED_REAL_CANDIDATE_SHA256["pack"]):
+                raise ValueError("native original asset candidate SHA256 drift")
             receipt["candidate_WImageDataServer"] = {
                 "original_entry_count": candidate["original_source_entry_count"],
                 "candidate_entry_count": candidate["candidate_entry_count"],
@@ -296,6 +335,8 @@ def verify_public_mirror_volatile(
                     ally["mamodel_conversion"]["extra_collision_and_model_footer_bytes_preserved"],
             }
             receipt["private_staging_worked_without_original_game_mutation"] = True
+            receipt["historical_original_source_and_seven_enemy_asset_SHA256_pinned"] = True
+            receipt["candidate_archive_model_conversion_SHA256_pinned"] = True
             receipt["status"] = "PASS_ORIGINAL_PUBLIC_ARCHIVE_MATCHED_AND_PRIVATE_PREVIEW_BUILT"
             receipt["last_stage"] = "metadata-only-receipt"
         except Exception as exc:
