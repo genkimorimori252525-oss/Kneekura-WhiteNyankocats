@@ -161,9 +161,148 @@ def inspect_original_virgin_save_failure(elf: bytes) -> dict[str, Any]:
     }
 
 
+# Exact onCreate_loadSaveData-related libc++ aGameServices::Status lambda
+# and real JNI update loop. These MAY participate in boot status progression,
+# but DO NOT authorize faking an online success, new game SAVE or account.
+ONCREATE_STATUS_ANCHORS = {
+    0x31755C: 0xD10143FF,  # real Android MyActivity_appUpdateDraw JNI entry
+    0x3175EC: 0x941AC2B5,  # original per-frame update -> 0x9c80c0
+    0x9C80C0: 0xD10203FF,  # native frame updater entry
+    0x9C80E4: 0x97F54F90,  # get original application singleton
+    0x9C8120: 0x36000F40,  # status check -> 0x9c8308
+    0x9C8168: 0x540009A1,  # B.NE -> status callback installation
+    0x9C82A0: 0xF0000A09,  # original registered lambda ADRP x9
+    0x9C82A4: 0x9132A129,  # ADD x9,x9,#0xca8 -> 0xb0bca8
+    0x9C82B4: 0xF9000BE9,  # store lambda vtable address
+    0x9C82C4: 0xF9407508,  # game services virtual slot +0xe8
+    0x9C82D0: 0xD63F0100,  # call service interface (not HTTP proof)
+    0x9C9BB8: 0xA9BF7BFD,  # typed lambda invocation
+    0x9C9BC0: 0x97F548D9,  # get original MyApplication
+    0x9C9BC4: 0xF9400008,  # get MyApplication vtable
+    0x9C9BC8: 0xF9401D01,  # vtable+0x38
+    0x9C9BD0: 0xD61F0020,  # BR x1 into MyApplication virtual function
+    0x724544: 0xD10303FF,  # resolved original app virtual method
+    0x492B98: 0x940A192B,  # original worker resets STATE before save read
+    0x492BE8: 0x9414A2DF,  # original worker THEN reads SAVE_DATA
+    0x492BEC: 0x360009E0,  # SAVE load failure -> fail state
+    0x492D2C: 0x39002668,  # worker failure flag
+}
+
+ONCREATE_DIRECT_CALLS = {
+    0x3175EC: 0x9C80C0,
+    0x9C80E4: 0x71BF24,
+    0x9C9BC0: 0x71BF24,
+    0x492B98: 0x719044,
+    0x492BE8: 0x9BB764,
+}
+
+ONCREATE_RELOCATIONS = {
+    0xB0BC78: 0x1F4B14,  # exact aGameServices::Status std::function type
+    0xB0BC90: 0x1F4B92,  # exact lambda onCreate_loadSaveData name
+    0xB0BCD8: 0x9C9BB8,  # lambda vtable invoked method
+    0xAFD488: 0xAFD4E0,  # MyApplication vtable RTTI pointer
+    0xAFD4C8: 0x724544,  # method +0x38 from address point 0xafd490
+    0xAFD4E8: 0x1DA558,  # MyApplication type name
+}
+
+ONCREATE_RTTI = {
+    0x1F4B14: b"NSt6__ndk110__function6__funcIZN13MyApplication21onCreate_loadSaveDataEvE3$_0NS_9allocatorIS3_EEFvN13aGameServices6StatusEEEE\x00",
+    0x1F4B92: b"ZN13MyApplication21onCreate_loadSaveDataEvE3$_0\x00",
+    0x1DA558: b"13MyApplication\x00",
+}
+
+ONCREATE_RELA_START = 0x9D2A8
+ONCREATE_RELA_END = 0x12F708
+ONCREATE_RELA_STEP = 24
+
+
+def inspect_original_oncreate_save_status_callback(elf: bytes) -> dict[str, Any]:
+    """Disambiguate original zero-initialized RAM from a valid virgin SAVE.
+
+    The onCreate_loadSaveData-named lambda is installed on a services-status
+    path inside the original native app's FRAME updater. When invoked it
+    dispatches a MyApplication virtual method (+0x38). In this bounded lambda
+    there is no SAVE writer call. The original loader worker seeds RAM first,
+    but a missing SAVE still flows to its error flag. All claims are static.
+    """
+    for pc, expected in ONCREATE_STATUS_ANCHORS.items():
+        if _u32(elf, pc) != expected:
+            raise OriginalVirginSaveGateError(
+                f"original onCreate status/worker opcode drift at 0x{pc:x}"
+            )
+    for pc, destination in ONCREATE_DIRECT_CALLS.items():
+        if _bl_target(elf, pc) != destination:
+            raise OriginalVirginSaveGateError(
+                f"original onCreate call destination drift at 0x{pc:x}"
+            )
+    if (_cond_target(elf, 0x492BEC, "tbz") != 0x492D28
+        or _cond_target(elf, 0x9C8120, "tbz") != 0x9C8308):
+        raise OriginalVirginSaveGateError("original frame/status or worker failure branch drift")
+    original_branch = _u32(elf, 0x9C8168)
+    if (original_branch & 0xFF00001F) != 0x54000001:
+        raise OriginalVirginSaveGateError("original callback install must use B.NE")
+    delta = _s((original_branch >> 5) & 0x7FFFF, 19)
+    if 0x9C8168 + 4 * delta != 0x9C829C:
+        raise OriginalVirginSaveGateError("original callback install branch target changed")
+    for address, literal in ONCREATE_RTTI.items():
+        if elf[address:address + len(literal)] != literal:
+            raise OriginalVirginSaveGateError("original onCreate/MyApplication RTTI drift")
+    observed: dict[int, int] = {}
+    if len(elf) < ONCREATE_RELA_END:
+        raise OriginalVirginSaveGateError("original native ELF relocation source truncated")
+    for offset in range(ONCREATE_RELA_START, ONCREATE_RELA_END, ONCREATE_RELA_STEP):
+        at, relocation_type, destination = struct.unpack_from("<QQq", elf, offset)
+        if at not in ONCREATE_RELOCATIONS:
+            continue
+        if at in observed or relocation_type != 0x403:
+            raise OriginalVirginSaveGateError("original onCreate RTTI/vtable relocation duplicate or drift")
+        observed[at] = destination
+    if observed != ONCREATE_RELOCATIONS:
+        raise OriginalVirginSaveGateError("onCreate lambda or app vtable relocation mismatch")
+    # Verify the ADRP/ADD pair rather than assuming the constructor's address.
+    adrp = _u32(elf, 0x9C82A0)
+    add = _u32(elf, 0x9C82A4)
+    encoded_page = ((adrp >> 5) & 0x7FFFF) << 2 | ((adrp >> 29) & 3)
+    if encoded_page & (1 << 20):
+        encoded_page -= 1 << 21
+    target_page = (0x9C82A0 & ~0xFFF) + (encoded_page << 12)
+    if ((adrp & 31) != 9 or (add & 31) != 9
+        or ((add >> 5) & 31) != 9
+        or target_page + ((add >> 10) & 0xFFF) != 0xB0BCA8):
+        raise OriginalVirginSaveGateError("original status lambda vtable address drift")
+    bounded_lambda_writes = _direct_bl_to(elf, (0x9C9BB8, 0x9C9BD4), WRITER_TARGET)
+    if bounded_lambda_writes:
+        raise OriginalVirginSaveGateError("original lambda unexpectedly writes SAVE_DATA")
+    return {
+        "status": "ORIGINAL_ONCREATE_SAVEDATA_STATUS_LAMBDA_AND_PRELOAD_RAM_RESET_STATIC",
+        "original_app_update_draw": "0x31755c JNI appUpdateDraw; 0x3175ec -> 0x9c80c0",
+        "status_callback_name": "MyApplication::onCreate_loadSaveData()::$_0",
+        "status_callback_type": "std::function<void(aGameServices::Status)>",
+        "lambda_original_registration": "0x9c82a0 ADRP / 0x9c82a4 ADD -> 0xb0bca8",
+        "services_status_callback_site": "0x9c82c4 virtual+0xe8; 0x9c82d0 BLR",
+        "typed_lambda_entry": "0xb0bcd8 -> 0x9c9bb8",
+        "typed_lambda_app_dispatch": "0x9c9bc0 singleton; 0x9c9bc8 app vtable+0x38; 0x9c9bd0 BR x1",
+        "app_virtual_method_target": "0xafd490+0x38=0xafd4c8 -> 0x724544",
+        "native_worker_initializes_RAM_first": "0x492b98 -> 0x719044",
+        "native_worker_loads_existing_SAVE_second": "0x492be8 -> 0x9bb764",
+        "native_worker_missing_save_still_fails": "0x492bec TBZ -> 0x492d28 -> 0x492d2c failure flag",
+        "bounded_lambda_direct_SAVE_writer_calls": bounded_lambda_writes,
+        "oncreate_status_callback_is_not_proven_native_new_player_writer": True,
+        "state_zero_defaults_are_not_durable_new_profile": True,
+        "actual_game_services_status_or_network_requirement_verified": False,
+        "other_valid_original_virgin_creation_path_excluded": False,
+        "original_native_game_local_first_boot_reboot_or_Lv60_passed": False,
+        "user_owned_original_APK_or_SAVE_modified": False,
+    }
+
+
 def trace_exact_original_virgin_save_gate(elf: bytes) -> dict[str, Any]:
     if sha256(elf).hexdigest() != NATIVE_SHA256:
         raise OriginalVirginSaveGateError(
             "original virgin SAVE analysis only supports owner's exact JP15.7.1"
         )
-    return inspect_original_virgin_save_failure(elf)
+    report = inspect_original_virgin_save_failure(elf)
+    report["original_oncreate_savedata_status_callback"] = (
+        inspect_original_oncreate_save_status_callback(elf)
+    )
+    return report
