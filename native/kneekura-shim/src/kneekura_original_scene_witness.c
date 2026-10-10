@@ -46,6 +46,19 @@
     "Java_jp_co_ponos_battlecats_MyActivity_appUpdateDraw"
 #define EXACT_LOCAL_PROCESS "jp.kn.local.battlecats"
 
+/*
+ * An opt-in original-scene research shim MUST be identifiable from its
+ * compiled ELF even with Clang LTO, string merging and -O2. These
+ * exported, used constants let the local build gate distinguish an
+ * instrumented research library from the default feature-OFF shim.
+ * Neither value contains game/save/account information.
+ */
+__attribute__((used, visibility("default")))
+const char kneekura_scene_research_package_identity[] = EXACT_LOCAL_PROCESS;
+__attribute__((used, visibility("default")))
+const char kneekura_scene_research_event_format[] =
+    "original-native-scene-v1 id=%u";
+
 /* original installed-owner ELF 8cb3815648eb9642da10bfb039d71bff7a3519bd */
 static const uint8_t kPinnedNativeBuildId[20] = {
     0x8c, 0xb3, 0x81, 0x56, 0x48, 0xeb, 0x96, 0x42, 0xda, 0x10,
@@ -85,7 +98,7 @@ static int current_process_is_isolated_original_research(void) {
     }
     /* The first NUL-terminated argv[0] MUST be the exact dedicated package.
        This also prevents accidentally activating in the actual PONOS app. */
-    return strcmp(process_name, EXACT_LOCAL_PROCESS) == 0;
+    return strcmp(process_name, kneekura_scene_research_package_identity) == 0;
 }
 
 static size_t align_note_size(size_t size) {
@@ -217,7 +230,7 @@ static void research_draw_proxy(void *jni_env, void *jni_class) {
        account, URL, player identifier, gameplay values or stack traces. */
     char message[64];
     int size = snprintf(message, sizeof(message),
-                        "original-native-scene-v1 id=%u", (unsigned)scene);
+                        kneekura_scene_research_event_format, (unsigned)scene);
     if (size > 0 && (size_t)size < sizeof(message)) {
         __android_log_write(ANDROID_LOG_INFO, WITNESS_TAG, message);
     }
