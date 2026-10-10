@@ -215,6 +215,124 @@ def prepare_private_native_resource_candidate(
     )
 
 
+def complete_owner_private_godzilla_pipeline(
+    source: Path, *,
+    server_output: Path, rig_output: Path,
+    ally_output: Path, resource_output: Path,
+    private_root: Path | None = None,
+) -> dict:
+    """Transactional four-stage OWNER-IMPORT pipeline.
+
+    Unlike the old sequential command, finish ALL original source checks,
+    rig extraction, converter and WImage encrypted round-trip within one
+    temporary private tree BEFORE publishing a single target directory.
+
+    Publication uses four carefully controlled no-overwrite directory
+    renames. If any publication fails, undo only directories THIS invocation
+    just published; source packs, SAVE and pre-existing destinations are
+    never deleted. No simulation equals original Android acceptance.
+    """
+    root_input = PRIVATE_ROOT if private_root is None else private_root
+    if root_input.is_symlink() or not source.is_dir() or source.is_symlink():
+        raise ValueError("original source or private root is absent or symlinked")
+    private = root_input.resolve()
+    targets = {
+        "server": server_output,
+        "rig": rig_output,
+        "ally": ally_output,
+        "candidate": resource_output,
+    }
+    paths = {key: path.resolve() for key, path in targets.items()}
+    if len(set(paths.values())) != 4:
+        raise ValueError("Godzilla pipeline outputs must be four distinct directories")
+    for key, target in paths.items():
+        if target == private or not target.is_relative_to(private):
+            raise ValueError("Godzilla " + key + " output must stay under private/")
+        if targets[key].is_symlink() or targets[key].exists():
+            raise ValueError("Godzilla " + key + " output exists; refusing overwrite")
+        if any(parent.is_symlink() for parent in (
+            target.parent, *list(target.parent.parents)
+        )):
+            raise ValueError("Godzilla pipeline output parent cannot be symlinked")
+        for other_key, other_path in paths.items():
+            if other_key != key and (
+                target.is_relative_to(other_path)
+                or other_path.is_relative_to(target)
+            ):
+                raise ValueError("Godzilla pipeline outputs cannot nest")
+    if any(source.resolve().is_relative_to(dest) or dest.is_relative_to(
+        source.resolve()) for dest in paths.values()):
+        raise ValueError("Godzilla pipeline output overlaps original source")
+
+    # Verify original owner-held source BEFORE mkdir or any intermediate
+    # conversion. This prevents an invalid .pack from producing half a rig.
+    for name, expected in FILES.items():
+        candidate = source / name
+        if candidate.is_symlink():
+            raise ValueError("refusing symlinked original owner Server file")
+        verify(candidate, expected)
+
+    root_input.mkdir(parents=True, exist_ok=True)
+    import_receipt = None
+    rig_receipt = None
+    ally_receipt = None
+    native_receipt = None
+    published: list[Path] = []
+    with tempfile.TemporaryDirectory(
+        prefix=".kneekura-godzilla-4stage-", dir=private
+    ) as tmp:
+        work = Path(tmp)
+        stages = {
+            "server": work / "server",
+            "rig": work / "rig",
+            "ally": work / "ally",
+            "candidate": work / "candidate",
+        }
+        import_receipt = acquire("import", stages["server"], source)
+        rig_receipt = extract_verified_local_godzilla_rig(
+            stages["server"], stages["rig"], private_root=root_input
+        )
+        ally_receipt = prepare_private_ally_preview(
+            stages["rig"], stages["ally"], private_root=root_input
+        )
+        native_receipt = prepare_private_native_resource_candidate(
+            stages["server"], stages["ally"], stages["candidate"],
+            private_root=root_input,
+        )
+        if (rig_receipt.get("ready_to_install") is not False
+            or ally_receipt.get("ready_to_install") is not False
+            or native_receipt.get("ready_to_install") is not False):
+            raise ValueError("research-only Godzilla pipeline unexpectedly installable")
+        # All four source/derivative stages have now succeeded; until here
+        # NOTHING has been published to a caller-visible output path.
+        try:
+            for key, staged in stages.items():
+                dest = paths[key]
+                if targets[key].is_symlink() or dest.exists():
+                    raise ValueError("Godzilla " + key + " output appeared during staging")
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                staged.rename(dest)
+                published.append(dest)
+        except BaseException:
+            # Roll back only directories created by THIS invocation; never
+            # follow a symlink or touch an existing owner source/destination.
+            for dest in reversed(published):
+                if dest.is_dir() and not dest.is_symlink():
+                    shutil.rmtree(dest)
+            raise
+    return {
+        **import_receipt,
+        "godzilla_original_rig": rig_receipt,
+        "godzilla_ally_preview": ally_receipt,
+        "godzilla_WImageDataServer_research_candidate": native_receipt,
+        "private_four_stage_validation_completed_before_publish": True,
+        "published_new_directories": len(published),
+        "owner_original_Server_pack_or_SAVE_modified": False,
+        "actual_original_Android_resource_winner_verified": False,
+        "ready_to_install": False,
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     mode = parser.add_mutually_exclusive_group()
@@ -265,8 +383,22 @@ def main(argv: list[str] | None = None) -> int:
         )
     chosen = "import" if args.from_dir else "download" if args.download else "verify"
     try:
-        result = acquire(chosen, args.output, args.from_dir)
-        if args.extract_original_godzilla_rig:
+        if chosen == "import" and args.prepare_native_resource_candidate:
+            # The full original-owner four-stage flow is now all-or-nothing:
+            # do not commit valid intermediate stages on a late real-pack
+            # schema/animation/asset-precedence error.
+            result = complete_owner_private_godzilla_pipeline(
+                args.from_dir,
+                server_output=args.output,
+                rig_output=args.rig_output,
+                ally_output=args.ally_preview_output,
+                resource_output=args.resource_preview_output,
+            )
+        else:
+            result = acquire(chosen, args.output, args.from_dir)
+        if args.extract_original_godzilla_rig and not (
+            chosen == "import" and args.prepare_native_resource_candidate
+        ):
             result["godzilla_original_rig"] = extract_verified_local_godzilla_rig(
                 args.output, args.rig_output,
             )
