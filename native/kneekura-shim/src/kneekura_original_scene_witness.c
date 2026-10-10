@@ -103,8 +103,15 @@ typedef int32_t (*OriginalAppLaunchLoaderFn)(void *);
  * FOUR source-pinned, UNSYMBOLIZED internal LEVEL/SAVE functions. For those
  * four use hook_func_addr, which accepts symbol-less function start VMAs.
  * Both types use the same unique-mode trampoline contract. */
-typedef void *(*ShadowHookSymAddrFn)(void *, void *, void **);
-typedef void *(*ShadowHookFuncAddrFn)(void *, void *, void **, ...);
+typedef void *(*ShadowHookSymAddr2Fn)(void *, void *, void **,
+                                      uint32_t, ...);
+typedef void *(*ShadowHookFuncAddr2Fn)(void *, void *, void **,
+                                       uint32_t, ...);
+/* ShadowHook 2.x initializes once per process: a different SDK can set
+ * a different DEFAULT hook mode before this research shim loads.
+ * Use _2 per-hook flags to force UNIQUE mode regardless of init order.
+ * Proxies directly call orig_addr, so SHARED mode is NOT safe here. */
+enum { SHADOWHOOK_FORCE_UNIQUE_MODE = 2u };
 typedef int (*ShadowHookInitFn)(int, _Bool);
 typedef int (*ShadowHookUnhookFn)(void *);
 
@@ -653,8 +660,8 @@ static int32_t research_original_app_launch_read_proxy(void *game_context) {
  * with fake hook APIs, without loading any proprietary game code.
  */
 static void attach_exact_original_witness_hooks(
-        ShadowHookSymAddrFn hook_sym_fn,
-        ShadowHookFuncAddrFn hook_func_fn,
+        ShadowHookSymAddr2Fn hook_sym_fn,
+        ShadowHookFuncAddr2Fn hook_func_fn,
         uintptr_t original_base,
         uintptr_t validated_shift) {
     if (hook_sym_fn == NULL || hook_func_fn == NULL) {
@@ -665,31 +672,35 @@ static void attach_exact_original_witness_hooks(
      * never misread as one coherent upgrade/save lifecycle. */
     gHookStub = hook_sym_fn(
         (void *)(original_base + ORIGINAL_JNI_DRAW + validated_shift),
-        (void *)&research_draw_proxy, &gOriginalDraw
+        (void *)&research_draw_proxy, &gOriginalDraw,
+        SHADOWHOOK_FORCE_UNIQUE_MODE
     );
     if (gHookStub != NULL && gOriginalDraw != NULL) {
         gCapHookStub = hook_func_fn(
             (void *)(original_base + ORIGINAL_UNIT_CAP_GETTER + validated_shift),
-            (void *)&research_original_cap_getter_proxy, &gOriginalCapGetter
+            (void *)&research_original_cap_getter_proxy, &gOriginalCapGetter,
+            SHADOWHOOK_FORCE_UNIQUE_MODE
         );
     }
     if (gCapHookStub != NULL && gOriginalCapGetter != NULL) {
         gUpgradeHookStub = hook_func_fn(
             (void *)(original_base + ORIGINAL_UPGRADE_GATE + validated_shift),
-            (void *)&research_original_upgrade_gate_proxy, &gOriginalUpgradeGate
+            (void *)&research_original_upgrade_gate_proxy, &gOriginalUpgradeGate,
+            SHADOWHOOK_FORCE_UNIQUE_MODE
         );
     }
     if (gUpgradeHookStub != NULL && gOriginalUpgradeGate != NULL) {
         gSaveHookStub = hook_func_fn(
             (void *)(original_base + ORIGINAL_SAVE_WRAPPER + validated_shift),
-            (void *)&research_original_save_wrapper_proxy, &gOriginalSaveWrapper
+            (void *)&research_original_save_wrapper_proxy, &gOriginalSaveWrapper,
+            SHADOWHOOK_FORCE_UNIQUE_MODE
         );
     }
     if (gSaveHookStub != NULL && gOriginalSaveWrapper != NULL) {
         gAppLaunchReadHookStub = hook_func_fn(
             (void *)(original_base + ORIGINAL_APP_LAUNCH_LOADER + validated_shift),
             (void *)&research_original_app_launch_read_proxy,
-            &gOriginalAppLaunchLoader
+            &gOriginalAppLaunchLoader, SHADOWHOOK_FORCE_UNIQUE_MODE
         );
     }
 
@@ -726,10 +737,10 @@ static void kneekura_init_scene_witness_research_only(void) {
     }
     ShadowHookInitFn init_fn =
         (ShadowHookInitFn)dlsym(library, "shadowhook_init");
-    ShadowHookSymAddrFn hook_sym_fn =
-        (ShadowHookSymAddrFn)dlsym(library, "shadowhook_hook_sym_addr");
-    ShadowHookFuncAddrFn hook_func_fn =
-        (ShadowHookFuncAddrFn)dlsym(library, "shadowhook_hook_func_addr");
+    ShadowHookSymAddr2Fn hook_sym_fn =
+        (ShadowHookSymAddr2Fn)dlsym(library, "shadowhook_hook_sym_addr_2");
+    ShadowHookFuncAddr2Fn hook_func_fn =
+        (ShadowHookFuncAddr2Fn)dlsym(library, "shadowhook_hook_func_addr_2");
     ShadowHookUnhookFn unhook_fn =
         (ShadowHookUnhookFn)dlsym(library, "shadowhook_unhook");
     if (init_fn == NULL || hook_sym_fn == NULL || hook_func_fn == NULL

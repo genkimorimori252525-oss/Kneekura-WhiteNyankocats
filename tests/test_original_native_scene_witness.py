@@ -66,7 +66,12 @@ class OriginalNativeSceneResearchObserverTests(unittest.TestCase):
         self.assertIn("int rollback_failed = 0;", code)
         self.assertIn("shadowhook_hook_sym_addr", code)
         self.assertIn("shadowhook_hook_func_addr", code)
-        self.assertIn("ShadowHookFuncAddrFn hook_func_fn", code)
+        self.assertIn("shadowhook_hook_sym_addr_2", code)
+        self.assertIn("shadowhook_hook_func_addr_2", code)
+        self.assertIn("SHADOWHOOK_FORCE_UNIQUE_MODE = 2u", code)
+        self.assertEqual(code.count("SHADOWHOOK_FORCE_UNIQUE_MODE\n"), 3)
+        self.assertIn("SHADOWHOOK_FORCE_UNIQUE_MODE\n        );", code)
+        self.assertIn("ShadowHookFuncAddr2Fn hook_func_fn", code)
         # Exactly ONE exported JNI symbol can use hook_sym_addr.
         self.assertEqual(code.count("gHookStub = hook_sym_fn("), 1)
         for symbolless in (
@@ -293,8 +298,10 @@ static uintptr_t hook_expected_base = 0x10000000u;
 static uintptr_t hook_expected_shift = 0x1000u;
 static int mock_symbol_hook_calls = 0;
 static int mock_stripped_hook_calls = 0;
-static void *fake_symbol_hook(void *entry, void *proxy, void **orig) {
-    if (entry != (void *)(hook_expected_base + hook_expected_shift
+static void *fake_symbol_hook(void *entry, void *proxy, void **orig,
+                              uint32_t flags, ...) {
+    if (flags != SHADOWHOOK_FORCE_UNIQUE_MODE
+        || entry != (void *)(hook_expected_base + hook_expected_shift
                           + ORIGINAL_JNI_DRAW)
         || proxy != (void *)&research_draw_proxy
         || mock_symbol_hook_calls != 0 || orig == NULL) return NULL;
@@ -303,7 +310,8 @@ static void *fake_symbol_hook(void *entry, void *proxy, void **orig) {
     return (void *)0x11;
 }
 static void *fake_stripped_hook(void *entry, void *proxy,
-                                void **orig, ...) {
+                                void **orig, uint32_t flags, ...) {
+    if (flags != SHADOWHOOK_FORCE_UNIQUE_MODE) return NULL;
     const uintptr_t pcs[] = {
         ORIGINAL_UNIT_CAP_GETTER, ORIGINAL_UPGRADE_GATE,
         ORIGINAL_SAVE_WRAPPER, ORIGINAL_APP_LAUNCH_LOADER
