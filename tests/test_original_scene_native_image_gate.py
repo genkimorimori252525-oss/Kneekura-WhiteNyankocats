@@ -7,12 +7,16 @@ checks before the optional local-research scene instrumentation is packaged.
 from __future__ import annotations
 
 import struct
+import tempfile
 import unittest
+from pathlib import Path
+from zipfile import ZipFile
 
 from tools.base_mod.original_scene_native_image_gate import (
     ORIGINAL_JP1571_BUILD_ID, ORIGINAL_DRAW_SYMBOL,
     ORIGINAL_DRAW_VMA, ORIGINAL_SCENE_ANCHORS,
     OriginalSceneNativeImageError, verify_mapped_original_scene_image,
+    verify_staged_original_scene_before_signing,
 )
 
 
@@ -106,6 +110,74 @@ class OriginalSceneSourceRepackPreflightTests(unittest.TestCase):
         struct.pack_into("<Q", corrupted, 40, len(corrupted) + 16) # shoff
         with self.assertRaisesRegex(OriginalSceneNativeImageError, "section headers unavailable"):
             verify_mapped_original_scene_image(bytes(corrupted))
+
+    def test_unsigned_original_research_scene_pre_sign_validates_exact_source(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            root = Path(scratch)
+            with ZipFile(root / "split_config.arm64_v8a.apk", "w") as archive:
+                archive.writestr(
+                    "lib/arm64-v8a/libnative-lib.so", self.original_fixture
+                )
+            original = self.original_fixture
+            outcome = verify_staged_original_scene_before_signing(
+                root, research_scene_witness=True
+            )
+            self.assertTrue(outcome["research_pre_signature_gate_executed"])
+            self.assertFalse(outcome["research_apk_signing_performed_by_this_gate"])
+            self.assertFalse(outcome["original_owner_save_accessed_by_gate"])
+            self.assertTrue(outcome["repacked_original_native_hook_layout_safe_static"])
+            with ZipFile(root / "split_config.arm64_v8a.apk", "r") as archive:
+                self.assertEqual(
+                    archive.read("lib/arm64-v8a/libnative-lib.so"), original
+                )
+
+    def test_feature_off_skips_signature_gate_even_without_any_APK(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            result = verify_staged_original_scene_before_signing(
+                Path(scratch) / "nonexistent", research_scene_witness=False
+            )
+            self.assertIsNone(result)
+
+    def test_corrupted_unsigned_original_or_duplicate_entry_stops_pre_sign(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            root = Path(scratch)
+            image = bytearray(self.original_fixture)
+            image[0x71C458] ^= 1
+            with ZipFile(root / "split_config.arm64_v8a.apk", "w") as archive:
+                archive.writestr(
+                    "lib/arm64-v8a/libnative-lib.so", image
+                )
+            with self.assertRaisesRegex(
+                OriginalSceneNativeImageError, "instruction drift"
+            ):
+                verify_staged_original_scene_before_signing(
+                    root, research_scene_witness=True
+                )
+        with tempfile.TemporaryDirectory() as scratch:
+            root = Path(scratch)
+            with ZipFile(root / "split_config.arm64_v8a.apk", "w") as archive:
+                archive.writestr("AndroidManifest.xml", b"synthetic")
+            with self.assertRaisesRegex(
+                OriginalSceneNativeImageError, "missing or duplicate"
+            ):
+                verify_staged_original_scene_before_signing(
+                    root, research_scene_witness=True
+                )
+
+    def test_signed_APK_step_must_follow_native_source_signature_gate(self):
+        builder = (
+            Path(__file__).resolve().parents[1]
+            / "tools/base_mod/build_owned_static_http_bridge.py"
+        ).read_text(encoding="utf-8")
+        before = builder.index(
+            "pre_signature_scene_receipt = verify_staged_original_scene_before_signing("
+        )
+        after = builder.index("signing_ledger = baseline_resign(")
+        self.assertLess(before, after)
+        self.assertIn("original-scene-pre-signature-proof.json", builder)
+        self.assertIn(
+            "original_research_scene_pre_signature_source_receipt", builder
+        )
 
     def test_bad_type_without_elf_or_private_original_rejected(self):
         with self.assertRaises(OriginalSceneNativeImageError):
