@@ -61,7 +61,12 @@ def _native_lines(raw: bytes, *, label: str) -> list[bytes]:
     if not raw or len(raw) > MAX_SINGLE_ASSET or b"\x00" in raw:
         raise OriginalGodzillaRigPreviewError(label + ": not bounded original text")
     # Strict UTF-8 with optional BOM; preserve original newline style.
-    text = raw.decode("utf-8-sig")
+    try:
+        text = raw.decode("utf-8-sig")
+    except UnicodeDecodeError as exc:
+        raise OriginalGodzillaRigPreviewError(
+            label + ": undecodable original UTF-8"
+        ) from exc
     if not text or "\ufffd" in text:
         raise OriginalGodzillaRigPreviewError(label + ": undecodable original format")
     lines = raw.splitlines(keepends=True)
@@ -77,11 +82,13 @@ def _text_at(lines: list[bytes], index: int, *, label: str) -> str:
         raise OriginalGodzillaRigPreviewError(label + ": truncated or invalid text") from exc
 
 
-def _positive_int(token: str, *, label: str, max_value: int) -> int:
+def _positive_int(
+    token: str, *, label: str, max_value: int, minimum: int = 1,
+) -> int:
     if not token.isascii() or not token.isdecimal():
         raise OriginalGodzillaRigPreviewError(label + ": count is not a positive decimal")
     count = int(token)
-    if not 1 <= count <= max_value:
+    if not minimum <= count <= max_value:
         raise OriginalGodzillaRigPreviewError(label + ": count outside original research limit")
     return count
 
@@ -167,6 +174,10 @@ def _rewrite_model(raw: bytes, *, sprite_part_count: int) -> tuple[bytes, dict[s
             raise OriginalGodzillaRigPreviewError(
                 "mamodel uses another atlas image ID; not safe to auto-convert"
             )
+        if not 0 <= numeric[2] < sprite_part_count:
+            raise OriginalGodzillaRigPreviewError(
+                "mamodel references sprite index outside original imgcut"
+            )
         if image_id == SOURCE_IMAGE_ID:
             numeric[1] = TARGET_IMAGE_ID
             source_models += 1
@@ -216,8 +227,11 @@ def _inspect_animation(raw: bytes, *, name: str) -> dict[str, Any]:
         track = _text_at(lines, current, label=name)
         if len(track.split(",", 5)) < 5:
             raise OriginalGodzillaRigPreviewError(name + ": malformed track header")
+        # Original JP15.7.1 ImageDataLocal contains legitimate empty tracks.
+        # 6 zero-keyframe tracks were observed across 1,814 .maanim samples.
         frames = _positive_int(_text_at(lines, current + 1, label=name),
-                               label=name + " keyframes", max_value=50000)
+                               label=name + " keyframes",
+                               max_value=50000, minimum=0)
         current += 2 + frames
         if current > len(lines):
             raise OriginalGodzillaRigPreviewError(name + ": truncated keyframes")
