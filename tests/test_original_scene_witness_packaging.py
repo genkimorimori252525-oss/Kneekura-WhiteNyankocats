@@ -94,6 +94,8 @@ class OriginalNativeSceneWitnessPackagingTests(unittest.TestCase):
         # Only synthetic tests may override the REAL official Maven pins.
         for key, digest in (
             ("APPROVED_OFFICIAL_SHADOWHOOK_V201_ARM64_SHA256", self.sha),
+            ("APPROVED_OFFICIAL_SHADOWHOOK_V201_COMPANION_SHA256",
+             hashlib.sha256(self.companion.read_bytes()).hexdigest()),
             ("APPROVED_OFFICIAL_SHADOWHOOK_V201_AAR_SHA256", self.aar_sha),
         ):
             pinned = mock_patch.object(official_checker, key, digest)
