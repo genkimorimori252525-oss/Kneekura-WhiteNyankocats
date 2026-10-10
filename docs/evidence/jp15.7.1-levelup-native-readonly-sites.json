@@ -1446,5 +1446,35 @@
       "tools/base_mod/original_scene_native_image_gate.py",
       "tests/test_original_scene_native_image_gate.py"
     ]
+  },
+  "original_LIEF_uniform_native_code_rebase_2026_10_10": {
+    "status": "ORIGINAL_SOURCE_VERIFIED_UNIFORM_REBASE_TOOLING_SUPPORTED_OWNER_POST_LIEF_DEVICE_NOT_YET_VERIFIED",
+    "owner_original_JP15_7_1_executable_ELF_SHA256": "333d2974ab2ff881fd70087fd62dea7d12d82addbc55cab2f2a675ad67e3a7e2",
+    "source_exact_build_id": "8cb3815648eb9642da10bfb039d71bff7a3519bd",
+    "source_hash_only_evidence": {
+      "text_8126892_bytes": "c696e73028669cfeed82ab3c4ceb216eff5dddd919101c3b4ec488580ecb6b15",
+      "rodata_452484_bytes": "2e471f7dfcdfb9bb5e2bac68ab3d400ccc318aaab8daf0989a6526dc92126852",
+      "eh_frame_968624_bytes": "0114d3eea2ed0315707957afa0016eb4f702e649558dd7097cc01deed7a92fec",
+      "lcxx_override_268_bytes": "a761a6710c195e92a9e8395970814288089fcedb11d2c2c78d156eacc7d28c62",
+      "plt_28704_bytes": "2ed884a4ab2697036f71cd3255f000463cca6d80311faa7427cbf93ba0738050"
+    },
+    "original_raw_asset_or_binary_bytes_committed": false,
+    "real_android_NDK_ARM64_own_shim_LIEF_test": "https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/actions/runs/38059820465",
+    "self_test_sources": [
+      "build/kneekura-shim/libkneekura.so",
+      "build/kneekura-scene-research/libkneekura.so"
+    ],
+    "self_test_original_source_text_SHA_identical": true,
+    "self_test_uniform_source_VMA_shift_bytes": 4096,
+    "self_test_dynamic_dynstr_separately_relocated": true,
+    "original_native_rebase_safety_gateway": "tools/base_mod/original_scene_native_image_gate.py::verify_mapped_original_scene_image",
+    "runtime_exact_BuildID_and_17_source_opcode_unique_rebase": "native/kneekura-shim/src/kneekura_original_scene_witness.c",
+    "uniform_shift_allowed_in_research_only": true,
+    "private_real_original_11MB_LIEF_rewritten_loaded_at_android": false,
+    "original_Lv60_UI_purchase_XP_debit_SAVE_reboot_verified": false,
+    "original_Jolly_i_and_other_full_game_features_verified": false,
+    "original_no_INTERNET_IPC_SDK_egress_verified": false,
+    "ready_for_original_APK_release": false,
+    "scope": "exact native source/hash proofs and SOURCE-ONLY instrumentation; not original game acceptance"
   }
 }
