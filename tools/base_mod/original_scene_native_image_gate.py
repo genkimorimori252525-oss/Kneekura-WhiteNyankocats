@@ -176,3 +176,55 @@ def verify_mapped_original_scene_image(native: bytes) -> dict[str, Any]:
         "original_device_first_boot_or_zero_egress_verified": False,
         "user_original_APK_SAVE_or_asset_modified": False,
     }
+
+
+def verify_staged_original_scene_before_signing(
+    unsigned_splits: "Path", *, research_scene_witness: bool,
+) -> dict[str, Any] | None:
+    """Read the FINAL unsigned arm64 research split BEFORE any APK signing.
+
+    The existing post-sign parity check remains independent defense in depth.
+    Feature-OFF builds never need this expensive exact-original scene check.
+    """
+    from pathlib import Path
+    from zipfile import BadZipFile, ZipFile
+
+    if not research_scene_witness:
+        return None
+    if (not isinstance(unsigned_splits, Path)
+        or unsigned_splits.is_symlink()
+        or not unsigned_splits.is_dir()):
+        raise OriginalSceneNativeImageError(
+            "unsigned original research split directory missing or unsafe"
+        )
+    arm64 = unsigned_splits / "split_config.arm64_v8a.apk"
+    if arm64.is_symlink() or not arm64.is_file():
+        raise OriginalSceneNativeImageError(
+            "no safe unsigned original ARM64 research split"
+        )
+    path = "lib/arm64-v8a/libnative-lib.so"
+    try:
+        with ZipFile(arm64, "r") as archive:
+            members = archive.infolist()
+            matching = [member for member in members if member.filename == path]
+            if len(matching) != 1:
+                raise OriginalSceneNativeImageError(
+                    "unsigned original research split has missing or duplicate native entry"
+                )
+            member = matching[0]
+            if member.file_size < 64 or member.file_size > 24 * 1024 * 1024:
+                raise OriginalSceneNativeImageError(
+                    "unsigned original research native entry size invalid"
+                )
+            original_repackaged = archive.read(member)
+    except (OSError, BadZipFile, RuntimeError, EOFError, ValueError) as exc:
+        if isinstance(exc, OriginalSceneNativeImageError):
+            raise
+        raise OriginalSceneNativeImageError(
+            "unsigned original native split unreadable"
+        ) from exc
+    result = verify_mapped_original_scene_image(original_repackaged)
+    result["research_pre_signature_gate_executed"] = True
+    result["research_apk_signing_performed_by_this_gate"] = False
+    result["original_owner_save_accessed_by_gate"] = False
+    return result
