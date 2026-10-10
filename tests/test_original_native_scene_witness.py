@@ -209,15 +209,16 @@ class OriginalNativeSceneResearchObserverTests(unittest.TestCase):
             root = Path(folder)
             (root / "android").mkdir()
             (root / "android" / "log.h").write_text(
-                "#ifndef KNEEKURA_TEST_ANDROID_LOG_H\\n"
-                "#define KNEEKURA_TEST_ANDROID_LOG_H\\n"
-                "#define ANDROID_LOG_INFO 4\\n"
-                "int __android_log_write(int, const char *, const char *);\\n"
-                "#endif\\n",
+                "#ifndef KNEEKURA_TEST_ANDROID_LOG_H\n"
+                "#define KNEEKURA_TEST_ANDROID_LOG_H\n"
+                "#define ANDROID_LOG_INFO 4\n"
+                "int __android_log_write(int, const char *, const char *);\n"
+                "#endif\n",
                 encoding="utf-8",
             )
             witness_path = str(WITNESS).replace("\\\\", "/")
             harness = r'''
+#define _GNU_SOURCE
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
