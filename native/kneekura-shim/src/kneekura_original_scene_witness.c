@@ -76,6 +76,9 @@ enum {
     ORIGINAL_UNIT_CAP_GETTER = 0x53B2BC,
     ORIGINAL_UPGRADE_GATE = 0x53BE0C,
     ORIGINAL_SAVE_WRAPPER = 0x8B9FC8,
+    ORIGINAL_NATIVE_TEXT_BEGIN = 0x317370,
+    ORIGINAL_NATIVE_TEXT_END_EXCLUSIVE = 0xAD751C,
+    MAX_SOURCE_VMA_REBASE = 0x10000,
 };
 typedef void (*OriginalDrawFn)(void *, void *);
 typedef int32_t (*OriginalIndexResultFn)(int32_t);
@@ -91,6 +94,7 @@ static void *gOriginalCapGetter = NULL;
 static void *gOriginalUpgradeGate = NULL;
 static void *gOriginalSaveWrapper = NULL;
 static uintptr_t gOriginalLoadBias = 0u;
+static uintptr_t gOriginalVmaShift = 0u;
 static _Atomic uint32_t gLastScene = UINT32_MAX;
 static _Atomic uint32_t gSawCapGetter = 0u;
 static _Atomic uint32_t gSawUpgradeGate = 0u;
@@ -151,8 +155,11 @@ static int note_has_exact_build_id(const uint8_t *data, size_t len) {
 
 struct NativeElfWitness {
     uintptr_t base;
+    uintptr_t executable_begin;
+    uintptr_t executable_end;
     unsigned exact_build_id_count;
     unsigned original_library_count;
+    unsigned executable_load_count;
 };
 
 static int inspect_original_library(struct dl_phdr_info *info,
@@ -177,14 +184,26 @@ static int inspect_original_library(struct dl_phdr_info *info,
     }
     for (ElfW(Half) index = 0; index < info->dlpi_phnum; ++index) {
         const ElfW(Phdr) *phdr = &info->dlpi_phdr[index];
-        if (phdr->p_type != PT_NOTE || phdr->p_memsz == 0u
-            || phdr->p_memsz > 65536u) {
-            continue;
+        if (phdr->p_type == PT_LOAD && (phdr->p_flags & PF_X)) {
+            witness->executable_load_count++;
+            if (witness->executable_load_count == 1u
+                && phdr->p_memsz >= 4u
+                && phdr->p_vaddr <= UINTPTR_MAX - (uintptr_t)info->dlpi_addr
+                && phdr->p_memsz <= UINTPTR_MAX -
+                    ((uintptr_t)info->dlpi_addr + (uintptr_t)phdr->p_vaddr)) {
+                witness->executable_begin =
+                    (uintptr_t)info->dlpi_addr + (uintptr_t)phdr->p_vaddr;
+                witness->executable_end =
+                    witness->executable_begin + (uintptr_t)phdr->p_memsz;
+            }
         }
-        const uint8_t *notes =
-            (const uint8_t *)(uintptr_t)(info->dlpi_addr + phdr->p_vaddr);
-        if (note_has_exact_build_id(notes, (size_t)phdr->p_memsz)) {
-            witness->exact_build_id_count++;
+        if (phdr->p_type == PT_NOTE && phdr->p_memsz > 0u
+            && phdr->p_memsz <= 65536u) {
+            const uint8_t *notes =
+                (const uint8_t *)(uintptr_t)(info->dlpi_addr + phdr->p_vaddr);
+            if (note_has_exact_build_id(notes, (size_t)phdr->p_memsz)) {
+                witness->exact_build_id_count++;
+            }
         }
     }
     witness->base = (uintptr_t)info->dlpi_addr;
@@ -192,37 +211,91 @@ static int inspect_original_library(struct dl_phdr_info *info,
     return 0;
 }
 
-static int source_words_match_exact_original(uintptr_t base) {
-    struct Anchor {uintptr_t vma; uint32_t instruction;};
-    static const struct Anchor anchors[] = {
-        {ORIGINAL_JNI_DRAW, 0xD10143FFu},
-        {ORIGINAL_APP_CONTEXT_GETTER, 0xB0002040u},
-        {ORIGINAL_APP_CONTEXT_GETTER + 4u, 0x911CC000u},
-        {ORIGINAL_APP_CONTEXT_GETTER + 8u, 0xD65F03C0u},
-        {ORIGINAL_SCENE_DISPATCH, 0xA9BB7BFDu},
-        {ORIGINAL_SCENE_STORE, 0xB9348001u},
-        {ORIGINAL_UNIT_CAP_GETTER, 0xA9BB7BFDu},
-        {ORIGINAL_UPGRADE_GATE, 0xA9BA7BFDu},
-        {ORIGINAL_SAVE_WRAPPER, 0xD10103FFu},
-        /* Original direct-call graph; cap getter is NOT a proven purchase
-         * call. 0x8581fc is the original actual upgrade predicate call. */
-        {0x821904u, 0x97F4666Eu},
-        {0x8581FCu, 0x97F38F04u},
-        {0x85C734u, 0x97F37DB6u},
-        {0x860224u, 0x97F36EFAu},
-        {0x88CB00u, 0x97F2BCC3u},
-        {0x88E884u, 0x97F2B562u},
-        /* Main purchase path: native XP debit and CURRENT base level +1. */
-        {0x858390u, 0x940600D5u},
-        {0x8583B8u, 0x9405CF25u},
-    };
-    for (size_t i = 0; i < sizeof(anchors) / sizeof(anchors[0]); ++i) {
+struct OriginalCodeWordAnchor {
+    uintptr_t vma;
+    uint32_t instruction;
+};
+
+static const struct OriginalCodeWordAnchor kSourceWordAnchors[] = {
+    {ORIGINAL_JNI_DRAW, 0xD10143FFu},
+    {ORIGINAL_APP_CONTEXT_GETTER, 0xB0002040u},
+    {ORIGINAL_APP_CONTEXT_GETTER + 4u, 0x911CC000u},
+    {ORIGINAL_APP_CONTEXT_GETTER + 8u, 0xD65F03C0u},
+    {ORIGINAL_SCENE_DISPATCH, 0xA9BB7BFDu},
+    {ORIGINAL_SCENE_STORE, 0xB9348001u},
+    {ORIGINAL_UNIT_CAP_GETTER, 0xA9BB7BFDu},
+    {ORIGINAL_UPGRADE_GATE, 0xA9BA7BFDu},
+    {ORIGINAL_SAVE_WRAPPER, 0xD10103FFu},
+    /* Original direct-call graph; cap getter is NOT a proven purchase
+     * call. 0x8581fc is the original actual upgrade predicate call. */
+    {0x821904u, 0x97F4666Eu},
+    {0x8581FCu, 0x97F38F04u},
+    {0x85C734u, 0x97F37DB6u},
+    {0x860224u, 0x97F36EFAu},
+    {0x88CB00u, 0x97F2BCC3u},
+    {0x88E884u, 0x97F2B562u},
+    /* Main purchase path: native XP debit and CURRENT base level +1. */
+    {0x858390u, 0x940600D5u},
+    {0x8583B8u, 0x9405CF25u},
+};
+
+static int source_words_match_exact_original(
+    uintptr_t base, uintptr_t shift,
+    uintptr_t executable_begin, uintptr_t executable_end
+) {
+    if (executable_end <= executable_begin
+        || base > UINTPTR_MAX - ORIGINAL_NATIVE_TEXT_END_EXCLUSIVE - shift
+        || base + ORIGINAL_NATIVE_TEXT_BEGIN + shift < executable_begin
+        || base + ORIGINAL_NATIVE_TEXT_END_EXCLUSIVE + shift > executable_end) {
+        return 0;
+    }
+    for (size_t i = 0;
+         i < sizeof(kSourceWordAnchors) / sizeof(kSourceWordAnchors[0]);
+         ++i) {
+        const uintptr_t at = base + kSourceWordAnchors[i].vma + shift;
+        if (at < executable_begin || at > executable_end - 4u) {
+            return 0;
+        }
         uint32_t actual = 0u;
-        memcpy(&actual, (const void *)(base + anchors[i].vma), sizeof(actual));
-        if (actual != anchors[i].instruction) {
+        memcpy(&actual, (const void *)at, sizeof(actual));
+        if (actual != kSourceWordAnchors[i].instruction) {
             return 0;
         }
     }
+    return 1;
+}
+
+/*
+ * A normal LIEF DT_NEEDED rebuild can rebase ALL original program sections
+ * by one aligned page while leaving original instructions intact. We allow
+ * only 0..64KiB page-aligned offsets and require ALL 17 original words,
+ * the exact BuildID, one executable LOAD, and one UNIQUE matching rebase.
+ * Exact original mapped .text/rodata/eh hashes must also pass pre-sign gate.
+ * No hook is installed if any part of this runtime proof is uncertain.
+ */
+static int select_unique_original_source_vma_shift(
+    const struct NativeElfWitness *native, uintptr_t *out_shift
+) {
+    if (native == NULL || out_shift == NULL
+        || native->base == 0u || native->executable_load_count != 1u
+        || native->executable_end <= native->executable_begin) {
+        return 0;
+    }
+    unsigned matches = 0u;
+    uintptr_t selected = 0u;
+    for (uintptr_t delta = 0u; delta <= MAX_SOURCE_VMA_REBASE;
+         delta += 0x1000u) {
+        if (source_words_match_exact_original(
+                native->base, delta,
+                native->executable_begin, native->executable_end)) {
+            selected = delta;
+            matches++;
+        }
+    }
+    if (matches != 1u) {
+        return 0;
+    }
+    *out_shift = selected;
     return 1;
 }
 
@@ -243,7 +316,8 @@ static void research_draw_proxy(void *jni_env, void *jni_class) {
     }
     typedef void *(*OriginalContextFn)(void);
     OriginalContextFn get_game_context = NULL;
-    uintptr_t context_getter = base + ORIGINAL_APP_CONTEXT_GETTER;
+    uintptr_t context_getter = base + ORIGINAL_APP_CONTEXT_GETTER
+                               + gOriginalVmaShift;
     memcpy(&get_game_context, &context_getter, sizeof(get_game_context));
     if (get_game_context == NULL) {
         return;
@@ -326,14 +400,16 @@ static void kneekura_init_scene_witness_research_only(void) {
     if (!current_process_is_isolated_original_research()) {
         return;
     }
-    /* libnative-lib.so is the parent DT_NEEDED dependency owner. The
-       mapped original's function offsets and build ID must remain exact
-       after owner-private LIEF DT_NEEDED packaging. Otherwise bail out. */
-    struct NativeElfWitness witness = {0u, 0u, 0u};
+    /* libnative-lib.so is the owner of this DT_NEEDED research dependency.
+       LIEF may uniformly rebase its source VMAs. Never assume raw hardcoded
+       absolute addresses, even when original instruction bytes match. */
+    struct NativeElfWitness witness = {0};
     dl_iterate_phdr(inspect_original_library, &witness);
+    uintptr_t validated_shift = 0u;
     if (witness.original_library_count != 1u
         || witness.exact_build_id_count != 1u
-        || !source_words_match_exact_original(witness.base)) {
+        || !select_unique_original_source_vma_shift(
+            &witness, &validated_shift)) {
         __android_log_write(
             ANDROID_LOG_INFO, WITNESS_TAG,
             "original-native-scene-hook-v1 original-source-unavailable");
@@ -363,28 +439,29 @@ static void kneekura_init_scene_witness_research_only(void) {
         return;
     }
     gOriginalLoadBias = witness.base;
+    gOriginalVmaShift = validated_shift;
     /* Hook only the loaded library with verified BuildID/opcodes. All
      * observers are REQUIRED together so a partial research report is
      * never misread as one coherent upgrade/save lifecycle. */
     gHookStub = hook_fn(
-        (void *)(witness.base + ORIGINAL_JNI_DRAW),
+        (void *)(witness.base + ORIGINAL_JNI_DRAW + validated_shift),
         (void *)&research_draw_proxy, &gOriginalDraw
     );
     if (gHookStub != NULL && gOriginalDraw != NULL) {
         gCapHookStub = hook_fn(
-            (void *)(witness.base + ORIGINAL_UNIT_CAP_GETTER),
+            (void *)(witness.base + ORIGINAL_UNIT_CAP_GETTER + validated_shift),
             (void *)&research_original_cap_getter_proxy, &gOriginalCapGetter
         );
     }
     if (gCapHookStub != NULL && gOriginalCapGetter != NULL) {
         gUpgradeHookStub = hook_fn(
-            (void *)(witness.base + ORIGINAL_UPGRADE_GATE),
+            (void *)(witness.base + ORIGINAL_UPGRADE_GATE + validated_shift),
             (void *)&research_original_upgrade_gate_proxy, &gOriginalUpgradeGate
         );
     }
     if (gUpgradeHookStub != NULL && gOriginalUpgradeGate != NULL) {
         gSaveHookStub = hook_fn(
-            (void *)(witness.base + ORIGINAL_SAVE_WRAPPER),
+            (void *)(witness.base + ORIGINAL_SAVE_WRAPPER + validated_shift),
             (void *)&research_original_save_wrapper_proxy, &gOriginalSaveWrapper
         );
     }
