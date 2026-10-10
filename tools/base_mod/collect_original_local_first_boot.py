@@ -247,6 +247,10 @@ def collect_original_local_boot_adb(
 
 def _protected_output_destination(dest: Path) -> Path:
     """One private JSON receipt, never a public Git or owner SAVE directory."""
+    if PRIVATE_ROOT.is_symlink():
+        raise OriginalLocalBootObservationError(
+            "research private directory cannot be a symlink"
+        )
     private = PRIVATE_ROOT.resolve()
     candidate = dest if dest.is_absolute() else ROOT / dest
     target = candidate.resolve()
