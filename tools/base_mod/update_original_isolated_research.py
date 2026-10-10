@@ -155,6 +155,7 @@ def run_user_approved_update(
             after, _ = preflight(
                 repo=repo, candidate=candidate, adb=adb, apksigner=apksigner,
                 output=scratch_dir / "read-only-after.json", runner=runner,
+                require_installed_bytes_match=True,
             )
         except PreflightBlocked as exc:
             # A successful ADB install followed by failed device attestation
@@ -165,13 +166,21 @@ def run_user_approved_update(
             ) from exc
         if not after["candidate_signer_matches_installed_research_base"]:
             raise ResearchUpdateBlocked("post-update installed research signature mismatch")
+        if (after["installed_base_bytes_match_candidate"] is not True
+            or after["installed_arm64_bytes_match_candidate"] is not True):
+            raise ResearchUpdateBlocked(
+                "post-update actual base/native split byte equality unavailable"
+            )
     receipt = {
         "schema": "owner-explicit-original-isolated-sixsplit-update-v1",
-        "status": "SIX_SPLIT_UPDATE_CONFIRMED_SIGNER_ONLY_NOT_GAMEPLAY",
+        "status": "SIX_SPLIT_UPDATE_CONFIRMED_BASE_ARM64_BYTES_NOT_GAMEPLAY",
         "package": PACKAGE,
         "updated_splits": len(SPLITS),
         "prior_actual_research_signature_match": True,
         "post_install_actual_research_signature_match": True,
+        "post_install_research_base_apk_byte_equal_candidate": True,
+        "post_install_research_arm64_apk_byte_equal_candidate": True,
+        "remaining_four_installed_split_bytes_not_compared": True,
         "official_shadowhook_two_arm64_libs_verified": True,
         "passive_shim_CI_byte_identity_verified": True,
         "owner_approval_present": True,
