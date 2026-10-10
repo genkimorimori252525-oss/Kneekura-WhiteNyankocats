@@ -72,12 +72,46 @@ RELOCATIONS = {
     0xAFD4B8: 0x71F2D4, 0xAFD4E8: 0x1DA558,
     0xB096D8: 0x938C98, 0xB09690: 0x1F08B1,
     0xAFEA00: 0x749DD0, 0xAFEA80: 0x1DC78F,
+    0xB01BA0: 0x1E3552, 0xB01BE8: 0x776530,
 }
 ORIGINAL_LABELS = {
     0x1DA558: b"13MyApplication\x00",
     0x1F08B1: b"ZN13MyApplication11TitleUpdateEvE3$_1\x00",
     0x1DC78F: b"22MyGameServicesDelegate\x00",
     0x191B9A: b"restart_reflect\x00",
+    0x1E3552: b"ZN17MyUtilityListener22miniBrowserLinkClickedERKNSt6__ndk112basic_stringIcNS0_11char_traitsIcEENS0_9allocatorIcEEEEE3$_6\x00",
+    0x1A82BD: b"AccountDelete_error02\x00",
+    0x1A74CE: b"AccountDelete_error03\x00",
+}
+
+
+# The source reset call is ALSO reachable from an account deletion callback.
+# This cannot be substituted for a local, account-free fresh-game creation.
+ACCOUNT_DELETE_RESET_ANCHORS = {
+    0x776530: 0xD10283FF,  # callback function (vtable 0xb01be8)
+    0x776550: 0xB9400035,  # callback integer result
+    0x77657C: 0x710006BF,  # compare result == 1
+    0x776580: 0x540002A1,  # if !=1, jump to account deletion error
+    0x776584: 0x940474B6,  # reset all original game state
+    0x77658C: 0x97FEDB78,  # post-reset helper
+    0x776594: 0x52821B28,  # game state flag index 0x10d9
+    0x776598: 0x52800029,  # game state flag value 1
+    0x77659C: 0x38286809,  # write game state flag
+    0x7765A4: 0x94050E89,  # original SAVE_DATA writer
+    0x7765BC: 0x52800D01,  # transition to scene 104
+    0x7765D0: 0x17FE978E,  # original scene transition
+    0x7765D4: 0xD0FFD188,  # account-deletion error literals
+    0x7765D8: 0x910AF508,  # AccountDelete_error02
+    0x7765E4: 0x91133929,  # AccountDelete_error03
+}
+ACCOUNT_DELETE_RESET_CALLS = {
+    0x776584: 0x89385C,
+    0x77658C: 0x72D36C,
+    0x7765A4: 0x8B9FC8,
+}
+ACCOUNT_DELETE_RESET_BRANCHES = {
+    0x776580: ("b.ne", 0x7765D4),
+    0x7765D0: ("b", 0x71C408),
 }
 
 
@@ -156,6 +190,21 @@ def inspect_original_player_init_save(elf: bytes) -> dict[str, Any]:
                 f"original initializer branch changed at 0x{pc:x}"
             )
     _check_relatives(elf)
+    for pc, word in ACCOUNT_DELETE_RESET_ANCHORS.items():
+        if _u32(elf, pc) != word:
+            raise OriginalPlayerInitSaveTraceError(
+                f"original account-delete callback opcode drift at 0x{pc:x}"
+            )
+    for pc, target in ACCOUNT_DELETE_RESET_CALLS.items():
+        if _target(elf, pc, "bl") != target:
+            raise OriginalPlayerInitSaveTraceError(
+                f"original account-delete reset call drift at 0x{pc:x}"
+            )
+    for pc, (kind, target) in ACCOUNT_DELETE_RESET_BRANCHES.items():
+        if _target(elf, pc, kind) != target:
+            raise OriginalPlayerInitSaveTraceError(
+                f"original account-delete callback branch drift at 0x{pc:x}"
+            )
     if (_u32(elf, 0x71A504) >> 5) & 0xFFFF != 882 or 0xDC8 // 4 != 882:
         raise OriginalPlayerInitSaveTraceError("original 882-row level count drift")
     return {
@@ -173,6 +222,13 @@ def inspect_original_player_init_save(elf: bytes) -> dict[str, Any]:
         "title_alternative_save": "0x938de0 tail B -> 0x8b9fc8",
         "game_services_rtti": "22MyGameServicesDelegate",
         "service_state9_reset_and_save": "0x749e70 CMP #9; 0x749e78 TBZ skip; 0x749e80 -> 0x89385c; 0x749eb0 -> 0x8b9fc8",
+        "account_deletion_callback_rtti": "MyUtilityListener::miniBrowserLinkClicked lambda$_6 (ELF typeinfo 0xb01ba0 -> 0x1e3552)",
+        "account_deletion_callback_entry": "0xb01be8 -> 0x776530",
+        "account_deletion_error_literals": ["AccountDelete_error02", "AccountDelete_error03"],
+        "account_deletion_success_reset": "0x77657c compare result1; 0x776580 B.NE error; 0x776584 -> 0x89385c",
+        "account_deletion_success_original_SAVE": "0x7765a4 -> 0x8b9fc8",
+        "account_deletion_success_scene": "0x776594 state flag 0x10d9=1; 0x7765bc scene104; 0x7765d0 -> 0x71c408",
+        "account_deletion_not_safe_to_repurpose_as_offline_virgin": True,
         "title_or_service_reset_accepted_for_legitimate_virgin_game": False,
         "original_title_reset_and_native_writer_connected": True,
         "normal_new_player_entry_identified": False,
