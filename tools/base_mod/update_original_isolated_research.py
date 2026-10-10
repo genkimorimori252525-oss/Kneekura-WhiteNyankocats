@@ -145,10 +145,18 @@ def run_user_approved_update(
         if _one_device(adb, runner) != serial_before:
             raise ResearchUpdateBlocked("update returned Success but device disconnected; no boot claim")
         _installed_paths(adb, serial_before, runner)
-        after, _ = preflight(
-            repo=repo, candidate=candidate, adb=adb, apksigner=apksigner,
-            output=scratch_dir / "read-only-after.json", runner=runner,
-        )
+        try:
+            after, _ = preflight(
+                repo=repo, candidate=candidate, adb=adb, apksigner=apksigner,
+                output=scratch_dir / "read-only-after.json", runner=runner,
+            )
+        except PreflightBlocked as exc:
+            # A successful ADB install followed by failed device attestation
+            # must NEVER be described as safe completion or auto-retried.
+            # No raw device stderr, serial or candidate paths in this error.
+            raise ResearchUpdateBlocked(
+                "post-update installed research signature mismatch or attestation failure; no automatic retry"
+            ) from exc
         if not after["candidate_signer_matches_installed_research_base"]:
             raise ResearchUpdateBlocked("post-update installed research signature mismatch")
     receipt = {
