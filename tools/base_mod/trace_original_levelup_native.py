@@ -2483,6 +2483,7 @@ def _additional_owner_list_coverage(
     extra_list_dir: Path, *,
     known_original_families: set[str] | None = None,
     verify_paired_pack_tsv_payloads: bool = False,
+    registered_family_indices: dict[str, int] | None = None,
 ) -> dict[str, Any]:
     """Scan *owner-supplied* additional encrypted .list manifests, read only.
 
@@ -2517,6 +2518,23 @@ def _additional_owner_list_coverage(
     source_per_tsv: dict[str, str] = {}
     conflicting_sources: set[str] = set()
     observed_normalized: set[str] = set()
+    sources_by_tsv: dict[str, list[dict[str, Any]]] = {}
+    if registered_family_indices is not None:
+        # Only immutable native source-row indices; never infer first/last
+        # match precedence for two families declaring the same TSV filename.
+        if (not isinstance(registered_family_indices, dict)
+            or any(
+                not isinstance(family, str)
+                or type(index) is not int or not 0 <= index < 92
+                for family, index in registered_family_indices.items()
+            )
+            or len(set(registered_family_indices.values()))
+                != len(registered_family_indices)
+            or (known_original_families is not None
+                and set(registered_family_indices) != known_original_families)):
+            raise LevelUpNativeTraceError(
+                "original registered Server family index map invalid or incomplete"
+            )
     for path in manifests:
         if (path.is_symlink() or not path.is_file()
             or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*\.list", path.name)):
@@ -2534,6 +2552,11 @@ def _additional_owner_list_coverage(
             raise LevelUpNativeTraceError(
                 "owned additional .list family not declared in pinned JP15.7.1 native catalog"
             )
+        if (registered_family_indices is not None
+            and path.stem not in registered_family_indices):
+            raise LevelUpNativeTraceError(
+                "owned additional .list family missing from original 92-row registration"
+            )
         if path.stat().st_size > 4 * 1024 * 1024:
             raise LevelUpNativeTraceError(
                 "owned additional encrypted .list too large"
@@ -2550,6 +2573,13 @@ def _additional_owner_list_coverage(
             prior = source_per_tsv.setdefault(filename, path.stem)
             if prior != path.stem:
                 conflicting_sources.add(filename)
+            sources_by_tsv.setdefault(filename, []).append({
+                "family": path.stem,
+                "original_registration_index": (
+                    registered_family_indices[path.stem]
+                    if registered_family_indices is not None else None
+                ),
+            })
         if verify_paired_pack_tsv_payloads and conflicting_sources:
             raise LevelUpNativeTraceError(
                 "ambiguous original TSV ciphertext source in multiple Server families"
@@ -2597,6 +2627,10 @@ def _additional_owner_list_coverage(
                     }
                     decrypted_tsvs.add(filename)
         families[path.stem] = {
+            "original_registration_index": (
+                registered_family_indices[path.stem]
+                if registered_family_indices is not None else None
+            ),
             "manifest_bytes": len(raw),
             "encrypted_manifest_sha256": sha256(raw).hexdigest(),
             "declared_entries": count,
@@ -2621,6 +2655,20 @@ def _additional_owner_list_coverage(
         "ambiguous_target_filenames_across_families": sorted(conflicting_sources),
         "each_download_tsv_has_unique_listed_family": not conflicting_sources,
         "families": families,
+        "download_tsv_candidate_registered_families": {
+            filename: sorted(
+                sources, key=lambda row: (
+                    row["original_registration_index"]
+                    if row["original_registration_index"] is not None else 999,
+                    row["family"],
+                ),
+            )
+            for filename, sources in sorted(sources_by_tsv.items())
+        },
+        "native_static_registration_indices_joined": (
+            registered_family_indices is not None
+        ),
+        "original_native_source_priority_or_duplicate_precedence_proven": False,
         "paired_pack_payload_check_explicitly_requested": verify_paired_pack_tsv_payloads,
         "download_tsv_payloads_decrypted": sorted(decrypted_tsvs),
         "all_35_payloads_decrypted_from_owner_paired_packs": decrypted_tsvs == expected,
@@ -2665,6 +2713,12 @@ def trace_from_owner_export(
                     report["original_registered_server_family_catalog"]["original_server_family_stems"]
                 ),
                 verify_paired_pack_tsv_payloads=verify_owner_extra_pack_tsv_payloads,
+                registered_family_indices={
+                    row["family"]: row["registration_index"]
+                    for row in report[
+                        "original_native_server_registration_row_order"
+                    ]["registered_source_rows_in_original_loop_order"]
+                },
             )
         )
     return report
