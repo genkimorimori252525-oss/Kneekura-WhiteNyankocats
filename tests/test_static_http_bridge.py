@@ -7,12 +7,62 @@ from tools.base_mod.inject_java_http_bridge import (
     ORIGINAL_LAUNCHER,
 )
 from tools.base_mod.package_flavor import FLAVOR_PACKAGES
+from tools.base_mod.verify_static_http_bridge import (
+    expected_isolated_research_permissions,
+    ORIGINAL_DYNAMIC_RECEIVER_PERMISSION,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 class StaticHttpBridgeTests(unittest.TestCase):
+    def test_original_native_6_split_research_permission_delta_is_exact(self):
+        """Real JP had a package-owned declared permission AND INTERNET.
+
+        Repackaged jp.kn.local replaces the app-defined permission name.
+        A raw string equality check rejects a correct original-game package.
+        """
+        before = [
+            "android.permission.INTERNET",
+            "android.permission.ACCESS_NETWORK_STATE",
+            "android.permission.POST_NOTIFICATIONS",
+            ORIGINAL_DYNAMIC_RECEIVER_PERMISSION,
+        ]
+        expected = expected_isolated_research_permissions(
+            before, package_name="jp.kn.local.battlecats", deny_internet=True,
+        )
+        self.assertEqual(expected, sorted([
+            "android.permission.ACCESS_NETWORK_STATE",
+            "android.permission.POST_NOTIFICATIONS",
+            "jp.kn.local.battlecats.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION",
+        ]))
+        self.assertNotIn("android.permission.INTERNET", expected)
+        self.assertEqual(
+            expected_isolated_research_permissions(
+                before, package_name="jp.kn.local.battlecats",
+                deny_internet=False,
+            ),
+            sorted(expected + ["android.permission.INTERNET"]),
+        )
+        for invalid in (
+            before[:-1],
+            before + [ORIGINAL_DYNAMIC_RECEIVER_PERMISSION],
+            before + ["android.permission.ACCESS_NETWORK_STATE"],
+        ):
+            with self.subTest(invalid=invalid):
+                with self.assertRaisesRegex(
+                    ValueError, "pinned original declared-permission set changed"
+                ):
+                    expected_isolated_research_permissions(
+                        invalid, package_name="jp.kn.local.battlecats",
+                        deny_internet=True,
+                    )
+        with self.assertRaisesRegex(ValueError, "pinned original"):
+            expected_isolated_research_permissions(
+                before, package_name="jp.other.unknown", deny_internet=True
+            )
+
     def test_bridge_launchers_preserve_original_length(self) -> None:
         for package in FLAVOR_PACKAGES.values():
             launcher = package + ".MyActivity"

@@ -23,6 +23,39 @@ from tools.base_mod.original_scene_native_image_gate import (
 from tools.base_mod.verify_parity import _lief_binary, _split_diff
 
 
+ORIGINAL_DYNAMIC_RECEIVER_PERMISSION = (
+    ORIGINAL_PACKAGE + ".DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+)
+
+
+def expected_isolated_research_permissions(
+    original: list[str], *, package_name: str, deny_internet: bool,
+) -> list[str]:
+    """Pin the exact original uses-permission transform after flavor rename.
+
+    Removing INTERNET and renaming exactly ONE app-owned receiver permission
+    are legitimate, but no other declared permissions may silently change.
+    Neither condition alone guarantees independent SDK/IPC zero egress.
+    """
+    if (type(original) is not list or
+        any(type(x) is not str or not x for x in original) or
+        original.count(ORIGINAL_DYNAMIC_RECEIVER_PERMISSION) != 1 or
+        len(set(original)) != len(original) or
+        package_name not in FLAVOR_PACKAGES.values()):
+        raise ValueError("pinned original declared-permission set changed")
+    result = []
+    for name in original:
+        if name == "android.permission.INTERNET" and deny_internet:
+            continue
+        if name == ORIGINAL_DYNAMIC_RECEIVER_PERMISSION:
+            result.append(
+                package_name + ".DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+            )
+        else:
+            result.append(name)
+    return sorted(result)
+
+
 ORIGINAL_LAUNCHER = ORIGINAL_PACKAGE + ".MyActivity"
 EXPECTED_NEW_HTTP_INSNS_SHA256 = (
     "14f896e5b42b8e5b8ab50f756bdc79ad44614325eb153ab99ffcdafb98c70a80"
@@ -238,9 +271,10 @@ def verify_static_http_bridge(
         actual_perms = manifest_components(
             final_base.read("AndroidManifest.xml")
         )["declared_permissions"]
-        expected_perms = sorted(
-            name for name in source_perms
-            if not (research_deny_internet and name == "android.permission.INTERNET")
+        expected_perms = expected_isolated_research_permissions(
+            source_perms,
+            package_name=package_name,
+            deny_internet=research_deny_internet,
         )
         if actual_perms != expected_perms:
             raise ValueError("original bridge INTERNET research permission delta drifted")
