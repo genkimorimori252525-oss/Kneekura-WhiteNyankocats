@@ -159,7 +159,7 @@ def evaluate_original_local_two_process_readback(
 
 
 def _load_protected_metadata(source: Path) -> dict[str, Any]:
-    if type(source) is not Path or source.is_symlink() or not source.is_file():
+    if not isinstance(source, Path) or source.is_symlink() or not source.is_file():
         raise OriginalLocalColdRestartError("metadata must be an existing regular private JSON")
     folder = PRIVATE_ROOT.resolve()
     if not source.resolve().is_relative_to(folder):
