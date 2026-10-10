@@ -107,7 +107,7 @@ class EphemeralRealGodzillaMirrorTests(unittest.TestCase):
             called.append(("private", source_dir, kwargs["private_root"]))
             self.assertTrue(source_dir.is_dir() or not source_dir.exists())
             self.assertEqual(source_dir.name, "mirror")
-            target = kwargs["ally_output"] if "ally_output" in kwargs else kwargs.get("ally_output", kwargs.get("ally_output"))
+            target = kwargs["ally_output"]
             # Pipeline accepts ally_output as a keyword, and keeps this
             # fixture entirely under TemporaryDirectory for deletion.
             target.mkdir(parents=True, exist_ok=True)
