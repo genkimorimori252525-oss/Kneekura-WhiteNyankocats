@@ -17,6 +17,10 @@ DUMPSYS = (
 PM_PATHS = (
     "package:/data/app/jp.kn.local.battlecats/base.apk\n"
     "package:/data/app/jp.kn.local.battlecats/split_config.arm64_v8a.apk\n"
+    "package:/data/app/jp.kn.local.battlecats/split_config.en.apk\n"
+    "package:/data/app/jp.kn.local.battlecats/split_config.ja.apk\n"
+    "package:/data/app/jp.kn.local.battlecats/split_config.xxhdpi.apk\n"
+    "package:/data/app/jp.kn.local.battlecats/split_InstallPack.apk\n"
 )
 PID = 2345
 
@@ -77,7 +81,7 @@ class OriginalNativeLocalFirstBootMetadataTests(TestCase):
         )
         self.assertEqual(receipt["exact_package"], "jp.kn.local.battlecats")
         self.assertEqual(receipt["status"], "LOCAL_ROOT_METADATA_OBSERVED_NOT_NATIVE_BOOT_PROOF")
-        self.assertEqual(receipt["installed_original_research_apk_split_count"], 2)
+        self.assertEqual(receipt["installed_original_research_apk_split_count"], 6)
         self.assertTrue(receipt["manifest_INTERNET_permission_not_declared_observed"])
         for field in (
             "observed_original_native_scene102",
@@ -176,6 +180,7 @@ class OriginalNativeLocalFirstBootMetadataTests(TestCase):
             {"dumpsys_package": DUMPSYS + "android.permission.INTERNET\n"},
             {"dumpsys_package": "Package [jp.co.ponos.battlecats]:"},
             {"pm_paths": "package:/tmp/foreign/not_game.bin"},
+            {"pm_paths": PM_PATHS.splitlines()[0] + "\n"},
             {"pm_paths": ""},
             {"pid_output": ""},
             {"pid_output": "1234 5678"},
