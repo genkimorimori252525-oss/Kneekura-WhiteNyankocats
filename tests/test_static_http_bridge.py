@@ -145,6 +145,17 @@ class StaticHttpBridgeTests(unittest.TestCase):
                 "package android.opengl; public class GLSurfaceView {"
                 "public void queueEvent(Runnable task) {task.run();}}"
             ),
+            "android/os/FileObserver.java": (
+                "package android.os; public abstract class FileObserver {"
+                "public static final int CREATE=256,CLOSE_WRITE=8,MOVED_TO=128,DELETE=512;"
+                "public static FileObserver latest;"
+                "public FileObserver(String path,int flags) { latest=this; }"
+                "public void startWatching() {}"
+                "public abstract void onEvent(int event,String relative);"
+                "public static void emit(int event,String relative) {"
+                "if(latest!=null) latest.onEvent(event,relative);}"
+                "}"
+            ),
             "android/util/Log.java": (
                 "package android.util; public class Log {"
                 "public static int i(String tag,String value) {return 0;}}"
@@ -322,6 +333,17 @@ class StaticHttpBridgeTests(unittest.TestCase):
                 "package android.opengl; public class GLSurfaceView {"
                 "public void queueEvent(Runnable task) {task.run();}}"
             ),
+            "android/os/FileObserver.java": (
+                "package android.os; public abstract class FileObserver {"
+                "public static final int CREATE=256,CLOSE_WRITE=8,MOVED_TO=128,DELETE=512;"
+                "public static FileObserver latest;"
+                "public FileObserver(String path,int flags) { latest=this; }"
+                "public void startWatching() {}"
+                "public abstract void onEvent(int event,String relative);"
+                "public static void emit(int event,String relative) {"
+                "if(latest!=null) latest.onEvent(event,relative);}"
+                "}"
+            ),
             "android/util/Log.java": (
                 "package android.util; public class Log {"
                 "public static int i(String tag,String message) {"
@@ -353,6 +375,8 @@ class StaticHttpBridgeTests(unittest.TestCase):
             "jp/kn/local/battlecats/MyActivity.java": source,
             "Harness.java": """
                 import jp.kn.local.battlecats.MyActivity;
+                import java.io.File;
+                import java.io.FileOutputStream;
                 import java.util.HashMap;
                 public class Harness {
                     public static void main(String[] args) throws Exception {
@@ -361,6 +385,15 @@ class StaticHttpBridgeTests(unittest.TestCase):
                             System.out.println("ROOT=" + activity.getFilesDir().getCanonicalPath());
                         } catch (IllegalStateException rejected) {
                             System.out.println("ROOT=BLOCKED");
+                        }
+                        if (args.length > 0 && "emit".equals(args[0])) {
+                            File target = new File(activity.getFilesDir(), "SAVE_DATA");
+                            try (FileOutputStream out = new FileOutputStream(target)) {
+                                out.write("NEW_OWNED_NATIVE_FIXTURE".getBytes("UTF-8"));
+                            }
+                            android.os.FileObserver.emit(android.os.FileObserver.CLOSE_WRITE, "SAVE_DATA");
+                            android.os.FileObserver.emit(android.os.FileObserver.CLOSE_WRITE, "../SAVE_DATA");
+                            System.out.println("EMITTED=SAVE_DATA");
                         }
                         try {
                             activity.newHttpRequest(
@@ -397,10 +430,10 @@ class StaticHttpBridgeTests(unittest.TestCase):
             local_root = base / "new-local-original-app"
             local_root.mkdir()
 
-            def run_host():
+            def run_host(*mode):
                 return subprocess.run(
                     [java, "-cp", str(class_dir),
-                     "-Dbc.localDir=" + str(local_root), "Harness"],
+                     "-Dbc.localDir=" + str(local_root), "Harness", *mode],
                     text=True, capture_output=True,
                 )
 
@@ -424,6 +457,13 @@ class StaticHttpBridgeTests(unittest.TestCase):
             self.assertEqual((official_root / "SAVE_DATA").read_bytes(),
                              b"PROTECTED_ORIGINAL")
 
+            emitted = run_host("emit")
+            self.assertEqual(emitted.returncode, 0, emitted.stderr)
+            self.assertIn("TRACE=original-save-event-observer-v1 active", emitted.stdout)
+            self.assertIn("TRACE=original-save-presence-v1 SAVE_DATA=present:", emitted.stdout)
+            self.assertIn("EMITTED=SAVE_DATA", emitted.stdout)
+            self.assertNotIn("NEW_OWNED_NATIVE_FIXTURE", emitted.stdout)
+            (local_root / "SAVE_DATA").unlink()
             (local_root / "SAVE_DATA").write_bytes(b"NEW_LOCAL_GAME_SAVE_FIXTURE")
             (local_root / "download_0.tsv").write_bytes(b"OWNED_LOCAL_TEST_TSV")
             resumed = run_host()
@@ -518,6 +558,25 @@ class StaticHttpBridgeTests(unittest.TestCase):
         self.assertIn("probeLocalDownloadBatchTsvFiles(root);", original)
         self.assertNotIn("FileInputStream", original)
         self.assertNotIn("FileOutputStream", original)
+
+    def test_original_file_event_monitor_is_only_research_metadata(self):
+        source = (ROOT / "bridge/java/MyActivity.java.in").read_text(
+            encoding="utf-8"
+        )
+        rendered = render_bridge_source(source, flavor="local-research", enabled=False)
+        self.assertIn("import android.os.FileObserver;", rendered)
+        self.assertIn("new FileObserver(", rendered)
+        self.assertIn("FileObserver.CLOSE_WRITE", rendered)
+        self.assertIn("FileObserver.MOVED_TO", rendered)
+        self.assertIn("FileObserver.DELETE", rendered)
+        self.assertIn("watchOriginalLocalSaveChanges(root);", rendered)
+        self.assertIn("original-save-event-observer-v1 active", rendered)
+        self.assertIn("probeLocalGameSaveFiles(root);", rendered)
+        self.assertIn("known.equals(filename)", rendered)
+        self.assertIn("if (!LOCAL_RESEARCH_FRESH_ROOT || !DEBUG_RESEARCH_LOG)", rendered)
+        self.assertNotIn("FileInputStream", rendered)
+        self.assertNotIn("FileOutputStream", rendered)
+        self.assertNotIn("FileInputStream", source)
 
     def test_local_research_builder_rejects_networked_or_legacy_save_modes_before_io(self):
         from tools.base_mod.build_owned_static_http_bridge import (
