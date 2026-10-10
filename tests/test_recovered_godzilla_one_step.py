@@ -88,6 +88,43 @@ class OwnerRecoveredGodzillaOneStepTests(unittest.TestCase):
         for n in self.actual:
             self.assertEqual((self.owner / n).read_bytes(), self.actual[n])
 
+    def test_optional_single_command_stages_first_form_preview_via_safe_converter(self):
+        from tools.base_mod import prepare_godzilla_ally_preview
+        preview_dest = self.root / "private" / "702_f-preview"
+        # Existing fake model fixtures test encrypted roundtrip, not real
+        # animation grammar; intercept only the independent conversion step.
+        # Separate tests exercise conversion with valid synthetic model data.
+        with patch.object(recovery, "PRIVATE_ROOT", self.root / "private"):
+            with patch.object(
+                prepare_godzilla_ally_preview, "prepare_from_private_source",
+                return_value={"status":"GODZILLA_FIRST_FORM_RIG_PREVIEW_ONLY_NOT_INSTALLABLE",
+                              "ready_to_install":False},
+            ) as convert:
+                rc = recovery.main([
+                    "--from-dir", str(self.owner),
+                    "--output", str(self.cache),
+                    "--extract-original-godzilla-rig",
+                    "--rig-output", str(self.rig),
+                    "--prepare-ally-preview",
+                    "--ally-preview-output", str(preview_dest),
+                ])
+        self.assertEqual(rc, 0)
+        convert.assert_called_once_with(self.rig, preview_dest)
+        self.assertTrue((self.rig / "rig-receipt.json").exists())
+        self.assertFalse((self.rig / "702_f.png").exists())
+        self.assertFalse((self.rig / "702_c.png").exists())
+
+    def test_allied_preview_requires_hash_gated_original_extraction(self):
+        with patch.object(recovery, "PRIVATE_ROOT", self.root / "private"):
+            with self.assertRaises(SystemExit):
+                recovery.main([
+                    "--from-dir", str(self.owner),
+                    "--prepare-ally-preview",
+                    "--output", str(self.cache),
+                ])
+        self.assertFalse(self.cache.exists())
+        self.assertFalse(self.rig.exists())
+
     def test_missing_7th_animation_refused_without_creating_rig(self):
         files = {
             n: (n + ":fake").encode()
