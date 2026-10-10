@@ -176,6 +176,8 @@ class OriginalVirginSaveGateTests(unittest.TestCase):
         self.assertIn("0x71c9b0", report["scene101_save_probe"])
         self.assertFalse(report["frame_counter_gate_guaranteed_to_pass_in_real_offline_app"])
         self.assertFalse(report["native_missing_save_creates_valid_virgin_player"])
+        self.assertEqual(report["bounded_virtual_method_direct_SAVE_writer_calls"], [])
+        self.assertFalse(report["transitive_or_indirect_SAVE_writer_calls_excluded"])
         self.assertFalse(report["real_original_scene102_or_101_seen_on_device"])
         self.assertEqual(bytes(fixture), initial)
 
@@ -203,6 +205,18 @@ class OriginalVirginSaveGateTests(unittest.TestCase):
                 corrupted[pc] ^= 1
                 with self.assertRaises(OriginalVirginSaveGateError):
                     inspect_original_cold_scene102_to_101(bytes(corrupted))
+
+    def test_detects_if_original_scene102_virtual_method_directly_writes_save(self):
+        synthetic = _oncreate_status_fixture()
+        pc = 0x724600  # inside the pinned method's .eh_frame range
+        displacement = (WRITER_TARGET - pc) // 4
+        self.assertEqual((WRITER_TARGET - pc) % 4, 0)
+        struct.pack_into(
+            "<I", synthetic, pc,
+            0x94000000 | (displacement & 0x03FFFFFF),
+        )
+        with self.assertRaisesRegex(OriginalVirginSaveGateError, "directly writes"):
+            inspect_original_cold_scene102_to_101(bytes(synthetic))
 
     def test_source_only_cold_path_does_not_call_save_writer_and_require_existing_data(self):
         receipt = inspect_original_cold_scene102_to_101(
