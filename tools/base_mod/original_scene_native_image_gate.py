@@ -20,7 +20,16 @@ from tools.base_mod.elf_anchor import EM_AARCH64, elf_machine, gnu_build_id
 ORIGINAL_JP1571_BUILD_ID = "8cb3815648eb9642da10bfb039d71bff7a3519bd"
 ORIGINAL_DRAW_SYMBOL = "Java_jp_co_ponos_battlecats_MyActivity_appUpdateDraw"
 ORIGINAL_DRAW_VMA = 0x31755C
-# Exactly the six source words also pinned by the optional research hook.
+# Exact user-owned JP15.7.1 `.text` VMA bounds and SHA256 verified
+# READ ONLY from ZIP 38c3bbb8...fd61a0ef56 and native 333d2974...a7e2.
+# This is the entire native executable instruction section, not merely the
+# 17 safety anchors; any unapproved instruction rewrite must abort signing.
+ORIGINAL_NATIVE_TEXT_START = 0x317370
+ORIGINAL_NATIVE_TEXT_END = 0xAD751C
+ORIGINAL_NATIVE_TEXT_SHA256 = (
+    "c696e73028669cfeed82ab3c4ceb216eff5dddd919101c3b4ec488580ecb6b15"
+)
+# Exactly the source words also pinned by the optional research hook.
 ORIGINAL_SCENE_ANCHORS = {
     0x31755C: 0xD10143FF,  # static JNI MyActivity.appUpdateDraw()V
     0x71BF24: 0xB0002040,  # getter from original scene consumer context
@@ -106,6 +115,50 @@ def _mapped_opcode(native: bytes, loads: list[dict[str, int]], vma: int) -> int:
     )[0]
 
 
+def _original_executable_text_sha256(
+    native: bytes, loads: list[dict[str, int]],
+) -> str:
+    """Hash the FULL original JP .text through unambiguous executable PT_LOAD.
+
+    LIEF may legitimately change raw ELF file offsets when inserting a
+    DT_NEEDED record, but the original mapped instruction bytes and VMAs
+    must remain IDENTICAL. Fail closed on missing/overlapping/non-executable
+    mappings or a single byte's drift. No original text is logged, returned
+    or persisted; only its SHA256 appears in metadata.
+    """
+    start, end = ORIGINAL_NATIVE_TEXT_START, ORIGINAL_NATIVE_TEXT_END
+    if start % 4 or end % 4 or start >= end:
+        raise OriginalSceneNativeImageError("original .text VMA bounds invalid")
+    mapped = [
+        segment for segment in loads
+        if (segment["flags"] & 1)
+        and segment["vaddr"] <= start
+        and end <= segment["vaddr"] + segment["filesz"]
+    ]
+    if len(mapped) != 1:
+        raise OriginalSceneNativeImageError(
+            "complete original executable .text mapping missing or ambiguous"
+        )
+    # Do not ignore overlapping auxiliary LOAD records even if non-executable.
+    # A second mapping for any original .text VMA is not safe for hooking.
+    overlapping = [
+        segment for segment in loads
+        if segment is not mapped[0]
+        and segment["vaddr"] < end
+        and start < segment["vaddr"] + segment["filesz"]
+    ]
+    if overlapping:
+        raise OriginalSceneNativeImageError(
+            "complete original executable .text has ambiguous LOAD overlap"
+        )
+    seg = mapped[0]
+    at = seg["offset"] + (start - seg["vaddr"])
+    size = end - start
+    if not _bounded_offset(len(native), at, size):
+        raise OriginalSceneNativeImageError("original executable .text extent unsafe")
+    return sha256(native[at:at + size]).hexdigest()
+
+
 def _dynsym_export_vma(native: bytes, symbol: str) -> int:
     """Read exactly one original JNI function dynamic symbol (no disassembler).
 
@@ -179,12 +232,21 @@ def verify_mapped_original_scene_image(native: bytes) -> dict[str, Any]:
             )
     if _dynsym_export_vma(native, ORIGINAL_DRAW_SYMBOL) != ORIGINAL_DRAW_VMA:
         raise OriginalSceneNativeImageError("original JNI draw export VMA changed")
+    full_text_digest = _original_executable_text_sha256(native, loads)
+    if full_text_digest != ORIGINAL_NATIVE_TEXT_SHA256:
+        raise OriginalSceneNativeImageError(
+            "complete original JP15.7.1 executable .text SHA256 drift"
+        )
     return {
         "status": "PINNED_REPACKAGED_JP1571_ORIGINAL_SCENE_VMA_AND_EXPORT_VERIFIED",
         "mapped_source_native_sha256": sha256(native).hexdigest(),
         "pinned_original_build_id": build_id,
         "original_JNI_draw_export_vma": f"0x{ORIGINAL_DRAW_VMA:x}",
         "verified_executable_instruction_anchors": len(ORIGINAL_SCENE_ANCHORS),
+        "complete_original_text_bytes_verified":
+            ORIGINAL_NATIVE_TEXT_END - ORIGINAL_NATIVE_TEXT_START,
+        "complete_original_text_sha256": full_text_digest,
+        "all_original_executable_text_bytes_unchanged_static": True,
         "repacked_original_native_hook_layout_safe_static": True,
         "original_account_free_player_SAVE_generated": False,
         "actual_Android_inline_hook_attach_verified": False,

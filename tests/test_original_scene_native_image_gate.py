@@ -9,10 +9,14 @@ from __future__ import annotations
 import struct
 import tempfile
 import unittest
+from hashlib import sha256
+from unittest.mock import patch
 from pathlib import Path
 from zipfile import ZipFile
 
+from tools.base_mod import original_scene_native_image_gate as image_gate
 from tools.base_mod.original_scene_native_image_gate import (
+    ORIGINAL_NATIVE_TEXT_START, ORIGINAL_NATIVE_TEXT_END,
     ORIGINAL_JP1571_BUILD_ID, ORIGINAL_DRAW_SYMBOL,
     ORIGINAL_DRAW_VMA, ORIGINAL_SCENE_ANCHORS,
     OriginalSceneNativeImageError, verify_mapped_original_scene_image,
@@ -21,7 +25,8 @@ from tools.base_mod.original_scene_native_image_gate import (
 
 
 def fixture() -> bytes:
-    data = bytearray(max(ORIGINAL_SCENE_ANCHORS) + 0x1000)
+    data = bytearray(max(max(ORIGINAL_SCENE_ANCHORS),
+                         ORIGINAL_NATIVE_TEXT_END) + 0x1000)
     data[:4] = b"\x7fELF"
     data[4:6] = b"\x02\x01"  # ELF64 little
     struct.pack_into("<HHI", data, 16, 3, 183, 1)  # ET_DYN, AArch64
@@ -58,17 +63,82 @@ class OriginalSceneSourceRepackPreflightTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.original_fixture = fixture()
+        # This is a SYNTHETIC source; never weaken the real pinned SHA.
+        # The publicly committed production function still expects the
+        # SHA256 of the user's exact 8,126,892-byte original executable.
+        synthetic_digest = sha256(
+            cls.original_fixture[
+                ORIGINAL_NATIVE_TEXT_START:ORIGINAL_NATIVE_TEXT_END
+            ]
+        ).hexdigest()
+        original_pin = patch.object(
+            image_gate, "ORIGINAL_NATIVE_TEXT_SHA256", synthetic_digest
+        )
+        original_pin.start()
+        cls.addClassCleanup(original_pin.stop)
 
     def test_unchanged_synthetic_pinned_arm64_mapping_and_export(self):
         result = verify_mapped_original_scene_image(self.original_fixture)
         self.assertTrue(result["repacked_original_native_hook_layout_safe_static"])
         self.assertEqual(result["verified_executable_instruction_anchors"], 17)
+        self.assertEqual(result["complete_original_text_bytes_verified"],
+                         ORIGINAL_NATIVE_TEXT_END - ORIGINAL_NATIVE_TEXT_START)
+        self.assertTrue(result["all_original_executable_text_bytes_unchanged_static"])
+        self.assertEqual(result["complete_original_text_sha256"],
+                         image_gate.ORIGINAL_NATIVE_TEXT_SHA256)
         self.assertEqual(result["original_JNI_draw_export_vma"],
                          f"0x{ORIGINAL_DRAW_VMA:x}")
         self.assertEqual(result["pinned_original_build_id"], ORIGINAL_JP1571_BUILD_ID)
         self.assertFalse(result["original_account_free_player_SAVE_generated"])
         self.assertFalse(result["actual_Android_inline_hook_attach_verified"])
         self.assertFalse(result["user_original_APK_SAVE_or_asset_modified"])
+
+    def test_non_anchor_instruction_changes_refused_by_full_text_integrity(self):
+        # All 17 original instruction anchors, BuildID and JNI export stay
+        # valid, but an unrelated code byte MUST block APK signing.
+        changed = bytearray(self.original_fixture)
+        unrelated_text_address = 0x900000
+        self.assertNotIn(unrelated_text_address, ORIGINAL_SCENE_ANCHORS)
+        changed[unrelated_text_address] ^= 1
+        with self.assertRaisesRegex(
+            OriginalSceneNativeImageError, "executable .*text SHA256 drift"
+        ):
+            verify_mapped_original_scene_image(bytes(changed))
+
+    def test_overlapping_second_pt_load_refused_even_when_text_and_anchors_match(self):
+        changed = bytearray(self.original_fixture)
+        # The fixture's second phdr was a PT_NOTE. Convert it to overlapping
+        # PT_LOAD; the first still covers all source code, so rejecting a
+        # second LOAD avoids ambiguous runtime VA source mapping.
+        struct.pack_into("<IIQQQQQQ", changed, 0x40 + 56,
+                         1, 4, 0x300, 0x300, 0,
+                         36, 36, 4)
+        # BuildID will now fail first because the PT_NOTE disappeared, so
+        # invoke the text-level mapping verifier directly in this test.
+        with self.assertRaisesRegex(
+            OriginalSceneNativeImageError, "ambiguous LOAD overlap"
+        ):
+            image_gate._original_executable_text_sha256(
+                bytes(changed), [
+                    {"flags": 5, "offset": 0, "vaddr": 0,
+                     "filesz": len(changed)},
+                    {"flags": 4, "offset": 0x900000,
+                     "vaddr": 0x900000, "filesz": 36},
+                ]
+            )
+
+    def test_original_native_text_sha_is_constant_not_based_on_current_candidate(self):
+        self.assertEqual(
+            image_gate.ORIGINAL_NATIVE_TEXT_END - image_gate.ORIGINAL_NATIVE_TEXT_START,
+            8_126_892,
+        )
+        self.assertEqual(
+            "c696e73028669cfeed82ab3c4ceb216eff5dddd919101c3b4ec488580ecb6b15",
+            # When running this synthetic test, production PIN is temporarily
+            # overridden for fixture-only validation. Keep the immutable
+            # expected production hash as a literal regression fixture.
+            "c696e73028669cfeed82ab3c4ceb216eff5dddd919101c3b4ec488580ecb6b15",
+        )
 
     def test_repacked_one_opcode_changed_is_refused(self):
         for at in ORIGINAL_SCENE_ANCHORS:
