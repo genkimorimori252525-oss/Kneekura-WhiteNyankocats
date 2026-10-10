@@ -361,10 +361,46 @@ jobs:
             build/kneekura-shim/shim-import-audit.json
           if-no-files-found: error
           retention-days: 30
+      - name: Write public-only passive observer ABI receipt for safe owner-private same-signer rebuild
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          from hashlib import sha256
+          import json, os
+          directory = Path("build/kneekura-scene-research")
+          native = directory / "libkneekura.so"
+          data = native.read_bytes()
+          mandatory = [
+              b"original-native-scene-hook-v1 hook-api-missing",
+              b"original-native-scene-hook-v1 hook-runtime-init-failed",
+              b"original-native-scene-hook-v1 hook-init-status=%d",
+          ]
+          assert all(marker in data for marker in mandatory)
+          assert b"kneekura-original-virgin-save-trial-v1" not in data
+          receipt = {
+              "schema": "public-original-research-passive-shim-v1",
+              "git_commit": os.environ["GITHUB_SHA"],
+              "sha256": sha256(data).hexdigest(),
+              "elf_abi": "arm64-v8a",
+              "original_game_or_save_bundled": False,
+              "actual_android_game_or_hook_boot_passed": False,
+              "original_save_writer_enabled": False,
+              "fixed_error_markers_compiled": True,
+          }
+          (directory / "PUBLIC_PASSIVE_SHIM_RECEIPT.json").write_text(
+              json.dumps(receipt, sort_keys=True, indent=2) + "\n",
+              encoding="utf-8")
+          print(json.dumps(receipt, sort_keys=True))
+          PY
+
       - uses: actions/upload-artifact@v4
         with:
           name: kneekura-arm64-scene-research-COMPILE-ONLY
-          path: build/kneekura-scene-research/libkneekura.so
+          path: |
+            build/kneekura-scene-research/libkneekura.so
+            build/kneekura-scene-research/PUBLIC_PASSIVE_SHIM_RECEIPT.json
           if-no-files-found: error
           retention-days: 7
 
