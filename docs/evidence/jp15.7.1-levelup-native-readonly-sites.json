@@ -1350,6 +1350,33 @@
     "repackaged_native_source_gate_code": "tools/base_mod/original_scene_native_image_gate.py",
     "repackaged_native_source_gate_tests": "tests/test_original_scene_native_image_gate.py",
     "repacked_original_ELF_source_verifier_required_in_bridge_parity": true,
-    "ci_real_android_ndk_build_not_proof_of_original_native_runtime": true
+    "ci_real_android_ndk_build_not_proof_of_original_native_runtime": true,
+    "original_owner_unmodified_ELF_PT_LOAD_all_six_JNI_scene_words_reverified_locally": true,
+    "research_unsigned_final_arm64_split_early_guard": {
+      "code": "tools/base_mod/original_scene_native_image_gate.py::verify_staged_original_scene_before_signing",
+      "integration": "tools/base_mod/build_owned_static_http_bridge.py",
+      "checks": "exact pinned original GNU BuildID, six executable ELF PT_LOAD instruction VMAs and original draw JNI dynsym VMA",
+      "executes_before": "baseline_resign",
+      "proof_receipt_name": "original-scene-pre-signature-proof.json",
+      "unsigned_actual_owner_repackaged_binary_validated_with_LIEF_in_this_session": false,
+      "synthetic_unsigned_valid_modified_and_feature_off_tested": true
+    },
+    "research_hook_target_resolver": "shadowhook_hook_sym_addr",
+    "research_hook_resolver_behavior": "absolute mapped verified original JNI address = unique verified ELF dlpi_addr + 0x31755c; not basename future/pending lookup",
+    "reviewed_optional_ShadowHook_native_abi_required": [
+      "shadowhook_init",
+      "shadowhook_hook_sym_addr",
+      "shadowhook_unhook"
+    ],
+    "original_vendor_or_other_same_basename_future_hook_disallowed_by_design": true,
+    "native_hook_abi_documentation": "https://github.com/bytedance/android-inline-hook/blob/main/doc/manual.md",
+    "research_real_ANDROID_NDK_arm64_cross_compilation_for_previous_source_passed": true,
+    "current_tests_ci": "https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/actions/runs/38047877037",
+    "current_tests_run_483_total_482_pass_1_skip": true,
+    "original_game_first_boot_and_native_hook_installed_on_phone": false,
+    "real_local_first_SAVE_generated_or_reloaded": false,
+    "original_native_level60_resources_max_madoka_godzilla_liveops_combat_finished": false,
+    "independent_SDK_IPC_zero_egress_hardware_verified": false,
+    "user_original_binary_SAVE_assets_or_signing_key_committed_or_overwritten": false
   }
 }
