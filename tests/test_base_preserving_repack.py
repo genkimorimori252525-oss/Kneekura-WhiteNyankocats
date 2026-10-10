@@ -88,9 +88,21 @@ class BasePreservingRepackTests(unittest.TestCase):
                 apksigner,
                 textwrap.dedent(
                     """                    #!/usr/bin/env python3
-                    import shutil, sys
+                    import os, shutil, sys
                     args = sys.argv[1:]
                     if args[0] == "sign":
+                        # Process arguments MUST only include env var names.
+                        assert "--ks-pass" in args
+                        store = args[args.index("--ks-pass") + 1]
+                        assert store.startswith("env:") and len(store) > 4
+                        assert os.environ[store[4:]] == "OWNER_PASSWORD_NEVER_ARGV"
+                        assert "--key-pass" in args
+                        key = args[args.index("--key-pass") + 1]
+                        assert key.startswith("env:") and len(key) > 4
+                        assert os.environ[key[4:]] == "DIFFERENT_KEY_PASSWORD"
+                        assert "OWNER_PASSWORD_NEVER_ARGV" not in str(args)
+                        assert "DIFFERENT_KEY_PASSWORD" not in str(args)
+                        assert "pass:" not in str(args)
                         out = args[args.index("--out") + 1]
                         shutil.copyfile(args[-1], out)
                     elif args[0] == "verify" and "--print-certs" in args:
@@ -106,7 +118,8 @@ class BasePreservingRepackTests(unittest.TestCase):
                 output,
                 keystore=keystore,
                 alias="kneekura",
-                storepass="test",
+                storepass="OWNER_PASSWORD_NEVER_ARGV",
+                keypass="DIFFERENT_KEY_PASSWORD",
                 zipalign=str(zipalign),
                 apksigner=str(apksigner),
                 source_export_sha256="a" * 64,
