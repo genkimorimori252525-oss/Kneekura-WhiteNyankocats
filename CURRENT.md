@@ -18,6 +18,27 @@
 | 5 | [AGENTS.md](AGENTS.md) | **コード作業/検証/Windows配布の手続き**。製品の意味やゲームの仕様を変更できない |
 | 6 | 1次証拠・過去の文書・研究ハーネス | 特定タスクの技術参照**だけ**。本表の上位と矛盾した内容は旧設計/研究履歴として扱う |
 
+## オーナーWindows開発環境 — 実測固定パス（2026-10-11 明示依頼）
+
+**以後すべてのAI・Codex・端末案内で先に参照する。** オーナーが繰り返し提供した既存環境。環境構築のために勝手に別のSDKや仮パス `C:\\PATH\\TO` を指示しない。実機は接続状態が変わるため、毎回動的に確認する。本人が環境を変更した場合はこの節を更新する。
+
+| 項目 | オーナー環境での場所・実測 |
+|---|---|
+| Windowsユーザーフォルダ | `C:\\Users\\genki` |
+| Android SDK **正本** | `C:\\Users\\genki\\AppData\\Local\\Android\\Sdk`（PowerShellは `$env:LOCALAPPDATA\\Android\\Sdk`） |
+| Android ADB **正本** | `C:\\Users\\genki\\AppData\\Local\\Android\\Sdk\\platform-tools\\adb.exe`（ADB 37.0.0 動作確認済み） |
+| Android build-tools | **34.0.0 / 36.1.0 / 37.0.0** で `zipalign.exe`、`apksigner.bat`、`d8.bat` が存在することを実測。**35.0.0** は2026-10-11 `sdkmanager "build-tools;35.0.0"` 実行が解凍100%まで進んだが、各ファイルの最終 `Test-Path` は再検証が必要 |
+| Android API 35 | `C:\\Users\\genki\\AppData\\Local\\Android\\Sdk\\platforms\\android-35\\android.jar` 存在確認済み |
+| SDK Manager | `$env:LOCALAPPDATA\\Android\\Sdk\\cmdline-tools\\latest\\bin\\sdkmanager.bat`。SDK XML v3/v4の警告は一度観測（終了後は実ファイル・終了コードを確認） |
+| GitHub作業リポジトリ | `C:\\Users\\genki\\Downloads\\Kneekura-WhiteNyankocats`（`CURRENT.md` と `tools\\base_mod\\build_owned_static_http_bridge.py` 存在確認済み） |
+| **所有原本JP15.7.1 ZIP** | `C:\\Users\\genki\\Downloads\\にーくらにゃんこ\\nyanko_battlecats_2026-10-06.zip` |
+| 原作Android実機研究キット | `C:\\Users\\genki\\Downloads\\kneekura-original-owner-trial-kit`（`BUILD-ORIGINAL-RESEARCH.ps1` 存在確認済み） |
+| Python | `py -3.12`、`lief==0.17.6` と `pycryptodome==3.24.0` インストール済みの本人出力 |
+
+**AIが出すコマンドの最小規則：** PowerShellから `$sdk = Join-Path $env:LOCALAPPDATA 'Android\\Sdk'`、`$adb = Join-Path $sdk 'platform-tools\\adb.exe'` を使用。通常は `$repo = Join-Path $HOME 'Downloads\\Kneekura-WhiteNyankocats'`、`$zip = Join-Path $HOME 'Downloads\\にーくらにゃんこ\\nyanko_battlecats_2026-10-06.zip'`、`$kit = Join-Path $HOME 'Downloads\\kneekura-original-owner-trial-kit'`。**研究版をビルドする時は `-RepositoryRoot $repo -OwnerExportZip $zip -PublicKitDirectory $kit` を必ず指定**する。カレントディレクトリだけでリポジトリを決定しない。 `zipalign.exe` はBuild-toolsの実在版を事前確認し、必要な35.0.0がなければバージョンを確認して追加インストールを案内。
+
+**実機安全条件：** `adb devices` が空なら端末を再接続しUSBデバッグ認証を確認する。過去に`device`表示があっても、接続中と断定しない。端末固有シリアルは永続記録しない。原作公式アプリ `jp.co.ponos.battlecats` / 元SAVEは `uninstall` / `pm clear` / 上書きの対象にしない。実験対象は別パッケージ `jp.kn.local.battlecats` のみ。**2026-10-11 現在の実機ビルド状況：原作研究キットの `BUILD-ORIGINAL-RESEARCH.ps1` が初回の研究用keystoreパスワード入力まで到達。署名完了やインストール・原作実機起動は未確認**。パスワード・秘密鍵をコミット/チャットに提出しない。
+
 ## このファイルの後に読むもの（最大限絞る）
 
 **普段の新規AIセッション：** このファイル → PRODUCT_IDENTITY.md → 実装ロードマップの「実行順序と次の担当者向け開始地点」→ 今動かす1タスクのソース/証拠だけ。毎回すべてのdocs/を巡回する必要はない。
