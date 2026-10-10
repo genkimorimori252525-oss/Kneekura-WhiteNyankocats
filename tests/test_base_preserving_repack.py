@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 import stat
+import sys
 import tempfile
 import textwrap
 import unittest
@@ -22,9 +24,25 @@ def _write_apk(path: Path, marker: str) -> None:
         archive.writestr("META-INF/OLD.SF", b"old signature metadata")
 
 
-def _write_executable(path: Path, source: str) -> None:
+def _write_executable(path: Path, source: str) -> Path:
+    """Cross-platform fake Android tool callable by subprocess without shell.
+
+    Unix can execute Python's shebang script. On Windows a bare extensionless
+    shebang is WinError 193, so use a .cmd launcher for a Python .py helper.
+    This is a synthetic-only test; no owner's device or signing key involved.
+    """
+    if os.name == "nt":
+        script = path.with_suffix(".py")
+        script.write_text(source, encoding="utf-8")
+        launcher = path.with_suffix(".cmd")
+        launcher.write_text(
+            '@echo off\r\n"' + sys.executable + '" "' + str(script) + '" %*\r\n',
+            encoding="ascii",
+        )
+        return launcher
     path.write_text(source, encoding="utf-8")
     path.chmod(path.stat().st_mode | stat.S_IXUSR)
+    return path
 
 
 class BasePreservingRepackTests(unittest.TestCase):
@@ -72,9 +90,8 @@ class BasePreservingRepackTests(unittest.TestCase):
             keystore = root / "kneekura.p12"
             keystore.write_bytes(b"synthetic-key")
 
-            zipalign = tools / "zipalign"
-            _write_executable(
-                zipalign,
+            zipalign = _write_executable(
+                tools / "zipalign",
                 textwrap.dedent(
                     """                    #!/usr/bin/env python3
                     import shutil, sys
@@ -83,9 +100,8 @@ class BasePreservingRepackTests(unittest.TestCase):
                 ),
             )
 
-            apksigner = tools / "apksigner"
-            _write_executable(
-                apksigner,
+            apksigner = _write_executable(
+                tools / "apksigner",
                 textwrap.dedent(
                     """                    #!/usr/bin/env python3
                     import os, shutil, sys
