@@ -512,3 +512,101 @@ jobs:
             tools/base_mod/repack.py
           if-no-files-found: error
           retention-days: 3
+
+  review-official-shadowhook-arm64:
+    name: Review official Maven Central ShadowHook v2.0.1 ARM64 ELF
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Download Maven Central PUBLIC MIT AAR and verify Maven SHA256
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/official-shadowhook-review
+          python - <<'PY'
+          from pathlib import Path
+          from hashlib import sha256
+          import re, json, subprocess
+          from urllib.request import urlopen
+          from zipfile import ZipFile
+          from io import BytesIO
+          version="2.0.1"
+          base="https://repo.maven.apache.org/maven2/com/bytedance/android/shadowhook/"+version
+          name="shadowhook-"+version+".aar"
+          def fetch(url,limit):
+              with urlopen(url,timeout=30) as response:
+                  data=response.read(limit+1)
+              if len(data)>limit: raise ValueError("public Maven response too large")
+              return data
+          original=fetch(base+"/"+name,8_000_000)
+          expected=fetch(base+"/"+name+".sha256",256).decode("ascii").strip().lower()
+          if not re.fullmatch("[0-9a-f]{64}",expected):
+              raise ValueError("missing public Maven AAR digest")
+          if sha256(original).hexdigest()!=expected:
+              raise ValueError("public Maven ShadowHook AAR SHA256 mismatch")
+          with ZipFile(BytesIO(original)) as archive:
+              candidates=[
+                  x for x in archive.infolist()
+                  if x.filename.endswith("/libshadowhook.so")
+                  and "arm64-v8a" in x.filename.split("/")
+                  and x.file_size>64 and x.file_size<4_000_000
+              ]
+              if len(candidates)!=1:
+                  raise ValueError("ambiguous official ARM64 ShadowHook in Maven AAR")
+              elf=archive.read(candidates[0])
+          if (elf[:6]!=b"\x7fELF\x02\x01"
+              or int.from_bytes(elf[16:18],"little")!=3
+              or int.from_bytes(elf[18:20],"little")!=183):
+              raise ValueError("official library is not ELF64 AArch64 ET_DYN")
+          out=Path("build/official-shadowhook-review")
+          arm=out/"libshadowhook.so"
+          arm.write_bytes(elf)
+          details=subprocess.run(["readelf","--dyn-syms","--wide",str(arm)],
+                                 capture_output=True,text=True,check=True).stdout
+          exports={}
+          for line in details.splitlines():
+              words=line.split()
+              if len(words)>=8 and words[3]=="FUNC" and words[6]!="UND":
+                  exports[words[7]]=line
+          required=["shadowhook_init", "shadowhook_hook_sym_addr",
+                    "shadowhook_hook_func_addr", "shadowhook_unhook"]
+          if not all(x in exports for x in required):
+              raise ValueError("actual Maven ARM64 dynamic FUNCTION exports missing")
+          dynamic=subprocess.run(["readelf","-d",str(arm)],
+                                 capture_output=True,text=True,check=True).stdout
+          needed=re.findall(r"\(NEEDED\).*?\[(.*?)\]",dynamic)
+          report={
+              "schema":"kneekura-official-shadowhook-arm64-review-v1",
+              "official_maven_coordinate":"com.bytedance.android:shadowhook:"+version,
+              "public_maven_aar_sha256":expected,
+              "arm64_native_sha256":sha256(elf).hexdigest(),
+              "arm64_native_size_bytes":len(elf),
+              "source_member_in_aar":candidates[0].filename,
+              "required_defined_func_symbols":required,
+              "defined_symbol_count":len(exports),
+              "DT_NEEDED":needed,
+              "actual_original_Battle_Cats_or_SAVE_in_CI":False,
+              "owner_device_runtime_hook_accepted":False,
+              "original_first_SAVE_and_Lv60_verified":False,
+              "ready_to_install_or_ship":False,
+              "status":"PASS_PUBLIC_OFFICIAL_ELF_STATIC_ONLY",
+          }
+          (out/"official-only-receipt.json").write_text(
+              json.dumps(report,sort_keys=True,indent=2)+"\n",encoding="utf-8"
+          )
+          print(json.dumps(report,sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kneekura-public-official-shadowhook-v2.0.1-arm64-review-ONLY
+          path: |
+            build/official-shadowhook-review/libshadowhook.so
+            build/official-shadowhook-review/official-only-receipt.json
+          if-no-files-found: error
+          retention-days: 5
