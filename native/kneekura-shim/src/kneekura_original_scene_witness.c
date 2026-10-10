@@ -98,7 +98,13 @@ typedef int32_t (*OriginalSaveWrapperFn)(void *);
 typedef int32_t (*OriginalAppLaunchLoaderFn)(void *);
 /* Hook the exact already-mapped ELF address, never a basename-driven
  * future/pending symbol match that could attach to another library. */
+/* ShadowHook official manual: hook_sym_addr REQUIRES .dynsym/.symtab.
+ * The original JP15.7.1 has ONE source-exported draw JNI function and
+ * FOUR source-pinned, UNSYMBOLIZED internal LEVEL/SAVE functions. For those
+ * four use hook_func_addr, which accepts symbol-less function start VMAs.
+ * Both types use the same unique-mode trampoline contract. */
 typedef void *(*ShadowHookSymAddrFn)(void *, void *, void **);
+typedef void *(*ShadowHookFuncAddrFn)(void *, void *, void **, ...);
 typedef int (*ShadowHookInitFn)(int, _Bool);
 typedef int (*ShadowHookUnhookFn)(void *);
 
@@ -669,11 +675,14 @@ static void kneekura_init_scene_witness_research_only(void) {
     }
     ShadowHookInitFn init_fn =
         (ShadowHookInitFn)dlsym(library, "shadowhook_init");
-    ShadowHookSymAddrFn hook_fn =
+    ShadowHookSymAddrFn hook_sym_fn =
         (ShadowHookSymAddrFn)dlsym(library, "shadowhook_hook_sym_addr");
+    ShadowHookFuncAddrFn hook_func_fn =
+        (ShadowHookFuncAddrFn)dlsym(library, "shadowhook_hook_func_addr");
     ShadowHookUnhookFn unhook_fn =
         (ShadowHookUnhookFn)dlsym(library, "shadowhook_unhook");
-    if (init_fn == NULL || hook_fn == NULL || unhook_fn == NULL
+    if (init_fn == NULL || hook_sym_fn == NULL || hook_func_fn == NULL
+        || unhook_fn == NULL
         || init_fn(1, 0) != 0) {
         __android_log_write(
             ANDROID_LOG_INFO, WITNESS_TAG,
@@ -686,30 +695,30 @@ static void kneekura_init_scene_witness_research_only(void) {
     /* Hook only the loaded library with verified BuildID/opcodes. All
      * observers are REQUIRED together so a partial research report is
      * never misread as one coherent upgrade/save lifecycle. */
-    gHookStub = hook_fn(
+    gHookStub = hook_sym_fn(
         (void *)(witness.base + ORIGINAL_JNI_DRAW + validated_shift),
         (void *)&research_draw_proxy, &gOriginalDraw
     );
     if (gHookStub != NULL && gOriginalDraw != NULL) {
-        gCapHookStub = hook_fn(
+        gCapHookStub = hook_func_fn(
             (void *)(witness.base + ORIGINAL_UNIT_CAP_GETTER + validated_shift),
             (void *)&research_original_cap_getter_proxy, &gOriginalCapGetter
         );
     }
     if (gCapHookStub != NULL && gOriginalCapGetter != NULL) {
-        gUpgradeHookStub = hook_fn(
+        gUpgradeHookStub = hook_func_fn(
             (void *)(witness.base + ORIGINAL_UPGRADE_GATE + validated_shift),
             (void *)&research_original_upgrade_gate_proxy, &gOriginalUpgradeGate
         );
     }
     if (gUpgradeHookStub != NULL && gOriginalUpgradeGate != NULL) {
-        gSaveHookStub = hook_fn(
+        gSaveHookStub = hook_func_fn(
             (void *)(witness.base + ORIGINAL_SAVE_WRAPPER + validated_shift),
             (void *)&research_original_save_wrapper_proxy, &gOriginalSaveWrapper
         );
     }
     if (gSaveHookStub != NULL && gOriginalSaveWrapper != NULL) {
-        gAppLaunchReadHookStub = hook_fn(
+        gAppLaunchReadHookStub = hook_func_fn(
             (void *)(witness.base + ORIGINAL_APP_LAUNCH_LOADER + validated_shift),
             (void *)&research_original_app_launch_read_proxy,
             &gOriginalAppLaunchLoader

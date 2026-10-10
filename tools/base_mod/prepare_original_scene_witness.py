@@ -56,6 +56,7 @@ def _safe_native_so(source: Path, expected_sha256: str) -> bytes:
     if any(anchor not in data for anchor in (
         b"shadowhook_init\x00",
         b"shadowhook_hook_sym_addr\x00",
+        b"shadowhook_hook_func_addr\x00",
         b"shadowhook_unhook\x00",
     )):
         raise OriginalSceneWitnessPackageError(

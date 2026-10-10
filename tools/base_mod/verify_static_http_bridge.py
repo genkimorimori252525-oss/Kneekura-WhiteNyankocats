@@ -342,6 +342,7 @@ def verify_static_http_bridge(
                 if any(required not in review_lib for required in (
                     b"shadowhook_init\x00",
                     b"shadowhook_hook_sym_addr\x00",
+                    b"shadowhook_hook_func_addr\x00",
                     b"shadowhook_unhook\x00",
                 )):
                     raise ValueError("reviewed exact-address scene hook ABI changed")

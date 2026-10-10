@@ -65,6 +65,17 @@ class OriginalNativeSceneResearchObserverTests(unittest.TestCase):
         self.assertIn("original-native-save-wrapper-v1 original-returned", code)
         self.assertIn("int rollback_failed = 0;", code)
         self.assertIn("shadowhook_hook_sym_addr", code)
+        self.assertIn("shadowhook_hook_func_addr", code)
+        self.assertIn("ShadowHookFuncAddrFn hook_func_fn", code)
+        # Exactly ONE exported JNI symbol can use hook_sym_addr.
+        self.assertEqual(code.count("gHookStub = hook_sym_fn("), 1)
+        for symbolless in (
+            "gCapHookStub", "gUpgradeHookStub",
+            "gSaveHookStub", "gAppLaunchReadHookStub"
+        ):
+            self.assertIn(symbolless + " = hook_func_fn(", code)
+        self.assertEqual(code.count("= hook_func_fn("), 4)
+        self.assertNotIn("= hook_fn(", code)
         self.assertNotIn('"shadowhook_hook_sym_name"', code)
         self.assertIn("witness.base + ORIGINAL_JNI_DRAW", code)
         self.assertIn("research_draw_proxy", code)

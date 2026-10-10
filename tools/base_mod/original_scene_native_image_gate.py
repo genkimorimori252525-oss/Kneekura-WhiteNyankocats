@@ -68,6 +68,16 @@ ORIGINAL_SCENE_ANCHORS = {
 }
 ELF64_LOAD = 1
 ELF64_DYNSYM = 11
+ELF64_SYMTAB = 2
+# All four internal functions are stripped in the exact JP15.7.1 ELF.
+# These entries are verified from the owned original .dynsym/.symtab and
+# must never be routed through ShadowHook's symbol-only hook_sym_addr API.
+ORIGINAL_UNSYMBOLIZED_HOOK_VMAS = (
+    0x53B2BC,  # LEVEL effective cap getter
+    0x53BE0C,  # LEVEL upgrade gate
+    0x8B9FC8,  # original SAVE wrapper
+    0x9BB764,  # original AppLaunchLoad reader
+)
 ELF64_SYM_ENTRY_SIZE = 24
 
 
@@ -268,6 +278,44 @@ def _dynsym_export_vma(native: bytes, symbol: str) -> int:
     return located[0]
 
 
+def _defined_function_symbol_vmas(native: bytes) -> set[int]:
+    """Read defined FUNC VMAs from both ELF .dynsym and .symtab.
+
+    Production ShadowHook code uses hook_sym_addr for ONE export and
+    hook_func_addr for FOUR source-pinned stripped functions. Refuse to
+    silently treat symbol-rich synthetic binaries as this original owner ELF.
+    Strictly mapped section bounds; no third-party ELF parser required.
+    """
+    if type(native) is not bytes or len(native) < 64:
+        raise OriginalSceneNativeImageError("original ELF symbol header unavailable")
+    shoff = struct.unpack_from("<Q", native, 40)[0]
+    shentsize = struct.unpack_from("<H", native, 58)[0]
+    shnum = struct.unpack_from("<H", native, 60)[0]
+    if shentsize < 64 or not 1 <= shnum <= 2048 or not _bounded_offset(
+        len(native), shoff, shentsize * shnum
+    ):
+        raise OriginalSceneNativeImageError("original ELF sections unavailable")
+    symbols = set()
+    for i in range(shnum):
+        at = shoff + i * shentsize
+        _, sec_type, _, _, offset, size, _, _, _, entsize = struct.unpack_from(
+            "<IIQQQQIIQQ", native, at
+        )
+        if sec_type not in (ELF64_DYNSYM, ELF64_SYMTAB):
+            continue
+        if (entsize != ELF64_SYM_ENTRY_SIZE
+            or size % ELF64_SYM_ENTRY_SIZE
+            or not _bounded_offset(len(native), offset, size)):
+            raise OriginalSceneNativeImageError("original FUNC symbol extent invalid")
+        for symoff in range(offset, offset + size, ELF64_SYM_ENTRY_SIZE):
+            _, info, _, section_index, value, _ = struct.unpack_from(
+                "<IBBHQQ", native, symoff
+            )
+            if section_index != 0 and (info & 0x0F) == 2 and value:
+                symbols.add(value)
+    return symbols
+
+
 def verify_mapped_original_scene_image(
     native: bytes, *, expected_research_native_package: str | None = None,
 ) -> dict[str, Any]:
@@ -292,6 +340,16 @@ def verify_mapped_original_scene_image(
         or vma_shift % 0x1000 != 0):
         raise OriginalSceneNativeImageError(
             "original JNI draw export has unsupported nonuniform VMA shift"
+        )
+    function_symbols = _defined_function_symbol_vmas(native)
+    if installed_draw_vma not in function_symbols:
+        raise OriginalSceneNativeImageError(
+            "original JNI draw is no longer a defined function symbol"
+        )
+    if any(vma + vma_shift in function_symbols
+           for vma in ORIGINAL_UNSYMBOLIZED_HOOK_VMAS):
+        raise OriginalSceneNativeImageError(
+            "original private LEVEL/SAVE hook unexpectedly has ELF symbol"
         )
     for vma, expected in ORIGINAL_SCENE_ANCHORS.items():
         relocated_pc = vma + vma_shift
@@ -356,6 +414,9 @@ def verify_mapped_original_scene_image(
             native_package_changed_bytes == 6
         ),
         "verified_executable_instruction_anchors": len(ORIGINAL_SCENE_ANCHORS),
+        "original_symbol_only_hook_targets": 1,
+        "original_symbol_free_function_hook_targets":
+            len(ORIGINAL_UNSYMBOLIZED_HOOK_VMAS),
         "complete_original_text_bytes_verified":
             ORIGINAL_NATIVE_TEXT_END - ORIGINAL_NATIVE_TEXT_START,
         "complete_original_text_sha256": full_text_digest,

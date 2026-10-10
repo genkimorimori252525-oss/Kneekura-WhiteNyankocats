@@ -26,6 +26,9 @@ def synthetic_reviewed_arm64_so() -> bytes:
     struct.pack_into("<H", data, 18, 183)     # AArch64
     data[100:116] = b"shadowhook_init\x00"
     data[180:205] = b"shadowhook_hook_sym_addr\x00"
+    data[410:410+len(b"shadowhook_hook_func_addr\x00")] = (
+        b"shadowhook_hook_func_addr\x00"
+    )
     data[300:318] = b"shadowhook_unhook\x00"
     return bytes(data)
 

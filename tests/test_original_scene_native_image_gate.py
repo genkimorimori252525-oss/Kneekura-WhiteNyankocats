@@ -18,6 +18,7 @@ from tools.base_mod import original_scene_native_image_gate as image_gate
 from tools.base_mod.original_scene_native_image_gate import (
     ORIGINAL_NATIVE_TEXT_START, ORIGINAL_NATIVE_TEXT_END,
     ORIGINAL_PINNED_MAPPED_RANGES,
+    ORIGINAL_UNSYMBOLIZED_HOOK_VMAS,
     ORIGINAL_JP1571_BUILD_ID, ORIGINAL_DRAW_SYMBOL,
     ORIGINAL_DRAW_VMA, ORIGINAL_SCENE_ANCHORS,
     OriginalSceneNativeImageError, verify_mapped_original_scene_image,
@@ -95,6 +96,28 @@ class OriginalSceneSourceRepackPreflightTests(unittest.TestCase):
         )
         ranges_pin.start()
         cls.addClassCleanup(ranges_pin.stop)
+
+    def test_original_STRIPPED_private_native_hook_sites_have_no_symbol(self):
+        from tools.base_mod.original_scene_native_image_gate import (
+            _defined_function_symbol_vmas,
+        )
+        original = self.original_fixture
+        defined = _defined_function_symbol_vmas(original)
+        self.assertIn(ORIGINAL_DRAW_VMA, defined)
+        self.assertTrue(set(ORIGINAL_UNSYMBOLIZED_HOOK_VMAS).isdisjoint(defined))
+        # Synthetic mutation: declare previously internal function as a
+        # second .dynsym FUNC, preserving all native instruction bytes.
+        modified = bytearray(original)
+        # Minimal fixture's dynamic symbol table section is at 0x600+64.
+        struct.pack_into("<Q", modified, 0x600 + 64 + 32, 72)
+        struct.pack_into(
+            "<IBBHQQ", modified, 0x430,
+            0, 0x12, 0, 1, ORIGINAL_UNSYMBOLIZED_HOOK_VMAS[0], 32
+        )
+        with self.assertRaisesRegex(
+            OriginalSceneNativeImageError, "unexpectedly has ELF symbol"
+        ):
+            verify_mapped_original_scene_image(bytes(modified))
 
     def test_unchanged_synthetic_pinned_arm64_mapping_and_export(self):
         result = verify_mapped_original_scene_image(self.original_fixture)

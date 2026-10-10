@@ -87,6 +87,8 @@ jobs:
             ! strings build/kneekura-shim/libkneekura.so | grep -Fq "$TAG"
           done
           strings build/kneekura-scene-research/libkneekura.so | grep -F "shadowhook_hook_sym_addr"
+          strings build/kneekura-scene-research/libkneekura.so | grep -F "shadowhook_hook_func_addr"
+          ! strings build/kneekura-shim/libkneekura.so | grep -Fq "shadowhook_hook_func_addr"
           ! strings build/kneekura-scene-research/libkneekura.so | grep -Fq "shadowhook_hook_sym_name"
           ! strings build/kneekura-shim/libkneekura.so | grep -Fq "original-native-scene-v1 id=%u"
           ! strings build/kneekura-shim/libkneekura.so | grep -Fq "jp.kn.local.battlecats"
