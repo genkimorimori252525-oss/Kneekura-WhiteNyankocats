@@ -27,7 +27,7 @@
 | Windowsユーザーフォルダ | `C:\\Users\\genki` |
 | Android SDK **正本** | `C:\\Users\\genki\\AppData\\Local\\Android\\Sdk`（PowerShellは `$env:LOCALAPPDATA\\Android\\Sdk`） |
 | Android ADB **正本** | `C:\\Users\\genki\\AppData\\Local\\Android\\Sdk\\platform-tools\\adb.exe`（ADB 37.0.0 動作確認済み） |
-| Android build-tools | **34.0.0 / 36.1.0 / 37.0.0** で `zipalign.exe`、`apksigner.bat`、`d8.bat` が存在することを実測。**35.0.0** は2026-10-11 `sdkmanager "build-tools;35.0.0"` 実行が解凍100%まで進んだが、各ファイルの最終 `Test-Path` は再検証が必要 |
+| Android build-tools | **34.0.0 / 36.1.0 / 37.0.0** で `zipalign.exe`、`apksigner.bat`、`d8.bat` が存在することを実測。**35.0.0** も2026-10-11 `sdkmanager "build-tools;35.0.0"` で追加され、専用ビルドスクリプトの `zipalign.exe` / `apksigner.bat` / `d8.bat` 存在チェックを通過して**keytool署名鍵作成のパスワード画面まで到達済み**（実行ログが根拠） |
 | Android API 35 | `C:\\Users\\genki\\AppData\\Local\\Android\\Sdk\\platforms\\android-35\\android.jar` 存在確認済み |
 | SDK Manager | `$env:LOCALAPPDATA\\Android\\Sdk\\cmdline-tools\\latest\\bin\\sdkmanager.bat`。SDK XML v3/v4の警告は一度観測（終了後は実ファイル・終了コードを確認） |
 | GitHub作業リポジトリ | `C:\\Users\\genki\\Downloads\\Kneekura-WhiteNyankocats`（`CURRENT.md` と `tools\\base_mod\\build_owned_static_http_bridge.py` 存在確認済み） |
