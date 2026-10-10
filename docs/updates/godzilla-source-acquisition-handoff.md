@@ -45,7 +45,7 @@ Offline revalidation and tests:
 
 ~~~powershell
 py -3 -m tools.base_mod.fetch_godzilla_server_assets --verify-only
-py -3 -m unittest tests.test_fetch_godzilla_server_assets -v
+py -3 -m unittest discover -s tests -p test_fetch_godzilla_server_assets.py -v
 ~~~
 
 A cloud-based AI cannot see the owner's Windows cache merely because GitHub has the script. If the mirror is blocked or an owner-local path is not available, report BLOCKED / USER_GATE, never invent source data.
