@@ -383,6 +383,47 @@ class OriginalNativeLocalFirstBootMetadataTests(TestCase):
             ):
                 obs.sanitized_original_activity_events(SAMPLE, pid=invalid)
 
+    def test_readonly_adb_timeout_names_only_known_stage_not_device_contents(self):
+        import subprocess
+        for args, stage in (
+            (["shell", "pm", "path", obs.RESEARCH_PACKAGE], "split-installation"),
+            (["shell", "dumpsys", "package", obs.RESEARCH_PACKAGE], "package-permissions"),
+            (["shell", "pidof", obs.RESEARCH_PACKAGE], "running-process"),
+            (["logcat", "-d", "-v", "threadtime", "--pid=2345",
+              "-s", f"{obs.LOG_TAG}:I", "*:S"], "scoped-native-logcat"),
+        ):
+            with self.subTest(stage=stage), patch.object(
+                obs.subprocess, "run",
+                side_effect=subprocess.TimeoutExpired(
+                    cmd=["fake", "secret=must-not-appear"], timeout=1,
+                    output=b"SECRET_PLAYER_SAVE",
+                ),
+            ):
+                with self.assertRaisesRegex(
+                    obs.OriginalLocalBootObservationError,
+                    "read-only ADB stage " + stage + " timed out"
+                ) as error:
+                    obs._adb_read("adb", args, serial=None, timeout=1)
+                self.assertNotIn("SECRET", str(error.exception))
+                self.assertNotIn("player", str(error.exception).lower())
+
+    def test_readonly_adb_missing_program_and_unknown_args_fail_closed(self):
+        with patch.object(obs.subprocess, "run", side_effect=OSError("private")):
+            with self.assertRaisesRegex(
+                obs.OriginalLocalBootObservationError, "could not start"
+            ):
+                obs._adb_read(
+                    "adb", ["shell", "pidof", obs.RESEARCH_PACKAGE], serial=None,
+                )
+        with patch.object(obs.subprocess, "run") as fake:
+            with self.assertRaisesRegex(
+                obs.OriginalLocalBootObservationError, "unsupported ADB command"
+            ):
+                obs._adb_read(
+                    "adb", ["shell", "pm", "clear", obs.RESEARCH_PACKAGE], serial=None,
+                )
+            fake.assert_not_called()
+
     def test_only_whitelisted_read_only_adb_commands_and_one_exact_package(self):
         calls = []
         answers = iter((PM_PATHS, DUMPSYS, str(PID), SAMPLE))

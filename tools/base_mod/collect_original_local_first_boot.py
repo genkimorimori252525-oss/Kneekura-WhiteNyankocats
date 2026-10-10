@@ -370,10 +370,30 @@ def build_original_local_boot_metadata_receipt(
     }
 
 
+def _allowed_adb_step_name(args: list[str]) -> str:
+    """Stage-only diagnostic. Never echo potentially sensitive raw argv."""
+    if args == ["shell", "pm", "path", RESEARCH_PACKAGE]:
+        return "split-installation"
+    if args == ["shell", "dumpsys", "package", RESEARCH_PACKAGE]:
+        return "package-permissions"
+    if args == ["shell", "pidof", RESEARCH_PACKAGE]:
+        return "running-process"
+    if (len(args) == 8 and args[:4] == ["logcat", "-d", "-v", "threadtime"]
+        and re.fullmatch(r"--pid=[0-9]{1,7}", args[4])
+        and args[5:] == ["-s", f"{LOG_TAG}:I", "*:S"]):
+        return "scoped-native-logcat"
+    return "unrecognized"
+
+
 def _adb_read(
     adb: str, args: list[str], *, serial: str | None,
     timeout: int = 20,
 ) -> str:
+    stage = _allowed_adb_step_name(args)
+    if stage == "unrecognized":
+        raise OriginalLocalBootObservationError(
+            "unsupported ADB command in original-game observer"
+        )
     argv = [adb]
     if serial:
         if not re.fullmatch(r"[A-Za-z0-9._:-]{1,128}", serial):
@@ -385,13 +405,21 @@ def _adb_read(
             argv, capture_output=True, check=False, text=True,
             errors="replace", timeout=timeout,
         )
-    except (OSError, subprocess.TimeoutExpired) as exc:
+    except subprocess.TimeoutExpired as exc:
         raise OriginalLocalBootObservationError(
-            "read-only adb command could not finish"
+            f"read-only ADB stage {stage} timed out after {timeout}s; "
+            "do not clear game data or reinstall; check USB connection and "
+            "run that specific read-only ADB check"
+        ) from exc
+    except OSError as exc:
+        raise OriginalLocalBootObservationError(
+            f"read-only ADB stage {stage} could not start; "
+            "check installed Android SDK platform-tools"
         ) from exc
     if result.returncode != 0:
         raise OriginalLocalBootObservationError(
-            "read-only adb command failed (raw stderr intentionally suppressed)"
+            f"read-only ADB stage {stage} failed with exit code "
+            f"{result.returncode}; raw device output was suppressed"
         )
     if len(result.stdout) > 2_000_000:
         raise OriginalLocalBootObservationError("adb metadata output too large")
@@ -406,7 +434,12 @@ def collect_original_local_boot_adb(
         raise OriginalLocalBootObservationError("invalid adb executable")
     package = RESEARCH_PACKAGE  # fixed: NEVER operate on the official package
     pm_paths = _adb_read(adb, ["shell", "pm", "path", package], serial=serial)
-    dump = _adb_read(adb, ["shell", "dumpsys", "package", package], serial=serial)
+    # On large Android installs dumpsys package can exceed the default
+    # twenty-second allowance; distinguish this from native crash / PID loss.
+    dump = _adb_read(
+        adb, ["shell", "dumpsys", "package", package],
+        serial=serial, timeout=45,
+    )
     if f"Package [{package}]" not in dump or "android.permission.INTERNET" in dump:
         raise OriginalLocalBootObservationError(
             "original local-research package does not meet fail-closed permissions gate"
@@ -420,7 +453,7 @@ def collect_original_local_boot_adb(
         ["logcat", "-d", "-v", "threadtime", f"--pid={pid}",
          "-s", f"{LOG_TAG}:I", "*:S"],
         serial=serial,
-        timeout=25,
+        timeout=45,
     )
     return build_original_local_boot_metadata_receipt(
         pm_paths=pm_paths, dumpsys_package=dump,
