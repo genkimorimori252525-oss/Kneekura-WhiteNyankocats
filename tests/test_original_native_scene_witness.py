@@ -110,6 +110,57 @@ class OriginalNativeSceneResearchObserverTests(unittest.TestCase):
             )
             self.assertEqual(compile_step.returncode, 0, compile_step.stderr)
 
+    def test_optimized_research_elf_keeps_public_identity_and_scene_markers(self):
+        """Build an optimized host-only mock ELF; marker must survive -O2/GC.
+
+        This doesn't constitute a genuine Android ABI or JNI runtime test.
+        """
+        compiler = shutil.which("gcc") or shutil.which("clang")
+        nm = shutil.which("nm")
+        strings = shutil.which("strings")
+        if not (compiler and nm and strings):
+            self.skipTest("host C compiler and binary inspection tools unavailable")
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            android_dir = root / "android"
+            android_dir.mkdir()
+            (android_dir / "log.h").write_text(
+                "#define ANDROID_LOG_INFO 4\n"
+                "int __android_log_write(int, const char*, const char*);\n",
+                encoding="utf-8",
+            )
+            (root / "logger.c").write_text(
+                "int __android_log_write(int level, const char *tag, "
+                "const char *message) {"
+                "(void)level;(void)tag;(void)message;return 0;}",
+                encoding="utf-8",
+            )
+            so = root / "libscene-witness-optimized-mock.so"
+            build = subprocess.run(
+                [compiler, "-std=c11", "-O2", "-Wall", "-Wextra", "-Werror",
+                 "-fvisibility=hidden", "-ffunction-sections", "-fdata-sections",
+                 "-fPIC", "-shared", "-Wl,--gc-sections",
+                 "-D__ANDROID__", "-D__aarch64__",
+                 "-DKNEEKURA_RESEARCH_SCENE_WITNESS=1",
+                 "-I", str(root), "-I", str(NATIVE / "include"),
+                 str(WITNESS), str(POLICY), str(root / "logger.c"), "-ldl",
+                 "-o", str(so)],
+                capture_output=True, text=True, timeout=50,
+            )
+            self.assertEqual(build.returncode, 0, build.stderr)
+            symbols = subprocess.run(
+                [nm, "-D", str(so)], capture_output=True, text=True,
+                timeout=15, check=True,
+            ).stdout
+            all_strings = subprocess.run(
+                [strings, "-a", str(so)], capture_output=True, text=True,
+                timeout=15, check=True,
+            ).stdout.splitlines()
+            self.assertIn("kneekura_scene_research_package_identity", symbols)
+            self.assertIn("kneekura_scene_research_event_format", symbols)
+            self.assertIn("jp.kn.local.battlecats", all_strings)
+            self.assertIn("original-native-scene-v1 id=%u", all_strings)
+
     def test_without_research_flag_compile_is_rejected_before_any_hook(self):
         compiler = shutil.which("gcc") or shutil.which("clang")
         if not compiler:
