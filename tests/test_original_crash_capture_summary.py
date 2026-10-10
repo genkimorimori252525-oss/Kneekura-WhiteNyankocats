@@ -55,7 +55,8 @@ class OriginalPrivateCrashMetadataTests(unittest.TestCase):
         result = summarize(log)
         self.assertEqual(result["reported_shadowhook_init_status_codes"], {"12":1})
         self.assertEqual(result["native_hook_event_counts"]["hook-runtime-init-failed"], 1)
-        self.assertEqual(result["native_hook_event_counts"]["hook-api-missing"], 1)
+        # PID 999 has no matching ActivityManager research process witness.
+        self.assertNotIn("hook-api-missing", result["native_hook_event_counts"])
         self.assertEqual(result["status"], "INSUFFICIENT_FOR_ROOT_CAUSE")
         self.assertNotIn("999999", str(result))
 
