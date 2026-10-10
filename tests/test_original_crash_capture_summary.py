@@ -77,6 +77,21 @@ class OriginalPrivateCrashMetadataTests(unittest.TestCase):
                 from_private_capture(repo=root, raw=root/"outside-raw.txt")
             self.assertFalse(result["original_gameplay_SAVE_level60_passed"])
 
+    def test_one_shot_owner_ps_script_sanitizes_before_sharing(self):
+        source_file = (Path(__file__).resolve().parents[1] /
+                       "tools/base_mod/CAPTURE-OWNER-ORIGINAL-CRASH.ps1")
+        data = source_file.read_bytes()
+        self.assertTrue(data.startswith(bytes((239, 187, 191))))
+        source = data.decode("utf-8-sig")
+        self.assertIn("tools.base_mod.summarize_original_crash_capture", source)
+        self.assertIn("'jp.kn.local.battlecats'", source)
+        self.assertIn("Start-Process @startOptions", source)
+        self.assertIn("Stop-Process -Id $proc.Id", source)
+        self.assertIn("PRIVATE-RESEARCH-AGGREGATE-PASS", source)
+        for forbidden in ("install-multiple", " pm clear ", "adb uninstall",
+                          "shell am force-stop", "logcat -c"):
+            self.assertNotIn(forbidden, source)
+
     def test_malformed_log_and_unknown_tags_not_gameplay_proof(self):
         result = summarize(
             row(777, "KNEEKURA_STATIC_HTTP", "original-native-scene-v1 id=101")
