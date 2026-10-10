@@ -121,6 +121,8 @@ static void *gUpgradeHookStub = NULL;
 static void *gSaveHookStub = NULL;
 static void *gAppLaunchReadHookStub = NULL;
 static void *gShadowHookLibrary = NULL;
+/* A partially installed/reverted hook chain MUST NEVER activate the writer. */
+static _Atomic uint32_t gAllOriginalHooksInstalled = 0u;
 
 /*
  * NEVER a default behavior. The whole experiment requires a special native
@@ -223,6 +225,8 @@ Java_jp_kn_local_battlecats_MyActivity_kneekuraAttestVirginRoot(
     (void)owner_class;
     if (env == NULL || java_canonical_root == NULL
         || !current_process_is_isolated_original_research()
+        || atomic_load_explicit(
+               &gAllOriginalHooksInstalled, memory_order_acquire) != 1u
         || gShadowHookLibrary == NULL || gAppLaunchReadHookStub == NULL
         || gOriginalAppLaunchLoader == NULL || gOriginalSaveWrapper == NULL
         || atomic_load_explicit(&gVirginTrialState, memory_order_acquire)
@@ -575,6 +579,8 @@ static int32_t research_original_app_launch_read_proxy(void *game_context) {
         && game_context != NULL
         && caller == expected_caller
         && gShadowHookLibrary != NULL
+        && atomic_load_explicit(
+               &gAllOriginalHooksInstalled, memory_order_acquire) == 1u
         && virgin_source_root_remains_trusted()) {
         uint32_t expected = VIRGIN_TRIAL_ATTESTED;
         if (atomic_compare_exchange_strong_explicit(
@@ -714,6 +720,8 @@ static void kneekura_init_scene_witness_research_only(void) {
         || gUpgradeHookStub == NULL || gOriginalUpgradeGate == NULL
         || gSaveHookStub == NULL || gOriginalSaveWrapper == NULL
         || gAppLaunchReadHookStub == NULL || gOriginalAppLaunchLoader == NULL) {
+        atomic_store_explicit(
+            &gAllOriginalHooksInstalled, 0u, memory_order_release);
         /* A partially patched JNI/level/save path can corrupt execution
          * if left behind. Undo in reverse order. Any failed unhook keeps
          * ShadowHook mapped; logging must not claim coherent attachment. */
@@ -750,6 +758,8 @@ static void kneekura_init_scene_witness_research_only(void) {
      * ALL source-exact scene, LEVEL, SAVE-WRITER and app-launch READ
      * observers are usable. The read hook never writes player state. */
     gShadowHookLibrary = library;
+    atomic_store_explicit(
+        &gAllOriginalHooksInstalled, 1u, memory_order_release);
     __android_log_write(
         ANDROID_LOG_INFO, WITNESS_TAG,
         "original-native-scene-hook-v1 installed");
