@@ -125,7 +125,7 @@ struct NativeElfWitness {
     unsigned original_library_count;
 };
 
-static int inspect_original_library(const struct dl_phdr_info *info,
+static int inspect_original_library(struct dl_phdr_info *info,
                                     size_t size, void *private_value) {
     (void)size;
     struct NativeElfWitness *witness = (struct NativeElfWitness *)private_value;
