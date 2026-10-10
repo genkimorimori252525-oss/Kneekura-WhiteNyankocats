@@ -33,6 +33,16 @@ ORIGINAL_SCENE_ANCHORS = {
     0x53B2BC: 0xA9BB7BFD,  # original unit effective-cap getter(int)
     0x53BE0C: 0xA9BA7BFD,  # original upgrade-allowed predicate(int)
     0x8B9FC8: 0xD10103FF,  # original SAVE_DATA serializer wrapper(void*)
+    # Exact original caller edges. Getter's only direct caller builds a level
+    # text; eligibility has five callers, including actual upgrade 0x8581FC.
+    0x821904: 0x97F4666E,  # BL -> 0x53B2BC (label-related caller)
+    0x8581FC: 0x97F38F04,  # BL -> 0x53BE0C (upgrade eligibility)
+    0x85C734: 0x97F37DB6,
+    0x860224: 0x97F36EFA,
+    0x88CB00: 0x97F2BCC3,
+    0x88E884: 0x97F2B562,
+    0x858390: 0x940600D5,  # BL -> original XP encoded write
+    0x8583B8: 0x9405CF25,  # BL -> CURRENT level upper16 +1
 }
 ELF64_LOAD = 1
 ELF64_DYNSYM = 11

@@ -204,6 +204,17 @@ static int source_words_match_exact_original(uintptr_t base) {
         {ORIGINAL_UNIT_CAP_GETTER, 0xA9BB7BFDu},
         {ORIGINAL_UPGRADE_GATE, 0xA9BA7BFDu},
         {ORIGINAL_SAVE_WRAPPER, 0xD10103FFu},
+        /* Original direct-call graph; cap getter is NOT a proven purchase
+         * call. 0x8581fc is the original actual upgrade predicate call. */
+        {0x821904u, 0x97F4666Eu},
+        {0x8581FCu, 0x97F38F04u},
+        {0x85C734u, 0x97F37DB6u},
+        {0x860224u, 0x97F36EFAu},
+        {0x88CB00u, 0x97F2BCC3u},
+        {0x88E884u, 0x97F2B562u},
+        /* Main purchase path: native XP debit and CURRENT base level +1. */
+        {0x858390u, 0x940600D5u},
+        {0x8583B8u, 0x9405CF25u},
     };
     for (size_t i = 0; i < sizeof(anchors) / sizeof(anchors[0]); ++i) {
         uint32_t actual = 0u;

@@ -135,6 +135,108 @@ def _decode_relative_bl(elf: bytes, address: int) -> int:
     return address + displacement
 
 
+# Complete direct-AArch64-BL census of three level-up/SAVE observer targets.
+# Source is ONLY the exact owner SHA-256-pinned JP15.7.1 native ELF.
+# The 158 generic SAVE wrapper callsites must NOT be treated as 158 upgrades.
+ORIGINAL_LEVEL_OBSERVER_DIRECT_CALLS = {
+    "cap_computation": {
+        "entry": 0x53B2BC,
+        "expected_callers": (0x821904,),
+        "count": 1,
+        "packed_pcs_sha256": "9f091e657001dd7e767d742ec7da96c6f953bd44fcb660b3bbbd1051aaa0f5c6",
+    },
+    "upgrade_eligibility": {
+        "entry": 0x53BE0C,
+        "expected_callers": (0x8581FC, 0x85C734, 0x860224, 0x88CB00, 0x88E884),
+        "count": 5,
+        "packed_pcs_sha256": "49730332c05914ae281116973102821777cc3c507fe6e8c08537fa79eec86e34",
+    },
+    "generic_save_wrapper": {
+        "entry": 0x8B9FC8,
+        "expected_callers": None,
+        "count": 158,
+        "packed_pcs_sha256": "995c80e5263feb86555ad12b92fd30a5a1d60e2223dc9f5cbd7d38ad70bfd3c9",
+    },
+}
+
+
+def direct_arm64_bl_caller_map(
+    elf: bytes, targets: tuple[int, ...], *,
+    text_start: int, text_end: int,
+) -> dict[int, list[int]]:
+    """Enumerate *direct* BL targets, without treating BR/BLR as proven.
+
+    Return only callsite address metadata. No disassembly, player state,
+    source function bytes or speculative transitive call claims escape.
+    """
+    if (type(elf) is not bytes
+        or not isinstance(targets, tuple) or not targets
+        or any(type(target) is not int or target < 0 or target % 4
+               for target in targets)
+        or len(set(targets)) != len(targets)
+        or type(text_start) is not int or type(text_end) is not int
+        or text_start < 0 or text_start % 4 or text_end % 4
+        or text_start >= text_end or text_end > len(elf)):
+        raise LevelUpNativeTraceError("invalid original direct BL census bounds")
+    callers = {target: [] for target in targets}
+    for pc in range(text_start, text_end, 4):
+        instruction = _u32(elf, pc)
+        if instruction & 0xFC000000 != 0x94000000:
+            continue
+        dest = pc + _sign_extend(instruction & 0x03FFFFFF, 26) * 4
+        if dest in callers:
+            callers[dest].append(pc)
+    return callers
+
+
+def _original_level_observer_direct_call_census(elf: bytes) -> dict[str, Any]:
+    """Fail closed on actual original callsite COUNT or SHA drift.
+
+    This does not prove true runtime transaction sequence or original-device
+    local save, and the single cap getter direct caller isn't the UI purchase.
+    """
+    if len(elf) < TEXT_END:
+        raise LevelUpNativeTraceError("original complete direct BL corpus unavailable")
+    refs = direct_arm64_bl_caller_map(
+        elf,
+        tuple(spec["entry"] for spec in ORIGINAL_LEVEL_OBSERVER_DIRECT_CALLS.values()),
+        text_start=TEXT_START, text_end=TEXT_END,
+    )
+    report = {}
+    for label, spec in ORIGINAL_LEVEL_OBSERVER_DIRECT_CALLS.items():
+        callers = refs[spec["entry"]]
+        digest = sha256(b"".join(struct.pack("<I", pc) for pc in callers)).hexdigest()
+        if (len(callers) != spec["count"]
+            or digest != spec["packed_pcs_sha256"]
+            or (spec["expected_callers"] is not None
+                and tuple(callers) != spec["expected_callers"])):
+            raise LevelUpNativeTraceError(
+                "exact JP original observer direct BL caller set drifted: " + label
+            )
+        report[label] = {
+            "original_target": _hex(spec["entry"]),
+            "direct_BL_caller_count": len(callers),
+            "all_direct_BL_callsite_pcs_sha256": digest,
+            "verified_direct_BL_sites": (
+                [_hex(pc) for pc in callers]
+                if spec["expected_callers"] is not None else []
+            ),
+        }
+    return {
+        "status": "PINNED_REAL_JP15_7_1_ORIGINAL_DIRECT_BL_CALLER_CENSUS",
+        "original_text_scan": [_hex(TEXT_START), _hex(TEXT_END)],
+        "observed_sources": report,
+        "cap_getter_only_direct_source_is_level_text_constructor": True,
+        "purchase_eligibility_original_BL_from_0x8581fc": True,
+        "generic_SAVE_wrapper_called_for_non_purchase_operations_too": True,
+        "native_runtime_sequence_observed_on_android": False,
+        "native_LEVEL_purchase_XP_debit_persisted_after_reboot": False,
+        "indirect_or_virtual_calls_enumerated": False,
+        "modified_original_native_or_player_SAVE": False,
+    }
+
+
+
 def _popup_value_call_chain(elf: bytes) -> dict:
     """Confirm original level-max popup compares an OBFUSCATED count.
 
@@ -2416,6 +2518,7 @@ def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict
         "original_unit_data_loader": _original_unit_data_loader(elf),
         "original_effective_level_cap_getter": _original_effective_level_cap_getter(elf),
         "original_upgrade_purchase_flow": _original_upgrade_purchase_flow(elf),
+        "original_level_observer_direct_callsite_census": _original_level_observer_direct_call_census(elf),
         "original_save_data_serialization": _original_save_data_serialization(elf),
         "original_save_restore_flow": _original_save_restore_flow(elf),
         "original_cap_increment_item_transaction": _original_cap_increment_item_transaction(elf),

@@ -190,6 +190,16 @@ class OriginalNativeLocalFirstBootMetadataTests(TestCase):
                 ["original-native-save-wrapper-v1 original-returned"], 1
         )
         self.assertNotIn("SECRET", repr(receipt))
+        self.assertEqual(
+            receipt["signals"]["original_level_observer_event_order_uncorrelated"],
+            [
+                "original-native-level-cap-getter-v1 original-returned",
+                "original-native-upgrade-gate-v1 original-returned",
+                "original-native-save-wrapper-v1 original-returned",
+            ],
+        )
+        self.assertTrue(receipt["observed_level_gate_then_SAVE_wrapper_log_order_only"])
+        self.assertFalse(receipt["original_level_purchase_and_SAVE_same_transaction_proven"])
         self.assertFalse(receipt["original_gameplay_SAVE_validated_or_generated"])
         self.assertFalse(receipt["original_stage_level60_xp_catseye_gameplay_verified"])
         self.assertFalse(receipt["finished_original_game_offline_product"])

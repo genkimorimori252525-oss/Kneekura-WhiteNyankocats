@@ -58,6 +58,7 @@ from tools.base_mod.trace_original_levelup_native import (
     _levelmax_popup_branch,
     _popup_value_call_chain,
     direct_adrp_add_refs, trace_exact_native,
+    direct_arm64_bl_caller_map, ORIGINAL_LEVEL_OBSERVER_DIRECT_CALLS,
 )
 
 
@@ -245,6 +246,59 @@ def _synthetic_native_resource_ctor_init_array() -> bytearray:
 
 
 class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
+    def test_original_direct_BL_census_distinguishes_call_and_branch(self):
+        # Only synthetic ARM64 words; no real ELF source or player data.
+        blob = bytearray(256)
+        # Positive and negative PC-relative displacements must both decode.
+        for at, target in ((0x20, 0x70), (0x90, 0x70), (0xA0, 0xB0)):
+            relative_words = ((target - at) // 4) & 0x03FFFFFF
+            struct.pack_into("<I", blob, at, 0x94000000 | relative_words)
+        # A plain B with the same relative offset must not appear as a call.
+        struct.pack_into("<I", blob, 0xB4,
+                         0x14000000 | (((0x70 - 0xB4) // 4) & 0x03FFFFFF))
+        grouped = direct_arm64_bl_caller_map(
+            bytes(blob), (0x70, 0xB0, 0xC0),
+            text_start=0x10, text_end=0xC0,
+        )
+        self.assertEqual(grouped, {
+            0x70: [0x20, 0x90], 0xB0: [0xA0], 0xC0: [],
+        })
+        self.assertEqual(
+            direct_arm64_bl_caller_map(
+                bytes(blob), (0x70,), text_start=0x80, text_end=0xC0
+            )[0x70], [0x90],
+        )
+
+    def test_original_BL_census_rejects_bad_bounds_or_duplicate_targets(self):
+        data = bytes(256)
+        bad = (
+            ((0x70, 0x70), 0, 0x100),
+            ((0x71,), 0, 0x100),
+            ((0x70,), 2, 0x100),
+            ((0x70,), 0, 0x101),
+            ((0x70,), 0x100, 0x100),
+            ((0x70,), 0, 0x200),
+        )
+        for targets, begin, end in bad:
+            with self.subTest(targets=targets, begin=begin, end=end):
+                with self.assertRaises(LevelUpNativeTraceError):
+                    direct_arm64_bl_caller_map(
+                        data, targets, text_start=begin, text_end=end
+                    )
+
+    def test_exact_native_observer_callsite_pins_explicitly_limit_inference(self):
+        source = ORIGINAL_LEVEL_OBSERVER_DIRECT_CALLS
+        self.assertEqual(source["cap_computation"]["expected_callers"], (0x821904,))
+        self.assertEqual(source["upgrade_eligibility"]["expected_callers"], (
+            0x8581FC, 0x85C734, 0x860224, 0x88CB00, 0x88E884
+        ))
+        self.assertEqual(source["generic_save_wrapper"]["count"], 158)
+        self.assertIsNone(source["generic_save_wrapper"]["expected_callers"])
+        self.assertEqual(
+            source["generic_save_wrapper"]["packed_pcs_sha256"],
+            "995c80e5263feb86555ad12b92fd30a5a1d60e2223dc9f5cbd7d38ad70bfd3c9",
+        )
+
     def test_decodes_real_arm64_adrp_add_page_and_register(self):
         code = bytearray(0x4000)
         put_direct_ref(code, pc=0x1000, target=0x2A55, reg=8)

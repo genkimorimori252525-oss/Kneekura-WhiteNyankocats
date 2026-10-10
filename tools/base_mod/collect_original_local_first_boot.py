@@ -105,6 +105,7 @@ def sanitized_original_activity_events(logcat: str, *, pid: int) -> dict[str, An
     later_save_seen_present = False
     last_download_coverage: dict[str, int] | None = None
     scene_events: list[int] = []
+    level_event_order: list[str] = []
     hook_install_marker_seen = False
     for line in logcat.splitlines():
         match = LOG_LINE.fullmatch(line)
@@ -119,6 +120,10 @@ def sanitized_original_activity_events(logcat: str, *, pid: int) -> dict[str, An
         if msg in NATIVE_LEVEL_EVENTS:
             if hook_install_marker_seen:
                 counts[msg] += 1
+                # In-process marker ordering, not correlated purchase proof.
+                if (len(level_event_order) < 32
+                    and (not level_event_order or level_event_order[-1] != msg)):
+                    level_event_order.append(msg)
             continue
         scene_match = NATIVE_SCENE_MESSAGE.fullmatch(msg)
         if scene_match:
@@ -169,6 +174,16 @@ def sanitized_original_activity_events(logcat: str, *, pid: int) -> dict[str, An
         ),
         "denied_HTTP_calls_observed": counts["original-local-denied-http-v1"],
         "optional_native_hook_installed_marker_seen": hook_install_marker_seen,
+        "original_level_observer_event_order_uncorrelated": level_event_order,
+        "upgrade_gate_log_precedes_SAVE_wrapper_log_same_PID_only": (
+            "original-native-upgrade-gate-v1 original-returned" in level_event_order
+            and "original-native-save-wrapper-v1 original-returned"
+                in level_event_order[
+                    level_event_order.index(
+                        "original-native-upgrade-gate-v1 original-returned"
+                    ) + 1:
+                ]
+        ),
         "original_level_cap_getter_called": (
             counts["original-native-level-cap-getter-v1 original-returned"] > 0
         ),
@@ -255,6 +270,12 @@ def build_original_local_boot_metadata_receipt(
         ),
         # A wrapper invocation cannot establish XP debit, first SAVE
         # creation, fsync, correct readback, Lv60 upgrade, or 0 egress.
+        "observed_level_gate_then_SAVE_wrapper_log_order_only": (
+            root_seen and observation[
+                "upgrade_gate_log_precedes_SAVE_wrapper_log_same_PID_only"
+            ]
+        ),
+        "original_level_purchase_and_SAVE_same_transaction_proven": False,
         "original_gameplay_SAVE_validated_or_generated": False,
         "original_stage_level60_xp_catseye_gameplay_verified": False,
         "original_Jolly_i_gacha_events_stage_liveops_verified": False,
