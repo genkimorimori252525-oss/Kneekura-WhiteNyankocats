@@ -336,6 +336,61 @@ class GodzillaNo703FirstFormCandidateTests(unittest.TestCase):
             self.assertFalse(output.exists())
             self.assertFalse(list(root.glob(".kneekura-ally-rig-preview-*")))
 
+    def test_numeric_timeline_summary_is_bounded_and_not_native_hit_proof(self):
+        # Fixture labels/content must never leak through numeric metadata.
+        source = b"\\n".join([
+            b"[modelanim:animation2]", b"2", b"3",
+            b"1,5,-1,0,0,SECRET_LABEL", b"4",
+            b"-10,1,2,3", b"0,9,8,7", b"130,3,2,1", b"210,4,5,6",
+            b"-2,11,-1,0,0,OTHER_SECRET", b"3",
+            b"0,2,3,4", b"170,4,5,6", b"210,7,8,9",
+            b"0,9,0,0,0,THIRD_SECRET", b"0", b"",
+        ]).replace(b"\\n", b"\n")
+        stats = preview._inspect_animation(source, name="fixture.maanim", model_node_count=3)
+        self.assertEqual(stats["track_count"], 3)
+        self.assertEqual(stats["keyframe_count"], 7)
+        self.assertEqual(stats["first_nonnegative_frame_number"], 0)
+        self.assertEqual(stats["last_nonnegative_frame_number"], 210)
+        self.assertEqual(stats["earliest_negative_frame_number"], -10)
+        self.assertEqual(stats["nonnegative_frame_key_count"], 6)
+        self.assertEqual(stats["unique_nonnegative_frame_indices"], 4)
+        self.assertEqual(stats["tracks_with_nonnegative_keys"], 2)
+        self.assertEqual(stats["tracks_with_negative_keys"], 1)
+        self.assertEqual(stats["tracks_reaching_last_nonnegative_frame"], 2)
+        self.assertEqual(stats["zero_keyframe_track_count"], 1)
+        self.assertEqual(stats["special_minus_two_node_track_count"], 1)
+        self.assertEqual(stats["most_keyed_nonnegative_frames"][0],
+                         {"frame": 0, "key_count": 2})
+        self.assertEqual(stats["candidate_hit_timing_130_170_210_exact_key_counts_only"],
+                         {"130": 1, "170": 1, "210": 2})
+        self.assertFalse(stats["hit_events_proven_from_maanim"])
+        summary = __import__("json").dumps(stats)
+        self.assertNotIn("SECRET", summary)
+        self.assertNotIn("OTHER_SECRET", summary)
+
+    def test_negative_only_and_empty_timelines_have_null_positive_bounds(self):
+        samples = [
+            (b"[modelanim:animation2]\\n2\\n1\\n0,5,-1,0,0,SECRET\\n2\\n-9,0,0,0\\n-1,0,0,0\\n",
+             2, -1, -9),
+            (b"[modelanim:animation2]\\n2\\n0\\n", 0, None, None),
+        ]
+        for blob, keys, max_frame, earliest in samples:
+            with self.subTest(keys=keys):
+                stats = preview._inspect_animation(blob, name="fixture.maanim",
+                                                   model_node_count=3)
+                self.assertEqual(stats["keyframe_count"], keys)
+                self.assertEqual(stats["largest_frame_number"], max_frame)
+                self.assertEqual(stats["earliest_negative_frame_number"], earliest)
+                self.assertIsNone(stats["first_nonnegative_frame_number"])
+                self.assertIsNone(stats["last_nonnegative_frame_number"])
+                self.assertEqual(stats["tracks_reaching_last_nonnegative_frame"], 0)
+                self.assertEqual(stats["most_keyed_nonnegative_frames"], [])
+                self.assertEqual(
+                    stats["candidate_hit_timing_130_170_210_exact_key_counts_only"],
+                    {"130": 0, "170": 0, "210": 0},
+                )
+
+
 
 if __name__ == "__main__":
     unittest.main()

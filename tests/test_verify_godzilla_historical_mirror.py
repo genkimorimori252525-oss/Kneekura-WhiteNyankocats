@@ -69,6 +69,19 @@ class EphemeralRealGodzillaMirrorTests(unittest.TestCase):
                         "special_minus_two_node_track_count": 0,
                         "largest_frame_number": 80,
                         "zero_keyframe_track_count": 0,
+                        "first_nonnegative_frame_number": 0,
+                        "last_nonnegative_frame_number": 80,
+                        "earliest_negative_frame_number": -1,
+                        "nonnegative_frame_key_count": 3,
+                        "unique_nonnegative_frame_indices": 3,
+                        "tracks_with_nonnegative_keys": 1,
+                        "tracks_with_negative_keys": 1,
+                        "tracks_reaching_last_nonnegative_frame": 1,
+                        "most_keyed_nonnegative_frames": [
+                            {"frame": 80, "key_count": 1}
+                        ],
+                        "candidate_hit_timing_130_170_210_exact_key_counts_only":
+                            {"130": 0, "170": 0, "210": 0},
                     } for i in range(4)
                 },
             },
@@ -147,6 +160,14 @@ class EphemeralRealGodzillaMirrorTests(unittest.TestCase):
                 ["candidate_matches_original_friendly_root_scale_sign"]
         )
         self.assertEqual(report["real_model_conversion"]["atlas_550_to_702_rows"], 44)
+        self.assertEqual(
+            report["original_animation_track_summaries"]["550_e02.maanim"]
+                ["last_nonnegative_frame_number"], 80,
+        )
+        self.assertFalse(
+            report["original_animation_track_summaries"]["550_e02.maanim"]
+                ["hit_events_proven_from_maanim"],
+        )
         self.assertFalse(report["ready_to_install_or_ship"])
         self.assertFalse(report["actual_original_Android_renderer_accepted"])
         self.assertNotIn(original_secret.decode(), json.dumps(report))

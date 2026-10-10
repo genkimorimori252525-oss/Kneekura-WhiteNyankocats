@@ -286,6 +286,27 @@ def verify_public_mirror_volatile(
                         info["special_minus_two_node_track_count"],
                     "largest_frame_number": info["largest_frame_number"],
                     "zero_keyframe_track_count": info["zero_keyframe_track_count"],
+                    "first_nonnegative_frame_number":
+                        info["first_nonnegative_frame_number"],
+                    "last_nonnegative_frame_number":
+                        info["last_nonnegative_frame_number"],
+                    "earliest_negative_frame_number":
+                        info["earliest_negative_frame_number"],
+                    "nonnegative_frame_key_count":
+                        info["nonnegative_frame_key_count"],
+                    "unique_nonnegative_frame_indices":
+                        info["unique_nonnegative_frame_indices"],
+                    "tracks_with_nonnegative_keys":
+                        info["tracks_with_nonnegative_keys"],
+                    "tracks_with_negative_keys":
+                        info["tracks_with_negative_keys"],
+                    "tracks_reaching_last_nonnegative_frame":
+                        info["tracks_reaching_last_nonnegative_frame"],
+                    "most_keyed_nonnegative_frames":
+                        info["most_keyed_nonnegative_frames"],
+                    "candidate_hit_timing_130_170_210_exact_key_counts_only":
+                        info["candidate_hit_timing_130_170_210_exact_key_counts_only"],
+                    "hit_events_proven_from_maanim": False,
                 }
                 for name, info in sorted(ally["animations_untouched"].items())
             }

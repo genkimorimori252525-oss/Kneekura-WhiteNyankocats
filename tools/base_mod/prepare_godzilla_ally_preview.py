@@ -20,6 +20,7 @@ The original source/receipt is never written, and second-form 702_c is untouched
 """
 from __future__ import annotations
 
+from collections import Counter
 from hashlib import sha256
 import json
 from pathlib import Path
@@ -225,11 +226,11 @@ def _rewrite_model(raw: bytes, *, sprite_part_count: int) -> tuple[bytes, dict[s
 def _inspect_animation(
     raw: bytes, *, name: str, model_node_count: int,
 ) -> dict[str, Any]:
-    """Original tracks are tied to model node indices, not free-standing CSV.
+    """Validate original tracks and report bounded numeric frame metadata.
 
-    The owned JP15.7.1 ImageDataLocal corpus has genuine .maanim files
-    with zero tracks, zero-keyframe tracks, signed/negative frame indices,
-    and a special -2 node reference. Keep all source bytes unchanged.
+    Frame indices are animation data, NOT native hit callbacks, attack cycle
+    duration or Android render proof. No animation labels, raw source rows,
+    or original binary/text content are written to metadata reports.
     """
     lines = _native_lines(raw, label=name)
     header = _text_at(lines, 0, label=name)
@@ -245,6 +246,14 @@ def _inspect_animation(
     special_node_tracks = 0
     zero_frame_tracks = 0
     max_frame = None
+    min_negative = None
+    min_nonnegative = None
+    max_nonnegative = None
+    tracks_with_nonnegative = 0
+    tracks_with_negative = 0
+    track_last_nonnegative: list[int] = []
+    # Aggregate only numbers, never proprietary animation values/labels.
+    frame_density: Counter[int] = Counter()
     for _ in range(count):
         track = _text_at(lines, current, label=name)
         columns = track.split(",", 5)
@@ -263,8 +272,6 @@ def _inspect_animation(
             raise OriginalGodzillaRigPreviewError(
                 name + ": animation refers to nonexistent model node"
             )
-        # Eight zero-track .maanim files and six zero-keyframe tracks were
-        # found across 1,814 original local animation assets.
         frames = _positive_int(_text_at(lines, current + 1, label=name),
                                label=name + " keyframes",
                                max_value=50000, minimum=0)
@@ -273,6 +280,8 @@ def _inspect_animation(
         end = current + 2 + frames
         if end > len(lines):
             raise OriginalGodzillaRigPreviewError(name + ": truncated keyframes")
+        track_last = None
+        track_negative = False
         for at in range(current + 2, end):
             fields = _text_at(lines, at, label=name).split(",")
             if len(fields) != 4:
@@ -292,12 +301,30 @@ def _inspect_animation(
                 )
             if frame < 0:
                 negative_frame_keys += 1
+                track_negative = True
+                min_negative = frame if min_negative is None else min(min_negative, frame)
+            else:
+                frame_density[frame] += 1
+                track_last = frame if track_last is None else max(track_last, frame)
+                min_nonnegative = frame if min_nonnegative is None else min(min_nonnegative, frame)
+                max_nonnegative = frame if max_nonnegative is None else max(max_nonnegative, frame)
             if max_frame is None or frame > max_frame:
                 max_frame = frame
         current = end
         keyframes += frames
+        if track_last is not None:
+            tracks_with_nonnegative += 1
+            track_last_nonnegative.append(track_last)
+        if track_negative:
+            tracks_with_negative += 1
     if current != len(lines):
         raise OriginalGodzillaRigPreviewError(name + ": trailing/unparsed frame data")
+    # The source hint 130/170/210 is NOT an established original hit schedule.
+    # Exact-key counts merely reveal whether these frame indices carry keys.
+    probes = {"130": frame_density[130], "170": frame_density[170],
+              "210": frame_density[210]}
+    most_dense = sorted(frame_density.items(),
+                        key=lambda item: (-item[1], item[0]))[:8]
     return {
         "native_animation_format": header,
         "track_count": count,
@@ -307,10 +334,24 @@ def _inspect_animation(
         "negative_frame_key_count": negative_frame_keys,
         "special_minus_two_node_track_count": special_node_tracks,
         "largest_frame_number": max_frame,
+        "first_nonnegative_frame_number": min_nonnegative,
+        "last_nonnegative_frame_number": max_nonnegative,
+        "earliest_negative_frame_number": min_negative,
+        "nonnegative_frame_key_count": sum(frame_density.values()),
+        "unique_nonnegative_frame_indices": len(frame_density),
+        "tracks_with_nonnegative_keys": tracks_with_nonnegative,
+        "tracks_with_negative_keys": tracks_with_negative,
+        "tracks_reaching_last_nonnegative_frame":
+            sum(value == max_nonnegative for value in track_last_nonnegative)
+            if max_nonnegative is not None else 0,
+        "most_keyed_nonnegative_frames": [
+            {"frame": frame, "key_count": freq} for frame, freq in most_dense
+        ],
+        "candidate_hit_timing_130_170_210_exact_key_counts_only": probes,
+        "hit_events_proven_from_maanim": False,
         "model_node_references_validated": True,
         "keyframe_bytes_preserved_identical": True,
     }
-
 
 def preview_converted_ally_rig(
     source: dict[str, bytes], *, source_receipt: dict | None = None,
