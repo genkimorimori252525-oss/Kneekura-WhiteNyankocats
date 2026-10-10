@@ -1182,6 +1182,17 @@ class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
                 ["download_9.tsv"],
             )
             self.assertTrue(report["native_static_registration_indices_joined"])
+            self.assertTrue(
+                report["original_native_same_key_first_successful_registration_rule_static_proven"]
+            )
+            self.assertEqual(
+                report["conditional_first_source_for_duplicate_names_if_all_register"],
+                {"download_9.tsv": {
+                    "family": "WImageDataServer",
+                    "original_registration_index": 4,
+                }},
+            )
+            self.assertFalse(report["original_native_actual_duplicate_tsv_source_winner_proven"])
             self.assertFalse(
                 report["original_native_source_priority_or_duplicate_precedence_proven"]
             )
