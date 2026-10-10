@@ -58,6 +58,11 @@ def fixture() -> bytes:
                      1, ORIGINAL_DRAW_VMA, 228)
     for pc, opcode in ORIGINAL_SCENE_ANCHORS.items():
         struct.pack_into("<I", data, pc, opcode)
+    # The actual original source contains exactly one dotted package string
+    # inside .rodata. Synthetic tests prove only this string may differ.
+    package_at = 0x18F400
+    old_package = b"jp.co.ponos.battlecats"
+    data[package_at:package_at+len(old_package)] = old_package
     return bytes(data)
 
 
@@ -169,6 +174,55 @@ class OriginalSceneSourceRepackPreflightTests(unittest.TestCase):
                          hex(ORIGINAL_DRAW_VMA + 0x1000))
         self.assertFalse(report["uniform_rebase_runtime_supported_by_device"])
         self.assertFalse(report["original_account_free_player_SAVE_generated"])
+
+    def test_only_six_native_dotted_package_bytes_may_change(self):
+        original = self.original_fixture
+        old = b"jp.co.ponos.battlecats"
+        target = b"jp.kn.local.battlecats"
+        self.assertEqual(len(old), len(target))
+        self.assertEqual(original.count(old), 1)
+        changed = original.replace(old, target, 1)
+        with self.assertRaisesRegex(
+            OriginalSceneNativeImageError, "mapped source section SHA256 drift"
+        ):
+            verify_mapped_original_scene_image(changed)
+        result = verify_mapped_original_scene_image(
+            changed, expected_research_native_package=target.decode("ascii")
+        )
+        self.assertTrue(result["research_native_local_package_rename_verified"])
+        self.assertEqual(result["research_native_exact_package_change_bytes_verified"], 6)
+        # A second unrelated change, even in a different rodata byte, is denied.
+        extra = bytearray(changed)
+        extra[0x1F0000] ^= 1
+        with self.assertRaisesRegex(
+            OriginalSceneNativeImageError, "mapped source section SHA256 drift"
+        ):
+            verify_mapped_original_scene_image(
+                bytes(extra), expected_research_native_package=target.decode("ascii")
+            )
+        with self.assertRaisesRegex(
+            OriginalSceneNativeImageError, "only exact JP local-research package"
+        ):
+            verify_mapped_original_scene_image(
+                changed, expected_research_native_package="jp.kn.trace.battlecats"
+            )
+
+    def test_original_research_six_split_pre_signature_exact_package_rename(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = self.original_fixture.replace(
+                b"jp.co.ponos.battlecats", b"jp.kn.local.battlecats", 1
+            )
+            with ZipFile(root / "split_config.arm64_v8a.apk", "w") as archive:
+                archive.writestr("lib/arm64-v8a/libnative-lib.so", source)
+            report = verify_staged_original_scene_before_signing(
+                root,
+                research_scene_witness=True,
+                expected_research_native_package="jp.kn.local.battlecats",
+            )
+            self.assertTrue(report["research_native_local_package_rename_verified"])
+            self.assertTrue(report["research_pre_signature_gate_executed"])
+            self.assertFalse(report["original_account_free_player_SAVE_generated"])
 
     def test_rebased_native_non_text_bytes_still_must_match_original(self):
         copy = bytearray(self.original_fixture)

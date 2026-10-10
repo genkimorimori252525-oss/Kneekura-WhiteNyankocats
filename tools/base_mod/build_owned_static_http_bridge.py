@@ -155,9 +155,15 @@ def build_owned_static_http_bridge(
     # Post-sign parity checks the same invariant independently.
     pre_signature_scene_receipt = verify_staged_original_scene_before_signing(
         bridged,
-        research_scene_witness=witness_contract[
-            "research_scene_witness_build_enabled"
-        ],
+        # The original research host MUST pass this static gate even when
+        # the optional native scene hooks remain feature-OFF.
+        research_scene_witness=(
+            flavor == "local-research"
+            or witness_contract["research_scene_witness_build_enabled"]
+        ),
+        expected_research_native_package=(
+            FLAVOR_PACKAGES[flavor] if flavor == "local-research" else None
+        ),
     )
 
     signing_ledger = baseline_resign(

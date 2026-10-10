@@ -5,6 +5,9 @@ on:
       - "jolly/**"
     paths:
       - ".github/workflows/owner-local-original-research-toolchain.yml"
+      - "tools/base_mod/original_scene_native_image_gate.py"
+      - "tools/base_mod/build_owned_static_http_bridge.py"
+      - "tools/base_mod/verify_static_http_bridge.py"
   workflow_dispatch:
 
 permissions:

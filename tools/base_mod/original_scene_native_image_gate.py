@@ -171,10 +171,10 @@ def _original_executable_text_sha256(
     return sha256(native[at:at + size]).hexdigest()
 
 
-def _pinned_mapped_range_sha256(
+def _pinned_mapped_range_bytes(
     native: bytes, loads: list[dict[str, int]], *,
     vma: int, size: int, require_exec: bool | None = None,
-) -> str:
+) -> bytes:
     """Use ELF PT_LOAD mappings, never raw file offsets as shifted VMAs.
 
     Reject overlapping/unbacked mappings or unexpected permissions.
@@ -200,7 +200,16 @@ def _pinned_mapped_range_sha256(
     offset = seg["offset"] + (vma - seg["vaddr"])
     if not _bounded_offset(len(native), offset, size):
         raise OriginalSceneNativeImageError("original native source range outside ELF")
-    return sha256(native[offset:offset + size]).hexdigest()
+    return native[offset:offset + size]
+
+
+def _pinned_mapped_range_sha256(
+    native: bytes, loads: list[dict[str, int]], *,
+    vma: int, size: int, require_exec: bool | None = None,
+) -> str:
+    return sha256(_pinned_mapped_range_bytes(
+        native, loads, vma=vma, size=size, require_exec=require_exec
+    )).hexdigest()
 
 
 def _dynsym_export_vma(native: bytes, symbol: str) -> int:
@@ -257,10 +266,16 @@ def _dynsym_export_vma(native: bytes, symbol: str) -> int:
     return located[0]
 
 
-def verify_mapped_original_scene_image(native: bytes) -> dict[str, Any]:
+def verify_mapped_original_scene_image(
+    native: bytes, *, expected_research_native_package: str | None = None,
+) -> dict[str, Any]:
     """Reject incorrect post-LIEF original VMAs BEFORE optional hook signing."""
     if type(native) is not bytes:
         raise OriginalSceneNativeImageError("expected bytes from private arm64 split")
+    if expected_research_native_package not in (None, "jp.kn.local.battlecats"):
+        raise OriginalSceneNativeImageError(
+            "only exact JP local-research package may alter original native rodata"
+        )
     try:
         build_id = gnu_build_id(native)
     except (ValueError, IndexError, struct.error) as exc:
@@ -291,11 +306,35 @@ def verify_mapped_original_scene_image(native: bytes) -> dict[str, Any]:
             "complete original JP15.7.1 executable .text SHA256 drift"
         )
     verified_nontext = {}
+    native_package_changed_bytes = 0
     for label, (vma, size, original_sha) in ORIGINAL_PINNED_MAPPED_RANGES.items():
-        actual = _pinned_mapped_range_sha256(
-            native, loads, vma=vma + vma_shift, size=size,
-            require_exec=True,
+        pinned_source = _pinned_mapped_range_bytes(
+            native, loads, vma=vma + vma_shift, size=size, require_exec=True,
         )
+        if label == "rodata" and expected_research_native_package is not None:
+            # ONE exact equal-width 6-byte change is authorized when the
+            # original package is isolated from the publisher. Everything
+            # else in the entire original rodata must hash to its known
+            # owner-source SHA after restoring this one approved string.
+            old_name = b"jp.co.ponos.battlecats"
+            local_name = b"jp.kn.local.battlecats"
+            if (len(old_name) != len(local_name)
+                or pinned_source.count(local_name) != 1
+                or pinned_source.count(old_name) != 0):
+                raise OriginalSceneNativeImageError(
+                    "missing/duplicate original-native local package rename"
+                )
+            restored = pinned_source.replace(local_name, old_name, 1)
+            native_package_changed_bytes = sum(
+                x != y for x, y in zip(old_name, local_name)
+            )
+            if native_package_changed_bytes != 6:
+                raise OriginalSceneNativeImageError(
+                    "original-native package replacement contract drift"
+                )
+            actual = sha256(restored).hexdigest()
+        else:
+            actual = sha256(pinned_source).hexdigest()
         if actual != original_sha:
             raise OriginalSceneNativeImageError(
                 "original JP15.7.1 mapped source section SHA256 drift: " + label
@@ -309,6 +348,11 @@ def verify_mapped_original_scene_image(native: bytes) -> dict[str, Any]:
         "original_source_uniform_VMA_rebase_bytes": vma_shift,
         "uniform_rebase_runtime_supported_by_device": False,
         "verified_nontext_mapped_source_sections": verified_nontext,
+        "research_native_exact_package_change_bytes_verified":
+            native_package_changed_bytes,
+        "research_native_local_package_rename_verified": (
+            native_package_changed_bytes == 6
+        ),
         "verified_executable_instruction_anchors": len(ORIGINAL_SCENE_ANCHORS),
         "complete_original_text_bytes_verified":
             ORIGINAL_NATIVE_TEXT_END - ORIGINAL_NATIVE_TEXT_START,
@@ -325,6 +369,7 @@ def verify_mapped_original_scene_image(native: bytes) -> dict[str, Any]:
 
 def verify_staged_original_scene_before_signing(
     unsigned_splits: "Path", *, research_scene_witness: bool,
+    expected_research_native_package: str | None = None,
 ) -> dict[str, Any] | None:
     """Read the FINAL unsigned arm64 research split BEFORE any APK signing.
 
@@ -368,7 +413,10 @@ def verify_staged_original_scene_before_signing(
         raise OriginalSceneNativeImageError(
             "unsigned original native split unreadable"
         ) from exc
-    result = verify_mapped_original_scene_image(original_repackaged)
+    result = verify_mapped_original_scene_image(
+        original_repackaged,
+        expected_research_native_package=expected_research_native_package,
+    )
     result["research_pre_signature_gate_executed"] = True
     result["research_apk_signing_performed_by_this_gate"] = False
     result["original_owner_save_accessed_by_gate"] = False
