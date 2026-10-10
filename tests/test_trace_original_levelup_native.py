@@ -1152,6 +1152,54 @@ class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
                 )
 
 
+    def test_private_tsv_candidate_sources_join_original_static_row_index(self):
+        from pathlib import Path
+        import tempfile
+        from tools.base_mod.battlecats_pack_writer import encrypt_manifest_bytes
+
+        with tempfile.TemporaryDirectory() as name:
+            root = Path(name)
+            common = encrypt_manifest_bytes(b"1\ndownload_9.tsv,0,16\n")
+            (root / "MNumberServer.list").write_bytes(common)
+            (root / "WImageDataServer.list").write_bytes(common)
+            registry = {"MNumberServer": 43, "WImageDataServer": 4}
+            report = _additional_owner_list_coverage(
+                root, known_original_families=set(registry),
+                registered_family_indices=registry,
+            )
+            candidates = report["download_tsv_candidate_registered_families"][
+                "download_9.tsv"
+            ]
+            self.assertEqual(
+                candidates,
+                [
+                    {"family": "WImageDataServer", "original_registration_index": 4},
+                    {"family": "MNumberServer", "original_registration_index": 43},
+                ],
+            )
+            self.assertEqual(
+                report["ambiguous_target_filenames_across_families"],
+                ["download_9.tsv"],
+            )
+            self.assertTrue(report["native_static_registration_indices_joined"])
+            self.assertFalse(
+                report["original_native_source_priority_or_duplicate_precedence_proven"]
+            )
+            self.assertFalse(report["native_registry_92_entries_cover_names"])
+            with self.assertRaisesRegex(LevelUpNativeTraceError, "map invalid"):
+                _additional_owner_list_coverage(
+                    root, known_original_families=set(registry),
+                    registered_family_indices={
+                        "MNumberServer": 4, "WImageDataServer": 4,
+                    },
+                )
+            with self.assertRaisesRegex(LevelUpNativeTraceError, "map invalid"):
+                _additional_owner_list_coverage(
+                    root, known_original_families=set(registry),
+                    registered_family_indices={"MNumberServer": 43},
+                )
+
+
     def test_owned_additional_list_scan_rejects_missing_duplicate_or_symlink(self):
         from pathlib import Path
         import tempfile
