@@ -1194,6 +1194,145 @@ class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
                         _additional_owner_list_coverage(root)
 
 
+
+    def test_owner_server_pack_selected_tsv_optin_decrypts_only_approved_spans(self):
+        """No original asset is in this test; encrypted ECB+manifest fixture."""
+        import tempfile
+        from pathlib import Path
+        from hashlib import sha256
+        from tools.base_mod.battlecats_pack_writer import (
+            encrypt_manifest_bytes, _encrypt_entry,
+        )
+
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            family = "MNumberServer"
+            payload = b"0\t1\t2\nOwned local-only TSV fixture\n"
+            secret_decoy = b"PRIVATE_PLAYER_ACCOUNT_DO_NOT_DECRYPT_OR_LOG"
+            selected_ct, selected_mode = _encrypt_entry(family, payload, region="jp")
+            secret_ct, _ = _encrypt_entry(family, secret_decoy, region="jp")
+            self.assertEqual(selected_mode, "aes-128-ecb-server")
+            plain_manifest = (
+                "2\n"
+                f"download_0.tsv,0,{len(selected_ct)}\n"
+                f"private_account.csv,{len(selected_ct)},{len(secret_ct)}\n"
+            ).encode()
+            list_content = encrypt_manifest_bytes(plain_manifest)
+            pack_content = selected_ct + secret_ct
+            (root / (family + ".list")).write_bytes(list_content)
+            (root / (family + ".pack")).write_bytes(pack_content)
+            before_list, before_pack = sha256(list_content).hexdigest(), sha256(pack_content).hexdigest()
+
+            names_only = _additional_owner_list_coverage(
+                root, known_original_families={family},
+            )
+            self.assertEqual(names_only["status"],
+                             "OWNER_ADDITIONAL_ENCRYPTED_LIST_NAMES_ONLY")
+            self.assertFalse(names_only["paired_pack_payload_check_explicitly_requested"])
+            self.assertEqual(names_only["download_tsv_payloads_decrypted"], [])
+            self.assertEqual(
+                names_only["families"][family]["targeted_decrypted_tsv_payloads"], {}
+            )
+
+            verified = _additional_owner_list_coverage(
+                root, known_original_families={family},
+                verify_paired_pack_tsv_payloads=True,
+            )
+            self.assertEqual(verified["status"],
+                             "OWNER_ADDITIONAL_SELECTED_TSV_PAYLOAD_SHA256_ONLY")
+            self.assertEqual(verified["download_tsv_payloads_decrypted"],
+                             ["download_0.tsv"])
+            self.assertTrue(verified["each_download_tsv_has_unique_listed_family"])
+            entry = verified["families"][family]["targeted_decrypted_tsv_payloads"]["download_0.tsv"]
+            self.assertEqual(entry["decrypted_payload_sha256"],
+                             sha256(payload).hexdigest())
+            self.assertEqual(entry["decrypted_payload_bytes"], len(payload))
+            self.assertEqual(entry["source_ciphertext_bytes"], len(selected_ct))
+            self.assertFalse(verified["all_35_payloads_decrypted_from_owner_paired_packs"])
+            self.assertFalse(verified["all_35_tsv_content_bytes_present_and_valid"])
+            self.assertFalse(verified["original_native_tsv_semantics_accepted"])
+            self.assertFalse(verified["original_game_offline_first_boot_and_Lv60_verified"])
+            self.assertNotIn("private_account.csv", repr(verified))
+            self.assertNotIn(secret_decoy.decode(), repr(verified))
+            self.assertNotIn(payload.decode(), repr(verified))
+            self.assertEqual(
+                sha256((root / (family + ".list")).read_bytes()).hexdigest(),
+                before_list,
+            )
+            self.assertEqual(
+                sha256((root / (family + ".pack")).read_bytes()).hexdigest(),
+                before_pack,
+            )
+
+    def test_owner_extra_pack_tsv_optin_rejects_missing_bad_and_ambiguous_ciphertext(self):
+        import tempfile
+        from pathlib import Path
+        from tools.base_mod.battlecats_pack_writer import (
+            encrypt_manifest_bytes, _encrypt_entry,
+        )
+
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            family = "MNumberServer"
+            source_ct, _ = _encrypt_entry(family, b"new-local-fixture\n", region="jp")
+            good_list = encrypt_manifest_bytes(
+                f"1\ndownload_8.tsv,0,{len(source_ct)}\n".encode()
+            )
+            manifest = root / (family + ".list")
+            pack = root / (family + ".pack")
+            manifest.write_bytes(good_list)
+            with self.assertRaisesRegex(
+                LevelUpNativeTraceError, ".pack pair missing or unsafe"
+            ):
+                _additional_owner_list_coverage(
+                    root, known_original_families={family},
+                    verify_paired_pack_tsv_payloads=True,
+                )
+            pack.write_bytes(source_ct[:8])
+            with self.assertRaisesRegex(LevelUpNativeTraceError, "span invalid"):
+                _additional_owner_list_coverage(
+                    root, known_original_families={family},
+                    verify_paired_pack_tsv_payloads=True,
+                )
+            pack.write_bytes(b"\x00" * len(source_ct))
+            with self.assertRaisesRegex(ValueError, "padding"):
+                _additional_owner_list_coverage(
+                    root, known_original_families={family},
+                    verify_paired_pack_tsv_payloads=True,
+                )
+            pack.write_bytes(source_ct)
+            duplicated = encrypt_manifest_bytes(
+                f"2\ndownload_8.tsv,0,{len(source_ct)}\n"
+                f"download_8.tsv,0,{len(source_ct)}\n".encode()
+            )
+            manifest.write_bytes(duplicated)
+            with self.assertRaisesRegex(
+                LevelUpNativeTraceError, "repeats target TSV"
+            ):
+                _additional_owner_list_coverage(
+                    root, known_original_families={family},
+                    verify_paired_pack_tsv_payloads=True,
+                )
+            manifest.write_bytes(good_list)
+            other = "WImageDataServer"
+            (root / (other + ".list")).write_bytes(good_list)
+            (root / (other + ".pack")).write_bytes(source_ct)
+            name_receipt = _additional_owner_list_coverage(
+                root, known_original_families={family,other},
+            )
+            self.assertEqual(
+                name_receipt["ambiguous_target_filenames_across_families"],
+                ["download_8.tsv"],
+            )
+            self.assertFalse(name_receipt["each_download_tsv_has_unique_listed_family"])
+            with self.assertRaisesRegex(
+                LevelUpNativeTraceError, "ambiguous original TSV ciphertext"
+            ):
+                _additional_owner_list_coverage(
+                    root, known_original_families={family, other},
+                    verify_paired_pack_tsv_payloads=True,
+                )
+
     def test_exact_original_server_families_have_92_list_pack_pairs(self):
         data = bytes(_synthetic_original_server_family_catalog_fixture())
         receipt = _original_registered_server_family_catalog(data)
