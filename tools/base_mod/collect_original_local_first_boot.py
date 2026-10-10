@@ -59,6 +59,7 @@ ALLOWED_STANDALONE_EVENTS = {
     "original-native-scene-hook-v1 library-unavailable",
     "original-native-scene-hook-v1 hook-initialization-failed",
     "original-native-scene-hook-v1 hook-unavailable",
+    "original-native-scene-hook-v1 partial-unhook-failed",
 }
 
 
