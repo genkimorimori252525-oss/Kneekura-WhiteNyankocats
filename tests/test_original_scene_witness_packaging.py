@@ -11,7 +11,8 @@ from zipfile import ZipFile, ZIP_STORED
 
 from tools.base_mod import prepare_original_scene_witness as official_checker
 from tools.base_mod.prepare_original_scene_witness import (
-    APPROVED_FLAVOR, EXTRA_NATIVE_ENTRY, OriginalSceneWitnessPackageError,
+    APPROVED_FLAVOR, EXTRA_NATIVE_ENTRY, EXTRA_NATIVE_COMPANION_ENTRY,
+    OriginalSceneWitnessPackageError,
     check_original_scene_witness_build_contract,
     include_reviewed_shadowhook_in_private_split_set,
 )
@@ -83,20 +84,36 @@ class OriginalNativeSceneWitnessPackagingTests(unittest.TestCase):
         self.reviewed = self.root / "libshadowhook.so"
         self.reviewed.write_bytes(synthetic_reviewed_arm64_so())
         self.sha = hashlib.sha256(self.reviewed.read_bytes()).hexdigest()
-        # A synthetic test fixture cannot match a REAL official Maven
-        # binary SHA. Override only during these explicit fixture tests.
-        pinned = mock_patch.object(
-            official_checker,
-            "APPROVED_OFFICIAL_SHADOWHOOK_V201_ARM64_SHA256", self.sha,
-        )
-        pinned.start()
-        self.addCleanup(pinned.stop)
+        self.companion = self.root / "libshadowhook_nothing.so"
+        aux = bytearray(96)
+        aux[:6] = bytes((127,69,76,70,2,1))
+        struct.pack_into("<HHI", aux, 16, 3, 183, 1)
+        self.companion.write_bytes(aux)
+        self.aar = self.root / "shadowhook-2.0.1.aar"
+        self.aar_sha = self.write_fixture_aar()
+        # Only synthetic tests may override the REAL official Maven pins.
+        for key, digest in (
+            ("APPROVED_OFFICIAL_SHADOWHOOK_V201_ARM64_SHA256", self.sha),
+            ("APPROVED_OFFICIAL_SHADOWHOOK_V201_AAR_SHA256", self.aar_sha),
+        ):
+            pinned = mock_patch.object(official_checker, key, digest)
+            pinned.start()
+            self.addCleanup(pinned.stop)
+
+    def write_fixture_aar(self, include_companion=True):
+        with ZipFile(self.aar, "w") as archive:
+            archive.writestr(official_checker.OFFICIAL_AAR_MAIN_ENTRY,
+                             self.reviewed.read_bytes())
+            if include_companion:
+                archive.writestr(official_checker.OFFICIAL_AAR_COMPANION_ENTRY,
+                                 self.companion.read_bytes())
+        return hashlib.sha256(self.aar.read_bytes()).hexdigest()
 
     def contract(self, **changes):
         kwargs = dict(
             flavor=APPROVED_FLAVOR, no_internet=True,
-            shim=self.shim, shadowhook=self.reviewed,
-            shadowhook_sha256=self.sha,
+            shim=self.shim, shadowhook=None,
+            shadowhook_sha256=None, shadowhook_aar=self.aar,
         )
         kwargs.update(changes)
         return check_original_scene_witness_build_contract(**kwargs)
@@ -119,7 +136,7 @@ class OriginalNativeSceneWitnessPackagingTests(unittest.TestCase):
         for changes in (
             {"no_internet": False},
             {"flavor": "personal"},
-            {"shadowhook": None, "shadowhook_sha256": None},
+            {"shadowhook_aar": None},
         ):
             with self.subTest(changes=changes), self.assertRaises(
                 OriginalSceneWitnessPackageError
@@ -136,8 +153,9 @@ class OriginalNativeSceneWitnessPackagingTests(unittest.TestCase):
             {"flavor": "practice"},
             {"flavor": "research"},
             {"no_internet": False},
-            {"shadowhook": None},
-            {"shadowhook_sha256": None},
+            {"shadowhook_aar": None},
+            {"shadowhook": self.reviewed},
+            {"shadowhook_sha256": self.sha},
         ):
             with self.subTest(mode=mode), self.assertRaises(
                 OriginalSceneWitnessPackageError
@@ -146,30 +164,35 @@ class OriginalNativeSceneWitnessPackagingTests(unittest.TestCase):
 
     def test_compiled_observer_without_explicit_reviewed_library_fails(self):
         with self.assertRaises(OriginalSceneWitnessPackageError):
-            self.contract(shadowhook=None, shadowhook_sha256=None)
+            self.contract(shadowhook_aar=None)
         self.shim.write_bytes(mock_shim(observer=False))
         with self.assertRaises(OriginalSceneWitnessPackageError):
             self.contract()
-        normal = self.contract(shadowhook=None, shadowhook_sha256=None)
+        normal = self.contract(shadowhook_aar=None)
         self.assertFalse(normal["research_scene_witness_build_enabled"])
         self.assertFalse(normal["research_original_native_scene_hook_runtime_supplied"])
 
     def test_unsymbolized_native_hook_needs_reviewed_func_addr_API(self):
-        # Older ShadowHook libraries could expose sym_addr but not the
-        # func_addr entrypoint. The four original stripped functions must
-        # never attempt the sym_addr fallback.
-        good = synthetic_reviewed_arm64_so()
+        original = synthetic_reviewed_arm64_so()
         needle = b"shadowhook_hook_func_addr_2" + bytes((0,))
-        self.assertEqual(good.count(needle), 1)
-        self.reviewed.write_bytes(good.replace(needle, bytes(len(needle))))
-        broken_digest = hashlib.sha256(self.reviewed.read_bytes()).hexdigest()
-        with self.assertRaisesRegex(
-            OriginalSceneWitnessPackageError, "hook ABI FUNC exports absent"
+        self.assertEqual(original.count(needle), 1)
+        corrupted = original.replace(needle, bytes(len(needle)))
+        self.reviewed.write_bytes(corrupted)
+        candidate_sha = self.write_fixture_aar()
+        with mock_patch.object(
+            official_checker, "APPROVED_OFFICIAL_SHADOWHOOK_V201_ARM64_SHA256",
+            hashlib.sha256(corrupted).hexdigest()
+        ), mock_patch.object(
+            official_checker, "APPROVED_OFFICIAL_SHADOWHOOK_V201_AAR_SHA256",
+            candidate_sha
         ):
-            self.contract(shadowhook_sha256=broken_digest)
-        self.reviewed.write_bytes(good)
+            with self.assertRaisesRegex(
+                OriginalSceneWitnessPackageError, "FUNC exports absent"
+            ):
+                self.contract()
+        self.reviewed.write_bytes(original)
+        self.write_fixture_aar()
         self.assertTrue(self.contract()["research_scene_witness_build_enabled"])
-
     def test_fake_ELF_with_embedded_API_strings_but_no_dynsym_is_rejected(self):
         from tools.base_mod.prepare_original_scene_witness import _safe_native_so
         corrupted = bytearray(synthetic_reviewed_arm64_so())
@@ -202,82 +225,112 @@ class OriginalNativeSceneWitnessPackagingTests(unittest.TestCase):
                     self.reviewed, self.sha, require_official_v201=True
                 )
 
-    def test_bad_hash_elf_arch_and_exports_fail_before_staging(self):
-        with self.assertRaisesRegex(OriginalSceneWitnessPackageError, "hash mismatched"):
-            self.contract(shadowhook_sha256="0"*64)
-        for mutate in ("elf_magic", "elf_32bit", "elf_x86", "not_dso", "missing_export"):
-            self.reviewed.write_bytes(synthetic_reviewed_arm64_so())
-            bad = bytearray(self.reviewed.read_bytes())
-            if mutate == "elf_magic":
-                bad[0] = 0
-            if mutate == "elf_32bit":
-                bad[4] = 1
-            if mutate == "elf_x86":
-                struct.pack_into("<H", bad, 18, 62)
-            if mutate == "not_dso":
-                struct.pack_into("<H", bad, 16, 2)
-            if mutate == "missing_export":
-                needle = b"shadowhook_hook_sym_addr_2\x00"
-                at = bad.find(needle)
-                self.assertGreater(at, 0)
-                bad[at] ^= 1
-            self.reviewed.write_bytes(bad)
-            with self.subTest(mutation=mutate), self.assertRaises(
-                OriginalSceneWitnessPackageError
+    def test_official_pair_rejects_missing_helper_and_corrupt_hash(self):
+        # A single-library installer was used on the owner device.
+        self.write_fixture_aar(include_companion=False)
+        with mock_patch.object(
+            official_checker, "APPROVED_OFFICIAL_SHADOWHOOK_V201_AAR_SHA256",
+            hashlib.sha256(self.aar.read_bytes()).hexdigest()
+        ):
+            with self.assertRaisesRegex(
+                OriginalSceneWitnessPackageError, "both unique ARM64 libraries"
             ):
-                self.contract(
-                    shadowhook_sha256=hashlib.sha256(bad).hexdigest()
-                )
+                self.contract()
+        self.write_fixture_aar()
+        self.aar.write_bytes(self.aar.read_bytes() + b"tampered")
+        with self.assertRaisesRegex(
+            OriginalSceneWitnessPackageError, "AAR SHA256 mismatch"
+        ):
+            self.contract()
+        self.write_fixture_aar()
 
-    def test_packaging_adds_only_one_library_in_arm64_of_all_six_splits(self):
+    def test_official_pair_rejects_bad_main_and_companion_elf(self):
+        original_main = self.reviewed.read_bytes()
+        original_companion = self.companion.read_bytes()
+        for which in ("main", "companion"):
+            self.reviewed.write_bytes(original_main)
+            self.companion.write_bytes(original_companion)
+            target = self.reviewed if which == "main" else self.companion
+            bad = bytearray(target.read_bytes())
+            bad[0] ^= 1
+            target.write_bytes(bad)
+            candidate_aar_sha = self.write_fixture_aar()
+            with mock_patch.object(
+                official_checker, "APPROVED_OFFICIAL_SHADOWHOOK_V201_AAR_SHA256",
+                candidate_aar_sha
+            ), mock_patch.object(
+                official_checker, "APPROVED_OFFICIAL_SHADOWHOOK_V201_ARM64_SHA256",
+                hashlib.sha256(self.reviewed.read_bytes()).hexdigest()
+            ):
+                with self.subTest(which=which), self.assertRaisesRegex(
+                    OriginalSceneWitnessPackageError, "ELF64 AArch64"
+                ):
+                    self.contract()
+        self.reviewed.write_bytes(original_main)
+        self.companion.write_bytes(original_companion)
+        self.write_fixture_aar()
+    def test_packaging_adds_only_official_two_library_pair_in_arm64_split(self):
         source = self.root / "original-fixture"
         output = self.root / "private-research-only"
         source.mkdir()
         for filename in JP_15_7_1_SPLITS:
-            with ZipFile(source / filename, "w") as z:
-                z.writestr("AndroidManifest.xml", b"PRIVATE_SYNTHETIC_MANIFEST")
-                z.writestr("assets/fixture.txt", b"UNMODIFIED_FIXTURE")
+            with ZipFile(source / filename, "w") as archive:
+                archive.writestr("AndroidManifest.xml", b"PRIVATE_SYNTHETIC_MANIFEST")
+                archive.writestr("assets/fixture.txt", b"UNMODIFIED_FIXTURE")
         receipts = include_reviewed_shadowhook_in_private_split_set(
-            source, output, shadowhook=self.reviewed, expected_sha256=self.sha
+            source, output, official_aar=self.aar
         )
         self.assertEqual(receipts["original_split_count"], 6)
-        self.assertEqual(receipts["only_extra_entry"], EXTRA_NATIVE_ENTRY)
+        self.assertEqual(receipts["only_extra_entries"],
+                         [EXTRA_NATIVE_ENTRY, EXTRA_NATIVE_COMPANION_ENTRY])
+        self.assertEqual(receipts["reviewed_native_companion_sha256"],
+                         hashlib.sha256(self.companion.read_bytes()).hexdigest())
         self.assertFalse(receipts["scene_observer_runtime_or_original_gameplay_verified"])
         for filename in JP_15_7_1_SPLITS:
-            with ZipFile(source/filename, "r") as original, ZipFile(output/filename, "r") as private:
-                self.assertEqual(private.read("AndroidManifest.xml"),
+            with ZipFile(source / filename) as original, ZipFile(output / filename) as modified:
+                self.assertEqual(modified.read("AndroidManifest.xml"),
                                  original.read("AndroidManifest.xml"))
-                self.assertEqual(private.read("assets/fixture.txt"),
+                self.assertEqual(modified.read("assets/fixture.txt"),
                                  original.read("assets/fixture.txt"))
                 self.assertNotIn(EXTRA_NATIVE_ENTRY, original.namelist())
+                self.assertNotIn(EXTRA_NATIVE_COMPANION_ENTRY, original.namelist())
                 if filename == "split_config.arm64_v8a.apk":
-                    self.assertEqual(private.read(EXTRA_NATIVE_ENTRY),
+                    self.assertEqual(modified.read(EXTRA_NATIVE_ENTRY),
                                      self.reviewed.read_bytes())
-                    self.assertEqual(private.getinfo(EXTRA_NATIVE_ENTRY).compress_type,
-                                     ZIP_STORED)
+                    self.assertEqual(modified.read(EXTRA_NATIVE_COMPANION_ENTRY),
+                                     self.companion.read_bytes())
+                    for member in (EXTRA_NATIVE_ENTRY, EXTRA_NATIVE_COMPANION_ENTRY):
+                        self.assertEqual(modified.getinfo(member).compress_type,
+                                         ZIP_STORED)
                 else:
-                    self.assertNotIn(EXTRA_NATIVE_ENTRY, private.namelist())
-
-    def test_reject_occupied_destination_missing_owner_split_or_double_library(self):
+                    self.assertNotIn(EXTRA_NATIVE_ENTRY, modified.namelist())
+                    self.assertNotIn(EXTRA_NATIVE_COMPANION_ENTRY, modified.namelist())
+    def test_reject_occupied_destination_missing_split_or_legacy_single_library(self):
         source = self.root / "original-fixture"
         source.mkdir()
         for filename in JP_15_7_1_SPLITS:
-            with ZipFile(source/filename, "w") as z:
-                z.writestr("AndroidManifest.xml", b"SYNTHETIC")
+            with ZipFile(source / filename, "w") as archive:
+                archive.writestr("AndroidManifest.xml", b"SYNTHETIC")
         occupied = self.root / "occupied"
         occupied.mkdir()
         with self.assertRaises(OriginalSceneWitnessPackageError):
             include_reviewed_shadowhook_in_private_split_set(
-                source, occupied, shadowhook=self.reviewed, expected_sha256=self.sha
+                source, occupied, official_aar=self.aar
+            )
+        with self.assertRaisesRegex(
+            OriginalSceneWitnessPackageError, "complete ShadowHook AAR"
+        ):
+            include_reviewed_shadowhook_in_private_split_set(
+                source, self.root / "legacy-single",
+                shadowhook=self.reviewed, expected_sha256=self.sha
             )
         missing = self.root / "missing"
         (source / "split_InstallPack.apk").unlink()
         with self.assertRaises(OriginalSceneWitnessPackageError):
             include_reviewed_shadowhook_in_private_split_set(
-                source, missing, shadowhook=self.reviewed, expected_sha256=self.sha
+                source, missing, official_aar=self.aar
             )
         self.assertFalse(missing.exists())
-
     def test_build_pipeline_and_parity_fail_closed_source_contract(self):
         root = Path(__file__).resolve().parents[1]
         builder = (root/"tools/base_mod/build_owned_static_http_bridge.py").read_text(
@@ -290,7 +343,7 @@ class OriginalNativeSceneWitnessPackagingTests(unittest.TestCase):
             "check_original_scene_witness_build_contract",
             "include_reviewed_shadowhook_in_private_split_set",
             "research_shadowhook_sha256",
-            "--research-shadowhook-so",
+            "--research-shadowhook-aar",
             "research_scene_witness=",
         ):
             with self.subTest(needle=needle):
@@ -298,6 +351,8 @@ class OriginalNativeSceneWitnessPackagingTests(unittest.TestCase):
         for needle in (
             "research_scene_witness",
             "EXTRA_NATIVE_ENTRY",
+            "EXTRA_NATIVE_COMPANION_ENTRY",
+            "research_shadowhook_nothing_sha256",
             "SCENE_WITNESS_COMPILED_MARKER",
             "research_shadowhook_sha256",
             "verify_mapped_original_scene_image",
