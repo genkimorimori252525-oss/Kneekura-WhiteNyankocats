@@ -57,6 +57,7 @@ def build_owned_static_http_bridge(
     research_deny_internet: bool = False,
     research_shadowhook_so: Path | None = None,
     research_shadowhook_sha256: str | None = None,
+    research_virgin_save_trial: bool = False,
     keypass: str | None = None,
     zipalign: str | None = None,
     apksigner: str | None = None,
@@ -83,11 +84,17 @@ def build_owned_static_http_bridge(
         if research_isolate_original_native_files_dir and flavor != "research":
             raise ValueError("original native files research isolation requires research flavor")
 
+    if research_virgin_save_trial and (flavor != "local-research"
+                                        or not research_deny_internet):
+        raise ValueError(
+            "original virgin SAVE experiment requires separate no-INTERNET local-research"
+        )
     # Validate the optional native observer and exact package BEFORE staging.
     witness_contract = check_original_scene_witness_build_contract(
         flavor=flavor, no_internet=research_deny_internet,
         shim=shim, shadowhook=research_shadowhook_so,
         shadowhook_sha256=research_shadowhook_sha256,
+        virgin_save_trial=research_virgin_save_trial,
     )
     export_zip = export_zip.resolve()
     shim = shim.resolve()
@@ -136,6 +143,7 @@ def build_owned_static_http_bridge(
         flavor=flavor,
         enabled=enable_backup_offline_replay,
         isolate_original_native_files_dir=research_isolate_original_native_files_dir,
+        virgin_save_trial=research_virgin_save_trial,
         output=bridge_dex,
         javac=javac,
         d8=d8,
@@ -261,6 +269,8 @@ Final device smoke should be performed only after repository parity is green.
         "original_native_scene_witness_device_runtime_verified": False,
         "original_independent_local_save_verified": False,
         "fresh_local_original_package": flavor == "local-research",
+        "research_virgin_SAVE_trial_explicitly_enabled": research_virgin_save_trial,
+        "research_virgin_SAVE_trial_device_result": "NOT_VERIFIED",
         "original_native_file_root_is_super": flavor == "local-research",
         "local_origin_marker_is_gameplay_save": False,
         "original_zero_network_verified": False,
@@ -287,6 +297,8 @@ def main() -> int:
                         help="Opt-in owned arm64 hook library, ONLY local-research")
     parser.add_argument("--research-shadowhook-sha256",
                         help="Explicit SHA256 of reviewed owner-private libshadowhook.so")
+    parser.add_argument("--research-virgin-save-trial", action="store_true",
+                        help="EXPERIMENTAL: only clean isolated local no-INTERNET original new player")
     parser.add_argument("--enable-backup-offline-replay", action="store_true")
     parser.add_argument(
         "--research-isolate-original-native-files-dir",
@@ -320,6 +332,7 @@ def main() -> int:
         research_deny_internet=args.research_no_internet_permission,
         research_shadowhook_so=args.research_shadowhook_so,
         research_shadowhook_sha256=args.research_shadowhook_sha256,
+        research_virgin_save_trial=args.research_virgin_save_trial,
         zipalign=args.zipalign,
         apksigner=args.apksigner,
         javac=args.javac,

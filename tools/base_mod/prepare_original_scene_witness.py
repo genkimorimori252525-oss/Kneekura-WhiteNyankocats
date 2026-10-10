@@ -24,6 +24,7 @@ from tools.base_mod.repack import JP_15_7_1_SPLITS
 EXTRA_NATIVE_ENTRY = "lib/arm64-v8a/libshadowhook.so"
 RESEARCH_PACKAGE = "jp.kn.local.battlecats"
 SCENE_WITNESS_COMPILED_MARKER = b"original-native-scene-v1 id=%u"
+VIRGIN_SAVE_TRIAL_MARKER = b"kneekura-original-virgin-save-trial-v1"
 SCENE_WITNESS_PACKAGE_MARKER = RESEARCH_PACKAGE.encode("ascii")
 APPROVED_FLAVOR = "local-research"
 MAX_EXTERNAL_LIBRARY_BYTES = 24 * 1024 * 1024
@@ -66,6 +67,7 @@ def _safe_native_so(source: Path, expected_sha256: str) -> bytes:
 def check_original_scene_witness_build_contract(
     *, flavor: str, no_internet: bool, shim: Path,
     shadowhook: Path | None, shadowhook_sha256: str | None,
+    virgin_save_trial: bool = False,
 ) -> dict:
     """Reject a witness-enabled shim unless flavor/policy/dependency match.
 
@@ -77,7 +79,19 @@ def check_original_scene_witness_build_contract(
         raise OriginalSceneWitnessPackageError("native Kneekura shim size unacceptable")
     source = shim.read_bytes()
     witness_present = SCENE_WITNESS_COMPILED_MARKER in source
+    compiled_virgin_trial = VIRGIN_SAVE_TRIAL_MARKER in source
     paired_dependency = shadowhook is not None or shadowhook_sha256 is not None
+    if compiled_virgin_trial != virgin_save_trial:
+        raise OriginalSceneWitnessPackageError(
+            "native virgin SAVE trial requires matching explicit Java opt-in"
+        )
+    if compiled_virgin_trial and (
+        not witness_present or not paired_dependency
+        or flavor != APPROVED_FLAVOR or not no_internet
+    ):
+        raise OriginalSceneWitnessPackageError(
+            "virgin SAVE trial requires separate local no-INTERNET original scene hooks"
+        )
 
     if witness_present and (
         flavor != APPROVED_FLAVOR or not no_internet
@@ -102,6 +116,8 @@ def check_original_scene_witness_build_contract(
         _safe_native_so(shadowhook, shadowhook_sha256)
     return {
         "research_scene_witness_build_enabled": witness_present,
+        "research_virgin_SAVE_trial_compiled_and_explicit": compiled_virgin_trial,
+        "original_virgin_first_SAVE_device_reloaded_verified": False,
         "research_original_native_scene_hook_runtime_supplied": paired_dependency,
         "research_scene_witness_package_constraint": RESEARCH_PACKAGE,
         "research_scene_witness_default_shipping": False,
