@@ -22,6 +22,8 @@ import re
 import subprocess
 from typing import Any
 
+from tools.base_mod.repack import JP_15_7_1_SPLITS
+
 RESEARCH_PACKAGE = "jp.kn.local.battlecats"
 LOG_TAG = "KNEEKURA_STATIC_HTTP"
 MAX_LOGCAT_BYTES = 1_048_576
@@ -175,12 +177,16 @@ def build_original_local_boot_metadata_receipt(
     provide purely synthetic strings; fixture PASS is not Android validation.
     """
     paths = [line for line in pm_paths.splitlines() if line.strip()]
-    if (not paths or len(paths) > 16
-        or any(not line.startswith("package:") or not line.endswith(".apk")
+    if (len(paths) != len(JP_15_7_1_SPLITS)
+        or any(not line.startswith("package:/") or not line.endswith(".apk")
+               or "\x00" in line or ".." in line
                for line in paths)
-        or "base.apk" not in "\n".join(paths)):
+        or {line.rsplit("/", 1)[-1] for line in paths}
+                != set(JP_15_7_1_SPLITS)):
+        # A two-split mock game with a plausible package name is NOT the
+        # original JP15.7.1 six-split isolated Android research package.
         raise OriginalLocalBootObservationError(
-            "the exact original-engine local research APK is not installed"
+            "exact original JP15.7.1 six-split research package not installed"
         )
     if (f"Package [{RESEARCH_PACKAGE}]" not in dumpsys_package
         or "requested permissions:" not in dumpsys_package.lower()):
