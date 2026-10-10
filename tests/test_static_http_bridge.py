@@ -441,6 +441,8 @@ class StaticHttpBridgeTests(unittest.TestCase):
             self.assertEqual(first.returncode, 0, first.stderr)
             self.assertIn("ROOT=" + str(local_root.resolve()), first.stdout)
             self.assertIn("HTTP=BLOCKED", first.stdout)
+            self.assertIn("TRACE=original-local-denied-http-v1", first.stdout)
+            self.assertNotIn("https://example.invalid", first.stdout)
             self.assertIn(
                 "TRACE=original-save-presence-v1 SAVE_DATA=absent"
                 " SAVE_DATA4=absent SAVE_DATA8=absent", first.stdout
