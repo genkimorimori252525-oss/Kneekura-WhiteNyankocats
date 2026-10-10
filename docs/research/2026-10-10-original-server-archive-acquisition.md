@@ -89,3 +89,23 @@ py -3 .\download_bcdata_server.py --verify-only
 The script fetches four literal historical mirror filenames via raw.githubusercontent.com; checks exact byte count + MD5 using the user's 35-lane owner-manifest; stages in temporary .part files, atomically promotes verified content, never replaces a conflicting existing file, and stores a **metadata-only verification receipt** under `server_archive_cache/files`. No ADB/root/install/network-account/SAVE manipulation.
 
 **Local validation completed**: 7 unittest cases PASS, Python syntax PASS, ZIP CRC PASS, unpacked ZIP tests PASS; actual mirror HTTP access and real four MD5 matches remain OPEN. The offline `--verify-only` properly rejects a missing file set. Status: **POTENTIAL ASSET SOURCE IDENTIFIED, USER DOWNLOAD + FOUR MD5 VERIFICATION REQUIRED**.
+
+
+## 2026-10-10 SUCCESS — four JP15.7.1 exact-hash Server files on owner PC
+
+The owner ran `py -3 .\download_bcdata_server.py --download` on their **own Windows PC** and provided terminal output:
+```
+[PASS] MNumberServer.list (VERIFIED) MD5=34219ad4ddebe715ddaa3af4244697b1
+[PASS] MNumberServer.pack (VERIFIED) MD5=0c23c4defa077d2e97fbbb1b28a0de4d
+[PASS] WImageDataServer.list (VERIFIED) MD5=1ddee28c515a52ebd0a09d655745945c
+[PASS] WImageDataServer.pack (VERIFIED) MD5=cebd0898a2c9d68fa3c7631afa9dd0d2
+[SUCCESS] 4 / 4 matched JP15.7.1 original size AND MD5; local-only copy ready.
+```
+Owner PC private location is `kneekura_server_recovery/server_archive_cache/files/` under their own downloaded kit. The records match the pinned original 15.7.1 `download_*.tsv` data. **These are results reported by the locally-run validator, not raw pack bytes independently inspected in CI or this session.** No asset bodies, owner path, identifying ADB serials or personal SAVE committed. The PONOS CDN lane URLs still returned HTTP 403 in the owner's previous test; the successful source was the public historical BCData mirror.
+
+### Scope and immediately actionable follow-up
+- [x] 4 target file names downloaded to owner-only local disk and reported MD5/size match.
+- [ ] Copy these four immutable source files into a stable private backup with a separately recorded SHA256 receipt (never Git/PR).
+- [ ] Run existing owner-local extract/parse of `550_e` enemy Godzilla model+sprites+animations, verify model files via the original `.list/.pack` pair and bounds.
+- [ ] Build local derived `702_f` candidate without destroying original `702_c`; verify real game renderer/damage hook and H01 behavior. No 1.01 release claim.
+- [ ] Acquire and check the other 89 Server pairs only if needed; these 4 are **NOT** all 93 TSV pairs.
