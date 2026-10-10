@@ -200,7 +200,7 @@ def _official_shadowhook_v201_arm64_pair(aar: Path) -> tuple[bytes, bytes, str]:
         raise OriginalSceneWitnessPackageError(
             "official ShadowHook main ARM64 library SHA256 mismatch")
     for raw in (main, companion):
-        if (len(raw) < 64 or raw[:4] != b"\\x7fELF"
+        if (len(raw) < 64 or raw[:4] != b"\x7fELF"
             or raw[4] != 2 or raw[5] != 1
             or int.from_bytes(raw[16:18], "little") != 3
             or elf_machine(raw) != EM_AARCH64):
