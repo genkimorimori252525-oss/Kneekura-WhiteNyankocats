@@ -30,11 +30,14 @@ def synthetic_reviewed_arm64_so() -> bytes:
     return bytes(data)
 
 
-def mock_shim(*, observer: bool) -> bytes:
+def mock_shim(*, observer: bool, virgin_trial: bool = False) -> bytes:
     blob = bytearray(2048)
     blob[:4] = b"\x7fELF"
     blob[4:6] = b"\x02\x01"
     struct.pack_into("<H", blob, 18, 183)
+    if virgin_trial:
+        word = b"kneekura-original-virgin-save-trial-v1"
+        blob[700:700+len(word)] = word
     if observer:
         blob[256:256+len(b"original-native-scene-v1 id=%u")] = (
             b"original-native-scene-v1 id=%u"
@@ -64,6 +67,31 @@ class OriginalNativeSceneWitnessPackagingTests(unittest.TestCase):
         )
         kwargs.update(changes)
         return check_original_scene_witness_build_contract(**kwargs)
+
+    def test_virgin_trial_shim_requires_explicit_matching_local_research_build(self):
+        self.shim.write_bytes(mock_shim(observer=True, virgin_trial=True))
+        valid = self.contract(virgin_save_trial=True)
+        self.assertTrue(valid["research_virgin_SAVE_trial_compiled_and_explicit"])
+        self.assertFalse(valid["original_virgin_first_SAVE_device_reloaded_verified"])
+        with self.assertRaisesRegex(
+            OriginalSceneWitnessPackageError, "matching explicit Java opt-in"
+        ):
+            self.contract()
+        self.shim.write_bytes(mock_shim(observer=True, virgin_trial=False))
+        with self.assertRaisesRegex(
+            OriginalSceneWitnessPackageError, "matching explicit Java opt-in"
+        ):
+            self.contract(virgin_save_trial=True)
+        self.shim.write_bytes(mock_shim(observer=True, virgin_trial=True))
+        for changes in (
+            {"no_internet": False},
+            {"flavor": "personal"},
+            {"shadowhook": None, "shadowhook_sha256": None},
+        ):
+            with self.subTest(changes=changes), self.assertRaises(
+                OriginalSceneWitnessPackageError
+            ):
+                self.contract(virgin_save_trial=True, **changes)
 
     def test_explicit_opt_in_requires_exact_local_research_no_internet(self):
         valid = self.contract()

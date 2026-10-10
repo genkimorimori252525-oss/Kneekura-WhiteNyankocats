@@ -62,7 +62,15 @@ NATIVE_APP_LAUNCH_READ_EVENTS = frozenset({
     "original-native-app-launch-save-read-v1 accepted",
     "original-native-app-launch-save-read-v1 failed",
 })
+NATIVE_VIRGIN_TRIAL_EVENTS = frozenset({
+    "original-native-virgin-save-trial-v1 root-attested",
+    "original-native-virgin-save-trial-v1 writer-rejected",
+    "original-native-virgin-save-trial-v1 read-rejected",
+    "original-native-virgin-save-trial-v1 read-accepted",
+})
 ALLOWED_STANDALONE_EVENTS = {
+    "original-virgin-root-attested-v1",
+    "original-virgin-root-not-ready-v1",
     "original-local-fresh-package-root active",
     "original-save-event-observer-v1 active",
     "original-save-event-observer-v1 unavailable",
@@ -113,6 +121,8 @@ def sanitized_original_activity_events(logcat: str, *, pid: int) -> dict[str, An
     scene_events: list[int] = []
     level_event_order: list[str] = []
     app_launch_read_outcomes: list[str] = []
+    virgin_trial_events: list[str] = []
+    native_trial_root_attested = False
     hook_install_marker_seen = False
     for line in logcat.splitlines():
         match = LOG_LINE.fullmatch(line)
@@ -123,6 +133,20 @@ def sanitized_original_activity_events(logcat: str, *, pid: int) -> dict[str, An
             counts[msg] += 1
             if msg == "original-native-scene-hook-v1 installed":
                 hook_install_marker_seen = True
+            continue
+        if msg in NATIVE_VIRGIN_TRIAL_EVENTS:
+            # The native event does not carry SAVE bytes, path or account ID.
+            # Still require the source-matched original hooks and a native
+            # root attestation in the same PID BEFORE any trial outcome.
+            if hook_install_marker_seen and (
+                msg == "original-native-virgin-save-trial-v1 root-attested"
+                or native_trial_root_attested
+            ):
+                if msg == "original-native-virgin-save-trial-v1 root-attested":
+                    native_trial_root_attested = True
+                counts[msg] += 1
+                if msg not in virgin_trial_events:
+                    virgin_trial_events.append(msg)
             continue
         if msg in NATIVE_APP_LAUNCH_READ_EVENTS:
             if hook_install_marker_seen:
@@ -188,6 +212,25 @@ def sanitized_original_activity_events(logcat: str, *, pid: int) -> dict[str, An
         "denied_HTTP_calls_observed": counts["original-local-denied-http-v1"],
         "optional_native_hook_installed_marker_seen": hook_install_marker_seen,
         "source_pinned_app_launch_save_read_outcomes": app_launch_read_outcomes,
+        "native_original_virgin_trial_event_order_metadata_only":
+            virgin_trial_events,
+        "native_virgin_trial_original_read_accepted_in_this_pid_only": (
+            virgin_trial_events == [
+                "original-native-virgin-save-trial-v1 root-attested",
+                "original-native-virgin-save-trial-v1 read-accepted",
+            ]
+        ),
+        "native_virgin_trial_failed_or_conflicting": (
+            "original-native-virgin-save-trial-v1 writer-rejected"
+                in virgin_trial_events
+            or "original-native-virgin-save-trial-v1 read-rejected"
+                in virgin_trial_events
+            or (
+                "original-native-virgin-save-trial-v1 read-accepted"
+                    in virgin_trial_events
+                and len(virgin_trial_events) != 2
+            )
+        ),
         "native_app_launch_save_read_accepted_only": (
             app_launch_read_outcomes
             == ["original-native-app-launch-save-read-v1 accepted"]
@@ -288,6 +331,14 @@ def build_original_local_boot_metadata_receipt(
         "observed_original_AppLaunchLoad_SAVE_read_failed": (
             root_seen and observation["native_app_launch_save_read_failed_only"]
         ),
+        "observed_original_native_virgin_trial_readback_this_process_only": (
+            root_seen
+            and observation["SAVE_absence_then_presence_observed_in_this_PID"]
+            and observation[
+                "native_virgin_trial_original_read_accepted_in_this_pid_only"
+            ]
+        ),
+        "original_virgin_native_trial_durable_SAVE_reboot_verified": False,
         "original_AppLaunchLoad_source_read_status_is_not_fresh_save_proof": True,
         "observed_original_level_cap_getter_call": (
             root_seen and observation["original_level_cap_getter_called"]

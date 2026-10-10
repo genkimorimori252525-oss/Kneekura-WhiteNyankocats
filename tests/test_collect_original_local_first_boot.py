@@ -229,6 +229,47 @@ class OriginalNativeLocalFirstBootMetadataTests(TestCase):
         self.assertEqual(no_root["status"],
                          "BLOCKED_NO_CURRENT_PROCESS_RESEARCH_ROOT_WITNESS")
 
+    def test_native_virgin_trial_events_requires_hook_and_root_attestation(self):
+        raw = SAMPLE + "".join([
+            safe_thread(PID, "original-native-virgin-save-trial-v1 read-accepted"),
+            safe_thread(PID+1, "original-native-virgin-save-trial-v1 read-accepted"),
+            safe_thread(PID, "original-native-scene-hook-v1 installed"),
+            safe_thread(PID, "original-native-virgin-save-trial-v1 writer-rejected"),
+            safe_thread(PID, "original-native-virgin-save-trial-v1 root-attested"),
+            safe_thread(PID, "original-native-virgin-save-trial-v1 read-accepted"),
+            safe_thread(PID, "original-native-virgin-save-trial-v1 read-accepted token=secret"),
+        ])
+        receipt = obs.build_original_local_boot_metadata_receipt(
+            pm_paths=PM_PATHS, dumpsys_package=DUMPSYS,
+            pid_output=str(PID), logcat=raw
+        )
+        self.assertTrue(receipt["observed_original_native_virgin_trial_readback_this_process_only"])
+        self.assertFalse(receipt["original_virgin_native_trial_durable_SAVE_reboot_verified"])
+        self.assertFalse(receipt["finished_original_game_offline_product"])
+        self.assertEqual(
+            receipt["signals"]["native_original_virgin_trial_event_order_metadata_only"],
+            [
+                "original-native-virgin-save-trial-v1 root-attested",
+                "original-native-virgin-save-trial-v1 read-accepted",
+            ]
+        )
+        self.assertNotIn("secret", repr(receipt))
+
+    def test_native_virgin_trial_rejects_conflicting_outcomes(self):
+        events = "".join([
+            safe_thread(PID, "original-native-scene-hook-v1 installed"),
+            safe_thread(PID, "original-native-virgin-save-trial-v1 root-attested"),
+            safe_thread(PID, "original-native-virgin-save-trial-v1 writer-rejected"),
+            safe_thread(PID, "original-native-virgin-save-trial-v1 read-accepted"),
+        ])
+        receipt = obs.build_original_local_boot_metadata_receipt(
+            pm_paths=PM_PATHS, dumpsys_package=DUMPSYS,
+            pid_output=str(PID), logcat=SAMPLE+events
+        )
+        self.assertTrue(receipt["signals"]["native_virgin_trial_failed_or_conflicting"])
+        self.assertFalse(receipt["observed_original_native_virgin_trial_readback_this_process_only"])
+        self.assertFalse(receipt["original_gameplay_SAVE_validated_or_generated"])
+
     def test_original_level_and_save_events_require_full_hook_before_recording(self):
         events = "".join([
             safe_thread(PID, "original-native-level-cap-getter-v1 original-returned"),

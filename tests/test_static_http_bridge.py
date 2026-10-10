@@ -63,6 +63,35 @@ class StaticHttpBridgeTests(unittest.TestCase):
                 before, package_name="jp.other.unknown", deny_internet=True
             )
 
+    def test_virgin_SAVE_writer_opt_in_is_exact_local_original_package_only(self):
+        template = (ROOT / "bridge/java/MyActivity.java.in").read_text(encoding="utf-8")
+        normal = render_bridge_source(template, flavor="local-research", enabled=False)
+        trial = render_bridge_source(
+            template, flavor="local-research", enabled=False,
+            virgin_save_trial=True,
+        )
+        self.assertIn(
+            "private static final boolean RESEARCH_VIRGIN_SAVE_TRIAL =\n"
+            "            false;", normal
+        )
+        self.assertIn(
+            "private static final boolean RESEARCH_VIRGIN_SAVE_TRIAL =\n"
+            "            true;", trial
+        )
+        self.assertIn("virginMarkerCreatedInThisProcess = true;", trial)
+        self.assertIn("kneekuraAttestVirginRoot(root.getCanonicalPath())", trial)
+        self.assertIn("private static native boolean kneekuraAttestVirginRoot", trial)
+        for forbidden in ("personal", "practice", "research"):
+            with self.subTest(flavor=forbidden), self.assertRaisesRegex(
+                ValueError, "isolated local-research only"
+            ):
+                render_bridge_source(
+                    template, flavor=forbidden, enabled=False,
+                    virgin_save_trial=True,
+                )
+        # Trial never changes the original-game HTTP deny policy.
+        self.assertIn("if (LOCAL_RESEARCH_DENY_HTTP)", trial)
+
     def test_bridge_launchers_preserve_original_length(self) -> None:
         for package in FLAVOR_PACKAGES.values():
             launcher = package + ".MyActivity"
