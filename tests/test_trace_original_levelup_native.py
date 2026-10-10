@@ -1289,7 +1289,7 @@ class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as name:
             root = Path(name)
             with self.assertRaisesRegex(
-                LevelUpNativeTraceError, "1..64 encrypted manifests"
+                LevelUpNativeTraceError, "1..92 encrypted manifests"
             ):
                 _additional_owner_list_coverage(root)
             one = encrypt_manifest_bytes(b"1\ndownload_1.tsv,0,16\n")
@@ -1322,6 +1322,32 @@ class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
                     ):
                         _additional_owner_list_coverage(root)
 
+
+
+    def test_all_92_owner_native_families_can_be_inspected_in_one_pass(self):
+        """Regression: original native catalog is 92 families, not old 64."""
+        from pathlib import Path
+        import tempfile
+        from tools.base_mod.battlecats_pack_writer import encrypt_manifest_bytes
+
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            family_names = {f"Seed{index:02d}Server" for index in range(92)}
+            empty_encrypted_manifest = encrypt_manifest_bytes(b"0\n")
+            for family in sorted(family_names):
+                (root / f"{family}.list").write_bytes(empty_encrypted_manifest)
+            scanned = _additional_owner_list_coverage(
+                root, known_original_families=family_names,
+            )
+            self.assertEqual(scanned["family_count"], 92)
+            self.assertEqual(scanned["total_declared_entries"], 0)
+            self.assertFalse(scanned["all_35_tsv_names_listed"])
+            self.assertFalse(scanned["original_game_offline_first_boot_and_Lv60_verified"])
+            (root / "Seed92Server.list").write_bytes(empty_encrypted_manifest)
+            with self.assertRaisesRegex(LevelUpNativeTraceError, "1..92"):
+                _additional_owner_list_coverage(
+                    root, known_original_families=family_names,
+                )
 
 
     def test_owner_server_pack_selected_tsv_optin_decrypts_only_approved_spans(self):
