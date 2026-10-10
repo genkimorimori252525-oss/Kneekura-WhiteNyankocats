@@ -439,6 +439,16 @@ def inspect_original_cold_scene102_to_101(elf: bytes) -> dict[str, Any]:
             raise OriginalVirginSaveGateError(
                 "unexpected original direct SAVE writer in guarded cold scene slice"
             )
+    # Original ELF .eh_frame identifies the selected MyApplication virtual
+    # routine's direct function body as 0x724544..0x725744. This bounded
+    # direct-BL survey does NOT exclude indirect or transitive SAVE writes.
+    virtual_direct_saves = _direct_bl_to(
+        elf, (0x724544, 0x725744), WRITER_TARGET,
+    )
+    if virtual_direct_saves:
+        raise OriginalVirginSaveGateError(
+            "original scene102 app virtual now directly writes SAVE_DATA"
+        )
     return {
         "status": "PINNED_ORIGINAL_COLD_SCENE102_GUARDED_SCENE101_TRANSITION",
         "original_cold_native_entry": "0x31753c -> 0x9c89cc",
@@ -449,6 +459,9 @@ def inspect_original_cold_scene102_to_101(elf: bytes) -> dict[str, Any]:
         "frame_local_state_gate": "0x723058 CBZ -> 0x7231ac, else 0x72305c CMP #83 and 0x723060 B.GT -> 0x7231ac; else 0x723064 resets counter to85",
         "guard_for_scene101": "0x7231ac CMP prior counter #99; 0x7231b0 B.LT -> 0x72298c",
         "application_virtual_before_scene101": "0x7231b4/1bc/1c0 vtable+0x38 -> 0x724544",
+        "original_virtual_method_unwind_range": "0x724544..0x725744 (ELF .eh_frame)",
+        "bounded_virtual_method_direct_SAVE_writer_calls": virtual_direct_saves,
+        "transitive_or_indirect_SAVE_writer_calls_excluded": False,
         "conditional_next_scene": "0x7231c8 w1=101; 0x7231cc -> 0x71c408",
         "scene101_save_probe": "0x71c6e4 CMP #101; 0x71c9b0 -> 0x35d620; 0x71c9c8 absent SAVE -> AppLaunchLoad path",
         "conditional_source_control_flow_reaches_scene101": True,
