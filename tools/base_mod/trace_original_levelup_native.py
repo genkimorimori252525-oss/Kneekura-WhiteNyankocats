@@ -2688,9 +2688,7 @@ def _additional_owner_list_coverage(
             registered_family_indices is not None
         ),
         "original_native_actual_duplicate_tsv_source_winner_proven": False,
-        "original_native_source_priority_or_duplicate_precedence_proven": (
-            registered_family_indices is not None
-        ),
+        "original_native_source_priority_or_duplicate_precedence_proven": False,
         "paired_pack_payload_check_explicitly_requested": verify_paired_pack_tsv_payloads,
         "download_tsv_payloads_decrypted": sorted(decrypted_tsvs),
         "all_35_payloads_decrypted_from_owner_paired_packs": decrypted_tsvs == expected,
