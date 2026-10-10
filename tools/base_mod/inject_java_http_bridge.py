@@ -157,6 +157,7 @@ def render_bridge_source(
     enabled: bool,
     use_external_files_dir: bool = False,
     isolate_original_native_files_dir: bool = False,
+    virgin_save_trial: bool = False,
 ) -> str:
     """Render the ORIGINAL MyActivity subclass, rejecting unsafe file modes.
 
@@ -171,6 +172,8 @@ def render_bridge_source(
         enabled or use_external_files_dir or isolate_original_native_files_dir
     ):
         raise ValueError("local research must keep original files root and deny online backup replay")
+    if virgin_save_trial and flavor != "local-research":
+        raise ValueError("original virgin SAVE trial is isolated local-research only")
     if isolate_original_native_files_dir and flavor != "research":
         raise ValueError("original-game native file isolation requires research flavor")
     if isolate_original_native_files_dir and use_external_files_dir:
@@ -204,6 +207,10 @@ def render_bridge_source(
             "__KNEEKURA_LOCAL_RESEARCH_DENY_HTTP__",
             "true" if flavor == "local-research" else "false",
         )
+        .replace(
+            "__KNEEKURA_RESEARCH_VIRGIN_SAVE_TRIAL__",
+            "true" if virgin_save_trial else "false",
+        )
     )
     if "__KNEEKURA_" in rendered:
         raise ValueError("bridge template contains unresolved placeholders")
@@ -221,6 +228,7 @@ def build_bridge_dex(
     root: Path = Path("."),
     use_external_files_dir: bool = False,
     isolate_original_native_files_dir: bool = False,
+    virgin_save_trial: bool = False,
 ) -> dict:
     package_name = FLAVOR_PACKAGES.get(flavor)
     if package_name is None:
@@ -234,6 +242,7 @@ def build_bridge_dex(
         enabled=enabled,
         use_external_files_dir=use_external_files_dir,
         isolate_original_native_files_dir=isolate_original_native_files_dir,
+        virgin_save_trial=virgin_save_trial,
     )
 
     javac_bin = _find_executable("javac", javac)
@@ -318,6 +327,8 @@ def build_bridge_dex(
         "original_native_gameplay_persistence_verified": False,
         "network_egress_guarantee": "NOT_VERIFIED",
         "strict_local_research_package": flavor == "local-research",
+        "explicit_native_virgin_save_trial": virgin_save_trial,
+        "original_virgin_save_trial_device_acceptance": False,
         "original_native_files_root": (
             "super.getFilesDir() in separate app UID" if flavor == "local-research"
             else "existing original bridge mode"

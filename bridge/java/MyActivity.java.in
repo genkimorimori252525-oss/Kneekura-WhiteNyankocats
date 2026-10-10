@@ -40,6 +40,12 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
             __KNEEKURA_LOCAL_RESEARCH_FRESH_ROOT__;
     private static final boolean LOCAL_RESEARCH_DENY_HTTP =
             __KNEEKURA_LOCAL_RESEARCH_DENY_HTTP__;
+    // Extra explicit opt-in, absent from default and passive research builds.
+    private static final boolean RESEARCH_VIRGIN_SAVE_TRIAL =
+            __KNEEKURA_RESEARCH_VIRGIN_SAVE_TRIAL__;
+    private static native boolean kneekuraAttestVirginRoot(String canonicalRoot);
+    private static boolean virginMarkerCreatedInThisProcess;
+    private static boolean virginNativeRootAttested;
     private static final String LOCAL_RESEARCH_MARKER = ".kneekura-virgin-local-jp15-7-1";
     private static final String[] FORBIDDEN_PREEXISTING_SAVES = {
             "SAVE_DATA", "SAVE_DATA4", "SAVE_DATA8"
@@ -268,6 +274,9 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
                     if (!marker.createNewFile()) {
                         throw new IllegalStateException("local research origin marker creation failed");
                     }
+                    // A marker from an earlier process must NEVER authorize
+                    // first-SAVE creation, even if the expected files are absent.
+                    virginMarkerCreatedInThisProcess = true;
                 }
                 // Canonical path check AFTER creation catches symlink relocation.
                 if (!marker.getCanonicalPath().equals(exactMarkerPath)
@@ -276,6 +285,23 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
                 }
             } catch (IOException error) {
                 throw new IllegalStateException("original local research origin root unavailable", error);
+            }
+            if (RESEARCH_VIRGIN_SAVE_TRIAL
+                    && virginMarkerCreatedInThisProcess
+                    && !virginNativeRootAttested) {
+                // The native side also verifies the exact original source,
+                // hooks, no prior SAVE files, root UID and empty marker.
+                try {
+                    System.loadLibrary("kneekura");
+                    if (kneekuraAttestVirginRoot(root.getCanonicalPath())) {
+                        virginNativeRootAttested = true;
+                        debugResearch("original-virgin-root-attested-v1");
+                    }
+                } catch (UnsatisfiedLinkError unavailable) {
+                    // Original ELF hooks can be absent this early in startup.
+                    // No writer is authorized until native attestation succeeds.
+                    debugResearch("original-virgin-root-not-ready-v1");
+                }
             }
             probeLocalGameSaveFiles(root);
             watchOriginalLocalSaveChanges(root);
