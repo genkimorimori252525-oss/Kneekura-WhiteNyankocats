@@ -4,7 +4,9 @@ import unittest
 
 from tools.base_mod.trace_original_player_init_save import (
     ORIGINAL_ANCHORS, ORIGINAL_LABELS, RELOCATIONS, RELA_START, RELA_SIZE,
-    BL_TARGETS, BRANCHES, OriginalPlayerInitSaveTraceError,
+    BL_TARGETS, BRANCHES, ACCOUNT_DELETE_RESET_ANCHORS,
+    ACCOUNT_DELETE_RESET_CALLS, ACCOUNT_DELETE_RESET_BRANCHES,
+    OriginalPlayerInitSaveTraceError,
     _target, inspect_original_player_init_save,
     trace_exact_original_player_init_save,
 )
@@ -13,7 +15,7 @@ from tools.base_mod.trace_original_player_init_save import (
 def _fixture() -> bytearray:
     # Exact *selected instruction words*, with every unrelated byte synthetic 0.
     blob = bytearray(max(ORIGINAL_ANCHORS) + 4)
-    for pc, op in ORIGINAL_ANCHORS.items():
+    for pc, op in {**ORIGINAL_ANCHORS, **ACCOUNT_DELETE_RESET_ANCHORS}.items():
         struct.pack_into("<I", blob, pc, op)
     for at, literal in ORIGINAL_LABELS.items():
         blob[at:at + len(literal)] = literal
@@ -58,6 +60,33 @@ class OriginalPlayerStateInitToNativeSaveTests(unittest.TestCase):
         self.assertIn("0x749e80 -> 0x89385c", result["service_state9_reset_and_save"])
         self.assertIn("0x749eb0 -> 0x8b9fc8", result["service_state9_reset_and_save"])
         self.assertFalse(result["normal_new_player_entry_identified"])
+
+    def test_account_delete_browser_reset_save_cannot_be_claimed_virgin(self):
+        receipt = inspect_original_player_init_save(self.source)
+        self.assertIn("miniBrowserLinkClicked", receipt["account_deletion_callback_rtti"])
+        self.assertIn("AccountDelete_error02",
+                      receipt["account_deletion_error_literals"])
+        self.assertIn("0x776584 -> 0x89385c",
+                      receipt["account_deletion_success_reset"])
+        self.assertIn("0x7765a4 -> 0x8b9fc8",
+                      receipt["account_deletion_success_original_SAVE"])
+        self.assertIn("scene104", receipt["account_deletion_success_scene"])
+        self.assertTrue(receipt["account_deletion_not_safe_to_repurpose_as_offline_virgin"])
+        self.assertFalse(receipt["normal_new_player_entry_identified"])
+
+    def test_account_delete_callback_branch_and_actual_writer_drift_fails(self):
+        for pc, op in ACCOUNT_DELETE_RESET_CALLS.items():
+            with self.subTest(call=hex(pc)):
+                self.assertEqual(_target(self.source, pc, "bl"), op)
+        for pc, (kind, target) in ACCOUNT_DELETE_RESET_BRANCHES.items():
+            with self.subTest(branch=hex(pc)):
+                self.assertEqual(_target(self.source, pc, kind), target)
+        for pc in ACCOUNT_DELETE_RESET_ANCHORS:
+            with self.subTest(pinned_instruction=hex(pc)):
+                changed = bytearray(self.source)
+                changed[pc] ^= 1
+                with self.assertRaises(OriginalPlayerInitSaveTraceError):
+                    inspect_original_player_init_save(bytes(changed))
 
     def test_selected_real_arm64_direct_calls_and_branches(self):
         for at, dest in BL_TARGETS.items():
