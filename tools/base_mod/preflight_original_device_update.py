@@ -204,7 +204,8 @@ def _cert(text: str) -> str:
 
 
 def preflight(*, repo: Path, candidate: Path, adb: Path, apksigner: Path,
-              output: Path | None = None, runner=subprocess.run) -> tuple[dict, Path]:
+              output: Path | None = None, runner=subprocess.run,
+              require_installed_bytes_match: bool = False) -> tuple[dict, Path]:
     repo = repo.resolve(strict=True)
     candidate = _candidate(repo, candidate)
     adb = _owned_file(adb, "adb tool")
@@ -227,6 +228,8 @@ def preflight(*, repo: Path, candidate: Path, adb: Path, apksigner: Path,
     ]
     if len(set(candidate_certs)) != 1:
         raise PreflightBlocked("candidate split signer mismatch; do not install")
+    installed_base_bytes_match = False
+    installed_arm64_bytes_match: bool | None = None
     with tempfile.TemporaryDirectory(
         dir=(repo / "private"), prefix="read-only-installed-research-"
     ) as tmp:
@@ -235,12 +238,36 @@ def preflight(*, repo: Path, candidate: Path, adb: Path, apksigner: Path,
             adb, ["-s", serial, "pull", installed["base.apk"], str(saved_base)],
             "read installed research base.apk", 60, runner,
         )
-        if not saved_base.is_file() or saved_base.stat().st_size < 512:
+        if (not saved_base.is_file() or not
+                512 <= saved_base.stat().st_size <= 250_000_000):
             raise PreflightBlocked("installed research base.apk inaccessible via unprivileged ADB")
         installed_cert = _cert(_call(
             apksigner, ["verify", "--print-certs", str(saved_base)],
             "read installed research APK signature", 25, runner,
         ))
+        installed_base_bytes_match = (
+            hashlib.sha256(saved_base.read_bytes()).digest()
+            == hashlib.sha256((candidate / "base.apk").read_bytes()).digest()
+        )
+        if require_installed_bytes_match:
+            saved_arm = Path(tmp) / "installed-arm64.apk"
+            _call(
+                adb, ["-s", serial, "pull",
+                      installed["split_config.arm64_v8a.apk"], str(saved_arm)],
+                "read installed isolated research arm64 split", 90, runner,
+            )
+            if (not saved_arm.is_file() or not
+                    512 <= saved_arm.stat().st_size <= 250_000_000):
+                raise PreflightBlocked("installed ARM64 research split unreadable")
+            installed_arm64_bytes_match = (
+                hashlib.sha256(saved_arm.read_bytes()).digest()
+                == hashlib.sha256((
+                    candidate / "split_config.arm64_v8a.apk").read_bytes()).digest()
+            )
+            if not (installed_base_bytes_match and installed_arm64_bytes_match):
+                raise PreflightBlocked(
+                    "installed research base/arm64 bytes do not match signed candidate"
+                )
     if installed_cert != candidate_certs[0]:
         raise PreflightBlocked(
             "candidate signer DOES NOT match actually installed isolated research app; never uninstall or clear data"
@@ -256,6 +283,9 @@ def preflight(*, repo: Path, candidate: Path, adb: Path, apksigner: Path,
         "candidate_signer_matches_all_six_splits": True,
         "compiled_passive_arm64_sha256_receipt_verified": True,
         "candidate_signer_matches_installed_research_base": True,
+        "installed_base_bytes_match_candidate": installed_base_bytes_match,
+        "installed_arm64_bytes_match_candidate": installed_arm64_bytes_match,
+        "installed_research_copy_removed_after_checks": True,
         "temporary_copy_of_installed_APK_removed": True,
         "original_game_or_player_SAVE_read_or_modified": False,
         "adb_calls_read_only": True,
