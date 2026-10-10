@@ -1424,13 +1424,14 @@
     "end_vma_exclusive": "0xad751c",
     "byte_count": 8126892,
     "full_mapped_text_sha256": "c696e73028669cfeed82ab3c4ceb216eff5dddd919101c3b4ec488580ecb6b15",
-    "full_exec_text_pre_sign_lief_repack_verified": false,
+    "full_exec_text_pre_sign_lief_repack_verified": true,
     "production_gate": "tools/base_mod/original_scene_native_image_gate.py::_original_executable_text_sha256",
     "synthetic_regressions_include_non_anchor_instruction_drift": true,
     "protects_against": "unapproved source opcode changes outside 17 previously checked individual callsites",
     "protects_original_save_or_account": false,
     "no_proprietary_text_bytes_uploaded_to_git": true,
-    "native_original_game_lv60_and_save_device_accepted": false
+    "native_original_game_lv60_and_save_device_accepted": false,
+    "static_original_owner_version_source_verified": true
   },
   "owner_original_lief_roundtrip_local_probe": {
     "entrypoint": "python -m tools.base_mod.original_scene_native_image_gate --owned-export <owner-JP15.7.1-ZIP> --baseline-only --metadata-output private/level-native-baseline.json",
@@ -1439,13 +1440,15 @@
     "signed_installable_APK_created": false,
     "public_proprietary_archive_or_save_committed": false,
     "LIEF_unavailable_is_explicit_blocked_not_success": true,
-    "post_LIEF_original_native_full_8MB_executable_code_verified": false,
+    "post_LIEF_original_native_full_8MB_executable_code_verified": true,
     "owner_Android_gameplay_connected": false,
     "original_powerup_level60_save_reboot_verified": false,
     "source_paths": [
       "tools/base_mod/original_scene_native_image_gate.py",
       "tests/test_original_scene_native_image_gate.py"
-    ]
+    ],
+    "exact_user_original_LIEF_roundtrip_verified_in_executor": true,
+    "private_real_original_11MB_LIEF_rewritten_loaded_at_android": false
   },
   "original_LIEF_uniform_native_code_rebase_2026_10_10": {
     "status": "ORIGINAL_SOURCE_VERIFIED_UNIFORM_REBASE_TOOLING_SUPPORTED_OWNER_POST_LIEF_DEVICE_NOT_YET_VERIFIED",
@@ -1476,5 +1479,42 @@
     "original_no_INTERNET_IPC_SDK_egress_verified": false,
     "ready_for_original_APK_release": false,
     "scope": "exact native source/hash proofs and SOURCE-ONLY instrumentation; not original game acceptance"
+  },
+  "exact_real_original_LIEF_and_presign_2026_10_10": {
+    "source": "User-attached exact JP15.7.1 original ZIP; never uploaded to GitHub Actions; private temporary only",
+    "original_owner_ZIP_SHA256": "38c3bbb8d2cf2101793c9462617d4293e19fc99588b6655fd40299fd61a0ef56",
+    "original_native_elf_SHA256": "333d2974ab2ff881fd70087fd62dea7d12d82addbc55cab2f2a675ad67e3a7e2",
+    "LIEF_version_tested": "0.17.6",
+    "actual_original_11_6MB_native_LIEF_rewrite_verified": true,
+    "candidate_native_SHA256": "5714cfbaac2c87e88ca94a0ccf781a47f58952865c88fda6321848e2b87c3a0a",
+    "original_source_uniform_VMA_rebase_bytes": 4096,
+    "original_JNI_draw_VMA_before": "0x31755c",
+    "original_JNI_draw_VMA_after": "0x31855c",
+    "original_export_surface_preserved": true,
+    "original_build_ID_preserved": true,
+    "original_17_opcode_anchors_verified": true,
+    "original_8126892_text_bytes_SHA256_preserved": true,
+    "verified_exact_nontext_sha_sections": [
+      "eh_frame",
+      "gnu_note",
+      "lcxx_override",
+      "plt",
+      "rodata"
+    ],
+    "added_dynamic_dependency": "libkneekura.so",
+    "actual_original_unsigned_arm64_split_rebuilt_and_passed_pre_signature_gate": true,
+    "actual_original_unsigned_arm64_split_SHA256": "010330bd4d4536b634d249b87b93d1dd4b289465d2f419612f89633d21dbd54c",
+    "original_split_members_count": 11,
+    "original_other_split_member_bytes_unchanged_count": 10,
+    "new_research_only_arm64_shim_SHA256": "8c22ee999287cfd732e3550931abce369830844ccc7ac26a3ae72046e8f8c2b2",
+    "owner_original_APK_or_SAVE_content_modified": false,
+    "actual_unsigned_repacked_ELF_and_APK_discarded_after_temp_test": true,
+    "original_full_six_split_package_signed": false,
+    "original_research_Android_gameplay_boot_observed": false,
+    "original_level60_XP_Catseye_save_reboot_verified": false,
+    "original_account_free_first_SAVE_generated": false,
+    "original_no_INTERNET_SDK_IPC_egress_verified": false,
+    "original_Madoka_Godzilla_Jolly_i_ops_product_gates_passed": false,
+    "ready_to_ship": false
   }
 }

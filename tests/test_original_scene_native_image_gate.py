@@ -369,11 +369,50 @@ class OriginalSceneSourceRepackPreflightTests(unittest.TestCase):
             self.assertEqual(outcome["status"],
                              "PASS_PRIVATE_TEMP_NATIVE_LIEF_ROUNDTRIP_ONLY")
             self.assertTrue(outcome["original_text_preserved_after_LIEF_rewrite"])
+            self.assertEqual(outcome["source_original_JNI_draw_VMA"], "0x31755c")
+            self.assertEqual(outcome["candidate_original_JNI_draw_VMA"], "0x31755c")
+            self.assertEqual(outcome["candidate_uniform_source_VMA_rebase_bytes"], 0)
+            self.assertEqual(outcome["candidate_verified_original_instruction_anchors"], 17)
+            self.assertEqual(
+                outcome["candidate_verified_nontext_source_sections"],
+                ["eh_frame", "gnu_note", "lcxx_override", "plt", "rodata"],
+            )
             self.assertFalse(outcome["ready_to_sign_or_install"])
             with ZipFile(owner) as archive:
                 self.assertIn(
                     "apk/split_config.arm64_v8a.apk", archive.namelist()
                 )
+
+    def test_owner_private_probe_reports_only_verified_uniform_shift(self):
+        # Synthetic ELF shifting just executable mapped VMA and JNI exported
+        # address. The private owner probe must report shift from the strict
+        # original-source validator, not infer success from the rewriter log.
+        with tempfile.TemporaryDirectory() as temp:
+            owner = self._private_fake_owner_native_archive(Path(temp))
+            source_hash, native_hash = self._fixture_owned_export_and_native_hashes(owner)
+            def synthetic_uniform_rebase(original):
+                edited = bytearray(original)
+                p_vaddr = struct.unpack_from("<Q", edited, 0x40 + 16)[0]
+                struct.pack_into("<Q", edited, 0x40 + 16, p_vaddr + 0x1000)
+                struct.pack_into("<Q", edited, 0x400 + 24 + 8,
+                                 ORIGINAL_DRAW_VMA + 0x1000)
+                return bytes(edited), {
+                    "libraries_before": [],
+                    "libraries_after": ["libkneekura.so"],
+                    "export_surface_preserved": True,
+                }
+            with source_hash, native_hash:
+                report = image_gate.probe_owner_original_lief_roundtrip(
+                    owner, native_rewriter=synthetic_uniform_rebase
+                )
+            self.assertEqual(
+                report["status"], "PASS_PRIVATE_TEMP_NATIVE_LIEF_ROUNDTRIP_ONLY")
+            self.assertEqual(report["candidate_uniform_source_VMA_rebase_bytes"],
+                             4096)
+            self.assertEqual(report["source_original_JNI_draw_VMA"], "0x31755c")
+            self.assertEqual(report["candidate_original_JNI_draw_VMA"], "0x31855c")
+            self.assertFalse(report["ready_to_sign_or_install"])
+            self.assertFalse(report["original_APK_or_SAVE_written"])
 
     def test_any_non_anchor_native_rewrite_drift_blocks_candidate(self):
         with tempfile.TemporaryDirectory() as temp:

@@ -459,6 +459,11 @@ def probe_owner_original_lief_roundtrip(
         "original_library_LIEF_rewrite_executed": False,
         "original_text_preserved_after_LIEF_rewrite": False,
         "changed_native_candidate_sha256": None,
+        "source_original_JNI_draw_VMA": original_gate["original_JNI_draw_export_vma"],
+        "candidate_original_JNI_draw_VMA": None,
+        "candidate_uniform_source_VMA_rebase_bytes": None,
+        "candidate_verified_nontext_source_sections": [],
+        "candidate_verified_original_instruction_anchors": 0,
         "original_APK_or_SAVE_written": False,
         "original_restricted_account_or_PONOS_endpoint_contacted": False,
         "original_Android_runtime_played": False,
@@ -500,6 +505,16 @@ def probe_owner_original_lief_roundtrip(
     receipt["original_text_preserved_after_LIEF_rewrite"] = (
         mapped["complete_original_text_sha256"]
         == original_gate["complete_original_text_sha256"]
+    )
+    receipt["candidate_original_JNI_draw_VMA"] = mapped["original_JNI_draw_export_vma"]
+    receipt["candidate_uniform_source_VMA_rebase_bytes"] = (
+        mapped["original_source_uniform_VMA_rebase_bytes"]
+    )
+    receipt["candidate_verified_nontext_source_sections"] = sorted(
+        mapped["verified_nontext_mapped_source_sections"]
+    )
+    receipt["candidate_verified_original_instruction_anchors"] = (
+        mapped["verified_executable_instruction_anchors"]
     )
     receipt["status"] = "PASS_PRIVATE_TEMP_NATIVE_LIEF_ROUNDTRIP_ONLY"
     return receipt
