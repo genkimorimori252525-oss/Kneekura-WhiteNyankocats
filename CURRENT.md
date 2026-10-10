@@ -47,6 +47,13 @@
 - このビルドと端末アップデートは別工程。実機上の研究版 `jp.kn.local.battlecats` の実際のインストール済み証明書と候補6本を `tools/base_mod/CHECK-OWNER-RESEARCH-DEVICE-SIGNER.ps1`（内部の `preflight_original_device_update.py`）で**読み取り専用照合**するまで、`-r` インストールはしない。さらに候補 `libkneekura.so` はCIコンパイル済みの `PASSIVE_SHIM_BUILD_SOURCE_RECEIPT.json` のSHAと一致必須。
 - それらのゲートが実機で通った場合だけ、本人が明示的に選んで研究版6分割を上書き更新し、`CAPTURE-OWNER-ORIGINAL-CRASH.ps1` で研究版を1回のみ起動、`summarize_original_crash_capture.py` で機密抜きの集計JSONを生成する。古い単独ShadowHook研究キットを再実行しない。**公式 `jp.co.ponos.battlecats` やSAVEの削除・再利用・H01/BAN回避なし。** 具体的なコード/テストと成果は既存 [Issue #12](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/issues/12) に一本化。
 
+### 2026-10-11 続報 — Android実ツール署名確認と更新実行の安全な単一ゲート
+
+- **合成ではあるが実Android SDKによる実署名が成功。** `.github/workflows/real-apksigner-env-smoke.yml` はWindows/Linux両方で `aapt2` による合成APK生成、`zipalign`、実`keytool`の一時秘密鍵、`apksigner`による原作と同じ6分割名の署名/検証を実行。パスワードの`env:`渡しと内容保持を検証、元ゲームAPK・公式SAVEは未使用。[実SDK検証](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/actions/runs/38083892128) 両OS PASS。ただし所有者実キーでの原作ゲーム署名・実起動ではない。
+- **本人が明示承認した場合だけ研究版を6分割で1回更新する実コード**：`tools/base_mod/INSTALL-OWNER-RESEARCH-PAIR.ps1` → `tools/base_mod/update_original_isolated_research.py`。既存 `preflight_original_device_update.py` による本人端末に現存する**研究用パッケージだけ**のread-only署名/ネイティブ証明確認に合格後、研究版が動いておらず同じUSB端末・6本ハッシュが維持されている時だけ `adb install-multiple --no-streaming -r`。失敗・タイムアウト時は自動再試行せず、公式アプリやSAVE領域へ介入しない。再インストール・初期化・署名違いでの置換をしない。
+- **更新後の実バイト照合**：署名一致だけではShadowHook修正がインストールされた証拠にならないため、privateの一時領域で研究版の`base.apk`と`split_config.arm64_v8a.apk`を読み取り、新候補とSHA-256一致を要求（残り4分割は導入確認・署名検証のみ）。一時コピーは削除、出力レシートには端末ID/証明書/SAVE/APK本文を保存しない。実機での同一鍵ビルド・更新・起動はいずれも **OWNER_GATE / 未実施**。
+- 実Android署名のCI成功＋合成ADB更新テストは、**原作の黒画面解消・初回SAVE・Lv60/MAX・運営i/まどか/ゴジラ/完全オフラインの受入PASSではない**。次の現物試験は本人Windowsで既存研究用署名鍵を使い`BUILD-OWNER-RESEARCH-PAIR.ps1`により原作所有ZIPからPrivate候補を作り、read-only signer gateを通過後にのみ本人の明示操作で更新・一度だけログ採取。旧一個だけのShadowHook `.so`を含むトライアルを再実行しない。
+
 ## このファイルの後に読むもの（最大限絞る）
 
 **普段の新規AIセッション：** このファイル → PRODUCT_IDENTITY.md → 実装ロードマップの「実行順序と次の担当者向け開始地点」→ 今動かす1タスクのソース/証拠だけ。毎回すべてのdocs/を巡回する必要はない。
