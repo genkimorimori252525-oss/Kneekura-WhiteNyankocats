@@ -280,3 +280,18 @@ runtime proof): 1,814 local animation files contain 127,224 tracks and
 tracks with zero keyframes, 22,960 negative-frame entries and six special -2
 model-node references. The private converter permits these legitimate native
 records but rejects malformed/unknown model-node references.
+
+## Real source archive validated on ephemeral GitHub Actions (2026-10-10)
+
+All four historical JP15.7.1 Server files were acquired from the archived public `fieryhenry/BCData/jp_server` repository **in a temporary GitHub Actions runner**, compared against the owner's source-archive manifest **size and MD5**, and used to execute the real source pipeline. This is NOT a synthetic encrypted fixture:
+
+- Original enemy Godzilla `550_e`: exactly seven actual source assets decrypted, PNG 631 × 631, 71 sprites, 155 model nodes
+- Existing original friendly first form `702_f`: 93 nodes; existing second form `702_c`: 93 nodes; both have positive root X-scale +1250
+- Original enemy `550_e`: positive root X-scale +1790. Converted candidate `702_f` retains positive +1790; therefore the private converter did not change root facing sign
+- Original 550_e00/01/02/03 animation maximum keyframe indices: 180 / 115 / 310 / 0 respectively. Original 550_e02 has 379 tracks and 10,529 keyframes; this is not a confirmed hit schedule
+- Validated candidate WImageDataServer entry count: 16,165 source -> 16,166 candidate (one additional `702_f.png`); the six first-form resource replacements were independently decrypted/read back
+- Original PNG and all four motion-animation payloads remain SHA-identical; original second form `702_c` and unrelated original Server assets remain unchanged
+
+See [persistent metadata-only real source proof](../evidence/jp15.7.1-godzilla-real-mirror-proof.md) and [enhanced read-only CI result](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/actions/runs/38053970596). Exact historical original binary, image, model and animation bytes were **deleted from the runner temporary directory**; only the metadata JSON was uploaded, not the copyrighted content.
+
+**Important boundary:** This proves real data extraction, source model conversion and a full valid encrypted candidate in an isolated environment. It does NOT validate original game's downloaded archive MD5 after changes, native resource winner, original renderer facing or Android battle; the preview still must NOT be installed as an official Server pack. The four files separately recovered by the owner on Windows have historical matching MD5/size but their SHA-256 must be independently compared against this evidence if strict byte identity to that recovery is needed.
