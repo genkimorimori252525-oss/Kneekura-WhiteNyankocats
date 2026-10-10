@@ -24,6 +24,10 @@ def _fixture():
 
 def _oncreate_status_fixture():
     image = _fixture()
+    # The typed lambda is later in .text than the legacy worker-fixture end.
+    target_size = max(ONCREATE_STATUS_ANCHORS) + 4
+    if len(image) < target_size:
+        image.extend(bytes(target_size - len(image)))
     for pc, opcode in ONCREATE_STATUS_ANCHORS.items():
         struct.pack_into("<I", image, pc, opcode)
     for pc, literal in ONCREATE_RTTI.items():
