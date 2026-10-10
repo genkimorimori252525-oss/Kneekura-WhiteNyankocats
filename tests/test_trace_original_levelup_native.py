@@ -1211,6 +1211,76 @@ class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
                 )
 
 
+    def test_two_verified_owner_tsv_candidates_remain_conditional_not_live_winner(self):
+        """Each encrypted synthetic pack is inspected, not guessed or selected."""
+        from pathlib import Path
+        from hashlib import sha256
+        import tempfile
+        from tools.base_mod.battlecats_pack_writer import (
+            encrypt_manifest_bytes, _encrypt_entry,
+        )
+
+        names = {"MNumberServer": b"synthetic-M-source\n",
+                 "WImageDataServer": b"synthetic-W-source\n"}
+        original_order = {"MNumberServer": 43, "WImageDataServer": 4}
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            source_digest = {}
+            for family, payload in names.items():
+                ciphertext, mode = _encrypt_entry(family, payload, region="jp")
+                self.assertEqual(mode, "aes-128-ecb-server")
+                manifest = encrypt_manifest_bytes(
+                    f"1\ndownload_9.tsv,0,{len(ciphertext)}\n".encode()
+                )
+                (root / (family + ".list")).write_bytes(manifest)
+                (root / (family + ".pack")).write_bytes(ciphertext)
+                source_digest[family] = (
+                    sha256(manifest).hexdigest(),
+                    sha256(ciphertext).hexdigest(),
+                )
+
+            with self.assertRaisesRegex(
+                LevelUpNativeTraceError, "ambiguous original TSV"
+            ):
+                _additional_owner_list_coverage(
+                    root, known_original_families=set(original_order),
+                    verify_paired_pack_tsv_payloads=True,
+                )
+            receipt = _additional_owner_list_coverage(
+                root, known_original_families=set(original_order),
+                registered_family_indices=original_order,
+                verify_paired_pack_tsv_payloads=True,
+            )
+            self.assertTrue(receipt["all_duplicate_candidate_payloads_decrypted"])
+            self.assertEqual(receipt["download_tsv_payloads_decrypted"],
+                             ["download_9.tsv"])
+            self.assertEqual(receipt["ambiguous_target_filenames_across_families"],
+                             ["download_9.tsv"])
+            self.assertEqual(
+                receipt["conditional_first_source_for_duplicate_names_if_all_register"],
+                {"download_9.tsv": {
+                    "family": "WImageDataServer", "original_registration_index": 4
+                }},
+            )
+            self.assertFalse(receipt["original_native_actual_duplicate_tsv_source_winner_proven"])
+            self.assertFalse(receipt["original_native_tsv_semantics_accepted"])
+            for family, payload in names.items():
+                metadata = receipt["families"][family]["targeted_decrypted_tsv_payloads"]
+                self.assertEqual(
+                    metadata["download_9.tsv"]["decrypted_payload_sha256"],
+                    sha256(payload).hexdigest(),
+                )
+                self.assertNotIn(payload.decode().strip(), repr(receipt))
+                self.assertEqual(
+                    sha256((root / (family + ".list")).read_bytes()).hexdigest(),
+                    source_digest[family][0],
+                )
+                self.assertEqual(
+                    sha256((root / (family + ".pack")).read_bytes()).hexdigest(),
+                    source_digest[family][1],
+                )
+
+
     def test_owned_additional_list_scan_rejects_missing_duplicate_or_symlink(self):
         from pathlib import Path
         import tempfile
