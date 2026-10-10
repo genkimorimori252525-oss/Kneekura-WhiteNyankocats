@@ -743,12 +743,32 @@ static void kneekura_init_scene_witness_research_only(void) {
         (ShadowHookFuncAddr2Fn)dlsym(library, "shadowhook_hook_func_addr_2");
     ShadowHookUnhookFn unhook_fn =
         (ShadowHookUnhookFn)dlsym(library, "shadowhook_unhook");
+    /* An owner-device rapid restart loop showed this exact aggregated
+     * failure 85 times. Split the reason without logging dlsym strings,
+     * paths, addresses, account data or SAVE contents. The hook remains OFF
+     * on any failure; this is observation-only instrumentation. */
     if (init_fn == NULL || hook_sym_fn == NULL || hook_func_fn == NULL
-        || unhook_fn == NULL
-        || init_fn(1, 0) != 0) {
+        || unhook_fn == NULL) {
         __android_log_write(
             ANDROID_LOG_INFO, WITNESS_TAG,
-            "original-native-scene-hook-v1 hook-initialization-failed");
+            "original-native-scene-hook-v1 hook-api-missing");
+        dlclose(library);
+        return;
+    }
+    int shadowhook_init_status = init_fn(1, 0);
+    if (shadowhook_init_status != 0) {
+        __android_log_write(
+            ANDROID_LOG_INFO, WITNESS_TAG,
+            "original-native-scene-hook-v1 hook-runtime-init-failed");
+        char status_message[96];
+        int message_length = snprintf(
+            status_message, sizeof(status_message),
+            "original-native-scene-hook-v1 hook-init-status=%d",
+            shadowhook_init_status);
+        if (message_length > 0
+            && (size_t)message_length < sizeof(status_message)) {
+            __android_log_write(ANDROID_LOG_INFO, WITNESS_TAG, status_message);
+        }
         dlclose(library);
         return;
     }
