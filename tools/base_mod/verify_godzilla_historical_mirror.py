@@ -188,6 +188,8 @@ def verify_public_mirror_volatile(
                 "candidate_manifest_sha256":
                     candidate["candidate_manifest_sha256"],
                 "candidate_pack_sha256": candidate["candidate_pack_sha256"],
+                "original_702c_second_form_unchanged":
+                    candidate["original_second_form_bytes_changed"] is False,
             }
             receipt["original_rig_geometry"] = ally["atlas_geometry"]
             receipt["original_imgcut_sprite_count"] = (
@@ -196,6 +198,14 @@ def verify_public_mirror_volatile(
             receipt["original_model_node_count"] = (
                 ally["mamodel_conversion"]["declared_model_nodes"]
             )
+            receipt["real_model_conversion"] = {
+                "atlas_550_to_702_rows":
+                    ally["mamodel_conversion"]["atlas_rows_rebased"],
+                "root_horizontal_orientation_changed":
+                    ally["mamodel_conversion"]["root_was_reoriented"],
+                "other_original_model_fields_preserved":
+                    ally["mamodel_conversion"]["extra_collision_and_model_footer_bytes_preserved"],
+            }
             receipt["original_animation_track_summaries"] = {
                 name: {
                     "track_count": info["track_count"],
@@ -204,9 +214,19 @@ def verify_public_mirror_volatile(
                         info["negative_frame_key_count"],
                     "special_minus_two_node_track_count":
                         info["special_minus_two_node_track_count"],
+                    "largest_frame_number": info["largest_frame_number"],
+                    "zero_keyframe_track_count": info["zero_keyframe_track_count"],
                 }
                 for name, info in sorted(ally["animations_untouched"].items())
             }
+            originals = receipt["original_enemy_art_550e"]
+            candidates = receipt["candidate_first_form_702f"]
+            for suffix in (".png", "00.maanim", "01.maanim",
+                           "02.maanim", "03.maanim"):
+                if (originals["550_e" + suffix]["sha256"]
+                    != candidates["702_f" + suffix]["sha256"]):
+                    raise ValueError("original Godzilla PNG or animation bytes changed")
+            receipt["PNG_and_four_maanim_SHA256_all_unchanged"] = True
             receipt["private_staging_worked_without_original_game_mutation"] = True
             receipt["status"] = "PASS_ORIGINAL_PUBLIC_ARCHIVE_MATCHED_AND_PRIVATE_PREVIEW_BUILT"
             receipt["last_stage"] = "metadata-only-receipt"
