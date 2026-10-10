@@ -1292,7 +1292,7 @@
     "final_parity": "tools/base_mod/verify_static_http_bridge.py requires exact added library, reviewed SHA256, isolated no-INTERNET flavor",
     "observer": "tools/base_mod/collect_original_local_first_boot.py parses allowlisted native transition events only after hook-installed marker",
     "tests": "tests/test_original_native_scene_witness.py;tests/test_original_scene_witness_packaging.py;tests/test_collect_original_local_first_boot.py",
-    "real_ndk_android_native_shim_compilation_verified": false,
+    "real_ndk_android_native_shim_compilation_verified": true,
     "real_shadowhook_dynamic_attach_observed": false,
     "signed_original_local_research_app_installed_or_run": false,
     "original_native_scene_102_or_101_observed_on_device": false,
@@ -1325,6 +1325,31 @@
     "staged_native_libshadowhook_actual_arm64_from_reviewed_source_integrated_on_phone": false,
     "original_device_scene102_scene101_real_observation_complete": false,
     "original_game_first_account_free_SAVE_generated_and_persisted": false,
-    "full_offline_original_gameplay_release_accepted": false
+    "full_offline_original_gameplay_release_accepted": false,
+    "actual_original_research_NDK_build": {
+      "source_only_GitHub_run": 38046792504,
+      "followup_verified_run": 38046703566,
+      "toolchain": "Android NDK 27.2.12479018",
+      "ABI": "arm64-v8a",
+      "android_min_api": 29,
+      "native_feature_off_shim_compiled": true,
+      "native_feature_on_scene_shim_compiled": true,
+      "compiled_research_identity_global_symbols": [
+        "kneekura_scene_research_package_identity",
+        "kneekura_scene_research_event_format"
+      ],
+      "source_only_liblog_android_dependency_linked": true,
+      "GitHub_action": "https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/actions/runs/38046703566",
+      "original_user_game_APK_or_assets_included_in_CI": false,
+      "compiled_hook_attached_on_real_Android": false
+    },
+    "native_duplicate_original_library_name_search_fixed_to_complete_all_dl_iterate_phdr_entries": true,
+    "native_post_LIEF_source_VMA_BuildID_and_JNI_dynsym_gate_integrated": true,
+    "native_post_LIEF_source_VMA_gate_static_synthetic_tests_passed": true,
+    "native_post_LIEF_user_original_renamed_APK_signed_and_device_tested": false,
+    "repackaged_native_source_gate_code": "tools/base_mod/original_scene_native_image_gate.py",
+    "repackaged_native_source_gate_tests": "tests/test_original_scene_native_image_gate.py",
+    "repacked_original_ELF_source_verifier_required_in_bridge_parity": true,
+    "ci_real_android_ndk_build_not_proof_of_original_native_runtime": true
   }
 }
