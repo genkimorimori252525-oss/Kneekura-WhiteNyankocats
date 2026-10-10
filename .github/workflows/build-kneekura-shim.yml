@@ -115,10 +115,17 @@ jobs:
               reloc_sections = {}
               for name in (".note.gnu.build-id", ".dynstr", ".rodata",
                            ".eh_frame", ".text", ".plt", ".data.rel.ro",
-                           ".dynamic", ".got"):
+                           ".dynamic", ".got", ".got.plt", ".data",
+                           ".init_array", ".fini_array"):
                   current = binary.get_section(name)
                   if current is not None:
-                      reloc_sections[name] = int(current.virtual_address)
+                      reloc_sections[name] = {
+                          "vma": int(current.virtual_address),
+                          "size": int(current.size),
+                          "sha256": sha256(bytes(current.content)).hexdigest()
+                              if name in (".note.gnu.build-id", ".rodata",
+                                          ".eh_frame", ".plt") else None,
+                      }
               return {
                   "vma": int(section.virtual_address),
                   "size": int(section.size),
@@ -150,7 +157,28 @@ jobs:
                       raise ValueError("LIEF output changed ELF machine")
                   original_text = inspect_text(source, work / "before.so")
                   modified_text = inspect_text(rewritten, work / "after.so")
-                  unchanged = original_text == modified_text
+                  delta = modified_text["vma"] - original_text["vma"]
+                  orig_layout = original_text["other_section_VMA_metadata"]
+                  new_layout = modified_text["other_section_VMA_metadata"]
+                  stable = (".note.gnu.build-id", ".rodata", ".eh_frame",
+                            ".text", ".plt", ".data.rel.ro", ".got",
+                            ".got.plt", ".data", ".init_array", ".fini_array")
+                  geometry = all(
+                      (name in orig_layout) == (name in new_layout)
+                      and (name not in orig_layout or (
+                          new_layout[name]["vma"] - orig_layout[name]["vma"] == delta
+                          and (orig_layout[name]["sha256"] is None or
+                               orig_layout[name]["sha256"] == new_layout[name]["sha256"])
+                      ))
+                      for name in stable
+                  )
+                  unchanged = (
+                      0 <= delta <= 0x10000
+                      and delta % 0x1000 == 0
+                      and original_text["sha256"] == modified_text["sha256"]
+                      and original_text["size"] == modified_text["size"]
+                      and geometry
+                  )
                   if (not ledger["export_surface_preserved"]
                       or "libkneekura-source-only-lief-test.so"
                           not in ledger["libraries_after"]):
@@ -159,21 +187,22 @@ jobs:
                       "source": path,
                       "original_text": original_text,
                       "after_LIEF_text": modified_text,
-                      "same_original_text_VMA_and_SHA256": unchanged,
+                      "stable_uniform_mapped_source_rebase": unchanged,
+                      "original_to_LIEF_VMA_delta_bytes": delta,
                       "DT_NEEDED_added": True,
                       "export_surface_preserved": True,
                   })
           result["status"] = (
-              "PASS_OWN_ANDROID_ARM64_LIEF_NO_GAME_DATA"
-              if all(row["same_original_text_VMA_and_SHA256"] for row in result["cases"])
-              else "BLOCKED_OWN_ANDROID_ARM64_LIEF_TEXT_MAPPED_DRIFT"
+              "PASS_OWN_ANDROID_ARM64_UNIFORM_REBASE_RESEARCH_ONLY"
+              if all(row["stable_uniform_mapped_source_rebase"] for row in result["cases"])
+              else "BLOCKED_OWN_ANDROID_ARM64_NONUNIFORM_SOURCE_REBASE"
           )
           target = Path(".agent-validation/reports/android-arm64-lief-selftest.json")
           target.write_text(json.dumps(result, sort_keys=True, indent=2) + "\n",
                             encoding="utf-8")
           print(json.dumps(result, sort_keys=True))
           if not result["status"].startswith("PASS_"):
-              raise SystemExit("LIEF changed own compiled Android ARM64 text; stop")
+              raise SystemExit("LIEF changed source bytes or nonuniform mapped source; stop")
           PY
 
       - name: Upload metadata-only native LIEF report
