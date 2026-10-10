@@ -1516,5 +1516,51 @@
     "original_no_INTERNET_SDK_IPC_egress_verified": false,
     "original_Madoka_Godzilla_Jolly_i_ops_product_gates_passed": false,
     "ready_to_ship": false
+  },
+  "original_full_six_split_isolated_research_static_build_2026_10_11": {
+    "status": "PASS_PRIVATE_ACTUAL_OWNED_ORIGINAL_JP15_7_1_SIX_SPLIT_LOCALLY_SIGNED_STATIC_ONLY",
+    "source_kind": "owner provided exact JP15.7.1 export ZIP; processed in private ephemeral local runtime, not GitHub Actions",
+    "owner_original_export_sha256": "38c3bbb8d2cf2101793c9462617d4293e19fc99588b6655fd40299fd61a0ef56",
+    "original_source_or_user_SAVE_overwritten": false,
+    "separate_package_name": "jp.kn.local.battlecats",
+    "source_original_native_after_LIEF_and_dotted_package_rewrite_sha256": "95f220b2c8e2a3381f989091af5cfeda737eaae39a8d80a2aa88f03410a18f9b",
+    "uniform_source_VMA_rebase_bytes": 4096,
+    "original_native_17_opcode_anchors_preserved": true,
+    "original_native_8126892_text_SHA256_preserved": true,
+    "native_rodata_only_exact_six_dotted_package_bytes_exempted_from_original_hash": true,
+    "all_other_rodata_bytes_restored_original_SHA256_and_pinned_other_sections": true,
+    "native_pre_signature_gate_pass": true,
+    "original_JNI_draw_candidate_vma": "0x31855c",
+    "original_six_apk_bodies_compiled_aligned_and_signed_with_one_disposable_self_generated_testing_certificate": true,
+    "original_owner_signing_key_accessed_or_reused": false,
+    "temporary_research_signing_private_key_deleted": true,
+    "android_35_Java_source_D8_offline_research_bridge_compiled": true,
+    "original_base_HTTP_code_XP_or_level_battle_code_preserved_static": true,
+    "no_INTERNET_android_uses_permission_in_local_research_manifest": true,
+    "original_app_defined_receiver_permission_renamed_to_new_package": true,
+    "unknown_HTTP_request_fallthrough_denied_in_isolated_Java_subclass": true,
+    "all_six_signed_APK_payload_fingerprints_identical_before_after_signing": true,
+    "base_added_only_classes5_dex_and_narrow_manifest_dex_resource_changes": true,
+    "installpack_only_manifest_modified": true,
+    "original_full_six_APK_splits_and_player_SAVE_uploaded_to_repository": false,
+    "privately_signed_test_apk_persisted_as_public_release": false,
+    "original_local_game_first_boot_on_real_Android_passed": false,
+    "original_native_first_local_SAVE_created_and_reloaded": false,
+    "original_upgrade_screen_level60_and_XP_Catseye_debit_verified": false,
+    "all_35_tsv_or_full_extra_downloads_included": false,
+    "third_party_SDK_or_native_IPC_actual_zero_egress_verified": false,
+    "Jolly_original_base_i_login_gacha_events_and_Madoka_Godzilla_acceptance": false,
+    "ready_to_install_or_ship": false,
+    "source_changed": [
+      "tools/base_mod/original_scene_native_image_gate.py",
+      "tools/base_mod/build_owned_static_http_bridge.py",
+      "tools/base_mod/verify_static_http_bridge.py"
+    ],
+    "regressions": [
+      "tests/test_original_scene_native_image_gate.py",
+      "tests/test_static_http_bridge.py"
+    ],
+    "test_tooling": "https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/actions/runs/38063113857",
+    "owner_local_metadata_only_proof": "kneekura-original-six-split-private-static-proof-20261011.json"
   }
 }
