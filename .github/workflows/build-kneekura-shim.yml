@@ -89,6 +89,94 @@ jobs:
           ! strings build/kneekura-shim/libkneekura.so | grep -Fq "original-native-scene-v1 id=%u"
           ! strings build/kneekura-shim/libkneekura.so | grep -Fq "jp.kn.local.battlecats"
 
+      - name: Prove real Android ARM64 LIEF DT_NEEDED code stability (own shim only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .agent-validation/reports
+          python - <<'PY'
+          from hashlib import sha256
+          import json
+          from pathlib import Path
+          from tempfile import TemporaryDirectory
+          import lief
+
+          from tools.base_mod.elf_anchor import EM_AARCH64, elf_machine
+          from tools.base_mod.inject_shim import add_needed_dependency
+
+          def inspect_text(data, tmp_path):
+              tmp_path.write_bytes(data)
+              binary = lief.parse(str(tmp_path))
+              if binary is None:
+                  raise ValueError("LIEF rejected generated native ARM64 ELF")
+              section = binary.get_section(".text")
+              if section is None or not section.content:
+                  raise ValueError("generated Android native .text not found")
+              return {
+                  "vma": int(section.virtual_address),
+                  "size": int(section.size),
+                  "sha256": sha256(bytes(section.content)).hexdigest(),
+              }
+
+          result = {
+              "schema": "kneekura-android-arm64-lief-dtneeded-self-test-v1",
+              "original_game_APK_native_or_SAVE_used": False,
+              "actual_owner_JP15_7_1_LIEF_rewrite_verified": False,
+              "android_original_gameplay_or_Lv60_verified": False,
+              "ready_to_install": False,
+              "cases": [],
+          }
+          with TemporaryDirectory(prefix="kneekura-owned-shim-lief-ci-") as temp:
+              work = Path(temp)
+              for path in (
+                  "build/kneekura-shim/libkneekura.so",
+                  "build/kneekura-scene-research/libkneekura.so",
+              ):
+                  source = Path(path).read_bytes()
+                  if elf_machine(source) != EM_AARCH64:
+                      raise ValueError("Android test requires real NDK AArch64 build")
+                  rewritten, ledger = add_needed_dependency(
+                      source, needed="libkneekura-source-only-lief-test.so"
+                  )
+                  if elf_machine(rewritten) != EM_AARCH64:
+                      raise ValueError("LIEF output changed ELF machine")
+                  original_text = inspect_text(source, work / "before.so")
+                  modified_text = inspect_text(rewritten, work / "after.so")
+                  unchanged = original_text == modified_text
+                  if (not ledger["export_surface_preserved"]
+                      or "libkneekura-source-only-lief-test.so"
+                          not in ledger["libraries_after"]):
+                      raise ValueError("Android LIEF ELF export/NEEDED invariant failed")
+                  result["cases"].append({
+                      "source": path,
+                      "original_text": original_text,
+                      "after_LIEF_text": modified_text,
+                      "same_original_text_VMA_and_SHA256": unchanged,
+                      "DT_NEEDED_added": True,
+                      "export_surface_preserved": True,
+                  })
+          result["status"] = (
+              "PASS_OWN_ANDROID_ARM64_LIEF_NO_GAME_DATA"
+              if all(row["same_original_text_VMA_and_SHA256"] for row in result["cases"])
+              else "BLOCKED_OWN_ANDROID_ARM64_LIEF_TEXT_MAPPED_DRIFT"
+          )
+          target = Path(".agent-validation/reports/android-arm64-lief-selftest.json")
+          target.write_text(json.dumps(result, sort_keys=True, indent=2) + "\n",
+                            encoding="utf-8")
+          print(json.dumps(result, sort_keys=True))
+          if not result["status"].startswith("PASS_"):
+              raise SystemExit("LIEF changed own compiled Android ARM64 text; stop")
+          PY
+
+      - name: Upload metadata-only native LIEF report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kneekura-android-arm64-lief-metadata-ONLY
+          path: .agent-validation/reports/android-arm64-lief-selftest.json
+          if-no-files-found: warn
+          retention-days: 3
+
       - name: Verify shim ABI and default-off contract
         shell: bash
         run: |
