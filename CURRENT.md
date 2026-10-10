@@ -26,7 +26,7 @@
 |---|---|
 | レベル上限 | `tools/base_mod/level_cap_unlock.py`、`tests/test_level_cap_unlock.py`、実JP15.7.1 `unitbuy.csv`/元ネイティブ育成接点 |
 | まどか | `docs/updates/manifests/update-1.01.json` の `madoka`、`tools/base_mod/prepare_update_manifest.py`、`native/kneekura-shim/src/kneekura_battle101.c`、本家実ダメージ・攻撃/演出接点 |
-| シン・ゴジラ移植 | 同1.01 JSONの `godzilla`/source_assets、`tools/base_mod/collect_update_101_server_assets.py`、`kneekura_battle101.c`、所有者privateの `550_e` 元素材/味方 `702_f`。**Server実体回収は [2026-10-10 原本照合付き取得調査](docs/research/2026-10-10-original-server-archive-acquisition.md)**（現状URL応答・原本回収は未検証） |
+| シン・ゴジラ移植 | 同1.01 JSONの `godzilla`/source_assets、`tools/base_mod/collect_update_101_server_assets.py`、`kneekura_battle101.c`、所有者privateの `550_e` 元素材/味方 `702_f`。**Server原本4ファイルは所有者PCで原本MD5 4/4照合成功**。[GODZILLA実装AIへの回収・抽出手順](docs/updates/godzilla-source-acquisition-handoff.md)、`tools/base_mod/fetch_godzilla_server_assets.py`（Gitにはスクリプトと照合値だけ。実体はprivate/のみ）、[詳細証拠](docs/research/2026-10-10-original-server-archive-acquisition.md)。モデル変換・元ゲーム描画は未完了 |
 | 完全オフライン | `docs/evidence/jp15.7.1-offline-egress-static-receipt.json`、`docs/references/native-service-map-jp15.7.1.md`、`docs/architecture/2026-10-09-complete-local-offline-audit.md`（**証拠**として）、`bridge/java/MyActivity.java.in` |
 | MAX資源・育成/アイテム | `docs/updates/manifests/full-max-start-jp15.7.1.json`、`tools/base_mod/build_offline_max_save.py::MAX_VALUES`、`tools/localcore/full_max_resources.py`（**ローカルセーブ実装、元のゲームUIへの接続は未了**） |
 | iボタン/運営予定表 | `tools/localcore/ops_calendar.py`、`notice_feed.py`、`login_rotation.py`、`ops/seasons/2026-autumn-prototype.json`、`docs/architecture/kneekura-offline-notices.md` |
