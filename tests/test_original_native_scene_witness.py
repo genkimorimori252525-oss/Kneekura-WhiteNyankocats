@@ -58,6 +58,23 @@ class OriginalNativeSceneResearchObserverTests(unittest.TestCase):
         self.assertNotIn("unlink(", code)
         self.assertNotIn("newHttpRequest(", code)
 
+    def test_native_loader_walks_all_elf_modules_before_uniqueness_decision(self):
+        """Do not stop at first basename match and miss a duplicate ELF.
+
+        dl_iterate_phdr expects a ZERO callback result to continue walking.
+        This regression caught an earlier first-match early return of 1.
+        """
+        code = WITNESS.read_text(encoding="utf-8")
+        callback = code.split(
+            "static int inspect_original_library(", 1
+        )[1].split("static int source_words_match_exact_original(", 1)[0]
+        self.assertIn("witness->original_library_count++", callback)
+        self.assertIn("witness->exact_build_id_count++", callback)
+        self.assertNotIn("return 1;", callback)
+        self.assertGreaterEqual(callback.count("return 0;"), 3)
+        self.assertIn("witness.original_library_count != 1u", code)
+        self.assertIn("witness.exact_build_id_count != 1u", code)
+
     def test_native_scene_policy_only_allows_five_source_pinned_scene_ids(self):
         compiler = shutil.which("gcc") or shutil.which("clang")
         if not compiler:
