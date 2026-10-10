@@ -182,6 +182,24 @@ class OriginalNativeLocalFirstBootMetadataTests(TestCase):
         self.assertEqual(len(calls), 2)
         self.assertNotIn(("shell","pidof","jp.kn.local.battlecats"), calls)
 
+    def test_symlinked_private_root_is_never_accepted(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            base = Path(scratch)
+            outside = base / "elsewhere"
+            outside.mkdir()
+            linked = base / "private"
+            try:
+                linked.symlink_to(outside, target_is_directory=True)
+            except (NotImplementedError, OSError):
+                return  # e.g. Windows without developer/admin symlink support
+            with patch.object(obs, "ROOT", base), patch.object(obs, "PRIVATE_ROOT", linked):
+                with self.assertRaisesRegex(
+                    obs.OriginalLocalBootObservationError, "cannot be a symlink"
+                ):
+                    obs._protected_output_destination(
+                        Path("private/boot-events.json")
+                    )
+
     def test_private_output_directory_only_no_existing_file(self):
         with tempfile.TemporaryDirectory() as scratch:
             home = Path(scratch)
