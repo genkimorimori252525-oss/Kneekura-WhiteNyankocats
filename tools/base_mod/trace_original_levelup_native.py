@@ -2209,6 +2209,106 @@ def _original_registered_server_family_catalog(elf: bytes) -> dict[str, Any]:
     }
 
 
+
+# Original owner JP15.7.1 shared library LOAD-TIME source initialization.
+# The EXACT ELF .init_array R_AARCH64_RELATIVE relocation points to native
+# constructor 0x714ae8. Verified original .eh_frame associates the
+# constructor with PC range 0x714ae8..0x719044, and it writes at least
+# XImageServer.list to relocated BSS table 0xf98d38. This is a different
+# event from the later 92-row registry activation at 0x741b68..0x741b90.
+# It is NOT evidence that 92 .pack payloads exist locally.
+ORIGINAL_RESOURCE_TABLE_LOAD_INIT_ARRAY_ANCHORS = {
+    0x714AE8: 0xA9BC7BFD,  # native static resource initializer entry
+    0x71599C: 0x90FFD3E9,  # literal page XImageServer.list
+    0x7159A0: 0x91234529,  # literal exact XImageServer.list
+    0x7159A4: 0xF0004408,  # runtime BSS resource registration rows page
+    0x7159A8: 0x9134E108,  # add exact BSS rows base 0xf98d38
+    0x7159AC: 0x3DC00120,  # copy original source string 16B
+    0x7159C0: 0x3C801100,  # write string into BSS registry table
+}
+ORIGINAL_INIT_ARRAY_RELOCATION_SLOT = 0xB16CB8
+ORIGINAL_INIT_ARRAY_RELOCATION_TARGET = 0x714AE8
+ORIGINAL_INIT_ARRAY_SOURCE_START = 0xB16800
+ORIGINAL_INIT_ARRAY_SOURCE_END = 0xB170D0
+ORIGINAL_INIT_ARRAY_FILE_OFFSET = 0xB12800
+
+
+def _original_server_registry_constructor_initialized_on_load(elf: bytes) -> dict[str, Any]:
+    """Pin native library load-time constructor storing Server list names.
+
+    ELF's init_array runs when a native shared object is loaded. This static
+    proof confirms a real table population seam, NOT the full 92 entries'
+    runtime values or a successful zero-network Android original game boot.
+    """
+    import struct
+
+    if len(elf) < 0xB12CC0:
+        raise LevelUpNativeTraceError("original resource ctor ELF section truncated")
+    for at, opcode in ORIGINAL_RESOURCE_TABLE_LOAD_INIT_ARRAY_ANCHORS.items():
+        if _u32(elf, at) != opcode:
+            raise LevelUpNativeTraceError(
+                f"original load-time Server table initializer drift at {_hex(at)}"
+            )
+    if not (
+        ORIGINAL_INIT_ARRAY_SOURCE_START
+        <= ORIGINAL_INIT_ARRAY_RELOCATION_SLOT
+        < ORIGINAL_INIT_ARRAY_SOURCE_END
+    ):
+        raise LevelUpNativeTraceError("original native resource ctor outside init array")
+    source_slot = (
+        ORIGINAL_INIT_ARRAY_FILE_OFFSET
+        + ORIGINAL_INIT_ARRAY_RELOCATION_SLOT
+        - ORIGINAL_INIT_ARRAY_SOURCE_START
+    )
+    if struct.unpack_from("<Q", elf, source_slot)[0] != 0:
+        raise LevelUpNativeTraceError(
+            "original unrelocated init array ctor slot changed"
+        )
+    ctor_refs = [
+        (where, info, addr)
+        for offset in range(
+            ORIGINAL_RELA_DYN_OFFSET,
+            ORIGINAL_RELA_DYN_OFFSET
+            + ORIGINAL_RELA_DYN_COUNT * ORIGINAL_RELA_DYN_ENTRY_SIZE,
+            ORIGINAL_RELA_DYN_ENTRY_SIZE,
+        )
+        for where, info, addr in (struct.unpack_from("<QQq", elf, offset),)
+        if where == ORIGINAL_INIT_ARRAY_RELOCATION_SLOT
+    ]
+    if ctor_refs != [
+        (ORIGINAL_INIT_ARRAY_RELOCATION_SLOT, 0x403,
+         ORIGINAL_INIT_ARRAY_RELOCATION_TARGET)
+    ]:
+        raise LevelUpNativeTraceError(
+            "original load-time Server source ctor RELATIVE relocation drift"
+        )
+    refs = direct_adrp_add_refs(
+        elf, 0x1918D1, text_start=0x71599C, text_end=0x7159A4
+    )
+    if (len(refs) != 1
+        or refs[0]["adrp_address"] != "0x71599c"
+        or refs[0]["add_address"] != "0x7159a0"):
+        raise LevelUpNativeTraceError(
+            "original load-time Server source name xref drift"
+        )
+    return {
+        "status": "ORIGINAL_SERVER_RESOURCE_TABLE_LOAD_TIME_CTOR_RELOCATED",
+        "ELF_init_array_slot": "0xb16cb8",
+        "ELF_relative_ctor": "0x714ae8",
+        "verified_original_unwind_pc_range": "0x714ae8..0x719044",
+        "runtime_BSS_table_source": "0xf98d38",
+        "original_first_literal_loaded": "XImageServer.list",
+        "literal_load_sites": "0x71599c/0x7159a0",
+        "BSS_store_site": "0x7159c0",
+        "subsequent_92_row_registration": "0x741b68..0x741b90",
+        "all_92_registered_native_rows_resolved": False,
+        "owned_additional_Server_pack_available": False,
+        "native_first_game_initializer_or_save_attached": False,
+        "original_offline_Lv60_UI_and_reboot_tested": False,
+        "owner_APK_SAVE_or_native_binary_modified": False,
+    }
+
+
 def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict:
     digest = sha256(elf).hexdigest()
     if digest != expected_sha or expected_sha != NATIVE_SHA256:
@@ -2274,6 +2374,7 @@ def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict
         "original_download_tsv_file_source_resolver": _original_download_tsv_file_source_resolver(elf),
         "original_download_tsv_resource_registration_chain": _original_download_tsv_resource_registration_chain(elf),
         "original_registered_server_family_catalog": _original_registered_server_family_catalog(elf),
+        "original_server_registry_load_time_constructor": _original_server_registry_constructor_initialized_on_load(elf),
         "native_original_game_upgrader_getter_identified": True,
         "native_original_game_upgrade_purchase_hook_verified": False,
         "original_native_conditional_xp_purchase_to_save_calls_proven": True,
