@@ -31,6 +31,7 @@
 | MAX資源・育成/アイテム | `docs/updates/manifests/full-max-start-jp15.7.1.json`、`tools/base_mod/build_offline_max_save.py::MAX_VALUES`、`tools/localcore/full_max_resources.py`（**ローカルセーブ実装、元のゲームUIへの接続は未了**） |
 | iボタン/運営予定表 | `tools/localcore/ops_calendar.py`、`notice_feed.py`、`login_rotation.py`、`ops/seasons/2026-autumn-prototype.json`、`docs/architecture/kneekura-offline-notices.md` |
 | 共通の配布/再発防止 | `docs/research/failure-repair-history.md`、`AGENTS.md` のWindows部分（**ゲームが実装できた後だけ** owner ZIPを発行） |
+| USB/ADB初期診断と将来の初期セットアップZIP | [Issue #16 — Device preflight](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/issues/16)、`AGENTS.md` の「Owner Android device / ADB preflight」（**手順改善の追跡のみ。新たな本体計画やZIP完成ではない**） |
 
 ## 旧設計を読む場合の明確な区別
 
