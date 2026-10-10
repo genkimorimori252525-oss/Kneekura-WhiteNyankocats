@@ -44,6 +44,11 @@ SAVE_MESSAGE = re.compile(
 DOWNLOAD_MESSAGE = re.compile(
     r"^original-download-tsv-loose-v1 present=(\d+) absent=(\d+) unsafe=(\d+)$"
 )
+# Numeric ShadowHook init status is a fixed library return code, not player data.
+# Accept only the exact research tag/current PID and bounded decimal format.
+HOOK_INIT_STATUS_MESSAGE = re.compile(
+    r"^original-native-scene-hook-v1 hook-init-status=(-?[0-9]{1,5})$"
+)
 # Only integer original scene IDs already source-pinned in exact JP15.7.1.
 # A native-hook 'installed' marker must precede them in SAME process logs.
 NATIVE_SCENE_MESSAGE = re.compile(
@@ -81,6 +86,8 @@ ALLOWED_STANDALONE_EVENTS = {
     "original-native-scene-hook-v1 original-source-unavailable",
     "original-native-scene-hook-v1 library-unavailable",
     "original-native-scene-hook-v1 hook-initialization-failed",
+    "original-native-scene-hook-v1 hook-api-missing",
+    "original-native-scene-hook-v1 hook-runtime-init-failed",
     "original-native-scene-hook-v1 hook-unavailable",
     "original-native-scene-hook-v1 partial-unhook-failed",
 }
@@ -118,6 +125,7 @@ def sanitized_original_activity_events(logcat: str, *, pid: int) -> dict[str, An
     first_save_seen_absent = False
     later_save_seen_present = False
     last_download_coverage: dict[str, int] | None = None
+    last_shadowhook_init_status: int | None = None
     scene_events: list[int] = []
     level_event_order: list[str] = []
     app_launch_read_outcomes: list[str] = []
@@ -173,6 +181,14 @@ def sanitized_original_activity_events(logcat: str, *, pid: int) -> dict[str, An
                         scene_events.append(scene)
                 counts["original-native-scene-v1 valid-transition"] += 1
             continue
+        init_status = HOOK_INIT_STATUS_MESSAGE.fullmatch(msg)
+        if init_status:
+            value = int(init_status.group(1))
+            # Only bounded SDK error codes; reject arbitrary device/log strings.
+            if -9999 <= value <= 9999:
+                last_shadowhook_init_status = value
+                counts["original-native-scene-hook-v1 hook-init-status observed"] += 1
+            continue
         save = SAVE_MESSAGE.fullmatch(msg)
         if save:
             counts["original-save-presence-v1 valid-snapshot"] += 1
@@ -203,6 +219,7 @@ def sanitized_original_activity_events(logcat: str, *, pid: int) -> dict[str, An
         "last_original_SAVE_metadata": last_save_state,
         "SAVE_absence_then_presence_observed_in_this_PID": later_save_seen_present,
         "last_loose_35_TSV_presence_metadata": last_download_coverage,
+        "last_shadowhook_init_status_code": last_shadowhook_init_status,
         "root_probe_witnessed": (
             counts["original-local-fresh-package-root active"] > 0
         ),
