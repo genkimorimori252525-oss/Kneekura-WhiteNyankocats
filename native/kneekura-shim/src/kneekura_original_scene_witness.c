@@ -154,7 +154,10 @@ static int inspect_original_library(struct dl_phdr_info *info,
     }
     witness->original_library_count++;
     if (witness->original_library_count != 1u || info->dlpi_addr == 0u) {
-        return 1;
+        // Keep enumerating: returning nonzero from dl_iterate_phdr STOPs
+        // its scan and would silently miss a duplicate libnative-lib.so.
+        // The caller must require EXACTLY one matching library and Build ID.
+        return 0;
     }
     for (ElfW(Half) index = 0; index < info->dlpi_phnum; ++index) {
         const ElfW(Phdr) *phdr = &info->dlpi_phdr[index];
@@ -169,7 +172,8 @@ static int inspect_original_library(struct dl_phdr_info *info,
         }
     }
     witness->base = (uintptr_t)info->dlpi_addr;
-    return 1;
+    // 0 = continue enumeration; source uniqueness is checked afterwards.
+    return 0;
 }
 
 static int source_words_match_exact_original(uintptr_t base) {
