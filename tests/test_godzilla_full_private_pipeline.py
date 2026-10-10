@@ -247,6 +247,21 @@ class OriginalGodzillaFirstFormOneCommandIntegration(unittest.TestCase):
         self.assertFalse(overlay.exists())
         self.assertFalse((self.private / "godzilla-source").exists())
 
+    def test_full_pipeline_requires_local_original_sources_not_partial_network_mode(self):
+        """A full build never downloads half the sources before a late failure."""
+        for mode in (["--download"], ["--verify-only"]):
+            with self.subTest(mode=mode):
+                with patch.object(recovery, "PRIVATE_ROOT", self.private):
+                    with self.assertRaises(SystemExit):
+                        recovery.main([
+                            *mode,
+                            "--extract-original-godzilla-rig",
+                            "--prepare-ally-preview",
+                            "--prepare-native-resource-candidate",
+                            "--output", str(self.private / "godzilla-source"),
+                        ])
+                self.assertFalse(self.private.exists())
+
     def test_resource_candidate_requires_explicit_preceding_two_flags(self):
         with patch.object(recovery, "PRIVATE_ROOT", self.private):
             with self.assertRaises(SystemExit):
