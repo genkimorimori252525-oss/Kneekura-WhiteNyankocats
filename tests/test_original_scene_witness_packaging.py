@@ -187,6 +187,8 @@ class OriginalNativeSceneWitnessPackagingTests(unittest.TestCase):
             "EXTRA_NATIVE_ENTRY",
             "SCENE_WITNESS_COMPILED_MARKER",
             "research_shadowhook_sha256",
+            "verify_mapped_original_scene_image",
+            "repackaged_original_native_scene_layout",
             "unexpectedly changed",
         ):
             with self.subTest(needle=needle):
