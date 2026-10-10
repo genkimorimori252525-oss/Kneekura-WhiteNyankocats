@@ -47,6 +47,7 @@
         "tests.test_recovered_godzilla_one_step",
         "tests.test_prepare_godzilla_ally_preview",
         "tests.test_prepare_godzilla_native_resource_preview",
+        "tests.test_verify_godzilla_historical_mirror",
         "-v"
       ]
     },
