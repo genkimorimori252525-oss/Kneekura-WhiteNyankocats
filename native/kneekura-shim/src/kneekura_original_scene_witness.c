@@ -175,7 +175,11 @@ static int virgin_save_files_all_absent(int root_fd) {
     }
     /* Also refuse file variants such as SAVE_DATA.tmp or .bak, to avoid
      * overwriting any pre-existing state in a previous research experiment. */
-    int cloned = dup(root_fd);
+    /* dup() shares the ORIGINAL directory stream offset. A second safety
+     * check after a new SAVE_DATA.* file appears could silently see EOF!
+     * Re-open "." relative to the verified root FD for a fresh offset. */
+    int cloned = openat(root_fd, ".", O_RDONLY | O_DIRECTORY |
+                                      O_CLOEXEC | O_NOFOLLOW);
     if (cloned < 0) return 0;
     DIR *directory = fdopendir(cloned);
     if (directory == NULL) {
