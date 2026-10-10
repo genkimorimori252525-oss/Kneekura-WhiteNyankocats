@@ -1799,5 +1799,42 @@
     "original_real_game_Level60_and_MAX_wallet_verified": false,
     "original_MADOKA_GODZILLA_Jolly_i_assets_35TSVs_0egress_product_completed": false,
     "ready_to_ship_install_or_announce_playable": false
+  },
+  "original_android_two_process_native_SAVE_readback_2026_10_11": {
+    "status": "CODE_COMMITTED_SYNTHETIC_TWO_PROCESS_READBACK_RECEIPT_TESTED_NO_ORIGINAL_ANDROID_DEVICE",
+    "source_schema": "original-native-local-first-boot-metadata-v1",
+    "source_collector": "tools/base_mod/collect_original_local_first_boot.py",
+    "acceptance_gate": "tools/base_mod/verify_original_local_cold_restart.py",
+    "unit_test": "tests/test_original_local_cold_restart.py",
+    "input_safety": "Only two independently collected private JSON receipts; never raw APK/SAVE/player/account/URL/logcat",
+    "strict_checks": [
+      "each installed package must be isolated jp.kn.local.battlecats with all 6 original splits, no declared INTERNET",
+      "each process must have observed exact source-native hook installed and local root presence, different PIDs",
+      "first process must have native virgin-root attestation and native original writer->reader accepted, with SAVE_DATA absent then present",
+      "second PID must see existing nonempty local SAVE_DATA and independent source original AppLaunchLoad reader accepted",
+      "second process must NOT have virgin writer experiment root attestation/retry",
+      "any mixed failed+accepted source reader/writer events or bad SAVE metadata rejects receipt",
+      "private output new exclusive JSON only, neither ADB device controls nor source data writes"
+    ],
+    "evidence_label_if_all_checks_pass": "TWO_DISTINCT_ORIGINAL_PROCESS_SAVE_READBACK_METADATA_CONSISTENT_ONLY",
+    "what_this_does_not_prove": [
+      "same physical device cryptographically authenticated",
+      "actual full phone reboot",
+      "original writer fsync/persistence durable",
+      "original source 35 TSV data completeness",
+      "gameplay LEVEL60, XP/CatsEye debit and original visuals",
+      "Jolly original base i/LiveOps, Madoka/Godzilla combat, all initial MAX resources",
+      "third party SDK/IPC full no external network"
+    ],
+    "synthetic_ci_run": "https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/actions/runs/38069123353",
+    "synthetic_unittest_suite_count": 593,
+    "synthetic_unittest_pass": 592,
+    "synthetic_unittest_skip": 1,
+    "owner_actual_android_first_capture": false,
+    "owner_actual_android_second_capture": false,
+    "original_game_save_reloaded_after_owner_actual_cold_restart": false,
+    "original_all_required_product_acceptance": false,
+    "original_player_original_native_APK_SAVE_or_account_changed": false,
+    "release_ready": false
   }
 }
