@@ -2311,6 +2311,14 @@ def _original_server_registry_constructor_initialized_on_load(elf: bytes) -> dic
     }
 
 
+def _original_verified_native_resource_root_path(elf: bytes) -> dict:
+    """Original game's .list filesDir fallback and final direct-source retry."""
+    from tools.base_mod.trace_original_native_resource_roots import (
+        trace_exact_owner_source,
+    )
+    return trace_exact_owner_source(elf)
+
+
 def _original_verified_native_resource_collision_policy(elf: bytes) -> dict:
     """Pin original packed-index lookup duplicate-key handling, not live file I/O."""
     from tools.base_mod.original_resource_collision import (
@@ -2402,6 +2410,7 @@ def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict
         "original_server_registry_load_time_constructor": _original_server_registry_constructor_initialized_on_load(elf),
         "original_native_server_registration_row_order": _original_verified_92_registration_row_order(elf),
         "original_resource_duplicate_key_registration_policy": _original_verified_native_resource_collision_policy(elf),
+        "original_native_server_list_root_and_resource_fallback": _original_verified_native_resource_root_path(elf),
         "native_original_game_upgrader_getter_identified": True,
         "native_original_game_upgrade_purchase_hook_verified": False,
         "original_native_conditional_xp_purchase_to_save_calls_proven": True,
@@ -2513,9 +2522,9 @@ def _additional_owner_list_coverage(
         raise LevelUpNativeTraceError("owned additional .list directory unavailable or symlink")
     source_files = sorted(extra_list_dir.iterdir(), key=lambda x: x.name.casefold())
     manifests = [file for file in source_files if file.name.endswith(".list")]
-    if not manifests or len(manifests) > 64:
+    if not manifests or len(manifests) > 92:
         raise LevelUpNativeTraceError(
-            "owned additional .list directory must contain 1..64 encrypted manifests"
+            "owned additional .list directory must contain 1..92 encrypted manifests"
         )
     expected = {f"download_{index}.tsv" for index in range(35)}
     families: dict[str, Any] = {}
