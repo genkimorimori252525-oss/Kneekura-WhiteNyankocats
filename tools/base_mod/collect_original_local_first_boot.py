@@ -6,9 +6,11 @@ native JP15.7.1 research host `jp.kn.local.battlecats`.
 The app must already be running. Capture is restricted to the ORIGINAL
 MyActivity subclass's allowlisted metadata debug tag and its current PID.
 
-It is intentionally impossible for this observer to report original native
-scene102/scene101, game-save correctness, or SDK/IPC zero-egress as PASS:
-neither native scene instrumentation nor an independent network trace exists.
+By default there are no native scene observations. When the optional
+research-only, exact-original-BuildID scene hook actually emits allowlisted
+scene IDs from the same isolated PID, record that narrow runtime witness.
+This is still NOT proof of game-save correctness, user-visible gameplay or
+independent zero SDK/IPC network egress.
 """
 from __future__ import annotations
 
@@ -40,6 +42,11 @@ SAVE_MESSAGE = re.compile(
 DOWNLOAD_MESSAGE = re.compile(
     r"^original-download-tsv-loose-v1 present=(\d+) absent=(\d+) unsafe=(\d+)$"
 )
+# Only integer original scene IDs already source-pinned in exact JP15.7.1.
+# A native-hook 'installed' marker must precede them in SAME process logs.
+NATIVE_SCENE_MESSAGE = re.compile(
+    r"^original-native-scene-v1 id=(4|97|101|102|104)$"
+)
 ALLOWED_STANDALONE_EVENTS = {
     "original-local-fresh-package-root active",
     "original-save-event-observer-v1 active",
@@ -47,6 +54,11 @@ ALLOWED_STANDALONE_EVENTS = {
     "original-save-presence-v1 unavailable",
     "original-download-tsv-loose-v1 unavailable",
     "original-local-denied-http-v1",
+    "original-native-scene-hook-v1 installed",
+    "original-native-scene-hook-v1 original-source-unavailable",
+    "original-native-scene-hook-v1 library-unavailable",
+    "original-native-scene-hook-v1 hook-initialization-failed",
+    "original-native-scene-hook-v1 hook-unavailable",
 }
 
 
@@ -82,6 +94,8 @@ def sanitized_original_activity_events(logcat: str, *, pid: int) -> dict[str, An
     first_save_seen_absent = False
     later_save_seen_present = False
     last_download_coverage: dict[str, int] | None = None
+    scene_events: list[int] = []
+    hook_install_marker_seen = False
     for line in logcat.splitlines():
         match = LOG_LINE.fullmatch(line)
         if not match or int(match.group("pid")) != pid:
@@ -89,6 +103,19 @@ def sanitized_original_activity_events(logcat: str, *, pid: int) -> dict[str, An
         msg = match.group("message").strip()
         if msg in ALLOWED_STANDALONE_EVENTS:
             counts[msg] += 1
+            if msg == "original-native-scene-hook-v1 installed":
+                hook_install_marker_seen = True
+            continue
+        scene_match = NATIVE_SCENE_MESSAGE.fullmatch(msg)
+        if scene_match:
+            # Discard untrusted scene-looking logs before a native-hook
+            # success marker, and cap report size even after long sessions.
+            if hook_install_marker_seen:
+                scene = int(scene_match.group(1))
+                if not scene_events or scene_events[-1] != scene:
+                    if len(scene_events) < 64:
+                        scene_events.append(scene)
+                counts["original-native-scene-v1 valid-transition"] += 1
             continue
         save = SAVE_MESSAGE.fullmatch(msg)
         if save:
@@ -127,6 +154,12 @@ def sanitized_original_activity_events(logcat: str, *, pid: int) -> dict[str, An
             counts["original-save-event-observer-v1 active"] > 0
         ),
         "denied_HTTP_calls_observed": counts["original-local-denied-http-v1"],
+        "optional_native_hook_installed_marker_seen": hook_install_marker_seen,
+        "optional_native_scene_ID_sequence": scene_events,
+        "optional_native_scene102_then101_reported": (
+            102 in scene_events
+            and 101 in scene_events[scene_events.index(102) + 1:]
+        ),
         "raw_logcat_lines_retained": False,
         "original_SAVE_content_read": False,
     }
@@ -171,9 +204,19 @@ def build_original_local_boot_metadata_receipt(
         "installed_original_research_apk_split_count": len(paths),
         "manifest_INTERNET_permission_not_declared_observed": True,
         "signals": observation,
-        "observed_original_native_scene102": False,
-        "observed_original_native_scene101": False,
-        "native_scene_ID_source_in_current_logcat": False,
+        # Hook events come from this exact isolated PID and only after the
+        # native-hook marker. These are narrow process-log witnesses, NOT
+        # trusted screenshots, native scene acceptance or full product PASS.
+        "observed_original_native_scene102": (
+            root_seen and 102 in observation["optional_native_scene_ID_sequence"]
+        ),
+        "observed_original_native_scene101": (
+            root_seen and 101 in observation["optional_native_scene_ID_sequence"]
+        ),
+        "native_scene_ID_source_in_current_logcat": (
+            root_seen and observation["optional_native_hook_installed_marker_seen"]
+        ),
+        "native_scene_witness_is_current_process_log_only": True,
         "original_gameplay_SAVE_validated_or_generated": False,
         "original_stage_level60_xp_catseye_gameplay_verified": False,
         "original_Jolly_i_gacha_events_stage_liveops_verified": False,
