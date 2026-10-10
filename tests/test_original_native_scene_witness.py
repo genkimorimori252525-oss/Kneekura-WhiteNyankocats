@@ -44,7 +44,9 @@ class OriginalNativeSceneResearchObserverTests(unittest.TestCase):
         for offset in ("0x31755C", "0x71BF24", "0x71C408", "0x71C458", "0x3480"):
             self.assertIn(offset, code)
         self.assertIn("source_words_match_exact_original", code)
-        self.assertIn("hook_sym_name", code)
+        self.assertIn("shadowhook_hook_sym_addr", code)
+        self.assertNotIn('"shadowhook_hook_sym_name"', code)
+        self.assertIn("witness.base + ORIGINAL_JNI_DRAW", code)
         self.assertIn("research_draw_proxy", code)
         self.assertIn("shadowhook_unhook", code)
         self.assertIn("original-native-scene-hook-v1 partial-unhook-failed", code)
