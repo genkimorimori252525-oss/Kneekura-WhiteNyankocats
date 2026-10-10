@@ -120,10 +120,16 @@ class EphemeralRealGodzillaMirrorTests(unittest.TestCase):
             def read(self, name):
                 self.last_name = name
                 return model, None
+        mock_source_shas = {row["name"]:row["sha256"] for row in source}
+        mock_art_shas = {name:"a" * 64 for name in art_names}
+        mock_candidate_shas = {"manifest":"c"*64,"pack":"d"*64}
         with patch.object(owner, "acquire", side_effect=fake_download), \
              patch.object(owner, "complete_owner_private_godzilla_pipeline",
                           side_effect=fake_private_pipeline), \
-             patch.object(mirror, "PackReader", MockPackReader):
+             patch.object(mirror, "PackReader", MockPackReader), \
+             patch.object(mirror, "EXPECTED_REAL_SERVER_SHA256", mock_source_shas), \
+             patch.object(mirror, "EXPECTED_REAL_550E_ART_SHA256", mock_art_shas), \
+             patch.object(mirror, "EXPECTED_REAL_CANDIDATE_SHA256", mock_candidate_shas):
             report = mirror.verify_public_mirror_volatile(
                 allow_mirror_download=True
             )
@@ -134,6 +140,8 @@ class EphemeralRealGodzillaMirrorTests(unittest.TestCase):
         self.assertEqual(len(report["original_enemy_art_550e"]), 7)
         self.assertEqual(len(report["candidate_first_form_702f"]), 7)
         self.assertTrue(report["PNG_and_four_maanim_SHA256_all_unchanged"])
+        self.assertTrue(report["historical_original_source_and_seven_enemy_asset_SHA256_pinned"])
+        self.assertTrue(report["candidate_archive_model_conversion_SHA256_pinned"])
         self.assertTrue(
             report["original_allied_model_comparison"]
                 ["candidate_matches_original_friendly_root_scale_sign"]
@@ -143,6 +151,25 @@ class EphemeralRealGodzillaMirrorTests(unittest.TestCase):
         self.assertFalse(report["actual_original_Android_renderer_accepted"])
         self.assertNotIn(original_secret.decode(), json.dumps(report))
         self.assertNotIn("source_dir", json.dumps(report))
+
+    def test_identical_size_and_MD5_are_not_enough_if_strong_original_SHA_drifted(self):
+        # A mirror collision/substitution must stop before decrypting source.
+        all_original_md5 = [
+            {"name":name,"size":bytes_count,"md5":md5,"sha256":"0"*64}
+            for name,(bytes_count,md5) in owner.FILES.items()
+        ]
+        with patch.object(owner, "acquire",
+                          return_value={"files":all_original_md5}), \
+             patch.object(owner, "complete_owner_private_godzilla_pipeline") as decrypt:
+            report = mirror.verify_public_mirror_volatile(
+                allow_mirror_download=True
+            )
+            decrypt.assert_not_called()
+        self.assertEqual(report["status"],
+                         "BLOCKED_ORIGINAL_MIRROR_SOURCE_OR_FORMAT")
+        self.assertEqual(report["failure_code"],
+                         "ORIGINAL_SOURCE_OR_PREVIEW_SHA256_DRIFT")
+        self.assertFalse(report["ready_to_install_or_ship"])
 
     def test_unrecognized_pipeline_exception_is_never_returned_raw(self):
         secret = "player_token=UNSAFE_PRIVATE_ACCOUNT"
