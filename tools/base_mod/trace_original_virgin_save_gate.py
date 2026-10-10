@@ -204,6 +204,7 @@ ONCREATE_RELOCATIONS = {
     0xB0BC90: 0x1F4B92,  # exact lambda onCreate_loadSaveData name
     0xB0BCD8: 0x9C9BB8,  # lambda vtable invoked method
     0xAFD488: 0xAFD4E0,  # MyApplication vtable RTTI pointer
+    0xAFD490: 0x71BF30,  # original MyApplication virtual initialization slot0
     0xAFD4C8: 0x724544,  # method +0x38 from address point 0xafd490
     0xAFD4E8: 0x1DA558,  # MyApplication type name
 }
@@ -307,6 +308,159 @@ def inspect_original_oncreate_save_status_callback(elf: bytes) -> dict[str, Any]
     }
 
 
+# Original cold appInit (0x9c89cc) constructs the MyApplication virtual
+# initialization path and dispatches scene102. Later update scene102 may
+# dispatch the SAME application's vtable+0x38 and proceed to scene101.
+# This is CONDITIONALLY reachable; not proof it happened on Android, and
+# importantly does NOT establish an accepted missing-SAVE new player.
+COLD_SCENE102_ANCHORS = {
+    0x9C89CC: 0xA9BD7BFD,  # pinned original cold native entry
+    0x9C8AFC: 0x97F54D0A,  # original application singleton
+    0x9C8B00: 0xF9400008,  # load app vtable pointer
+    0x9C8B04: 0xF9400108,  # load virtual slot 0
+    0x9C8B08: 0xD63F0100,  # BLR x8 (vtable slot0)
+    0x9C8B0C: 0x97F54D06,  # singleton again
+    0x9C8B10: 0x97F54E10,  # original scene102 setup helper
+    0x71BF30: 0xD10183FF,  # app initializer through vtable slot0
+    0x71C350: 0xD10103FF,  # original scene setup helper
+    0x71C3AC: 0xAA1303E0,  # x0 = original game app context
+    0x71C3B0: 0x52800CC1,  # w1 = 102
+    0x71C3B4: 0x94000015,  # dispatcher 0x71c408
+    0x722CE8: 0x7101991F,  # update state == scene 102?
+    0x722CEC: 0x54001A40,  # B.EQ -> scene102 frame handler
+    0x723034: 0xB9403EA8,  # load scene102 state counter [x21,#0x3c]
+    0x723044: 0x11000509,  # increment counter +1
+    0x723048: 0xB9003EA9,  # store scene102 counter
+    0x723058: 0x34000AAA,  # CBZ local flag -> 0x7231ac
+    0x72305C: 0x71014D1F,  # cmp previous counter,#83
+    0x723060: 0x54000A6C,  # B.GT -> 0x7231ac
+    0x723064: 0x52800AA8,  # MOV 85 for counter reset on other side
+    0x723068: 0xB9003EA8,  # store fallback counter
+    0x72306C: 0x17FFFE48,  # back to per-frame return
+    0x7231AC: 0x71018D1F,  # cmp previous counter,#99
+    0x7231B0: 0x54FFBEEB,  # B.LT -> frame return, no scene101
+    0x7231B4: 0xF9400268,  # load app vtable
+    0x7231B8: 0xAA1303E0,  # x0 = app
+    0x7231BC: 0xF9401D08,  # load virtual method vtable+0x38
+    0x7231C0: 0xD63F0100,  # BLR x8
+    0x7231C4: 0xAA1303E0,  # x0 = app
+    0x7231C8: 0x52800CA1,  # w1 = scene101
+    0x7231CC: 0x97FFE48F,  # dispatcher 0x71c408
+    0x7231D0: 0x17FFFE41,  # frame return
+    0x71C6E4: 0x7101951F,  # scene101 app scene-dispatch check
+    0x71C6E8: 0x54007D41,  # if not scene101, skip
+    0x71C9B0: 0x97F1031C,  # native SAVE_DATA existence probe
+    0x71C9C8: 0x36004214,  # absence -> AppLaunchLoad creation route
+}
+COLD_SCENE102_DIRECT_CALLS = {
+    0x9C8AFC: 0x71BF24,
+    0x9C8B0C: 0x71BF24,
+    0x9C8B10: 0x71C350,
+    0x71C3B4: 0x71C408,
+    0x7231CC: 0x71C408,
+    0x71C9B0: 0x35D620,
+}
+COLD_SCENE102_CONDITIONAL_BRANCHES = {
+    0x722CEC: ("b.eq", 0x723034),
+    0x723058: ("cbz", 0x7231AC),
+    0x723060: ("b.gt", 0x7231AC),
+    0x72306C: ("b", 0x72298C),
+    0x7231B0: ("b.lt", 0x72298C),
+    0x7231D0: ("b", 0x722AD4),
+}
+
+
+def _cold_scene_branch_target(elf: bytes, pc: int, kind: str) -> int:
+    word = _u32(elf, pc)
+    if kind in ("b.eq", "b.gt", "b.lt"):
+        condition = {"b.eq": 0, "b.gt": 12, "b.lt": 11}[kind]
+        if word & 0xFF00001F != 0x54000000 | condition:
+            raise OriginalVirginSaveGateError("original scene102 conditional branch kind drift")
+        offset, bits = (word >> 5) & 0x7FFFF, 19
+    elif kind == "cbz":
+        if word & 0x7F000000 != 0x34000000:
+            raise OriginalVirginSaveGateError("original scene102 CBZ changed")
+        offset, bits = (word >> 5) & 0x7FFFF, 19
+    elif kind == "b":
+        if word & 0xFC000000 != 0x14000000:
+            raise OriginalVirginSaveGateError("original scene102 direct branch changed")
+        offset, bits = word & 0x03FFFFFF, 26
+    else:
+        raise OriginalVirginSaveGateError("unsupported original scene102 edge type")
+    return pc + _s(offset, bits) * 4
+
+
+def inspect_original_cold_scene102_to_101(elf: bytes) -> dict[str, Any]:
+    """Exact source-only path: JNI cold start -> scene102 -> guarded scene101.
+
+    The first MyApplication vtable entry and scene102 frame handler are
+    source-pinned. The virtual method at +0x38 also appears in the typed
+    onCreate_loadSaveData Status lambda, but calling it in one path is NOT
+    proof the same callback or online status is needed in another path.
+    No original new player save is synthesized and no server calls are made.
+    """
+    for pc, word in COLD_SCENE102_ANCHORS.items():
+        if _u32(elf, pc) != word:
+            raise OriginalVirginSaveGateError(
+                f"original cold scene102 opcode changed at 0x{pc:x}"
+            )
+    for pc, expected in COLD_SCENE102_DIRECT_CALLS.items():
+        if _bl_target(elf, pc) != expected:
+            raise OriginalVirginSaveGateError(
+                f"original cold scene102 direct call drift at 0x{pc:x}"
+            )
+    for pc, (kind, target) in COLD_SCENE102_CONDITIONAL_BRANCHES.items():
+        if _cold_scene_branch_target(elf, pc, kind) != target:
+            raise OriginalVirginSaveGateError(
+                f"original cold scene102 branch destination drift at 0x{pc:x}"
+            )
+    # Original onCreate callback's relocation validator includes all
+    # MyApplication vtable slots below; do not assume a literal pointer.
+    _init_slot = ONCREATE_RELOCATIONS.get(0xAFD490)
+    _status_slot = ONCREATE_RELOCATIONS.get(0xAFD4C8)
+    if _init_slot != 0x71BF30 or _status_slot != 0x724544:
+        raise OriginalVirginSaveGateError("original MyApplication vtable source changed")
+    if ((_u32(elf, 0x71C3B0) >> 5) & 0xFFFF) != 102:
+        raise OriginalVirginSaveGateError("original cold scene number no longer 102")
+    if ((_u32(elf, 0x7231C8) >> 5) & 0xFFFF) != 101:
+        raise OriginalVirginSaveGateError("original next scene number no longer 101")
+    for at, expected in ((0x722CE8, 102), (0x72305C, 83), (0x7231AC, 99)):
+        if ((_u32(elf, at) >> 10) & 0xFFF) != expected:
+            raise OriginalVirginSaveGateError(
+                f"original scene102 state/counter condition drift at 0x{at:x}"
+            )
+    for start, end in (
+        (0x9C8AFC, 0x9C8B14),
+        (0x71C3AC, 0x71C3B8),
+        (0x723034, 0x723070),
+        (0x7231AC, 0x7231D4),
+    ):
+        if _direct_bl_to(elf, (start, end), WRITER_TARGET):
+            raise OriginalVirginSaveGateError(
+                "unexpected original direct SAVE writer in guarded cold scene slice"
+            )
+    return {
+        "status": "PINNED_ORIGINAL_COLD_SCENE102_GUARDED_SCENE101_TRANSITION",
+        "original_cold_native_entry": "0x31753c -> 0x9c89cc",
+        "original_cold_app_virtual_init": "0x9c8afc app singleton; 0x9c8b00/04/08 vtable+0 -> 0x71bf30",
+        "initial_scene": "0x9c8b10 -> 0x71c350; 0x71c3b0 w1=102; 0x71c3b4 -> 0x71c408",
+        "original_frame_scene102": "0x722ce8 CMP #102; 0x722cec BEQ -> 0x723034",
+        "frame_counter": "0x723034 [x21+0x3c], 0x723044 +1, 0x723048 STR",
+        "frame_local_state_gate": "0x723058 CBZ -> 0x7231ac, else 0x72305c CMP #83 and 0x723060 B.GT -> 0x7231ac; else 0x723064 resets counter to85",
+        "guard_for_scene101": "0x7231ac CMP prior counter #99; 0x7231b0 B.LT -> 0x72298c",
+        "application_virtual_before_scene101": "0x7231b4/1bc/1c0 vtable+0x38 -> 0x724544",
+        "conditional_next_scene": "0x7231c8 w1=101; 0x7231cc -> 0x71c408",
+        "scene101_save_probe": "0x71c6e4 CMP #101; 0x71c9b0 -> 0x35d620; 0x71c9c8 absent SAVE -> AppLaunchLoad path",
+        "conditional_source_control_flow_reaches_scene101": True,
+        "frame_counter_gate_guaranteed_to_pass_in_real_offline_app": False,
+        "original_virtual_status_check_guaranteed_success_offline": False,
+        "native_missing_save_creates_valid_virgin_player": False,
+        "real_original_scene102_or_101_seen_on_device": False,
+        "real_native_game_first_run_or_SAVE_written": False,
+        "original_APK_SAVE_or_owner_assets_modified": False,
+    }
+
+
 def trace_exact_original_virgin_save_gate(elf: bytes) -> dict[str, Any]:
     if sha256(elf).hexdigest() != NATIVE_SHA256:
         raise OriginalVirginSaveGateError(
@@ -315,5 +469,8 @@ def trace_exact_original_virgin_save_gate(elf: bytes) -> dict[str, Any]:
     report = inspect_original_virgin_save_failure(elf)
     report["original_oncreate_savedata_status_callback"] = (
         inspect_original_oncreate_save_status_callback(elf)
+    )
+    report["original_cold_scene102_guarded_scene101"] = (
+        inspect_original_cold_scene102_to_101(elf)
     )
     return report
