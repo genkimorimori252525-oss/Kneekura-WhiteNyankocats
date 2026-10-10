@@ -17,6 +17,9 @@ from tools.base_mod.package_flavor import FLAVOR_PACKAGES, ORIGINAL_PACKAGE
 from tools.base_mod.prepare_original_scene_witness import (
     EXTRA_NATIVE_ENTRY, SCENE_WITNESS_COMPILED_MARKER,
 )
+from tools.base_mod.original_scene_native_image_gate import (
+    verify_mapped_original_scene_image,
+)
 from tools.base_mod.verify_parity import _lief_binary, _split_diff
 
 
@@ -286,7 +289,15 @@ def verify_static_http_bridge(
             raise ValueError(
                 "compiled research native scene hook and APK presence contract differ"
             )
+        original_scene_native_layout = None
         if research_scene_witness:
+            # LIEF can preserve .dynsym names while changing mapped VMAs.
+            # Check the POST-REPACKAGED original native bytes, not the
+            # known-good owner's original input APK. On any drift, refuse
+            # research package signing/installation before device use.
+            original_scene_native_layout = verify_mapped_original_scene_image(
+                final_native
+            )
             review_lib = final_arm.read(EXTRA_NATIVE_ENTRY)
             if hashlib.sha256(review_lib).hexdigest() != research_shadowhook_sha256:
                 raise ValueError("research native inline hook dependency hash drift")
@@ -340,6 +351,7 @@ def verify_static_http_bridge(
         "original_game_zero_egress_proven": False,
         "shim_dependency_present": True,
         "native_scene_hook_research_only": research_scene_witness,
+        "repackaged_original_native_scene_layout": original_scene_native_layout,
         "reviewed_external_hook_binary_hash_pinned": (
             research_shadowhook_sha256 if research_scene_witness else None
         ),
