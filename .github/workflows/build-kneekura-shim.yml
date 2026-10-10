@@ -82,7 +82,10 @@ jobs:
             "original-native-upgrade-gate-v1 original-returned" \
             "original-native-save-wrapper-v1 original-returned" \
             "original-native-app-launch-save-read-v1 accepted" \
-            "original-native-app-launch-save-read-v1 failed"; do
+            "original-native-app-launch-save-read-v1 failed" \
+            "original-native-scene-hook-v1 hook-api-missing" \
+            "original-native-scene-hook-v1 hook-runtime-init-failed" \
+            "original-native-scene-hook-v1 hook-init-status=%d"; do
             strings build/kneekura-scene-research/libkneekura.so | grep -Fx "$TAG"
             ! strings build/kneekura-shim/libkneekura.so | grep -Fq "$TAG"
           done
