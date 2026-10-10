@@ -46,7 +46,7 @@ class OriginalResearchSameSignerHandoffTests(unittest.TestCase):
             "fixed_error_markers_compiled",
             "merge-base --is-ancestor",
             "PRIVATE-build-receipt.json",
-            "BUILD_ONLY_PASS; EXISTING_RESEARCH_SIGNER_MATCHED",
+            "BUILD_ONLY_PASS; PROVIDED_PREVIOUS_SIGNED_BASE_CERT_MATCHED",
         ):
             # Exact fixture metadata file name may be passed as a parameter;
             # the schema/sha verification is authoritative.
