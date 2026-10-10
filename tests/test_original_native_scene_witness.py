@@ -266,6 +266,43 @@ int main(void) {
         save_arg != &sentinel) return 5;
     if (research_original_save_wrapper_proxy(&sentinel) != 1) return 6;
     if (cap_count != 1 || gate_count != 1 || save_count != 1) return 7;
+    // Only a synthetic mapped image is used; source oracle is these 17
+    // public opcode anchors, NOT any game binary or real owner SAVE.
+    size_t bytes = ORIGINAL_NATIVE_TEXT_END_EXCLUSIVE + MAX_SOURCE_VMA_REBASE
+                   + 0x1000u;
+    uint8_t *image = calloc(1, bytes);
+    if (!image) return 8;
+    struct NativeElfWitness fake = {0};
+    fake.base = (uintptr_t)image;
+    fake.executable_begin = fake.base + 0x1000u + ORIGINAL_NATIVE_TEXT_BEGIN;
+    fake.executable_end = fake.base + 0x1000u
+                          + ORIGINAL_NATIVE_TEXT_END_EXCLUSIVE;
+    fake.executable_load_count = 1;
+    for (size_t i=0; i<sizeof(kSourceWordAnchors)/sizeof(kSourceWordAnchors[0]); ++i) {
+        uint32_t opcode = kSourceWordAnchors[i].instruction;
+        memcpy(image + kSourceWordAnchors[i].vma + 0x1000u,
+               &opcode, sizeof(opcode));
+    }
+    uintptr_t delta = 0;
+    if (!select_unique_original_source_vma_shift(&fake, &delta)
+        || delta != 0x1000u) {
+        free(image);
+        return 9;
+    }
+    // A single changed instruction must fail before any ShadowHook attach.
+    image[ORIGINAL_JNI_DRAW + 0x1000u] ^= 1;
+    if (select_unique_original_source_vma_shift(&fake, &delta)) {
+        free(image);
+        return 10;
+    }
+    image[ORIGINAL_JNI_DRAW + 0x1000u] ^= 1;
+    // Two source executable LOAD mappings are ambiguous even if opcodes match.
+    fake.executable_load_count = 2;
+    if (select_unique_original_source_vma_shift(&fake, &delta)) {
+        free(image);
+        return 11;
+    }
+    free(image);
     return 0;
 }
 '''
