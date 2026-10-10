@@ -31,8 +31,17 @@ function Sha256([string]$path) {
     return (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()
 }
 function SignerDigest([string]$path, [string]$tool) {
-    $result = @(& $tool verify --print-certs $path 2>&1)
-    if ($LASTEXITCODE -ne 0) { throw 'Previously signed or new base APK certificate audit failed' }
+    # Native Java tools can warn on stderr while returning success. PowerShell
+    # 5.1 ErrorAction Stop must not turn those warnings into false failures.
+    $previousPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Continue'
+        $result = @(& $tool verify --print-certs $path 2>&1)
+        $verifyExit = $LASTEXITCODE
+    } finally {
+        $ErrorActionPreference = $previousPreference
+    }
+    if ($verifyExit -ne 0) { throw 'Previously signed or new base APK certificate audit failed' }
     $matchingLines = @($result | Where-Object { $_ -match '(?i)Signer #1 certificate SHA-256 digest:\s*([a-f0-9:]+)' })
     if ($matchingLines.Count -ne 1) { throw 'Exactly one primary APK signing certificate digest is required' }
     if ($matchingLines[0] -notmatch '(?i)Signer #1 certificate SHA-256 digest:\s*([a-f0-9:]+)') {
