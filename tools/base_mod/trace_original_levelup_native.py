@@ -2311,6 +2311,14 @@ def _original_server_registry_constructor_initialized_on_load(elf: bytes) -> dic
     }
 
 
+def _original_verified_init_and_reset_direct_caller_catalog(elf: bytes) -> dict:
+    """All exact owner-JP AArch64 direct init/reset BLs, with transfer labels."""
+    from tools.base_mod.trace_original_player_init_callers import (
+        inspect_exact_owner_original_init_callers,
+    )
+    return inspect_exact_owner_original_init_callers(elf)
+
+
 def _original_verified_player_init_and_title_save_paths(elf: bytes) -> dict:
     """Real original 882 level default initialization and native title SAVE;
     still not a proof of legitimate virgin game startup."""
@@ -2430,6 +2438,7 @@ def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict
         "original_native_server_list_root_and_resource_fallback": _original_verified_native_resource_root_path(elf),
         "original_virgin_save_worker_error_witness": _original_verified_virgin_save_failure_path(elf),
         "original_native_player_init_and_title_reset_save": _original_verified_player_init_and_title_save_paths(elf),
+        "original_player_initializer_and_reset_direct_callers": _original_verified_init_and_reset_direct_caller_catalog(elf),
         "native_original_game_upgrader_getter_identified": True,
         "native_original_game_upgrade_purchase_hook_verified": False,
         "original_native_conditional_xp_purchase_to_save_calls_proven": True,
