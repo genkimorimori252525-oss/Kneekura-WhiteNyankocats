@@ -109,3 +109,46 @@ Owner PC private location is `kneekura_server_recovery/server_archive_cache/file
 - [ ] Run existing owner-local extract/parse of `550_e` enemy Godzilla model+sprites+animations, verify model files via the original `.list/.pack` pair and bounds.
 - [ ] Build local derived `702_f` candidate without destroying original `702_c`; verify real game renderer/damage hook and H01 behavior. No 1.01 release claim.
 - [ ] Acquire and check the other 89 Server pairs only if needed; these 4 are **NOT** all 93 TSV pairs.
+
+## 2026-10-10 — Independent full 35-lane public-mirror metadata inventory
+
+Using the exact owned JP15.7.1 export ZIP and all 35 original download_N.tsv files,
+a read-only comparison with fieryhenry/BCData public jp_server Git tree found:
+
+| Type | Filename AND size candidate matches | Missing |
+| --- | ---: | ---: |
+| Server pair files | **176/186** (88/93 pairs) | 10 |
+| OGG/CAF sound | **172/172** | 0 |
+| Total | **348/358** | **10** |
+
+348 mirror candidates have identical filename and byte size and ZERO mismatches.
+Matching bodies total 652,324,488 bytes (uncompressed), out of 667,986,264
+original expected uncompressed bytes. The original compressed 35-lane
+download is separately 645,599,537 bytes; do not conflate these totals.
+
+All 10 missing entries are five lane34 X families, each list+pack:
+XImageDataServer, XImageServer, XMapServer, XNumberServer, XUnitServer.
+Four nonempty X families total 15,661,760 bytes.
+
+**Reproducible special case:** XImageDataServer.pack has zero bytes and
+original MD5 d41d8cd98f00b204e9800998ecf8427e. Encrypting the empty-list
+plaintext (ASCII 0 followed by LF) via original repository manifest encryption
+produces a 16-byte XImageDataServer.list whose MD5
+8a3af3c681dea113c37d04f722d56db1 exactly matches the owner's original
+download table. Only these two empty-family byte strings can be deterministically
+recreated in private/; other eight X files are still missing.
+
+The 35 lanes list 93 Server families, while the original native constructor
+registers 92; the nonregistered extra family is XImageDataServer.
+Do not say 93/93 runtime pairs or assume that completing this empty pair
+makes offline gameplay work.
+
+**Critical qualification:** all 348 are filename/size candidates, NOT
+content-MD5 verified. Only the owner's recovered MNumber/WImageData four
+files have been reported to match real original size+MD5.
+
+New audit implementation: tools/base_mod/audit_original_server_mirror.py;
+regressions: tests/test_audit_original_server_mirror.py.
+Original recovered Godzilla archive import now optionally extracts all seven
+original 550_e files in one command with --extract-original-godzilla-rig
+(no 702_f conversion, no installed original-game proof, no SAVE/APK changes).
