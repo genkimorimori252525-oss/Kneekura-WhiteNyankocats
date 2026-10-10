@@ -135,9 +135,15 @@ def run_user_approved_update(
             raise ResearchUpdateBlocked(
                 "isolated six-split install outcome unknown; do not retry automatically"
             ) from exc
-        if result.returncode != 0 or result.stdout.strip() != "Success":
+        # Some ADB versions prefix benign install-progress lines. The LAST
+        # line must still be exact Success and the exit status must be zero.
+        # Never accept a substring, a trailing Failure, or ambiguous output.
+        stdout_lines = [line.strip() for line in result.stdout.splitlines()
+                        if line.strip()]
+        if (result.returncode != 0 or not stdout_lines
+            or stdout_lines[-1] != "Success"):
             raise ResearchUpdateBlocked(
-                "isolated six-split installer did not report exact Success; do not clear data"
+                "isolated six-split installer did not finish with exact Success; do not clear data"
             )
 
         # Re-read installed research package; neither launching nor
