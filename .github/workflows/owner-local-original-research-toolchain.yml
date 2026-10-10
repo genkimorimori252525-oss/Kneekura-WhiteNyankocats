@@ -50,7 +50,7 @@ jobs:
                   d8=os.environ["ANDROID_HOME"]+"/build-tools/35.0.0/d8",
                   android_jar=os.environ["ANDROID_HOME"]+"/platforms/android-35/android.jar",
               )
-              assert path.read_bytes().startswith(b"dex\\n")
+              assert path.read_bytes()[:4] == bytes((100, 101, 120, 10))
               assert r["explicit_native_virgin_save_trial"] is True
               assert r["original_virgin_save_trial_device_acceptance"] is False
               print(json.dumps({
