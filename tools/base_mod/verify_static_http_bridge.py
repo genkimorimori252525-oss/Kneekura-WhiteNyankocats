@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 import zipfile
@@ -13,6 +14,9 @@ from tools.base_mod.dex_methods import defined_methods
 from tools.base_mod.inject_java_http_bridge import BRIDGE_DEX_ENTRY
 from tools.base_mod.inject_shim import NATIVE_ENTRY, SHIM_ENTRY, SHIM_SONAME
 from tools.base_mod.package_flavor import FLAVOR_PACKAGES, ORIGINAL_PACKAGE
+from tools.base_mod.prepare_original_scene_witness import (
+    EXTRA_NATIVE_ENTRY, SCENE_WITNESS_COMPILED_MARKER,
+)
 from tools.base_mod.verify_parity import _lief_binary, _split_diff
 
 
@@ -75,6 +79,8 @@ def verify_static_http_bridge(
     flavor: str,
     replay_enabled: bool,
     research_deny_internet: bool = False,
+    research_scene_witness: bool = False,
+    research_shadowhook_sha256: str | None = None,
     allow_datalocal_patch: bool = False,
     allow_downloadlocal_patch: bool = False,
 ) -> dict:
@@ -85,6 +91,13 @@ def verify_static_http_bridge(
         raise ValueError("local-research original host must omit INTERNET permission")
     if research_deny_internet and flavor not in ("research", "local-research"):
         raise ValueError("original no-INTERNET bridge validation requires research flavor")
+    if research_scene_witness and (
+        flavor != "local-research" or not research_deny_internet
+        or research_shadowhook_sha256 is None
+    ):
+        raise ValueError("native scene hook audit requires isolated no-INTERNET local-research")
+    if not research_scene_witness and research_shadowhook_sha256 is not None:
+        raise ValueError("third-party inline hook forbidden without explicit scene witness")
 
     bridge_launcher = package_name + ".MyActivity"
     bridge_descriptor = "L" + package_name.replace(".", "/") + "/MyActivity;"
@@ -129,7 +142,11 @@ def verify_static_http_bridge(
                 raise ValueError(
                     f"bridge arm64 changed surface drifted: {diff['changed']}"
                 )
-            if diff["added"] != [SHIM_ENTRY]:
+            expected_added = sorted(
+                [SHIM_ENTRY, EXTRA_NATIVE_ENTRY]
+                if research_scene_witness else [SHIM_ENTRY]
+            )
+            if diff["added"] != expected_added:
                 raise ValueError(
                     f"bridge arm64 added surface drifted: {diff['added']}"
                 )
@@ -264,6 +281,17 @@ def verify_static_http_bridge(
         final_native = final_arm.read(NATIVE_ENTRY)
         final_shim = final_arm.read(SHIM_ENTRY)
         names = set(final_arm.namelist())
+        actual_witness = SCENE_WITNESS_COMPILED_MARKER in final_shim
+        if actual_witness != research_scene_witness:
+            raise ValueError(
+                "compiled research native scene hook and APK presence contract differ"
+            )
+        if research_scene_witness:
+            review_lib = final_arm.read(EXTRA_NATIVE_ENTRY)
+            if hashlib.sha256(review_lib).hexdigest() != research_shadowhook_sha256:
+                raise ValueError("research native inline hook dependency hash drift")
+            if b"shadowhook_init\x00" not in review_lib:
+                raise ValueError("reviewed native scene hook library unexpectedly changed")
         for forbidden in (
             "lib/arm64-v8a/libfrida-gadget.so",
             "lib/arm64-v8a/libfrida-gadget.config.so",
@@ -311,6 +339,11 @@ def verify_static_http_bridge(
         "third_party_sdk_ipc_egress_audited": False,
         "original_game_zero_egress_proven": False,
         "shim_dependency_present": True,
+        "native_scene_hook_research_only": research_scene_witness,
+        "reviewed_external_hook_binary_hash_pinned": (
+            research_shadowhook_sha256 if research_scene_witness else None
+        ),
+        "actual_native_scene_event_seen_on_device": False,
         "frida_absent": True,
         "datalocal_patch_allowed": allow_datalocal_patch,
         "downloadlocal_patch_allowed": allow_downloadlocal_patch,
