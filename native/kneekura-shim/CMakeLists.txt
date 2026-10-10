@@ -55,3 +55,18 @@ if(KNEEKURA_RESEARCH_SCENE_WITNESS)
         KNEEKURA_RESEARCH_SCENE_WITNESS=1)
     target_link_libraries(kneekura PRIVATE log dl)
 endif()
+
+# Deliberately separate from the passive scene/LEVEL/SAVE observer.
+# ONLY an independently signed original-game local-research package may
+# enable this experiment; never a default release or an account-restoration
+# product. Research trial calls the original native writer/reader ONCE only.
+option(KNEEKURA_RESEARCH_VIRGIN_SAVE_TRIAL
+       "DANGEROUS explicit isolated first-run original SAVE experiment (never shipping)" OFF)
+if(KNEEKURA_RESEARCH_VIRGIN_SAVE_TRIAL)
+    if(NOT KNEEKURA_RESEARCH_SCENE_WITNESS)
+        message(FATAL_ERROR
+            "Original first-SAVE research trial requires the exact original scene witness")
+    endif()
+    target_compile_definitions(kneekura PRIVATE
+        KNEEKURA_RESEARCH_VIRGIN_SAVE_TRIAL=1)
+endif()
