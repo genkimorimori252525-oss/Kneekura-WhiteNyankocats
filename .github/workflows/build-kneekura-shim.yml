@@ -57,6 +57,28 @@ jobs:
           cmake --build build/kneekura-shim --parallel
           test -f build/kneekura-shim/libkneekura.so
 
+      - name: Compile original-scene research observer with REAL Android NDK arm64
+        shell: bash
+        run: |
+          set -euo pipefail
+          NDK="$ANDROID_HOME/ndk/27.2.12479018"
+          cmake -S native/kneekura-shim -B build/kneekura-scene-research \
+            -DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI=arm64-v8a \
+            -DANDROID_PLATFORM=android-29 \
+            -DKNEEKURA_RESEARCH_SCENE_WITNESS=ON \
+            -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/kneekura-scene-research --parallel
+          test -f build/kneekura-scene-research/libkneekura.so
+          # Source-only ARM64 .so: no third-party hook binary or owner game.
+          readelf -h build/kneekura-scene-research/libkneekura.so | grep -F "AArch64"
+          readelf -d build/kneekura-scene-research/libkneekura.so | grep -F "liblog.so"
+          strings build/kneekura-scene-research/libkneekura.so | grep -Fx "jp.kn.local.battlecats"
+          strings build/kneekura-scene-research/libkneekura.so | grep -Fx "original-native-scene-v1 id=%u"
+          strings build/kneekura-scene-research/libkneekura.so | grep -F "shadowhook_hook_sym_name"
+          ! strings build/kneekura-shim/libkneekura.so | grep -Fq "original-native-scene-v1 id=%u"
+          ! strings build/kneekura-shim/libkneekura.so | grep -Fq "jp.kn.local.battlecats"
+
       - name: Verify shim ABI and default-off contract
         shell: bash
         run: |
@@ -154,3 +176,9 @@ jobs:
             build/kneekura-shim/shim-import-audit.json
           if-no-files-found: error
           retention-days: 30
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kneekura-arm64-scene-research-COMPILE-ONLY
+          path: build/kneekura-scene-research/libkneekura.so
+          if-no-files-found: error
+          retention-days: 7
