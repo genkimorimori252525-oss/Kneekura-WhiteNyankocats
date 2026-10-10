@@ -33,10 +33,13 @@ function Sha256([string]$path) {
 function SignerDigest([string]$path, [string]$tool) {
     $result = @(& $tool verify --print-certs $path 2>&1)
     if ($LASTEXITCODE -ne 0) { throw 'Previously signed or new base APK certificate audit failed' }
-    $matches = @($result | Where-Object { $_ -match '(?i)Signer #1 certificate SHA-256 digest:\s*([a-f0-9:]+)' })
-    if ($matches.Count -ne 1) { throw 'Exactly one primary APK signing certificate digest is required' }
-    $null = ($matches[0] -match '(?i)Signer #1 certificate SHA-256 digest:\s*([a-f0-9:]+)')
-    return $Matches[1].Replace(':','').ToLowerInvariant()
+    $matchingLines = @($result | Where-Object { $_ -match '(?i)Signer #1 certificate SHA-256 digest:\s*([a-f0-9:]+)' })
+    if ($matchingLines.Count -ne 1) { throw 'Exactly one primary APK signing certificate digest is required' }
+    if ($matchingLines[0] -notmatch '(?i)Signer #1 certificate SHA-256 digest:\s*([a-f0-9:]+)') {
+        throw 'Unable to parse a trusted Android signing-certificate digest'
+    }
+    $digest = $Matches[1]
+    return $digest.Replace(':','').ToLowerInvariant()
 }
 $repo = (Resolve-Path -LiteralPath $RepositoryRoot).Path
 $zip = RequireFile $OwnerExportZip 'original JP15.7.1 owner export ZIP'
