@@ -91,6 +91,72 @@ class OriginalNativeLocalFirstBootMetadataTests(TestCase):
             self.assertFalse(receipt[field], field)
         self.assertTrue(receipt["adb_commands_were_read_only"])
 
+    def test_pinned_native_hook_reports_original_102_then_101_without_gameplay_pass(self):
+        original_events = "".join([
+            safe_thread(PID, "original-native-scene-v1 id=102"),  # before marker: reject
+            safe_thread(PID, "original-native-scene-hook-v1 installed"),
+            safe_thread(PID, "original-native-scene-v1 id=102"),
+            safe_thread(PID, "original-native-scene-v1 id=102"),  # deduplicated
+            safe_thread(PID, "original-native-scene-v1 id=101"),
+            safe_thread(PID, "original-native-scene-v1 id=104"),
+            safe_thread(PID, "original-native-scene-v1 id=999"),  # not original allowlist
+            safe_thread(PID+1, "original-native-scene-v1 id=4"),
+            safe_thread(PID, "original-native-scene-hook-v1 library-unavailable"),
+        ])
+        receipt = obs.build_original_local_boot_metadata_receipt(
+            pm_paths=PM_PATHS, dumpsys_package=DUMPSYS,
+            pid_output=str(PID), logcat=SAMPLE + original_events,
+        )
+        self.assertTrue(receipt["native_scene_ID_source_in_current_logcat"])
+        self.assertTrue(receipt["observed_original_native_scene102"])
+        self.assertTrue(receipt["observed_original_native_scene101"])
+        self.assertEqual(receipt["signals"]["optional_native_scene_ID_sequence"],
+                         [102, 101, 104])
+        self.assertTrue(receipt["signals"]["optional_native_scene102_then101_reported"])
+        self.assertFalse(receipt["original_gameplay_SAVE_validated_or_generated"])
+        self.assertFalse(receipt["finished_original_game_offline_product"])
+        self.assertFalse(receipt["independent_sdk_ipc_external_network_egress_measured_zero"])
+
+    def test_native_hook_scene_spoof_without_install_or_root_is_not_accepted(self):
+        scene_only = "".join([
+            safe_thread(PID, "original-native-scene-v1 id=102"),
+            safe_thread(PID, "original-native-scene-v1 id=101"),
+        ])
+        raw = obs.build_original_local_boot_metadata_receipt(
+            pm_paths=PM_PATHS, dumpsys_package=DUMPSYS,
+            pid_output=str(PID), logcat=SAMPLE + scene_only,
+        )
+        self.assertFalse(raw["native_scene_ID_source_in_current_logcat"])
+        self.assertFalse(raw["observed_original_native_scene102"])
+        self.assertFalse(raw["observed_original_native_scene101"])
+        self.assertEqual(raw["signals"]["optional_native_scene_ID_sequence"], [])
+        no_root = obs.build_original_local_boot_metadata_receipt(
+            pm_paths=PM_PATHS, dumpsys_package=DUMPSYS,
+            pid_output=str(PID), logcat="".join([
+                safe_thread(PID, "original-native-scene-hook-v1 installed"),
+                safe_thread(PID, "original-native-scene-v1 id=102"),
+                safe_thread(PID, "original-native-scene-v1 id=101"),
+            ]),
+        )
+        self.assertFalse(no_root["observed_original_native_scene102"])
+        self.assertFalse(no_root["observed_original_native_scene101"])
+        self.assertEqual(no_root["status"],
+                         "BLOCKED_NO_CURRENT_PROCESS_RESEARCH_ROOT_WITNESS")
+
+    def test_scene_log_filters_external_pid_url_and_oversized_sequences(self):
+        raw = "".join([
+            safe_thread(PID, "original-native-scene-hook-v1 installed"),
+            safe_thread(PID+1, "original-native-scene-v1 id=102"),
+            safe_thread(PID, "original-native-scene-v1 id=1000"),
+            safe_thread(PID, "original-native-scene-v1 id=101 url=https://secret.example"),
+        ])
+        for i in range(150):
+            raw += safe_thread(PID, f"original-native-scene-v1 id={101 if i % 2 else 102}")
+        events = obs.sanitized_original_activity_events(raw, pid=PID)
+        self.assertEqual(len(events["optional_native_scene_ID_sequence"]), 64)
+        self.assertNotIn("secret.example", repr(events))
+        self.assertTrue(events["optional_native_scene102_then101_reported"])
+
     def test_no_research_root_event_is_hard_blocked_not_fake_boot(self):
         receipt = obs.build_original_local_boot_metadata_receipt(
             pm_paths=PM_PATHS, dumpsys_package=DUMPSYS,
