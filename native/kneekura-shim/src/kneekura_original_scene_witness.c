@@ -64,6 +64,7 @@ typedef void (*OriginalDrawFn)(void *, void *);
 typedef void *(*ShadowHookSymNameFn)(
     const char *, const char *, void *, void **);
 typedef int (*ShadowHookInitFn)(int, _Bool);
+typedef int (*ShadowHookUnhookFn)(void *);
 
 static void *gOriginalDraw = NULL;
 static uintptr_t gOriginalLoadBias = 0u;
@@ -264,6 +265,23 @@ static void kneekura_init_scene_witness_research_only(void) {
     gHookStub = hook_fn(ORIGINAL_LIB, ORIGINAL_DRAW_SYM,
                        (void *)&research_draw_proxy, &gOriginalDraw);
     if (gHookStub == NULL || gOriginalDraw == NULL) {
+        /* A successful inline patch without a usable original trampoline
+           cannot safely forward the game's JNI call. Undo that patch BEFORE
+           ever unloading the library. A failed unhook must keep its library
+           mapped (no use-after-dlclose), and must never report installed. */
+        if (gHookStub != NULL) {
+            ShadowHookUnhookFn unhook_fn =
+                (ShadowHookUnhookFn)dlsym(library, "shadowhook_unhook");
+            if (unhook_fn == NULL || unhook_fn(gHookStub) != 0) {
+                gShadowHookLibrary = library;
+                gOriginalLoadBias = 0u;
+                __android_log_write(
+                    ANDROID_LOG_INFO, WITNESS_TAG,
+                    "original-native-scene-hook-v1 partial-unhook-failed");
+                return;
+            }
+            gHookStub = NULL;
+        }
         gOriginalLoadBias = 0u;
         __android_log_write(
             ANDROID_LOG_INFO, WITNESS_TAG,
