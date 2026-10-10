@@ -50,6 +50,35 @@ py -3 -m unittest discover -s tests -p test_fetch_godzilla_server_assets.py -v
 
 A cloud-based AI cannot see the owner's Windows cache merely because GitHub has the script. If the mirror is blocked or an owner-local path is not available, report BLOCKED / USER_GATE, never invent source data.
 
+## Recommended one-command offline Godzilla source staging
+
+The owner's recovery was **already 4/4 MD5+size verified** on Windows.
+Once this repository has the latest source overlay, run this one command
+from the repository root. It locally copies and revalidates four original
+files, decrypts the verified archives and stages all seven 550_e source
+rig files into separate git-ignored private directories. It never touches
+the original game's APK, SAVE or account.
+
+~~~powershell
+$owned = Join-Path $env:USERPROFILE 'Downloads\kneekura-server-recovery-jp1571\kneekura_server_recovery\server_archive_cache\files'
+py -3 -m tools.base_mod.fetch_godzilla_server_assets --from-dir "$owned" --extract-original-godzilla-rig
+~~~
+
+Expected private-only receipt:
+private/godzilla-550_e-original/rig-receipt.json
+(source assets NOT converted to cat first form 702_f). Output destinations
+must be NEW: on a second run, use the existing private files directly or
+choose a different empty rig destination instead of overwriting anything.
+
+Separately, new tools/base_mod/audit_original_server_mirror.py can audit
+all 35 owner manifest lanes against the historical GitHub TREE metadata.
+The independent read-only comparison found **348/358 matching names/sizes**
+(176/186 Server files and 172/172 audio), not MD5 verification of 348
+content bodies. Five X family pairs are absent from the public mirror.
+XImageDataServer.list/.pack can be recreated byte-exactly from the
+original empty-list algorithm and checksum; eight X files still need an
+authenticated source. See research/2026-10-10-original-server-archive-acquisition.md.
+
 ## Use existing rig extractor immediately
 
 From repository root after private files are verified:
