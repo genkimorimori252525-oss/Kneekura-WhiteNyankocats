@@ -834,7 +834,11 @@
     "native_registration_priority_for_duplicate_tsv_verified": false,
     "native_duplicate_key_first_successful_registration_static_proven": true,
     "duplicate_filename_first_static_registration_source_conditional_only": true,
-    "native_actual_TSV_source_winner_or_payload_proven": false
+    "native_actual_TSV_source_winner_or_payload_proven": false,
+    "optional_owner_private_pair_verifier_inspects_all_duplicate_tsv_candidates_with_native_order": true,
+    "original_native_first_registered_key_static_proven": true,
+    "metadata_contains_per_family_hashes_not_tsv_plaintext": true,
+    "duplicate_tsv_winner_in_original_android_runtime_proven": false
   },
   "original_research_save_file_event_monitor": {
     "source_file": "bridge/java/MyActivity.java.in::watchOriginalLocalSaveChanges",
@@ -996,6 +1000,10 @@
     "original_native_original_game_offline_save_lv60_verified": false,
     "code": "tools/base_mod/original_resource_collision.py;tools/base_mod/trace_original_levelup_native.py",
     "synthetic_regression": "tests/test_original_resource_collision.py;tests/test_trace_original_levelup_native.py",
-    "private_apk_save_art_or_signer_modified": false
+    "private_apk_save_art_or_signer_modified": false,
+    "normal_resource_open_path": "0x364980 singleton; 0x364990 -> 0x34d8e4 -> 0x34e524 key search",
+    "alternative_resource_open_path": "0x3649ec CBZ -> 0x364a64; 0x364a64 singleton; 0x364a70 -> 0x34daf0 -> 0x34e524 key search",
+    "both_paths_same_singleton_and_original_key_tree_proven": true,
+    "actual_android_first_boot_or_alternative_source_fallback_observed": false
   }
 }
