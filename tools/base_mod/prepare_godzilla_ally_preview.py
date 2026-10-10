@@ -35,7 +35,7 @@ SOURCE_STEM = "550_e"
 TARGET_STEM = "702_f"
 TARGET_IMAGE_ID = 702
 SOURCE_IMAGE_ID = 550
-SOURCE_FILES = (PNG_FILE, f"{SOURCE_STEM}.imgcut", f"{SOURCE_STEM}.mamodel", *ANIM_FILES)
+SOURCE_FILES = (PNG_FILE, *ANIM_FILES)  # extractor defines six non-PNG: cut, model, four .maanim
 ALLOWED_SOURCE_SET = frozenset(SOURCE_FILES)
 MAX_SINGLE_ASSET = 64 * 1024 * 1024
 MAX_RESEARCH_IMAGE_DIMENSION = 32768
@@ -282,6 +282,8 @@ def preview_converted_ally_rig(
     }
     animations = {}
     for name in ANIM_FILES:
+        if not name.endswith(".maanim"):
+            continue  # .imgcut and .mamodel were validated and converted above
         details = _inspect_animation(source[name], name=name)
         generated[_target_name(name)] = source[name]  # bytes unchanged
         animations[name] = details
