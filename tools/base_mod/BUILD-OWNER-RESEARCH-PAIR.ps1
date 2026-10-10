@@ -162,11 +162,13 @@ foreach ($name in $requiredApks) {
     [void](RequireFile (Join-Path $signed $name) ('six-split research output ' + $name))
 }
 @(
- 'BUILD_ONLY_STATIC_PASS; EXISTING_RESEARCH_SIGNER_MATCHED',
+ 'BUILD_ONLY_STATIC_PASS; PROVIDED_PREVIOUS_SIGNED_BASE_CERT_MATCHED',
+ 'The supplied previous signed APK matches the new certificate; installed device signer NOT independently checked.',
+ 'Before any -r device update, compare with the actual installed isolated package signer read-only.',
  'This did not install, uninstall, force-stop, log in, or touch any Android SAVE.',
  'This is passive hook observation only; virgin SAVE writer NOT enabled.',
  'Original gameplay, boot, assets, 0 SDK/IPC egress and Level60 NOT verified.'
 ) | Out-File -LiteralPath (Join-Path $out 'PRIVATE-BUILD-STATUS.txt') -Encoding utf8
-Write-Host 'BUILD_ONLY_PASS; EXISTING_RESEARCH_SIGNER_MATCHED' -ForegroundColor Green
+Write-Host 'BUILD_ONLY_PASS; PROVIDED_PREVIOUS_SIGNED_BASE_CERT_MATCHED' -ForegroundColor Green
 Write-Host ('PRIVATE six-split output: ' + $signed)
-Write-Host 'No device actions were performed. Do NOT install until explicit device preflight.'
+Write-Host 'No device actions were performed. Installed package signer is NOT yet checked; do NOT install until device preflight.'
