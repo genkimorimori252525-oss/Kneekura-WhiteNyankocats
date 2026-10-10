@@ -328,3 +328,37 @@ The helper `tools/base_mod/resolve_java_keytool.ps1` assigned to `$home` in seve
 
 This repair is on the independent app (`jp.kneekura.whitenyankocats`); the photographed original game's restricted save and the legacy `jp.kn.*` packages are out of scope. This `-CheckJava` error never reached `adb install` and did not alter the device.
 
+
+
+---
+
+## 2026-10-10 — Original research scene hook: signing order and target selection
+
+**Observed**
+
+The optional JP15.7.1 no-INTERNET research scene-witness packaging initially
+checked the repackaged native JNI VMAs only in its post-sign parity audit. It
+also used ShadowHook's basename-based hook_sym_name API; that API can register
+a future-load hook, even though the original native ELF's entry VMA is known.
+
+**Repair**
+
+- verify_staged_original_scene_before_signing() now checks the final unsigned
+  ARM64 split, including original Build ID, mapped executable instructions
+  and its exact JNI dynsym VMA, before baseline_resign(). The post-sign parity
+  gate stays in place as independent defense in depth.
+- For the isolated no-INTERNET research package only, the source-pinned
+  scene observer now calls shadowhook_hook_sym_addr() on the address from the
+  unique loaded original ELF plus JNI VMA 0x31755c. Reviewed native dependency
+  SHA and hook-init/hook-address/unhook API anchors are mandatory.
+- Synthetic regression tests cover the unsigned APK gate and mismatches,
+  optimized research-only native ELF identity, and optional hook packaging.
+  The optimized host ELF test does not shell out to nm (a slow runner
+  previously timed out). Actual ARM64 CI uses readelf for export checking.
+
+**Regression rule**
+
+Any native hook remains DEFAULT OFF and research-only. Original address drift
+must block before signing. Source tests and unrelated Android debug APK success
+must NEVER be described as a live original game/first-save/device pass.
+No original owner APK, SAVE, asset, account or signing key is modified.
