@@ -1048,7 +1048,10 @@
     "regression": "tests/test_original_virgin_save_gate.py",
     "other_native_game_state_initializers_have_been_found": true,
     "title_reset_path_cannot_be_assumed_legitimate_fresh_start": true,
-    "original_legitimate_no_account_fresh_game_path_still_unproven": true
+    "original_legitimate_no_account_fresh_game_path_still_unproven": true,
+    "original_worker_calls_game_RAM_init_before_reader": "0x492b98 -> 0x719044; 0x492be8 -> 0x9bb764",
+    "original_onCreate_game_services_lambda_found": true,
+    "original_onCreate_status_lambda_guarantees_local_first_boot": false
   },
   "original_native_player_zero_default_and_reset_save_paths": {
     "source_sha256": "333d2974ab2ff881fd70087fd62dea7d12d82addbc55cab2f2a675ad67e3a7e2",
@@ -1086,5 +1089,29 @@
     "title_or_service_or_account_deletion_flow_is_safe_virgin_creation_proven": false,
     "synthetic_account_deletion_regressions": "tests/test_original_player_init_save.py",
     "no_original_account_service_called_or_reused": true
+  },
+  "original_native_oncreate_savedata_typed_game_services_callback": {
+    "source": "user-owned unmodified original JP15.7.1 ARM64 SHA-256 333d2974ab2ff881fd70087fd62dea7d12d82addbc55cab2f2a675ad67e3a7e2",
+    "status": "ORIGINAL_ONCREATE_SAVEDATA_STATUS_LAMBDA_AND_PRELOAD_RAM_RESET_STATIC",
+    "real_original_worker_RAM_initializer_BEFORE_save_reader": "0x492b98 BL -> 0x719044, before 0x492be8 BL -> 0x9bb764",
+    "missing_or_invalid_save_handled_by_error": "0x492bec TBZ -> 0x492d28; 0x492d2c stores failure in worker+9",
+    "original_JNI_frame_entry_and_updater": "Java_jp_co_ponos_battlecats_MyActivity_appUpdateDraw at 0x31755c calls original 0x9c80c0 at 0x3175ec",
+    "native_status_callback_registration": "0x9c82a0/0x9c82a4 constructs original lambda vtable address 0xb0bca8; 0x9c82c4 virtual GameServices service method +0xe8; 0x9c82d0 BLR",
+    "owner_exact_original_lambda_RTTI": "MyApplication::onCreate_loadSaveData()::$_0 at 0x1f4b92; std::function<void(aGameServices::Status)> type at 0x1f4b14",
+    "lambda_runtime_vtable_slot": "0xb0bcd8 R_AARCH64_RELATIVE -> 0x9c9bb8",
+    "lambda_dispatches_app_vtable": "0x9c9bc0 singleton -> 0x9c9bc8 [app vtable +0x38] -> 0x9c9bd0 BR",
+    "original_MyApplication_vtable_relocation": "0xafd4c8 R_AARCH64_RELATIVE -> 0x724544; MyApplication RTTI 0xafd4e8 -> 0x1da558",
+    "bounded_lambda_direct_original_SAVE_writer_Bls_found": 0,
+    "authoritatively_initialized_game_state_on_disk": false,
+    "original_no_account_virgin_player_creation_connected": false,
+    "game_services_status_may_be_local_or_remote_unverified": true,
+    "SDK_IPC_network_egress_independently_verified": false,
+    "original_native_android_first_boot_or_save_reboot_verified": false,
+    "native_Lv60_MAX_ops_madoka_godzilla_product_acceptance": false,
+    "evidence_synthetic_tests": "tests/test_original_virgin_save_gate.py",
+    "evidence_integrated_original_tracer": "tools/base_mod/trace_original_levelup_native.py -> tools/base_mod/trace_original_virgin_save_gate.py",
+    "original_exact_elf_check": "21 anchored instruction words, 5 BL destinations, 6 RELATIVE vtable/RTTI relocation slots, 3 original RTTI literals verified read-only",
+    "proprietary_original_binary_or_user_SAVE_committed": false,
+    "original_user_APK_SAVE_private_file_bytes_modified": false
   }
 }
