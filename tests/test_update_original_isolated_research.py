@@ -20,7 +20,7 @@ from tools.base_mod import update_original_isolated_research as updater
 
 class UpdateFakeRunner(FakeRunner):
     def __init__(self, *args, live_process=False, install_timeout=False,
-                 candidate_mutation=None, install_output="Success\\n",
+                 candidate_mutation=None, install_output="Success\n",
                  **kwargs):
         super().__init__(*args, **kwargs)
         self.live_process = live_process
@@ -100,7 +100,7 @@ class ApprovedOriginalResearchUpdateTests(unittest.TestCase):
             self.assertNotIn(" -d ", args)
 
     def test_real_adb_progress_then_final_success_is_accepted_but_not_playable(self):
-        runner = UpdateFakeRunner(install_output="Performing Push Install\\nSuccess\\n")
+        runner = UpdateFakeRunner(install_output="Performing Push Install\nSuccess\n")
         receipt, _ = self.execute(runner=runner)
         self.assertEqual(receipt["status"],
                          "SIX_SPLIT_UPDATE_CONFIRMED_SIGNER_ONLY_NOT_GAMEPLAY")
@@ -108,7 +108,7 @@ class ApprovedOriginalResearchUpdateTests(unittest.TestCase):
         self.assertTrue(receipt["original_gameplay_black_screen_fix_unverified"])
 
     def test_trailing_installer_failure_is_never_treated_as_success(self):
-        runner = UpdateFakeRunner(install_output="Success\\nFailure [INSTALL_FAILED]\\n")
+        runner = UpdateFakeRunner(install_output="Success\nFailure [INSTALL_FAILED]\n")
         with self.assertRaisesRegex(updater.ResearchUpdateBlocked,
                                     "did not finish with exact Success"):
             self.execute(runner=runner)
