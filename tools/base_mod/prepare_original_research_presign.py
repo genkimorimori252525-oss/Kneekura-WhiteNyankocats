@@ -31,9 +31,6 @@ from tools.base_mod.original_scene_native_image_gate import (
     verify_staged_original_scene_before_signing,
 )
 from tools.base_mod.verify_static_http_bridge import verify_static_http_bridge
-from tools.base_mod.preflight_original_device_update import (
-    _candidate as validated_signed_candidate_contract,
-)
 from tools.base_mod.repack import JP_15_7_1_SPLITS
 
 ISOLATED_PACKAGE = "jp.kn.local.battlecats"
@@ -74,7 +71,9 @@ def _source_receipt(shim: Path, receipt: Path) -> dict:
         and proof.get("fixed_error_markers_compiled") is True
         and isinstance(proof.get("git_commit"), str)
         and len(proof["git_commit"]) == 40
+        and all(ch in "0123456789abcdef" for ch in proof["git_commit"])
         and isinstance(proof.get("sha256"), str)
+        and len(proof["sha256"]) == 64
         and hashlib.sha256(native).hexdigest() == proof["sha256"]
         and b"kneekura-original-virgin-save-trial-v1" not in native
     ):
@@ -91,8 +90,10 @@ def prepare_unsigned_research(
     private = repo / "private"
     if not private.is_dir() or private.is_symlink():
         raise UnsignedOriginalBuildBlocked("research private working root unavailable")
+    if owner_export.is_symlink():
+        raise UnsignedOriginalBuildBlocked("owner original export ZIP must not be symlink")
     owner_export = owner_export.resolve(strict=True)
-    if owner_export.is_symlink() or not owner_export.is_file():
+    if not owner_export.is_file():
         raise UnsignedOriginalBuildBlocked("owner original export ZIP missing or symlink")
     passive_shim = _inside_private(repo, passive_shim)
     passive_receipt = _inside_private(repo, passive_receipt)
@@ -154,8 +155,14 @@ def prepare_unsigned_research(
         destination.mkdir(parents=False)
         splits = destination / "original-JP1571-unsigned-six"
         splits.mkdir()
+        signed_bytes = {}
         for name in JP_15_7_1_SPLITS:
-            shutil.copy2(final / name, splits / name)
+            staged = splits / name
+            shutil.copy2(final / name, staged)
+            signed_bytes[name] = hashlib.sha256(staged.read_bytes()).hexdigest()
+        # These are NOT signatures: each value is the SHA of one unsigned
+        # private original research APK candidate. A later signer must reject
+        # mismatches instead of signing stale/mutated intermediate data.
         # Only the exact public compiler receipt and privacy-safe static
         # metadata are copied, no source encrypted APK/SAVE to GitHub.
         shutil.copy2(passive_receipt, destination / "PUBLIC_PASSIVE_SHIM_RECEIPT.json")
@@ -168,6 +175,9 @@ def prepare_unsigned_research(
             "official_shadowhook_main_and_companion_verified": bool(native_ledger),
             "original_research_no_INTERNET_manifest_static_checked": True,
             "private_passive_native_shim_sha256": native_proof["sha256"],
+            "source_compiler_commit": native_proof["git_commit"],
+            "unsigned_original_splits_sha256": signed_bytes,
+            "exact_original_native_presign_status": native_gate["status"],
             "compiled_original_virgin_SAVE_writer_enabled": False,
             "original_user_SAVE_read_or_written": False,
             "original_user_APK_source_mutated": False,
