@@ -46,17 +46,29 @@ class EphemeralRealGodzillaMirrorTests(unittest.TestCase):
             "godzilla_ally_preview": {
                 "ready_to_install": False,
                 "candidate_ally_art": {
-                    n: {"bytes": 15, "sha256": "b" * 64}
+                    n: {
+                        "bytes": 15,
+                        "sha256": ("b" if n.endswith(
+                            (".imgcut", ".mamodel")
+                        ) else "a") * 64,
+                    }
                     for n in preview_names
                 },
                 "atlas_geometry": {"width": 1024, "height": 1000},
                 "imgcut_conversion": {"sprite_part_count": 28},
-                "mamodel_conversion": {"declared_model_nodes": 45},
+                "mamodel_conversion": {
+                    "declared_model_nodes": 45,
+                    "atlas_rows_rebased": 44,
+                    "root_was_reoriented": False,
+                    "extra_collision_and_model_footer_bytes_preserved": True,
+                },
                 "animations_untouched": {
                     f"550_e0{i}.maanim": {
                         "track_count": 1, "keyframe_count": 4,
                         "negative_frame_key_count": 1,
                         "special_minus_two_node_track_count": 0,
+                        "largest_frame_number": 80,
+                        "zero_keyframe_track_count": 0,
                     } for i in range(4)
                 },
             },
@@ -102,6 +114,8 @@ class EphemeralRealGodzillaMirrorTests(unittest.TestCase):
         self.assertEqual(set(report["source_original_archives"]), set(owner.FILES))
         self.assertEqual(len(report["original_enemy_art_550e"]), 7)
         self.assertEqual(len(report["candidate_first_form_702f"]), 7)
+        self.assertTrue(report["PNG_and_four_maanim_SHA256_all_unchanged"])
+        self.assertEqual(report["real_model_conversion"]["atlas_550_to_702_rows"], 44)
         self.assertFalse(report["ready_to_install_or_ship"])
         self.assertFalse(report["actual_original_Android_renderer_accepted"])
         self.assertNotIn(original_secret.decode(), json.dumps(report))
