@@ -34,6 +34,9 @@ class OriginalRegisteredResourceCollisionTests(unittest.TestCase):
             "first successfully registered key is retained by this native path",
         )
         self.assertFalse(found["same_key_update_or_replace_in_this_function"])
+        self.assertTrue(found["primary_and_fallback_use_same_registry_singleton_and_key_tree"])
+        self.assertIn("0x34e524", found["normal_stream_lookup"])
+        self.assertIn("0x34e524", found["fallback_stream_lookup"])
         self.assertFalse(found["all_other_native_registry_mutation_sites_excluded"])
         self.assertFalse(found["actual_download_tsv_source_winner_observed"])
         self.assertEqual(bytes(original), immutable)
@@ -49,8 +52,9 @@ class OriginalRegisteredResourceCollisionTests(unittest.TestCase):
 
     def test_colliding_key_bypass_or_insert_jump_drift_is_refused(self):
         origin = synthetic_resource_registration_code()
-        for pc in (0x34D310, 0x34D384, 0x34D3B0, 0x34D3B8,
-                   0x34D440, 0x34D480, 0x34D488, 0x34D494):
+        for pc in (0x364980, 0x364990, 0x3649EC, 0x364A64, 0x364A70,
+                   0x34D92C, 0x34DB34, 0x34D310, 0x34D384, 0x34D3B0,
+                   0x34D3B8, 0x34D440, 0x34D480, 0x34D488, 0x34D494):
             with self.subTest(pc=hex(pc)):
                 mutated = bytearray(origin)
                 struct.pack_into("<I", mutated, pc,
