@@ -164,6 +164,32 @@ class GodzillaNo703FirstFormCandidateTests(unittest.TestCase):
                 with self.assertRaises(preview.OriginalGodzillaRigPreviewError):
                     preview.preview_converted_ally_rig(bad)
 
+    def test_source_proven_zero_keyframes_are_valid_and_untouched(self):
+        # The owned JP15.7.1 ImageDataLocal has 6 zero-keyframe tracks.
+        # Zero frames must not be mistaken for a corrupt model.
+        source = dict(self.source)
+        empty_track = (
+            b"[modelanim:animation2]\n"
+            b"2\n1\n"
+            b"1,11,-1,0,0,Empty\n"
+            b"0\n"
+        )
+        source["550_e03.maanim"] = empty_track
+        generated, report = preview.preview_converted_ally_rig(source)
+        self.assertEqual(generated["702_f03.maanim"], empty_track)
+        self.assertEqual(
+            report["animations_untouched"]["550_e03.maanim"]["keyframe_count"], 0
+        )
+
+    def test_model_sprite_part_index_must_be_within_imgcut(self):
+        bad = dict(self.source)
+        bad["550_e.mamodel"] = bad["550_e.mamodel"].replace(
+            b"0,550,1,", b"0,550,400,"
+        )
+        with self.assertRaisesRegex(preview.OriginalGodzillaRigPreviewError,
+                                     "sprite index outside"):
+            preview.preview_converted_ally_rig(bad)
+
     def test_truncated_model_and_animations_fail_before_output(self):
         one = dict(self.source)
         one["550_e.mamodel"] = one["550_e.mamodel"].replace(
