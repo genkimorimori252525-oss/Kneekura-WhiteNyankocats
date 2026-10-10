@@ -2495,6 +2495,11 @@ def _additional_owner_list_coverage(
     families: dict[str, Any] = {}
     present: set[str] = set()
     decrypted_tsvs: set[str] = set()
+    # Original name lookup can be ambiguous if TWO registered Server families
+    # expose the SAME download_N.tsv. Until original lookup precedence is
+    # proven, do NOT call either selected payload the definitive winner.
+    source_per_tsv: dict[str, str] = {}
+    conflicting_sources: set[str] = set()
     observed_normalized: set[str] = set()
     for path in manifests:
         if (path.is_symlink() or not path.is_file()
@@ -2519,7 +2524,20 @@ def _additional_owner_list_coverage(
             )
         raw = path.read_bytes()
         count, entries = parse_manifest(raw)
-        matches = sorted({entry.name for entry in entries} & expected)
+        target_names = [entry.name for entry in entries if entry.name in expected]
+        matches = sorted(set(target_names))
+        if len(target_names) != len(matches):
+            raise LevelUpNativeTraceError(
+                "owner additional encrypted manifest repeats target TSV filename"
+            )
+        for filename in matches:
+            prior = source_per_tsv.setdefault(filename, path.stem)
+            if prior != path.stem:
+                conflicting_sources.add(filename)
+        if verify_paired_pack_tsv_payloads and conflicting_sources:
+            raise LevelUpNativeTraceError(
+                "ambiguous original TSV ciphertext source in multiple Server families"
+            )
         present.update(matches)
         payload_metadata: dict[str, Any] = {}
         if verify_paired_pack_tsv_payloads and matches:
@@ -2573,13 +2591,19 @@ def _additional_owner_list_coverage(
             "targeted_decrypted_tsv_payloads": payload_metadata,
         }
     return {
-        "status": "OWNER_ADDITIONAL_ENCRYPTED_LIST_NAMES_ONLY",
+        "status": (
+            "OWNER_ADDITIONAL_SELECTED_TSV_PAYLOAD_SHA256_ONLY"
+            if verify_paired_pack_tsv_payloads
+            else "OWNER_ADDITIONAL_ENCRYPTED_LIST_NAMES_ONLY"
+        ),
         "source": "explicit extra owner-supplied directory; never downloaded automatically",
         "family_count": len(families),
         "total_declared_entries": sum(v["declared_entries"] for v in families.values()),
         "matched_download_batch_tsv_names": sorted(present),
         "missing_download_batch_tsv_names": sorted(expected - present),
         "all_35_tsv_names_listed": present == expected,
+        "ambiguous_target_filenames_across_families": sorted(conflicting_sources),
+        "each_download_tsv_has_unique_listed_family": not conflicting_sources,
         "families": families,
         "paired_pack_payload_check_explicitly_requested": verify_paired_pack_tsv_payloads,
         "download_tsv_payloads_decrypted": sorted(decrypted_tsvs),
