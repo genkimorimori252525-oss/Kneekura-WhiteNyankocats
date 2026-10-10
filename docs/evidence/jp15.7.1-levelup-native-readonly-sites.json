@@ -1255,7 +1255,10 @@
     "original_offline_native_game_playable_verified": false,
     "original_private_APK_player_SAVE_signing_key_modified": false,
     "can_report_scene102_or_scene101_if_exact_native_hook_reports_from_same_PID": true,
-    "native_hook_only_and_full_gameplay_still_not_proven": true
+    "native_hook_only_and_full_gameplay_still_not_proven": true,
+    "original_six_split_package_identity_required_before_meta_witness": true,
+    "original_native_hook_marker_and_same_process_scene_allowlist_supported": true,
+    "original_runtime_scene_trace_collected_from_real_Android": false
   },
   "original_local_native_scene_hook_optional_source": {
     "status": "IMPLEMENTED_RESEARCH_ONLY_OPTIONAL_NATIVE_SCENE_WITNESS_NOT_DEVICE_EXECUTED",
@@ -1296,6 +1299,32 @@
     "legitimate_account_free_original_player_SAVE_generated_or_reloaded": false,
     "confirmed_gameplay_Lv60_MAX_Jolly_liveops_Madoka_Godzilla": false,
     "SDK_IPC_all_egress_zero_verified": false,
-    "original_private_artifacts_or_SAVE_committed": false
+    "original_private_artifacts_or_SAVE_committed": false,
+    "exact_six_original_JP15_7_1_split_basenames": [
+      "base.apk",
+      "split_config.arm64_v8a.apk",
+      "split_config.en.apk",
+      "split_config.ja.apk",
+      "split_config.xxhdpi.apk",
+      "split_InstallPack.apk"
+    ],
+    "native_code_build_instrumentation_option_default_off": true,
+    "native_C_ABI_syntax_check_with_mock_Android_headers_completed": true,
+    "native_pure_scene_ID_policy_compiled_and_unit_tested": true,
+    "reviewed_shadowhook_native_dependency_required_when_enabled": true,
+    "original_scene_hook_incomplete_original_trampoline_unhook_required_before_dlclose": true,
+    "source_framework_did_not_bundle_or_publish_external_shadowhook_binary": true,
+    "original_native_scene_witness_bundling_source_and_tests": [
+      "tools/base_mod/prepare_original_scene_witness.py",
+      "tests/test_original_scene_witness_packaging.py",
+      "tools/base_mod/build_owned_static_http_bridge.py",
+      "tools/base_mod/verify_static_http_bridge.py"
+    ],
+    "device_ADB_collector_rejects_non_six_split_mock_APK": true,
+    "device_ADB_collector_sanitizes_hook_status_and_five_pinned_scene_IDs": true,
+    "staged_native_libshadowhook_actual_arm64_from_reviewed_source_integrated_on_phone": false,
+    "original_device_scene102_scene101_real_observation_complete": false,
+    "original_game_first_account_free_SAVE_generated_and_persisted": false,
+    "full_offline_original_gameplay_release_accepted": false
   }
 }
