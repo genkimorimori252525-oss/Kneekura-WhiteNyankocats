@@ -29,6 +29,9 @@ FILES = {
 DEFAULT_OUTPUT = Path("private/server-jp1571/godzilla")
 DEFAULT_RIG_OUTPUT = Path("private/godzilla-550_e-original")
 DEFAULT_ALLIED_PREVIEW_OUTPUT = Path("private/godzilla-702_f-preview")
+DEFAULT_NATIVE_RESOURCE_PREVIEW_OUTPUT = Path(
+    "private/godzilla-wimagedata-702f-preview"
+)
 PRIVATE_ROOT = Path("private")
 CHUNK = 1024 * 1024
 
@@ -186,6 +189,32 @@ def prepare_private_ally_preview(
     return prepare_from_private_source(original_rig, destination)
 
 
+def prepare_private_native_resource_candidate(
+    exact_server_dir: Path, ally_preview_dir: Path, output_dir: Path,
+    *, private_root: Path | None = None,
+) -> dict:
+    """One opt-in owner-private source->candidate step, NEVER installable.
+
+    Exact 4/4 original Server size+MD5 is checked by acquire(), and the
+    candidate builder separately verifies the WImage pair and SHA256 of the
+    7 converted first-form art files. A changed original download-table
+    hash means this output must NEVER replace any installed original pack.
+    """
+    from tools.base_mod.prepare_godzilla_native_resource_preview import (
+        preview_private_candidate,
+    )
+    root = PRIVATE_ROOT if private_root is None else private_root
+    protected = root.resolve()
+    target = output_dir.resolve()
+    if (root.is_symlink() or output_dir.is_symlink()
+        or not target.is_relative_to(protected)
+        or target == protected or output_dir.exists()):
+        raise ValueError("Godzilla WImage resource candidate must be NEW under private/")
+    return preview_private_candidate(
+        exact_server_dir, ally_preview_dir, output_dir,
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     mode = parser.add_mutually_exclusive_group()
@@ -209,6 +238,15 @@ def main(argv: list[str] | None = None) -> int:
         "--ally-preview-output", type=Path, default=DEFAULT_ALLIED_PREVIEW_OUTPUT,
         help="New private/ first-form-only art preview directory",
     )
+    parser.add_argument(
+        "--prepare-native-resource-candidate", action="store_true",
+        help="With both earlier preview flags, create NOT-INSTALLABLE WImageDataServer 702_f candidate",
+    )
+    parser.add_argument(
+        "--resource-preview-output", type=Path,
+        default=DEFAULT_NATIVE_RESOURCE_PREVIEW_OUTPUT,
+        help="New private/ WImageDataServer resource candidate destination",
+    )
     args = parser.parse_args(argv)
     if not (args.from_dir or args.download or args.verify_only):
         print("JP15.7.1 Godzilla source archive plan (no files downloaded):")
@@ -218,6 +256,13 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.prepare_ally_preview and not args.extract_original_godzilla_rig:
         parser.error("--prepare-ally-preview requires --extract-original-godzilla-rig")
+    if args.prepare_native_resource_candidate and (
+        not args.extract_original_godzilla_rig or not args.prepare_ally_preview
+    ):
+        parser.error(
+            "--prepare-native-resource-candidate requires "
+            "--extract-original-godzilla-rig AND --prepare-ally-preview"
+        )
     chosen = "import" if args.from_dir else "download" if args.download else "verify"
     try:
         result = acquire(chosen, args.output, args.from_dir)
@@ -229,6 +274,13 @@ def main(argv: list[str] | None = None) -> int:
                 result["godzilla_ally_preview"] = prepare_private_ally_preview(
                     args.rig_output, args.ally_preview_output,
                 )
+                if args.prepare_native_resource_candidate:
+                    result["godzilla_WImageDataServer_research_candidate"] = (
+                        prepare_private_native_resource_candidate(
+                            args.output, args.ally_preview_output,
+                            args.resource_preview_output,
+                        )
+                    )
     except (OSError, ValueError, error.HTTPError, error.URLError) as exc:
         print(f"BLOCKED: {type(exc).__name__}: {exc}", file=sys.stderr)
         return 2
@@ -246,6 +298,15 @@ def main(argv: list[str] | None = None) -> int:
                 + str(args.ally_preview_output)
             )
             print("Animations unchanged; no renderer/attack/castle-hit/game APK proof.")
+            if args.prepare_native_resource_candidate:
+                print(
+                    "[STATIC ONLY] Private WImageDataServer 702_f candidate at "
+                    + str(args.resource_preview_output)
+                )
+                print(
+                    "NOT INSTALLABLE: original download-table MD5 changes; "
+                    "source precedence/gameplay remains unverified."
+                )
         else:
             print("NOT converted to cat 702_f; not playable or APK-ready.")
     else:
