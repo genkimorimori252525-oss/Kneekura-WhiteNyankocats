@@ -1679,5 +1679,64 @@
     "experimental_full_six_split_APK_safely_installed_on_phone": false,
     "default_six_split_original_scene_research_build_virgin_writer_enabled": false,
     "ready_to_ship": false
+  },
+  "source_pinned_shadowhook_stripped_abi_repair_2026_10_11": {
+    "status": "REAL_ORIGINAL_JP15_7_1_AND_REAL_LIEF_UNSYMBOLIZED_ELF_EVIDENCE_PLUS_CODE_AND_HOST_C_CI_PASS",
+    "owned_original_native_sha256": "333d2974ab2ff881fd70087fd62dea7d12d82addbc55cab2f2a675ad67e3a7e2",
+    "ELF_symbol_sections": [
+      ".dynsym"
+    ],
+    "original_dynamic_symbol_records": 6714,
+    "original_defined_FUNCTION_symbol_distinct_VMA_count": 4592,
+    "source_runtime_symbol_hook_JNI": {
+      "pc": "0x31755c",
+      "name": "Java_jp_co_ponos_battlecats_MyActivity_appUpdateDraw",
+      "has_ELF_FUNCTION_symbol": true,
+      "shadowhook_API": "shadowhook_hook_sym_addr"
+    },
+    "source_runtime_stripped_internal_hooks": [
+      {
+        "pc": "0x53b2bc",
+        "name": "effective-cap getter",
+        "has_ELF_FUNCTION_symbol": false
+      },
+      {
+        "pc": "0x53be0c",
+        "name": "upgrade eligibility",
+        "has_ELF_FUNCTION_symbol": false
+      },
+      {
+        "pc": "0x8b9fc8",
+        "name": "SAVE serialization",
+        "has_ELF_FUNCTION_symbol": false
+      },
+      {
+        "pc": "0x9bb764",
+        "name": "AppLaunchLoad SAVE reader",
+        "has_ELF_FUNCTION_symbol": false
+      }
+    ],
+    "source_stripped_hook_API": "shadowhook_hook_func_addr",
+    "former_bug": "all five original function addresses used hook_sym_addr; original private four have no .dynsym/.symtab definition",
+    "original_repacked_with_actual_LIEF_0_17_6": true,
+    "LIEF_candidate_bytes": 11644016,
+    "source_uniform_VMA_shift_bytes": 4096,
+    "after_LIEF_defined_FUNC_symbol_count": 4592,
+    "after_LIEF_JNI_still_symbolized_at": "0x31855c",
+    "after_LIEF_all_four_private_hooks_still_unsymbolized": true,
+    "source_pin_presign_enforced": true,
+    "reviewed_hook_binary_must_export_both_API_strings": true,
+    "no_sym_name_API_or_network_fallback": true,
+    "source_commit": "d319d0139393ff3cd374facfbc525315c088f79a",
+    "executable_dispatch_mock_commit": "f1fbf926e5c1c48c025000df17a8bcd3989cb847",
+    "host_C_and_python_CI": "https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/actions/runs/38066624242",
+    "host_C_total_tests": 583,
+    "host_C_tests_passed": 582,
+    "host_C_tests_skipped": 1,
+    "NDK_ARM64_source_compilation": "https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/actions/runs/38066550193",
+    "owner_private_original_raw_binary_or_SAVEs_committed": false,
+    "original_Android_runtime_hook_attach_verified": false,
+    "original_save_fresh_profile_generated_or_reboot_verified": false,
+    "original_game_Lv60_MAX_Offline_Jolly_i_madoka_godzilla_finished": false
   }
 }

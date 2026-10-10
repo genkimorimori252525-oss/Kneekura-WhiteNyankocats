@@ -124,6 +124,24 @@ class OriginalNativeSceneWitnessPackagingTests(unittest.TestCase):
         self.assertFalse(normal["research_scene_witness_build_enabled"])
         self.assertFalse(normal["research_original_native_scene_hook_runtime_supplied"])
 
+    def test_unsymbolized_native_hook_needs_reviewed_func_addr_API(self):
+        # Older ShadowHook libraries could expose sym_addr but not the
+        # func_addr entrypoint. The four original stripped functions must
+        # never attempt the sym_addr fallback.
+        good = synthetic_reviewed_arm64_so()
+        needle = b"shadowhook_hook_func_addr\\x00"
+        # Source uses a literal ASCII identifier terminated by NUL.
+        needle = b"shadowhook_hook_func_addr" + bytes((0,))
+        self.assertEqual(good.count(needle), 1)
+        self.reviewed.write_bytes(good.replace(needle, bytes(len(needle))))
+        broken_digest = hashlib.sha256(self.reviewed.read_bytes()).hexdigest()
+        with self.assertRaisesRegex(
+            OriginalSceneWitnessPackageError, "hook ABI identifier anchors absent"
+        ):
+            self.contract(shadowhook_sha256=broken_digest)
+        self.reviewed.write_bytes(good)
+        self.assertTrue(self.contract()["research_scene_witness_build_enabled"])
+
     def test_bad_hash_elf_arch_and_exports_fail_before_staging(self):
         with self.assertRaisesRegex(OriginalSceneWitnessPackageError, "hash mismatched"):
             self.contract(shadowhook_sha256="0"*64)
