@@ -2,6 +2,8 @@
 
 **FIRST: READ [CURRENT.md](CURRENT.md).** That file is the ONLY design entry point and links to [PRODUCT_IDENTITY.md](PRODUCT_IDENTITY.md) and the [four-feature active implementation roadmap](docs/roadmap/2026-10-09-original-battle-cats-delivery.md). Do **not** search all older design docs, open a new foundational spec series, continue the standalone lookalike Alpha as product work, or hand over an APK whose only achievement is passing basic CI. **The next implementation task is the first real original-game UI level-cap vertical slice, with full offline engineering investigated in parallel.**
 
+**OWNER WINDOWS PATHS ARE NOT GUESSWORK:** Read the “オーナーWindows開発環境 — 実測固定パス” section of [CURRENT.md](CURRENT.md) before proposing any Android SDK, adb, PowerShell, ZIP, or signing instructions. The confirmed SDK root is `C:\Users\genki\AppData\Local\Android\Sdk`, ADB is `platform-tools\adb.exe` below that root, project checkout is `C:\Users\genki\Downloads\Kneekura-WhiteNyankocats`, original owned ZIP is under `Downloads\にーくらにゃんこ\`, and the research kit is under `Downloads\kneekura-original-owner-trial-kit`. Use dynamic `adb devices` for current connection state; NEVER hardcode a device serial, fake `C:\PATH\TO` path, or infer the currently opened PowerShell directory is the repo. Exact current paths and Build-tools evidence are centralized in CURRENT.md; update there, not in new parallel rules.
+
 This repository contains device-facing PowerShell and Android tooling where an incorrect command can waste a long device/debug cycle. Coding agents must use the repository validation harness before handing terminal commands to a human.
 
 ## P0 OWNER PRODUCT IDENTITY — NEVER SUBSTITUTE A LOOKALIKE
