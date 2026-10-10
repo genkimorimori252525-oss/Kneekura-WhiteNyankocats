@@ -44,7 +44,7 @@ def summarize(log: str) -> dict:
         raise OriginalCrashLogBlocked("research filtered log too large")
     starts, deaths = set(), set()
     errors_by_process: dict[int, Counter] = {}
-    init_codes = Counter()
+    init_codes_by_process: dict[int, Counter] = {}
     research_signals: list[tuple[int, str]] = []
     backtrace_known_libs = set()
     backtrace_known_frames = 0
@@ -67,7 +67,7 @@ def summarize(log: str) -> dict:
                 status = INIT_STATUS.fullmatch(msg)
                 if status and -9999 <= int(status.group(1)) <= 9999:
                     errors_by_process.setdefault(pid, Counter())["hook-init-status"] += 1
-                    init_codes[int(status.group(1))] += 1
+                    init_codes_by_process.setdefault(pid, Counter())[int(status.group(1))] += 1
         elif tag in ("libc", "DEBUG", "AndroidRuntime"):
             if "Fatal signal 11" in msg or "SIGSEGV" in msg:
                 research_signals.append((pid, msg))
@@ -84,6 +84,18 @@ def summarize(log: str) -> dict:
         if (inner and int(inner.group(1)) in starts
             or pid in starts and "jp.kn.local.battlecats" in msg):
             signal_count += 1
+    # A public log tag is not proof of research process identity. Discard
+    # all fixed research-looking lines without corroborating start/death PID
+    # from the separately generated Android ActivityManager trace.
+    verified = starts | deaths
+    errors_by_process = {
+        pid: counts for pid, counts in errors_by_process.items()
+        if pid in verified
+    }
+    init_codes = Counter()
+    for pid, codes in init_codes_by_process.items():
+        if pid in verified:
+            init_codes.update(codes)
     events = Counter()
     for counts in errors_by_process.values():
         events.update(counts)
