@@ -8,6 +8,10 @@ on:
       - "tools/base_mod/original_scene_native_image_gate.py"
       - "tools/base_mod/build_owned_static_http_bridge.py"
       - "tools/base_mod/verify_static_http_bridge.py"
+      - "tools/base_mod/prepare_original_scene_witness.py"
+      - "tools/base_mod/build_owned_static_http_bridge.py"
+      - "native/kneekura-shim/src/kneekura_original_scene_witness.c"
+      - "bridge/java/MyActivity.java.in"
   workflow_dispatch:
 
 permissions:
