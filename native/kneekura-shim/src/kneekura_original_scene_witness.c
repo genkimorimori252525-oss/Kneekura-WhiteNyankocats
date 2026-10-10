@@ -74,8 +74,9 @@ enum {
     ORIGINAL_SCENE_RECORD_OFFSET = 0x3480,
 };
 typedef void (*OriginalDrawFn)(void *, void *);
-typedef void *(*ShadowHookSymNameFn)(
-    const char *, const char *, void *, void **);
+/* Hook the exact already-mapped ELF address, never a basename-driven
+ * future/pending symbol match that could attach to another library. */
+typedef void *(*ShadowHookSymAddrFn)(void *, void *, void **);
 typedef int (*ShadowHookInitFn)(int, _Bool);
 typedef int (*ShadowHookUnhookFn)(void *);
 
@@ -269,8 +270,8 @@ static void kneekura_init_scene_witness_research_only(void) {
     }
     ShadowHookInitFn init_fn =
         (ShadowHookInitFn)dlsym(library, "shadowhook_init");
-    ShadowHookSymNameFn hook_fn =
-        (ShadowHookSymNameFn)dlsym(library, "shadowhook_hook_sym_name");
+    ShadowHookSymAddrFn hook_fn =
+        (ShadowHookSymAddrFn)dlsym(library, "shadowhook_hook_sym_addr");
     if (init_fn == NULL || hook_fn == NULL || init_fn(1, 0) != 0) {
         __android_log_write(
             ANDROID_LOG_INFO, WITNESS_TAG,
@@ -279,8 +280,14 @@ static void kneekura_init_scene_witness_research_only(void) {
         return;
     }
     gOriginalLoadBias = witness.base;
-    gHookStub = hook_fn(ORIGINAL_LIB, ORIGINAL_DRAW_SYM,
-                       (void *)&research_draw_proxy, &gOriginalDraw);
+    /* No symbol lookup by basename and no pending future-load hook.
+     * Source BuildID, sole mapped native ELF, and exact JNI opcode already
+     * verified. Source VMA is also checked in the pre-sign APK verifier. */
+    void *pinned_original_JNI_draw =
+        (void *)(witness.base + ORIGINAL_JNI_DRAW);
+    gHookStub = hook_fn(
+        pinned_original_JNI_draw, (void *)&research_draw_proxy, &gOriginalDraw
+    );
     if (gHookStub == NULL || gOriginalDraw == NULL) {
         /* A successful inline patch without a usable original trampoline
            cannot safely forward the game's JNI call. Undo that patch BEFORE
