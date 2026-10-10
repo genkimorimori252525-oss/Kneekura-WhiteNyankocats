@@ -831,7 +831,10 @@
     "test_workflow": "Test tooling #38018709389 (394 total/1 unrelated LIEF skipped)",
     "actual_owner_game_loop_connected": false,
     "original_static_92_row_index_joins_to_private_manifest_names": true,
-    "native_registration_priority_for_duplicate_tsv_verified": false
+    "native_registration_priority_for_duplicate_tsv_verified": false,
+    "native_duplicate_key_first_successful_registration_static_proven": true,
+    "duplicate_filename_first_static_registration_source_conditional_only": true,
+    "native_actual_TSV_source_winner_or_payload_proven": false
   },
   "original_research_save_file_event_monitor": {
     "source_file": "bridge/java/MyActivity.java.in::watchOriginalLocalSaveChanges",
@@ -966,6 +969,33 @@
     "native_original_resource_registration_executed_on_phone": false,
     "actual_35_tsv_content_presence_or_lookup_success_verified": false,
     "local_player_save_and_original_lv60_and_zero_network_verified": false,
-    "private_owner_apk_or_SAVE_modified": false
+    "private_owner_apk_or_SAVE_modified": false,
+    "collision_first_registration_retained_static_proven": true,
+    "collision_winning_owner_pack_loaded_on_android_proven": false
+  },
+  "original_registered_resource_duplicate_key_control_flow": {
+    "proof_type": "SOURCE_READ_ONLY_EXACT_ORIGINAL_ARM64_REGISTERED_RESOURCE_RBTREE_DUPLICATE_KEY_BYPASS",
+    "native_sha256": "333d2974ab2ff881fd70087fd62dea7d12d82addbc55cab2f2a675ad67e3a7e2",
+    "registry_registration_loop": "0x741b84 -> 0x34d0f4",
+    "resource_row_name_parser": "0x34d304 -> 0x363c24 (column0)",
+    "rb_tree_root": "0x34d308 LDR x28, [x24,#8]",
+    "comparator": [
+      "0x34d36c -> memcmp@plt",
+      "0x34d394 -> memcmp@plt"
+    ],
+    "no_existing_key_path": "0x34d310 CBZ -> 0x34d3bc (new resource insert)",
+    "insert_new_key": "0x34d440 -> 0x34dedc",
+    "equal_key_path": "0x34d3b0 B.NE -> 0x34d484",
+    "duplicate_short_string_path": "0x34d488 CBZ -> 0x34d2e0 (advance row)",
+    "duplicate_heap_string_path": "0x34d490 free; 0x34d494 B -> 0x34d2e0",
+    "native_same_inner_filename_registration_behavior": "First successfully registered key is preserved in original 0x34d0f4 registry; subsequent identical source keys do not replace it",
+    "precedence_if_all_owner_packages_register_in_native_row_order": "Earliest registration index containing the named TSV would win under this entrypoint",
+    "original_native_no_other_mutation_path_proven": false,
+    "original_owner_additional_Server_packs_and_all_35_download_tsv_payloads_available": false,
+    "original_android_registered_resource_read_or_collision_runtime_winner_confirmed": false,
+    "original_native_original_game_offline_save_lv60_verified": false,
+    "code": "tools/base_mod/original_resource_collision.py;tools/base_mod/trace_original_levelup_native.py",
+    "synthetic_regression": "tests/test_original_resource_collision.py;tests/test_trace_original_levelup_native.py",
+    "private_apk_save_art_or_signer_modified": false
   }
 }
