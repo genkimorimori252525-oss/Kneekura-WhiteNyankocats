@@ -165,6 +165,9 @@ def inspect_original_virgin_save_failure(elf: bytes) -> dict[str, Any]:
 # and real JNI update loop. These MAY participate in boot status progression,
 # but DO NOT authorize faking an online success, new game SAVE or account.
 ONCREATE_STATUS_ANCHORS = {
+    0x31748C: 0xA9BD7BFD,  # real Android MyActivity_appInit JNI entry
+    0x31753C: 0x141AC524,  # cold appInit -> 0x9c89cc
+    0x9C89CC: 0xA9BD7BFD,  # original cold native initializer entry
     0x31755C: 0xD10143FF,  # real Android MyActivity_appUpdateDraw JNI entry
     0x3175EC: 0x941AC2B5,  # original per-frame update -> 0x9c80c0
     0x9C80C0: 0xD10203FF,  # native frame updater entry
@@ -235,6 +238,12 @@ def inspect_original_oncreate_save_status_callback(elf: bytes) -> dict[str, Any]
             raise OriginalVirginSaveGateError(
                 f"original onCreate call destination drift at 0x{pc:x}"
             )
+    cold_start_branch = _u32(elf, 0x31753C)
+    if (cold_start_branch & 0xFC000000) != 0x14000000:
+        raise OriginalVirginSaveGateError("original JNI appInit direct B changed")
+    cold_delta = _s(cold_start_branch & 0x03FFFFFF, 26) * 4
+    if 0x31753C + cold_delta != 0x9C89CC:
+        raise OriginalVirginSaveGateError("original JNI cold init target changed")
     if (_cond_target(elf, 0x492BEC, "tbz") != 0x492D28
         or _cond_target(elf, 0x9C8120, "tbz") != 0x9C8308):
         raise OriginalVirginSaveGateError("original frame/status or worker failure branch drift")
@@ -275,7 +284,9 @@ def inspect_original_oncreate_save_status_callback(elf: bytes) -> dict[str, Any]
         raise OriginalVirginSaveGateError("original lambda unexpectedly writes SAVE_DATA")
     return {
         "status": "ORIGINAL_ONCREATE_SAVEDATA_STATUS_LAMBDA_AND_PRELOAD_RAM_RESET_STATIC",
+        "original_app_cold_init": "0x31748c JNI appInit; 0x31753c tail B -> 0x9c89cc",
         "original_app_update_draw": "0x31755c JNI appUpdateDraw; 0x3175ec -> 0x9c80c0",
+        "cold_appInit_and_frame_GameServices_callback_are_distinct": True,
         "status_callback_name": "MyApplication::onCreate_loadSaveData()::$_0",
         "status_callback_type": "std::function<void(aGameServices::Status)>",
         "lambda_original_registration": "0x9c82a0 ADRP / 0x9c82a4 ADD -> 0xb0bca8",
