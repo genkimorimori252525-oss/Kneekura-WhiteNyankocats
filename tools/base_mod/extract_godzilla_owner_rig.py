@@ -11,6 +11,10 @@ import json
 from pathlib import Path
 from typing import Any
 from tools.battlecats_pack import PackReader
+from tools.base_mod.fetch_godzilla_server_assets import (
+    FILES as EXPECTED_JP1571_SERVER_FILES,
+    verify as verify_exact_owner_server_file,
+)
 
 SOURCE_STEM = "550_e"
 TARGET_STEM = "702_f"  # cat No703 first form only
@@ -84,12 +88,29 @@ def main(argv: list[str] | None = None) -> int:
     files = (a.m_number_list, a.m_number_pack,
              a.w_imagedata_list, a.w_imagedata_pack)
     try:
-        hashes = {x.name: hashlib.sha256(x.read_bytes()).hexdigest() for x in files}
+        if {x.name for x in files} != set(EXPECTED_JP1571_SERVER_FILES):
+            raise ValueError("Godzilla source filenames do not match JP15.7.1 exact pairs")
+        # Never extract from similarly named different-region/newer Server
+        # archives. The four exact size+historical JP15.7.1 MD5 claims are
+        # independently rechecked against the local owner files here.
+        verified_sources = {
+            x.name: verify_exact_owner_server_file(
+                x, EXPECTED_JP1571_SERVER_FILES[x.name]
+            )
+            for x in files
+        }
+        hashes = {name: row["sha256"] for name, row in verified_sources.items()}
         png = PackReader(PNG_FAMILY, a.m_number_list.read_bytes(),
                          a.m_number_pack.read_bytes(), region="jp")
         anim = PackReader(ANIM_FAMILY, a.w_imagedata_list.read_bytes(),
                           a.w_imagedata_pack.read_bytes(), region="jp")
         result = export_owner_rig(png, anim, a.output, source_fingerprints=hashes)
+        result["original_server_file_sha_and_MD5_verified_before_extraction"] = True
+        result["exact_owner_server_source_receipts"] = verified_sources
+        (a.output / "rig-receipt.json").write_text(
+            json.dumps(result, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
     except (OSError, ValueError, KeyError) as exc:
         p.error(str(exc))
     print(result["status"], len(result["art"]), "files (owner-local only)")
