@@ -29,6 +29,9 @@ SOURCE_PATH = "jp_server"
 SCHEMA = "jp15.7.1-historical-godzilla-mirror-ephemeral-metadata-v1"
 KNOWN_SAFE_FILES = tuple(recovery.FILES)
 RESULT_LIMIT = 100 * 1024
+PINNED_MIRROR_BASE = (
+    "https://raw.githubusercontent.com/fieryhenry/BCData/main/jp_server/"
+)
 
 
 def _sha(path: Path) -> str:
@@ -95,6 +98,12 @@ def verify_public_mirror_volatile(
         receipt.update(
             status="BLOCKED_EXPLICIT_NETWORK_OPT_IN_REQUIRED",
             last_stage="network-authorization",
+        )
+        return receipt
+    if recovery.SOURCE != PINNED_MIRROR_BASE:
+        receipt.update(
+            status="BLOCKED_HISTORICAL_MIRROR_SOURCE_URL_DRIFT",
+            last_stage="network-origin-validation",
         )
         return receipt
 
