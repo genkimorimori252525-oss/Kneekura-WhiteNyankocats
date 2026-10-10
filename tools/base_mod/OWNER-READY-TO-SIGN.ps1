@@ -82,8 +82,19 @@ $signer = Join-Path $sdk 'build-tools\35.0.0\apksigner.bat'
 if (-not (Test-Path -LiteralPath $signer -PathType Leaf)) {
     throw 'Owner confirmed Android SDK35 apksigner not found'
 }
-& $signer verify --print-certs $previousBase 1>$null 2>$null
-if ($LASTEXITCODE -ne 0) {
+# Java 17/21 may print harmless restricted-method warnings to stderr.
+# Windows PowerShell 5.1 with ErrorActionPreference Stop incorrectly treats
+# native stderr as a terminating PowerShell error even when exit code is 0.
+# Capture/discard only this metadata-only tool's output, then inspect EXIT CODE.
+$priorPreference = $ErrorActionPreference
+try {
+    $ErrorActionPreference = 'Continue'
+    & $signer verify --print-certs $previousBase 1>$null 2>$null
+    $certificateVerifyExit = $LASTEXITCODE
+} finally {
+    $ErrorActionPreference = $priorPreference
+}
+if ($certificateVerifyExit -ne 0) {
     throw 'The proposed old research base APK is not a valid signed APK'
 }
 $unsigned = @(Get-ChildItem -LiteralPath $private -Directory -Filter 'unsigned-original-native-pair-*')
