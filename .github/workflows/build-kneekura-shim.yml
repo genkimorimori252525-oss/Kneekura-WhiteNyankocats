@@ -381,7 +381,7 @@ jobs:
           $py = "build/owner-lief-wheel-validation/Scripts/python.exe"
           & $py -m pip install --no-index --no-deps --no-cache-dir --find-links build/owner-lief-wheel "lief==0.17.6"
           if ($LASTEXITCODE -ne 0) { throw "Offline wheel installation failed" }
-          & $py -c "import lief; assert lief.__version__ == '0.17.6'"
+          & $py -c "import lief; from importlib.metadata import version; assert version('lief') == '0.17.6'"
           if ($LASTEXITCODE -ne 0) { throw "Offline installed LIEF failed import" }
           & $py -m unittest tests.test_original_scene_native_image_gate tests.test_owner_lief_probe_windows_contract -v
           if ($LASTEXITCODE -ne 0) { throw "Native research unit tests failed" }

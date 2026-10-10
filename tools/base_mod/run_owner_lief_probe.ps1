@@ -72,7 +72,7 @@ if (-not (Test-Path -LiteralPath $python -PathType Leaf)) {
 }
 & $python -m pip install --no-index --no-deps --no-cache-dir --find-links $wheels "lief==0.17.6"
 if ($LASTEXITCODE -ne 0) { throw "Offline LIEF installation failed" }
-& $python -c "import lief; assert lief.__version__ == '0.17.6'"
+& $python -c "import lief; from importlib.metadata import version; assert version('lief') == '0.17.6'"
 if ($LASTEXITCODE -ne 0) { throw "Offline LIEF import/version failure" }
 Push-Location $repo
 try {
