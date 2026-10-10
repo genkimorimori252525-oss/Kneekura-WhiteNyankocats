@@ -207,6 +207,35 @@ class GodzillaNo703FirstFormCandidateTests(unittest.TestCase):
         self.assertEqual(source["550_e.mamodel"], before)
         self.assertIn(b"0,0,-48,350,10,0,collision", model)
 
+    def test_imageless_original_model_bone_minus_one_sprite_is_kept(self):
+        """Owned JP15.7.1 local rig contains valid -1/-1 sprite-less nodes."""
+        source = dict(self.source)
+        source["550_e.mamodel"] = source["550_e.mamodel"].replace(
+            b"1,550,0,0,0,0,0,0,1000,1000",
+            b"1,-1,-1,0,0,0,0,0,1000,1000",
+        )
+        created, proof = preview.preview_converted_ally_rig(source)
+        self.assertIn(
+            b"1,-1,-1,0,0,0,0,0,1000,1000",
+            created["702_f.mamodel"],
+        )
+        self.assertTrue(
+            proof["mamodel_conversion"]["native_imageless_bones_id_minus_one_preserved"]
+        )
+        self.assertFalse(proof["ready_to_install"])
+
+    def test_real_atlas_with_sentinel_minus_one_cut_still_rejected(self):
+        source = dict(self.source)
+        source["550_e.mamodel"] = source["550_e.mamodel"].replace(
+            b"1,550,0,0,0,0,0,0,1000,1000",
+            b"1,550,-1,0,0,0,0,0,1000,1000",
+        )
+        with self.assertRaisesRegex(
+            preview.OriginalGodzillaRigPreviewError,
+            "sprite index outside",
+        ):
+            preview.preview_converted_ally_rig(source)
+
     def test_original_empty_animation_zero_tracks_is_valid(self):
         # Owner JP ImageDataLocal contains eight entire .maanim files
         # with zero tracks. This is a legitimate original state.
