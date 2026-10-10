@@ -33,6 +33,9 @@ from tools.base_mod.inject_java_http_bridge import (
     inject_bridge_split_set,
 )
 from tools.base_mod.repack import baseline_resign
+from tools.base_mod.original_scene_native_image_gate import (
+    verify_staged_original_scene_before_signing,
+)
 from tools.base_mod.prepare_original_scene_witness import (
     check_original_scene_witness_build_contract,
     include_reviewed_shadowhook_in_private_split_set,
@@ -147,6 +150,16 @@ def build_owned_static_http_bridge(
         research_deny_internet=research_deny_internet,
     )
 
+    # Reject a changed JNI VMA / executable mapping in the unsigned
+    # ORIGINAL ARM64 binary before accessing private signing credentials.
+    # Post-sign parity checks the same invariant independently.
+    pre_signature_scene_receipt = verify_staged_original_scene_before_signing(
+        bridged,
+        research_scene_witness=witness_contract[
+            "research_scene_witness_build_enabled"
+        ],
+    )
+
     signing_ledger = baseline_resign(
         bridged,
         signed,
@@ -179,6 +192,8 @@ def build_owned_static_http_bridge(
     }
     if native_witness_ledger is not None:
         ledgers["original-scene-witness-optional-dependency.json"] = native_witness_ledger
+    if pre_signature_scene_receipt is not None:
+        ledgers["original-scene-pre-signature-proof.json"] = pre_signature_scene_receipt
     for name, payload in ledgers.items():
         (signed / name).write_text(
             json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
@@ -234,6 +249,9 @@ Final device smoke should be performed only after repository parity is green.
         "research_original_native_files_dir_isolation": research_isolate_original_native_files_dir,
         "research_no_internet_manifest": research_deny_internet,
         "original_native_scene_witness_build_contract": witness_contract,
+        "original_research_scene_pre_signature_source_receipt": (
+            pre_signature_scene_receipt
+        ),
         "original_native_scene_witness_device_runtime_verified": False,
         "original_independent_local_save_verified": False,
         "fresh_local_original_package": flavor == "local-research",
