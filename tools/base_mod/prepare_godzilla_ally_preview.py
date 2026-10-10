@@ -212,7 +212,15 @@ def _rewrite_model(raw: bytes, *, sprite_part_count: int) -> tuple[bytes, dict[s
     }
 
 
-def _inspect_animation(raw: bytes, *, name: str) -> dict[str, Any]:
+def _inspect_animation(
+    raw: bytes, *, name: str, model_node_count: int,
+) -> dict[str, Any]:
+    """Original tracks are tied to model node indices, not free-standing CSV.
+
+    The owned JP15.7.1 ImageDataLocal corpus has genuine .maanim files
+    with zero tracks, zero-keyframe tracks, signed/negative frame indices,
+    and a special -2 node reference. Keep all source bytes unchanged.
+    """
     lines = _native_lines(raw, label=name)
     header = _text_at(lines, 0, label=name)
     if header not in ("[modelanim:animation]", "[modelanim:animation2]"):
@@ -220,21 +228,63 @@ def _inspect_animation(raw: bytes, *, name: str) -> dict[str, Any]:
     if _text_at(lines, 1, label=name) not in ("1", "2"):
         raise OriginalGodzillaRigPreviewError(name + ": unsupported animation revision")
     count = _positive_int(_text_at(lines, 2, label=name),
-                          label=name, max_value=30000)
+                          label=name, max_value=30000, minimum=0)
     current = 3
     keyframes = 0
+    negative_frame_keys = 0
+    special_node_tracks = 0
+    zero_frame_tracks = 0
+    max_frame = None
     for _ in range(count):
         track = _text_at(lines, current, label=name)
-        if len(track.split(",", 5)) < 5:
+        columns = track.split(",", 5)
+        if len(columns) < 5:
             raise OriginalGodzillaRigPreviewError(name + ": malformed track header")
-        # Original JP15.7.1 ImageDataLocal contains legitimate empty tracks.
-        # 6 zero-keyframe tracks were observed across 1,814 .maanim samples.
+        try:
+            track_fields = [int(item) for item in columns[:5]]
+        except ValueError as exc:
+            raise OriginalGodzillaRigPreviewError(
+                name + ": nonnumeric original track field"
+            ) from exc
+        node_index = track_fields[0]
+        if node_index == -2:
+            special_node_tracks += 1
+        elif not 0 <= node_index < model_node_count:
+            raise OriginalGodzillaRigPreviewError(
+                name + ": animation refers to nonexistent model node"
+            )
+        # Eight zero-track .maanim files and six zero-keyframe tracks were
+        # found across 1,814 original local animation assets.
         frames = _positive_int(_text_at(lines, current + 1, label=name),
                                label=name + " keyframes",
                                max_value=50000, minimum=0)
-        current += 2 + frames
-        if current > len(lines):
+        if frames == 0:
+            zero_frame_tracks += 1
+        end = current + 2 + frames
+        if end > len(lines):
             raise OriginalGodzillaRigPreviewError(name + ": truncated keyframes")
+        for at in range(current + 2, end):
+            fields = _text_at(lines, at, label=name).split(",")
+            if len(fields) != 4:
+                raise OriginalGodzillaRigPreviewError(
+                    name + ": original keyframe must contain four integers"
+                )
+            try:
+                values = [int(item) for item in fields]
+            except ValueError as exc:
+                raise OriginalGodzillaRigPreviewError(
+                    name + ": original keyframe includes nonnumeric values"
+                ) from exc
+            frame = values[0]
+            if not -1000000 <= frame <= 1000000:
+                raise OriginalGodzillaRigPreviewError(
+                    name + ": original keyframe time outside bound"
+                )
+            if frame < 0:
+                negative_frame_keys += 1
+            if max_frame is None or frame > max_frame:
+                max_frame = frame
+        current = end
         keyframes += frames
     if current != len(lines):
         raise OriginalGodzillaRigPreviewError(name + ": trailing/unparsed frame data")
@@ -242,6 +292,12 @@ def _inspect_animation(raw: bytes, *, name: str) -> dict[str, Any]:
         "native_animation_format": header,
         "track_count": count,
         "keyframe_count": keyframes,
+        "empty_animation_tracks_accepted": count == 0,
+        "zero_keyframe_track_count": zero_frame_tracks,
+        "negative_frame_key_count": negative_frame_keys,
+        "special_minus_two_node_track_count": special_node_tracks,
+        "largest_frame_number": max_frame,
+        "model_node_references_validated": True,
         "keyframe_bytes_preserved_identical": True,
     }
 
@@ -284,7 +340,10 @@ def preview_converted_ally_rig(
     for name in ANIM_FILES:
         if not name.endswith(".maanim"):
             continue  # .imgcut and .mamodel were validated and converted above
-        details = _inspect_animation(source[name], name=name)
+        details = _inspect_animation(
+            source[name], name=name,
+            model_node_count=model_receipt["declared_model_nodes"],
+        )
         generated[_target_name(name)] = source[name]  # bytes unchanged
         animations[name] = details
     receipts = {
