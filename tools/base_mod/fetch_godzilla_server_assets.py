@@ -28,6 +28,7 @@ FILES = {
 }
 DEFAULT_OUTPUT = Path("private/server-jp1571/godzilla")
 DEFAULT_RIG_OUTPUT = Path("private/godzilla-550_e-original")
+DEFAULT_ALLIED_PREVIEW_OUTPUT = Path("private/godzilla-702_f-preview")
 PRIVATE_ROOT = Path("private")
 CHUNK = 1024 * 1024
 
@@ -163,6 +164,28 @@ def extract_verified_local_godzilla_rig(
         raise ValueError("unexpected incomplete/private owner-rig export")
     return receipt
 
+def prepare_private_ally_preview(
+    original_rig: Path, destination: Path, *, private_root: Path | None = None,
+) -> dict:
+    """Original encrypted packs -> rig -> preview, without another program.
+
+    Only operates after the hash-gated original rig step. This converter is
+    a NON-INSTALLABLE art preview; it neither patches a game nor changes
+    any source .pack, player SAVE, existing art, or second form 702_c.
+    """
+    from tools.base_mod.prepare_godzilla_ally_preview import (
+        prepare_from_private_source,
+    )
+    root = PRIVATE_ROOT if private_root is None else private_root
+    private = root.resolve()
+    target = destination.resolve()
+    if (root.is_symlink() or not target.is_relative_to(private)
+        or target == private or destination.is_symlink()
+        or destination.exists()):
+        raise ValueError("Godzilla allied preview destination must be NEW under private/")
+    return prepare_from_private_source(original_rig, destination)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     mode = parser.add_mutually_exclusive_group()
@@ -178,6 +201,14 @@ def main(argv: list[str] | None = None) -> int:
         "--rig-output", type=Path, default=DEFAULT_RIG_OUTPUT,
         help="New private/ rig destination; refuses existing directory",
     )
+    parser.add_argument(
+        "--prepare-ally-preview", action="store_true",
+        help="With --extract-original-godzilla-rig, generate validated 702_f non-installable preview",
+    )
+    parser.add_argument(
+        "--ally-preview-output", type=Path, default=DEFAULT_ALLIED_PREVIEW_OUTPUT,
+        help="New private/ first-form-only art preview directory",
+    )
     args = parser.parse_args(argv)
     if not (args.from_dir or args.download or args.verify_only):
         print("JP15.7.1 Godzilla source archive plan (no files downloaded):")
@@ -185,6 +216,8 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  {name}: {size:,} bytes / MD5 {md5}")
         print("Run with --from-dir PATH, --download, or --verify-only.")
         return 0
+    if args.prepare_ally_preview and not args.extract_original_godzilla_rig:
+        parser.error("--prepare-ally-preview requires --extract-original-godzilla-rig")
     chosen = "import" if args.from_dir else "download" if args.download else "verify"
     try:
         result = acquire(chosen, args.output, args.from_dir)
@@ -192,6 +225,10 @@ def main(argv: list[str] | None = None) -> int:
             result["godzilla_original_rig"] = extract_verified_local_godzilla_rig(
                 args.output, args.rig_output,
             )
+            if args.prepare_ally_preview:
+                result["godzilla_ally_preview"] = prepare_private_ally_preview(
+                    args.rig_output, args.ally_preview_output,
+                )
     except (OSError, ValueError, error.HTTPError, error.URLError) as exc:
         print(f"BLOCKED: {type(exc).__name__}: {exc}", file=sys.stderr)
         return 2
@@ -203,7 +240,14 @@ def main(argv: list[str] | None = None) -> int:
             "[SUCCESS] Original Godzilla enemy rig 7/7 files privately staged at "
             + str(args.rig_output)
         )
-        print("NOT converted to cat 702_f; not playable or APK-ready.")
+        if args.prepare_ally_preview:
+            print(
+                "[PREVIEW ONLY] Godzilla 702_f first-form rig candidate (7 files) at "
+                + str(args.ally_preview_output)
+            )
+            print("Animations unchanged; no renderer/attack/castle-hit/game APK proof.")
+        else:
+            print("NOT converted to cat 702_f; not playable or APK-ready.")
     else:
         print("Next: --extract-original-godzilla-rig stages seven original assets privately.")
     return 0
