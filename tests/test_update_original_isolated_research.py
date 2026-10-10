@@ -32,6 +32,21 @@ class UpdateFakeRunner(FakeRunner):
 
     def __call__(self, command, **kwargs):
         args = command[1:]
+        if (self.installs and len(args) == 5
+            and args[:3] == ["-s", "FAKE-DEVICE", "pull"]):
+            # Fake post-install Android PackageManager: only the research
+            # base/ARM64 installed bytes now equal the submitted candidate.
+            self.calls.append(args)
+            filename = ("base.apk" if Path(args[4]).name == "installed-base.apk"
+                        else "split_config.arm64_v8a.apk")
+            installed_source = next(
+                (Path(src) for src in self.installs[0][5:]
+                 if Path(src).name == filename), None,
+            )
+            if installed_source is None:
+                raise AssertionError("unexpected post-install research APK")
+            Path(args[4]).write_bytes(installed_source.read_bytes())
+            return subprocess.CompletedProcess(command, 0, "1 file pulled", "")
         if args == ["-s", "FAKE-DEVICE", "shell", "pidof", gate.PACKAGE]:
             self.calls.append(args)
             return subprocess.CompletedProcess(
@@ -85,6 +100,9 @@ class ApprovedOriginalResearchUpdateTests(unittest.TestCase):
         self.assertEqual(receipt["package"], "jp.kn.local.battlecats")
         self.assertEqual(receipt["updated_splits"], 6)
         self.assertTrue(receipt["post_install_actual_research_signature_match"])
+        self.assertTrue(receipt["post_install_research_base_apk_byte_equal_candidate"])
+        self.assertTrue(receipt["post_install_research_arm64_apk_byte_equal_candidate"])
+        self.assertTrue(receipt["remaining_four_installed_split_bytes_not_compared"])
         self.assertTrue(receipt["original_gameplay_black_screen_fix_unverified"])
         self.assertTrue(receipt["android_data_preservation_not_dynamically_verified"])
         self.assertNotIn("FAKE-DEVICE", destination.read_text())
@@ -103,7 +121,7 @@ class ApprovedOriginalResearchUpdateTests(unittest.TestCase):
         runner = UpdateFakeRunner(install_output="Performing Push Install\nSuccess\n")
         receipt, _ = self.execute(runner=runner)
         self.assertEqual(receipt["status"],
-                         "SIX_SPLIT_UPDATE_CONFIRMED_SIGNER_ONLY_NOT_GAMEPLAY")
+                         "SIX_SPLIT_UPDATE_CONFIRMED_BASE_ARM64_BYTES_NOT_GAMEPLAY")
         self.assertEqual(len(runner.installs), 1)
         self.assertTrue(receipt["original_gameplay_black_screen_fix_unverified"])
 
@@ -135,6 +153,26 @@ class ApprovedOriginalResearchUpdateTests(unittest.TestCase):
                                     "signed APK content changed"):
             self.execute(runner=runner)
         self.assertEqual(runner.installs, [])
+
+    def test_postinstall_wrong_arm64_bytes_block_even_when_signer_matches(self):
+        class CorruptNativePostPull(UpdateFakeRunner):
+            def __call__(self, command, **kwargs):
+                result = super().__call__(command, **kwargs)
+                args = command[1:]
+                if (self.installs and len(args) == 5
+                    and args[:3] == ["-s", "FAKE-DEVICE", "pull"]
+                    and Path(args[4]).name == "installed-arm64.apk"):
+                    target = Path(args[4])
+                    target.write_bytes(target.read_bytes() + b"wrong-loaded-native")
+                return result
+
+        runner = CorruptNativePostPull()
+        with self.assertRaisesRegex(updater.ResearchUpdateBlocked,
+                                    "post-update installed research signature mismatch"):
+            self.execute(runner=runner)
+        self.assertEqual(len(runner.installs), 1)
+        self.assertFalse(list((self.fixtures.repo/"private").glob(
+            "isolated-sixsplit-update-*.json")))
 
     def test_ambiguous_install_timeout_never_retries_or_clears_data(self):
         runner = UpdateFakeRunner(install_timeout=True)
