@@ -1352,10 +1352,22 @@ class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
                 _additional_owner_list_coverage(root)["matched_download_batch_tsv_names"],
                 ["download_1.tsv"],
             )
-            (root / "ownedserver.list").write_bytes(one)
-            with self.assertRaisesRegex(LevelUpNativeTraceError, "duplicate"):
-                _additional_owner_list_coverage(root)
-            (root / "ownedserver.list").unlink()
+            duplicate = root / "ownedserver.list"
+            duplicate.write_bytes(one)
+            original = root / "OwnedServer.list"
+            # Windows NTFS is normally case-insensitive, so the lowercase
+            # spelling aliases the same file instead of creating a second
+            # physical manifest. Exercise the duplicate scanner with a
+            # synthetic repeated directory entry in that case.
+            if duplicate.samefile(original):
+                from unittest.mock import patch
+                with patch.object(Path, "iterdir", return_value=iter([original, original])):
+                    with self.assertRaisesRegex(LevelUpNativeTraceError, "duplicate"):
+                        _additional_owner_list_coverage(root)
+            else:
+                with self.assertRaisesRegex(LevelUpNativeTraceError, "duplicate"):
+                    _additional_owner_list_coverage(root)
+                duplicate.unlink()
             (root / "Unsafe-Path.list").write_bytes(one)
             with self.assertRaisesRegex(LevelUpNativeTraceError, "safe family name"):
                 _additional_owner_list_coverage(root)
