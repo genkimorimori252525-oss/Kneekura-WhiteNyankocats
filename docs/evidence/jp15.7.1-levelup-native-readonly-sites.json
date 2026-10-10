@@ -1431,5 +1431,20 @@
     "protects_original_save_or_account": false,
     "no_proprietary_text_bytes_uploaded_to_git": true,
     "native_original_game_lv60_and_save_device_accepted": false
+  },
+  "owner_original_lief_roundtrip_local_probe": {
+    "entrypoint": "python -m tools.base_mod.original_scene_native_image_gate --owned-export <owner-JP15.7.1-ZIP> --baseline-only --metadata-output private/level-native-baseline.json",
+    "lief_roundtrip_command": "python -m tools.base_mod.original_scene_native_image_gate --owned-export <owner-JP15.7.1-ZIP> --metadata-output private/level-native-lief.json",
+    "uses_original_game_binary_from_owner_zip_only": true,
+    "signed_installable_APK_created": false,
+    "public_proprietary_archive_or_save_committed": false,
+    "LIEF_unavailable_is_explicit_blocked_not_success": true,
+    "post_LIEF_original_native_full_8MB_executable_code_verified": false,
+    "owner_Android_gameplay_connected": false,
+    "original_powerup_level60_save_reboot_verified": false,
+    "source_paths": [
+      "tools/base_mod/original_scene_native_image_gate.py",
+      "tests/test_original_scene_native_image_gate.py"
+    ]
   }
 }

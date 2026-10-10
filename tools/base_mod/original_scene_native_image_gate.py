@@ -305,3 +305,173 @@ def verify_staged_original_scene_before_signing(
     result["research_apk_signing_performed_by_this_gate"] = False
     result["original_owner_save_accessed_by_gate"] = False
     return result
+
+# This tool intentionally never creates an APK, native ELF output, player
+# SAVE, public artifact, signing key, or device-side installation. Only hashes.
+ORIGINAL_OWNER_EXPORT_SHA256 = (
+    "38c3bbb8d2cf2101793c9462617d4293e19fc99588b6655fd40299fd61a0ef56"
+)
+ORIGINAL_OWNER_NATIVE_SHA256 = (
+    "333d2974ab2ff881fd70087fd62dea7d12d82addbc55cab2f2a675ad67e3a7e2"
+)
+
+
+def probe_owner_original_lief_roundtrip(
+    owner_export: "Path", *, baseline_only: bool = False,
+    native_rewriter=None,
+) -> dict[str, Any]:
+    """Exercise the real owned original native bytes and optional LIEF rewrite.
+
+    This is deliberately NOT an installer. The only original asset read from
+    the archive is the ARM64 native image; neither SAVE nor InstallPack data
+    are read. The modified native stays in memory, is verified and destroyed.
+    An injected test rewriter is supported only for synthetic unit tests.
+    """
+    from hashlib import sha256 as digest
+    from io import BytesIO
+    from pathlib import Path
+    from zipfile import ZipFile, BadZipFile
+
+    if (not isinstance(owner_export, Path) or owner_export.is_symlink()
+        or not owner_export.is_file() or owner_export.stat().st_size > 300_000_000):
+        raise OriginalSceneNativeImageError("unsafe or missing owned original export")
+    with owner_export.open("rb") as stream:
+        hashed = digest()
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            hashed.update(chunk)
+    if hashed.hexdigest() != ORIGINAL_OWNER_EXPORT_SHA256:
+        raise OriginalSceneNativeImageError("original JP15.7.1 ZIP SHA256 mismatch")
+    split_entry = "apk/split_config.arm64_v8a.apk"
+    native_entry = "lib/arm64-v8a/libnative-lib.so"
+    try:
+        with ZipFile(owner_export) as archive:
+            matching_splits = [
+                member for member in archive.infolist()
+                if member.filename == split_entry
+            ]
+            if len(matching_splits) != 1 or not (
+                100_000 <= matching_splits[0].file_size <= 80_000_000
+            ):
+                raise OriginalSceneNativeImageError(
+                    "original owner ARM64 split missing/ambiguous or oversized"
+                )
+            split_bytes = archive.read(matching_splits[0])
+        with ZipFile(BytesIO(split_bytes)) as split:
+            matching_native = [
+                member for member in split.infolist()
+                if member.filename == native_entry
+            ]
+            if len(matching_native) != 1 or not (
+                64 <= matching_native[0].file_size <= 24_000_000
+            ):
+                raise OriginalSceneNativeImageError(
+                    "original owner ARM64 native missing/ambiguous or oversized"
+                )
+            original = split.read(matching_native[0])
+    except (OSError, BadZipFile, RuntimeError, EOFError) as exc:
+        raise OriginalSceneNativeImageError(
+            "original ARM64 private source archive unreadable"
+        ) from exc
+    original_sha = digest(original).hexdigest()
+    if original_sha != ORIGINAL_OWNER_NATIVE_SHA256:
+        raise OriginalSceneNativeImageError("original JP15.7.1 native SHA256 drift")
+    original_gate = verify_mapped_original_scene_image(original)
+    receipt: dict[str, Any] = {
+        "schema": "kneekura-original-level-native-lief-probe-v1",
+        "status": "PASS_ORIGINAL_JP1571_NATIVE_SOURCE_BASELINE_ONLY",
+        "source_export_sha256": ORIGINAL_OWNER_EXPORT_SHA256,
+        "original_native_sha256": original_sha,
+        "original_native_build_id": original_gate["pinned_original_build_id"],
+        "original_instruction_anchor_count":
+            original_gate["verified_executable_instruction_anchors"],
+        "original_executable_text_sha256":
+            original_gate["complete_original_text_sha256"],
+        "original_executable_text_bytes":
+            original_gate["complete_original_text_bytes_verified"],
+        "original_library_LIEF_rewrite_executed": False,
+        "original_text_preserved_after_LIEF_rewrite": False,
+        "changed_native_candidate_sha256": None,
+        "original_APK_or_SAVE_written": False,
+        "original_restricted_account_or_PONOS_endpoint_contacted": False,
+        "original_Android_runtime_played": False,
+        "original_game_Lv60_and_offline_SAVE_verified": False,
+        "ready_to_sign_or_install": False,
+    }
+    if baseline_only:
+        return receipt
+    try:
+        if native_rewriter is None:
+            from tools.base_mod.inject_shim import add_needed_dependency
+            native_rewriter = add_needed_dependency
+        rewritten, ledger = native_rewriter(original)
+    except RuntimeError as exc:
+        receipt["status"] = (
+            "BLOCKED_LIEF_DEPENDENCY_UNAVAILABLE"
+            if "LIEF is required" in str(exc)
+            else "BLOCKED_LIEF_REWRITE_RUNTIME_FAILURE"
+        )
+        return receipt
+    except (OSError, ValueError, TypeError):
+        receipt["status"] = "BLOCKED_LIEF_REWRITE_FAILURE"
+        return receipt
+    if (type(rewritten) is not bytes
+        or not isinstance(ledger, dict)
+        or len(rewritten) < 64 or len(rewritten) > 32_000_000
+        or "libkneekura.so" not in ledger.get("libraries_after", [])
+        or "libkneekura.so" in ledger.get("libraries_before", [])
+        or ledger.get("export_surface_preserved") is not True):
+        receipt["status"] = "BLOCKED_LIEF_DEPENDENCY_OR_EXPORT_INVARIANT"
+        return receipt
+    receipt["original_library_LIEF_rewrite_executed"] = True
+    receipt["changed_native_candidate_sha256"] = digest(rewritten).hexdigest()
+    try:
+        mapped = verify_mapped_original_scene_image(rewritten)
+    except (OriginalSceneNativeImageError, ValueError):
+        receipt["status"] = "BLOCKED_LIEF_ORIGINAL_GAME_NATIVE_CODE_LAYOUT_DRIFT"
+        return receipt
+    receipt["original_text_preserved_after_LIEF_rewrite"] = (
+        mapped["complete_original_text_sha256"]
+        == original_gate["complete_original_text_sha256"]
+    )
+    receipt["status"] = "PASS_PRIVATE_TEMP_NATIVE_LIEF_ROUNDTRIP_ONLY"
+    return receipt
+
+
+def main_owner_native_probe(argv: list[str] | None = None) -> int:
+    """Read-only private owner command; optionally write small JSON metadata."""
+    import argparse
+    import json
+    from pathlib import Path
+    parser = argparse.ArgumentParser(
+        description="JP15.7.1 owner-private original ARM64 native source/LIEF check"
+    )
+    parser.add_argument("--owned-export", required=True, type=Path)
+    parser.add_argument("--baseline-only", action="store_true")
+    parser.add_argument("--metadata-output", type=Path)
+    args = parser.parse_args(argv)
+    try:
+        receipt = probe_owner_original_lief_roundtrip(
+            args.owned_export, baseline_only=args.baseline_only
+        )
+        if args.metadata_output is not None:
+            target = args.metadata_output
+            if (target.suffix.lower() != ".json" or target.is_symlink()
+                or target.exists()):
+                raise OriginalSceneNativeImageError(
+                    "metadata output must be a NEW non-symlink JSON path"
+                )
+            encoded = (json.dumps(receipt, indent=2, sort_keys=True) + "\n").encode("utf-8")
+            if len(encoded) > 16_384:
+                raise OriginalSceneNativeImageError("metadata receipt unexpectedly large")
+            target.parent.mkdir(parents=True, exist_ok=True)
+            with target.open("xb") as out:
+                out.write(encoded)
+    except (OriginalSceneNativeImageError, OSError, ValueError):
+        print("BLOCKED_UNSAFE_OR_MISMATCHED_OWNER_SOURCE_OR_METADATA_OUTPUT")
+        return 3
+    print(json.dumps(receipt, indent=2, sort_keys=True))
+    return 0 if receipt["status"].startswith("PASS_") else 3
+
+
+if __name__ == "__main__":
+    raise SystemExit(main_owner_native_probe())

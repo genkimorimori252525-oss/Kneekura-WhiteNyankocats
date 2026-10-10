@@ -249,6 +249,153 @@ class OriginalSceneSourceRepackPreflightTests(unittest.TestCase):
             "original_research_scene_pre_signature_source_receipt", builder
         )
 
+
+    def _private_fake_owner_native_archive(self, folder: Path) -> Path:
+        """Synthetic ZIP-within-ZIP only. Owner data never enters tests."""
+        from io import BytesIO
+        native = self.original_fixture
+        buffer = BytesIO()
+        with ZipFile(buffer, "w") as nested:
+            nested.writestr("lib/arm64-v8a/libnative-lib.so", native)
+        owner = folder / "owner-synthetic.zip"
+        with ZipFile(owner, "w") as archive:
+            archive.writestr("apk/split_config.arm64_v8a.apk", buffer.getvalue())
+        return owner
+
+    def _fixture_owned_export_and_native_hashes(self, owner: Path):
+        from unittest.mock import patch
+        # Patch only the synthetic test fixtures, never the original constants.
+        return (
+            patch.object(
+                image_gate, "ORIGINAL_OWNER_EXPORT_SHA256",
+                sha256(owner.read_bytes()).hexdigest(),
+            ),
+            patch.object(
+                image_gate, "ORIGINAL_OWNER_NATIVE_SHA256",
+                sha256(self.original_fixture).hexdigest(),
+            ),
+        )
+
+    def test_actual_owner_zip_nested_layout_probe_baseline_without_lief(self):
+        with tempfile.TemporaryDirectory() as temp:
+            owner = self._private_fake_owner_native_archive(Path(temp))
+            source_hash, native_hash = self._fixture_owned_export_and_native_hashes(owner)
+            with source_hash, native_hash:
+                baseline = image_gate.probe_owner_original_lief_roundtrip(
+                    owner, baseline_only=True
+                )
+            self.assertEqual(
+                baseline["status"], "PASS_ORIGINAL_JP1571_NATIVE_SOURCE_BASELINE_ONLY"
+            )
+            self.assertEqual(baseline["original_instruction_anchor_count"], 17)
+            self.assertEqual(
+                baseline["original_executable_text_bytes"], 8_126_892
+            )
+            self.assertFalse(baseline["original_library_LIEF_rewrite_executed"])
+            self.assertFalse(baseline["ready_to_sign_or_install"])
+
+    def test_transient_native_rewrite_must_preserve_entire_text(self):
+        with tempfile.TemporaryDirectory() as temp:
+            owner = self._private_fake_owner_native_archive(Path(temp))
+            source_hash, native_hash = self._fixture_owned_export_and_native_hashes(owner)
+
+            def approved_test_rewrite(raw):
+                self.assertEqual(raw, self.original_fixture)
+                return raw, {
+                    "libraries_before": ["libc.so"],
+                    "libraries_after": ["libc.so", "libkneekura.so"],
+                    "export_surface_preserved": True,
+                }
+
+            with source_hash, native_hash:
+                outcome = image_gate.probe_owner_original_lief_roundtrip(
+                    owner, native_rewriter=approved_test_rewrite
+                )
+            self.assertEqual(outcome["status"],
+                             "PASS_PRIVATE_TEMP_NATIVE_LIEF_ROUNDTRIP_ONLY")
+            self.assertTrue(outcome["original_text_preserved_after_LIEF_rewrite"])
+            self.assertFalse(outcome["ready_to_sign_or_install"])
+            with ZipFile(owner) as archive:
+                self.assertIn(
+                    "apk/split_config.arm64_v8a.apk", archive.namelist()
+                )
+
+    def test_any_non_anchor_native_rewrite_drift_blocks_candidate(self):
+        with tempfile.TemporaryDirectory() as temp:
+            owner = self._private_fake_owner_native_archive(Path(temp))
+            source_hash, native_hash = self._fixture_owned_export_and_native_hashes(owner)
+            def changed_rewrite(raw):
+                mutated = bytearray(raw)
+                mutated[0x900000] ^= 1
+                return bytes(mutated), {
+                    "libraries_before": [],
+                    "libraries_after": ["libkneekura.so"],
+                    "export_surface_preserved": True,
+                }
+            with source_hash, native_hash:
+                outcome = image_gate.probe_owner_original_lief_roundtrip(
+                    owner, native_rewriter=changed_rewrite
+                )
+            self.assertEqual(outcome["status"],
+                             "BLOCKED_LIEF_ORIGINAL_GAME_NATIVE_CODE_LAYOUT_DRIFT")
+            self.assertFalse(outcome["original_text_preserved_after_LIEF_rewrite"])
+            self.assertFalse(outcome["ready_to_sign_or_install"])
+
+    def test_lief_missing_is_a_clear_failure_not_false_build_success(self):
+        with tempfile.TemporaryDirectory() as temp:
+            owner = self._private_fake_owner_native_archive(Path(temp))
+            source_hash, native_hash = self._fixture_owned_export_and_native_hashes(owner)
+            def missing_dependency(_):
+                raise RuntimeError("LIEF is required for native dependency injection")
+            with source_hash, native_hash:
+                outcome = image_gate.probe_owner_original_lief_roundtrip(
+                    owner, native_rewriter=missing_dependency
+                )
+            self.assertEqual(outcome["status"], "BLOCKED_LIEF_DEPENDENCY_UNAVAILABLE")
+            self.assertIsNone(outcome["changed_native_candidate_sha256"])
+            self.assertFalse(outcome["ready_to_sign_or_install"])
+
+    def test_original_owner_source_mismatch_rejected_before_rewriter(self):
+        with tempfile.TemporaryDirectory() as temp:
+            owner = self._private_fake_owner_native_archive(Path(temp))
+            with self.assertRaisesRegex(
+                OriginalSceneNativeImageError, "ZIP SHA256 mismatch"
+            ):
+                image_gate.probe_owner_original_lief_roundtrip(owner)
+            source_hash, native_hash = self._fixture_owned_export_and_native_hashes(owner)
+            with source_hash, native_hash:
+                with self.assertRaisesRegex(
+                    OriginalSceneNativeImageError, "unsafe or missing"
+                ):
+                    image_gate.probe_owner_original_lief_roundtrip(
+                        Path(temp) / "missing.zip"
+                    )
+
+    def test_private_only_metadata_is_exclusive_and_never_an_apk(self):
+        with tempfile.TemporaryDirectory() as temp:
+            owner = self._private_fake_owner_native_archive(Path(temp))
+            output = Path(temp) / "private" / "original-lief-receipt.json"
+            source_hash, native_hash = self._fixture_owned_export_and_native_hashes(owner)
+            with source_hash, native_hash:
+                self.assertEqual(
+                    image_gate.main_owner_native_probe([
+                        "--owned-export", str(owner), "--baseline-only",
+                        "--metadata-output", str(output),
+                    ]), 0
+                )
+            report = __import__("json").loads(output.read_text())
+            self.assertTrue(report["status"].startswith("PASS_"))
+            self.assertFalse(report["original_APK_or_SAVE_written"])
+            self.assertFalse(report["ready_to_sign_or_install"])
+            with source_hash, native_hash:
+                self.assertEqual(
+                    image_gate.main_owner_native_probe([
+                        "--owned-export", str(owner), "--baseline-only",
+                        "--metadata-output", str(output),
+                    ]), 3,
+                )
+            self.assertFalse((Path(temp) / "private" / "original.patched.so").exists())
+
     def test_bad_type_without_elf_or_private_original_rejected(self):
         with self.assertRaises(OriginalSceneNativeImageError):
             verify_mapped_original_scene_image(b"\x7fELF")
