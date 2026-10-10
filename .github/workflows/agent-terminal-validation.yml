@@ -42,7 +42,8 @@ jobs:
             'tools/base_mod/BUILD-OWNER-RESEARCH-PAIR.ps1',
             'tools/base_mod/CHECK-OWNER-RESEARCH-DEVICE-SIGNER.ps1',
             'tools/base_mod/CAPTURE-OWNER-ORIGINAL-CRASH.ps1',
-            'tools/base_mod/INSTALL-OWNER-RESEARCH-PAIR.ps1'
+            'tools/base_mod/INSTALL-OWNER-RESEARCH-PAIR.ps1',
+            'tools/base_mod/OWNER-READY-TO-SIGN.ps1'
           )
           foreach ($path in $paths) {
             if (-not (Test-Path -LiteralPath $path)) {
