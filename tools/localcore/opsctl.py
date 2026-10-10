@@ -90,7 +90,10 @@ def main(argv: list[str] | None = None) -> int:
             report["schedule_entries"] = len(pack["schedule"])
     except (OSError, UnicodeError, ValueError, KeyError, TypeError) as error:
         parser.error(str(error))
-    # Windows PowerShell 5.1 / subprocess pipes often default to cp932.\n    # ASCII-escaped JSON preserves exact Unicode after json.loads without\n    # depending on terminal encodings or changing user locale settings.\n    print(json.dumps(report, indent=2, ensure_ascii=True, sort_keys=True))
+    # Windows PowerShell 5.1 / subprocess pipes often default to cp932.
+    # ASCII-escaped JSON preserves exact Unicode after json.loads without
+    # depending on terminal encodings or changing user locale settings.
+    print(json.dumps(report, indent=2, ensure_ascii=True, sort_keys=True))
     return 0
 
 
