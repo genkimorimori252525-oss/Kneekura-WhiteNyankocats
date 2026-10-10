@@ -317,3 +317,84 @@ jobs:
           path: build/kneekura-scene-research/libkneekura.so
           if-no-files-found: error
           retention-days: 7
+
+  owner-lief-probe-wheel-windows:
+    name: Owner offline LIEF wheel Python 3.12 Windows x64
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          architecture: x64
+      - name: Download exactly one PUBLIC Windows wheel (no owner game files)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          New-Item -ItemType Directory -Path build/owner-lief-wheel -Force | Out-Null
+          python -m pip download --only-binary=:all: --no-deps --dest build/owner-lief-wheel "lief==0.17.6"
+          if ($LASTEXITCODE -ne 0) { throw "LIEF public wheel download failed" }
+          $wheels = @(Get-ChildItem -LiteralPath build/owner-lief-wheel -Filter "*.whl" -File)
+          if ($wheels.Count -ne 1 -or $wheels[0].Name -ne "lief-0.17.6-cp312-cp312-win_amd64.whl") {
+            throw "Not exactly one CPython 3.12 x64 Windows LIEF wheel"
+          }
+          $hash = (Get-FileHash -LiteralPath $wheels[0].FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          $metadata = [ordered]@{
+            schema = "kneekura-offline-win312-lief-wheel-v1"
+            wheel_name = $wheels[0].Name
+            sha256 = $hash
+            lief_version = "0.17.6"
+            target_python = "3.12"
+            target_platform = "win_amd64"
+            original_game_apk_or_save_downloaded = $false
+            ready_to_install_game = $false
+          }
+          $metadata | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath build/owner-lief-wheel/wheel-receipt.json -Encoding UTF8
+      - name: Confirm SHA256, ZIP integrity and offline Windows import
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $program = @'
+          from pathlib import Path
+          from zipfile import ZipFile
+          from hashlib import sha256
+          import json
+          folder = Path("build/owner-lief-wheel")
+          data = json.loads((folder / "wheel-receipt.json").read_text(encoding="utf-8-sig"))
+          wheel = folder / data["wheel_name"]
+          assert data["schema"] == "kneekura-offline-win312-lief-wheel-v1"
+          assert wheel.name == "lief-0.17.6-cp312-cp312-win_amd64.whl"
+          assert sha256(wheel.read_bytes()).hexdigest() == data["sha256"]
+          with ZipFile(wheel) as z:
+              assert z.testzip() is None
+              assert any(name.endswith(".pyd") for name in z.namelist())
+              assert any(name.endswith(".dist-info/WHEEL") for name in z.namelist())
+          print("OFFLINE WHEEL SHA256 / ZIP / WINDOWS ABI: PASS")
+          '@
+          $program | python -
+          if ($LASTEXITCODE -ne 0) { throw "Wheel content check failed" }
+          python -m venv build/owner-lief-wheel-validation
+          if ($LASTEXITCODE -ne 0) { throw "Windows Python 3.12 venv failed" }
+          $py = "build/owner-lief-wheel-validation/Scripts/python.exe"
+          & $py -m pip install --no-index --no-deps --no-cache-dir --find-links build/owner-lief-wheel "lief==0.17.6"
+          if ($LASTEXITCODE -ne 0) { throw "Offline wheel installation failed" }
+          & $py -c "import lief; assert lief.__version__ == '0.17.6'"
+          if ($LASTEXITCODE -ne 0) { throw "Offline installed LIEF failed import" }
+          & $py -m unittest tests.test_original_scene_native_image_gate tests.test_owner_lief_probe_windows_contract -v
+          if ($LASTEXITCODE -ne 0) { throw "Native research unit tests failed" }
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path -LiteralPath tools/base_mod/run_owner_lief_probe.ps1).Path, [ref]$tokens, [ref]$errors) | Out-Null
+          if ($errors.Count -ne 0) { throw "Owner offline PowerShell probe syntax invalid" }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kneekura-owner-LIEF-0.17.6-win312-OFFLINE-WHEEL-ONLY
+          path: |
+            build/owner-lief-wheel/*.whl
+            build/owner-lief-wheel/wheel-receipt.json
+            tools/base_mod/run_owner_lief_probe.ps1
+          if-no-files-found: error
+          retention-days: 14
