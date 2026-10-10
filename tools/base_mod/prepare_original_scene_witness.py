@@ -44,6 +44,10 @@ MAX_OFFICIAL_AAR_BYTES = 40 * 1024 * 1024
 APPROVED_OFFICIAL_SHADOWHOOK_V201_ARM64_SHA256 = (
     "fc84287eac46e3bade2f7e07e3c9efdca005822e21191d6db5b8cb222d53e8a0"
 )
+# Real Maven 2.0.1 AAR: validated with a public-only GitHub Actions run.
+APPROVED_OFFICIAL_SHADOWHOOK_V201_COMPANION_SHA256 = (
+    "f2cc6a6f94d7361be915daafff1d25b7b3af34972e7308ac540982cfd608bd32"
+)
 REQUIRED_SHADOWHOOK_EXPORTED_FUNCTIONS = frozenset({
     "shadowhook_init", "shadowhook_hook_sym_addr_2",
     "shadowhook_hook_func_addr_2", "shadowhook_unhook",
@@ -206,12 +210,17 @@ def _official_shadowhook_v201_arm64_pair(aar: Path) -> tuple[bytes, bytes, str]:
             or elf_machine(raw) != EM_AARCH64):
             raise OriginalSceneWitnessPackageError(
                 "official ShadowHook pair must both be ELF64 AArch64 ET_DYN")
+    if hashlib.sha256(companion).hexdigest() != (
+        APPROVED_OFFICIAL_SHADOWHOOK_V201_COMPANION_SHA256
+    ):
+        raise OriginalSceneWitnessPackageError(
+            "official ShadowHook companion ARM64 SHA256 mismatch")
     if not REQUIRED_SHADOWHOOK_EXPORTED_FUNCTIONS.issubset(
         _verified_defined_shadowhook_functions(main)
     ):
         raise OriginalSceneWitnessPackageError(
             "official ShadowHook main exact-address FUNC exports absent")
-    return main, companion, hashlib.sha256(companion).hexdigest()
+    return main, companion, APPROVED_OFFICIAL_SHADOWHOOK_V201_COMPANION_SHA256
 
 
 def check_original_scene_witness_build_contract(
