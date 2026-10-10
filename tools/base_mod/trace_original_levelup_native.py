@@ -2311,6 +2311,14 @@ def _original_server_registry_constructor_initialized_on_load(elf: bytes) -> dic
     }
 
 
+def _original_verified_native_resource_collision_policy(elf: bytes) -> dict:
+    """Pin original packed-index lookup duplicate-key handling, not live file I/O."""
+    from tools.base_mod.original_resource_collision import (
+        trace_original_registration_collision,
+    )
+    return trace_original_registration_collision(elf)
+
+
 def _original_verified_92_registration_row_order(elf: bytes) -> dict:
     """Reconstruct all 92 actual original registered filename pairs in row order.
 
@@ -2393,6 +2401,7 @@ def trace_exact_native(elf: bytes, *, expected_sha: str = NATIVE_SHA256) -> dict
         "original_registered_server_family_catalog": _original_registered_server_family_catalog(elf),
         "original_server_registry_load_time_constructor": _original_server_registry_constructor_initialized_on_load(elf),
         "original_native_server_registration_row_order": _original_verified_92_registration_row_order(elf),
+        "original_resource_duplicate_key_registration_policy": _original_verified_native_resource_collision_policy(elf),
         "native_original_game_upgrader_getter_identified": True,
         "native_original_game_upgrade_purchase_hook_verified": False,
         "original_native_conditional_xp_purchase_to_save_calls_proven": True,
@@ -2668,7 +2677,20 @@ def _additional_owner_list_coverage(
         "native_static_registration_indices_joined": (
             registered_family_indices is not None
         ),
-        "original_native_source_priority_or_duplicate_precedence_proven": False,
+        "conditional_first_source_for_duplicate_names_if_all_register": {
+            filename: sorted(
+                sources_by_tsv[filename],
+                key=lambda row: row["original_registration_index"],
+            )[0]
+            for filename in sorted(conflicting_sources)
+        } if registered_family_indices is not None else {},
+        "original_native_same_key_first_successful_registration_rule_static_proven": (
+            registered_family_indices is not None
+        ),
+        "original_native_actual_duplicate_tsv_source_winner_proven": False,
+        "original_native_source_priority_or_duplicate_precedence_proven": (
+            registered_family_indices is not None
+        ),
         "paired_pack_payload_check_explicitly_requested": verify_paired_pack_tsv_payloads,
         "download_tsv_payloads_decrypted": sorted(decrypted_tsvs),
         "all_35_payloads_decrypted_from_owner_paired_packs": decrypted_tsvs == expected,
