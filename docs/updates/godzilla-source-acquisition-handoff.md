@@ -160,3 +160,64 @@ cycle, in-game facing/animation frame sync, and full offline original engine
 SAVE/battle confirmation. Separate extra 35 download_N.tsv payloads are not
 made available by these two Server family pairs; never equate the two-pair
 recovery with a complete 615 MiB original game local asset cache.
+
+
+## WImageDataServer first-form resource-priority candidate (research only)
+
+Static JP15.7.1 source confirms original Server registration indices:
+
+| Original native family | Zero-based registration index | Meaning |
+| --- | ---: | --- |
+| WImageDataServer | 4 | Original 702_f model, cut and four animations |
+| QNumberServer | 27 | Existing friendly 702_f.png texture source |
+| MNumberServer | 43 | Original enemy 550_e.png texture source |
+
+The source native code at \`0x34D3B0 → 0x34D484\` skips insertion
+when a resource name already exists. **Only if the earlier Server pair is
+actually registered and accepted at runtime**, a new 702_f.png key registered
+from WImageDataServer at index 4 may be chosen before the existing texture at
+QNumberServer index 27. This is a conditional research hypothesis, NOT a
+proven original-game override, and a new archive necessarily fails the original
+download-table MD5 until a legitimate fully local archive-acceptance path is
+verified. Do not install this candidate into an APK or copy it over the
+original cached pack.
+
+After the separate 550_e → 702_f private conversion has been verified, the
+following command writes an **additional private, non-installable** candidate:
+
+~~~powershell
+py -3 -m tools.base_mod.prepare_godzilla_native_resource_preview --original-server-dir private/server-jp1571/godzilla --ally-preview-dir private/godzilla-702_f-preview --output private/godzilla-wimagedata-702f-preview
+~~~
+
+It requires the owner's exact original WImageDataServer.list and .pack
+**byte-size and MD5** values, all 7 preview SHA-256 receipts and the
+original six 702_f slots. It refuses unexpected manifest CSV columns,
+noncontiguous offsets, trailing pack data, an existing 702_f.png in the source
+family or missing 702_c cut/model. It re-encrypts only the six 702_f model/cut/
+animation slots, appends only the converted 702_f PNG to this *private*
+WImageDataServer candidate, validates every source non-target asset unchanged,
+and verifies the original 702_c second form byte-for-byte. Both original
+WImageDataServer source files and the original 550_e art remain untouched.
+
+Expected additional Git-ignored output:
+
+~~~text
+private/godzilla-wimagedata-702f-preview/
+  WImageDataServer.list
+  WImageDataServer.pack
+  candidate-research-receipt.json
+~~~
+
+The files must **not** be redistributed, uploaded or substituted for the
+official DownloadLocal/DataLocal cache without a separate source-accurate
+runtime integrity and original Android proof. This research still lacks
+original-game runtime asset selection, accepted archive MD5, rendered
+orientation, attack synchronization, Lv30 50,000×3, castle HP sequence = 1,
+and original app SAVE/restart/zero-external-network acceptance.
+
+**Owned original JP15.7.1 ImageDataLocal grammar corroboration** (not a
+runtime proof): 1,814 local animation files contain 127,224 tracks and
+1,009,451 keyframes, including eight whole animations with zero tracks, six
+tracks with zero keyframes, 22,960 negative-frame entries and six special -2
+model-node references. The private converter permits these legitimate native
+records but rejects malformed/unknown model-node references.
