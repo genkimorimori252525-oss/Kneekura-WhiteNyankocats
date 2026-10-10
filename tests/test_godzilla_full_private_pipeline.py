@@ -174,6 +174,71 @@ class OriginalGodzillaFirstFormOneCommandIntegration(unittest.TestCase):
         self.assertEqual((ally / "702_f.png").read_bytes(), _minimal_png())
         self.assertEqual((ally / "702_f01.maanim").read_bytes(), _animation())
 
+    def test_late_resource_format_failure_cleans_all_invisible_stages(self):
+        """Even AFTER real encrypted original rig and art have been built,
+        failing the final native resource candidate must publish NOTHING.
+        """
+        rig_was_created_inside_private_stage = []
+        def last_stage_drift(source, ally, output, *, private_root=None):
+            rig_was_created_inside_private_stage.append(
+                (source / "WImageDataServer.pack").is_file()
+                and (ally / "702_f.mamodel").is_file()
+            )
+            raise ValueError("original real Server manifest contains unknown columns")
+        with patch.object(
+            recovery, "prepare_private_native_resource_candidate",
+            side_effect=last_stage_drift,
+        ):
+            result, rig, ally, overlay = self._run()
+        self.assertEqual(result, 2)
+        self.assertEqual(rig_was_created_inside_private_stage, [True])
+        self.assertFalse(rig.exists())
+        self.assertFalse(ally.exists())
+        self.assertFalse(overlay.exists())
+        self.assertFalse((self.private / "godzilla-source").exists())
+        self.assertFalse(list(self.private.glob(".kneekura-godzilla-4stage-*")))
+
+    def test_one_filesystem_commit_error_rolls_back_own_directories(self):
+        """If final candidate promotion fails, earlier output dirs created
+        by the same invocation are removed; owner source files are untouched.
+        """
+        owner_before = {
+            name: (self.owner / name).read_bytes()
+            for name in self.bodies
+        }
+        original_rename = Path.rename
+        def fail_last_publish(item, destination):
+            if (item.name == "candidate"
+                and item.parent.name.startswith(".kneekura-godzilla-4stage-")):
+                raise OSError("synthetic late directory publication failure")
+            return original_rename(item, destination)
+        with patch.object(Path, "rename", fail_last_publish):
+            result, rig, ally, overlay = self._run()
+        self.assertEqual(result, 2)
+        self.assertFalse(rig.exists())
+        self.assertFalse(ally.exists())
+        self.assertFalse(overlay.exists())
+        self.assertFalse((self.private / "godzilla-source").exists())
+        for name, prior in owner_before.items():
+            self.assertEqual((self.owner / name).read_bytes(), prior)
+        self.assertFalse(list(self.private.glob(".kneekura-godzilla-4stage-*")))
+
+    def test_existing_user_private_output_is_never_overwritten(self):
+        previous_art = self.private / "godzilla-enemy"
+        previous_art.mkdir(parents=True)
+        (previous_art / "important-user-output.txt").write_text(
+            "do-not-delete-owner-data", encoding="utf-8"
+        )
+        result, rig, ally, overlay = self._run()
+        self.assertEqual(result, 2)
+        self.assertEqual(
+            (rig / "important-user-output.txt").read_text(encoding="utf-8"),
+            "do-not-delete-owner-data",
+        )
+        self.assertFalse(ally.exists())
+        self.assertFalse(overlay.exists())
+        self.assertFalse((self.private / "godzilla-source").exists())
+
     def test_real_md5_mismatch_fails_before_any_private_output(self):
         result, rig, ally, overlay = self._run(damage="WImageDataServer.pack")
         self.assertEqual(result, 2)
