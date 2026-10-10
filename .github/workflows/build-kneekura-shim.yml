@@ -398,3 +398,78 @@ jobs:
             tools/base_mod/run_owner_lief_probe.ps1
           if-no-files-found: error
           retention-days: 14
+
+  ephemeral-linux-lief-native-probe:
+    name: Public-only Linux LIEF for private original native verification
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Fetch public LIEF wheel (NO owner game, APK, SAVE or keys)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/owner-lief-linux-wheel
+          python -m pip download --only-binary=:all: --no-deps \
+            --dest build/owner-lief-linux-wheel "lief==0.17.6"
+          python - <<'PY'
+          from pathlib import Path
+          from hashlib import sha256
+          from zipfile import ZipFile
+          import json
+          items = list(Path("build/owner-lief-linux-wheel").glob("*.whl"))
+          if len(items) != 1:
+              raise ValueError("expected exactly one public Python 3.13 Linux wheel")
+          wheel = items[0]
+          if (not wheel.name.startswith("lief-0.17.6-cp313-cp313-")
+              or not wheel.name.endswith("x86_64.whl")
+              or "manylinux" not in wheel.name):
+              raise ValueError("unexpected platform ABI")
+          with ZipFile(wheel) as archive:
+              if archive.testzip() is not None or not any(
+                  name.endswith(".so") for name in archive.namelist()
+              ):
+                  raise ValueError("broken public LIEF wheel")
+          meta = {
+              "schema": "kneekura-linux-python313-lief-wheel-v1",
+              "wheel_name": wheel.name,
+              "sha256": sha256(wheel.read_bytes()).hexdigest(),
+              "lief_version": "0.17.6",
+              "original_jp15_7_1_game_bytes_sent_to_ci": False,
+              "ready_to_ship_game": False,
+          }
+          Path("build/owner-lief-linux-wheel/wheel-receipt.json").write_text(
+              json.dumps(meta, sort_keys=True, indent=2) + "\n", encoding="utf-8"
+          )
+          PY
+      - name: Install the public wheel OFFLINE and run exact research tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m venv build/owner-lief-linux-smoke
+          build/owner-lief-linux-smoke/bin/python -m pip install \
+            --no-index --no-deps --no-cache-dir \
+            --find-links build/owner-lief-linux-wheel "lief==0.17.6"
+          build/owner-lief-linux-smoke/bin/python -c \
+            "import lief; from importlib.metadata import version; assert version('lief') == '0.17.6'"
+          build/owner-lief-linux-smoke/bin/python -m unittest \
+            tests.test_original_scene_native_image_gate -v
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kneekura-public-LIEF-0.17.6-Linux-py313-owner-probe-tools
+          path: |
+            build/owner-lief-linux-wheel/*.whl
+            build/owner-lief-linux-wheel/wheel-receipt.json
+            tools/__init__.py
+            tools/base_mod/__init__.py
+            tools/base_mod/original_scene_native_image_gate.py
+            tools/base_mod/inject_shim.py
+            tools/base_mod/elf_anchor.py
+            tools/base_mod/repack.py
+          if-no-files-found: error
+          retention-days: 3
