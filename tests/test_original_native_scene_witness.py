@@ -105,6 +105,31 @@ class OriginalNativeSceneResearchObserverTests(unittest.TestCase):
         self.assertNotIn("unlink(", code)
         self.assertNotIn("newHttpRequest(", code)
 
+    def test_shadowhook_bootstrap_device_failure_markers_are_split_and_fail_closed(self):
+        """Real owner device emitted 85 ambiguous initialization failures.
+
+        Missing official API exports must NOT be confused with a nonzero
+        shadowhook_init() result. This source-only regression cannot prove
+        the actual ARM64 hook/runtime works on the owner's device.
+        """
+        code = WITNESS.read_text(encoding="utf-8")
+        self.assertIn("original-native-scene-hook-v1 hook-api-missing", code)
+        self.assertIn("original-native-scene-hook-v1 hook-runtime-init-failed", code)
+        self.assertIn("original-native-scene-hook-v1 hook-init-status=%d", code)
+        self.assertIn("int shadowhook_init_status = init_fn(1, 0);", code)
+        self.assertIn("shadowhook_init_status != 0", code)
+        self.assertNotIn("|| init_fn(1, 0) != 0", code)
+        # No hook installation or SDK error code is reinterpreted as a
+        # successful source/native scene event before ShadowHook init.
+        init_part = code.split("static void kneekura_init_scene_witness_research_only(void) {", 1)[1]
+        self.assertLess(init_part.index("hook-api-missing"),
+                        init_part.index("gOriginalLoadBias = witness.base;"))
+        self.assertLess(init_part.index("hook-runtime-init-failed"),
+                        init_part.index("gOriginalLoadBias = witness.base;"))
+        self.assertGreaterEqual(
+            init_part.count("dlclose(library);\n        return;"), 2
+        )
+
     def test_native_loader_walks_all_elf_modules_before_uniqueness_decision(self):
         """Do not stop at first basename match and miss a duplicate ELF.
 
