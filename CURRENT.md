@@ -54,6 +54,15 @@
 - **更新後の実バイト照合**：署名一致だけではShadowHook修正がインストールされた証拠にならないため、privateの一時領域で研究版の`base.apk`と`split_config.arm64_v8a.apk`を読み取り、新候補とSHA-256一致を要求（残り4分割は導入確認・署名検証のみ）。一時コピーは削除、出力レシートには端末ID/証明書/SAVE/APK本文を保存しない。実機での同一鍵ビルド・更新・起動はいずれも **OWNER_GATE / 未実施**。
 - 実Android署名のCI成功＋合成ADB更新テストは、**原作の黒画面解消・初回SAVE・Lv60/MAX・運営i/まどか/ゴジラ/完全オフラインの受入PASSではない**。次の現物試験は本人Windowsで既存研究用署名鍵を使い`BUILD-OWNER-RESEARCH-PAIR.ps1`により原作所有ZIPからPrivate候補を作り、read-only signer gateを通過後にのみ本人の明示操作で更新・一度だけログ採取。旧一個だけのShadowHook `.so`を含むトライアルを再実行しない。
 
+### 2026-10-11 Windows実測・原作所有ZIPから署名前6分割再構築PASS（秘密情報非公開）
+
+- **接続済み Chat On Steroids Core で本人のWindowsローカル環境を実行検証。** 保護対象 `C:\\Users\\genki\\Downloads\\Kneekura-WhiteNyankocats` は現行 `jolly/balance-madoka-godzilla-2026-10-09` にfast-forward、作業ツリーを清潔に維持。Windows Python 3.12.10 で `unittest discover -s tests -p test_*.py` **640件実行、633成功・7スキップ・0失敗**。GitHub公開Linux側も同じソースで [Test tooling #38087269968](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/actions/runs/38087269968) **640件／639成功・1スキップ**、[Agent terminal #38087269990](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/actions/runs/38087269990) PASS。
+- Windows固有に実測された不具合3点を修正済み：`tests/test_base_preserving_repack.py` のPythonシバン実行がWinError 193→`.cmd`起動、`tools/localcore/opsctl.py`のcp932 UnicodeEncodeError→ASCII-escaped JSON（`json.loads`で元日本語完全復元）、NTFS大文字小文字同一ファイルへの同名二重manifest試験→同一inode/ケースfold対応。CIだけでなく**実Windowsで再検証PASS**。
+- 本人Windowsで公開SDK35（`aapt2`/`zipalign`/`apksigner`）＋Android Studio同梱JBR `keytool` を用い、**一時的な合成6分割APK・一時鍵のみの実署名6/6 PASS**。所有者鍵・公式アプリ・SAVEを使用しない。検証プログラムは `tools/base_mod/ci_real_apksigner_env_smoke.py`。`keytool.exe`がPATHになくてもインストール済みAndroid Studio JBRから検出する。
+- 本人の所有ZIP SHA256 `38c3bbb8d2cf2101793c9462617d4293e19fc99588b6655fd40299fd61a0ef56` を**一切変更せず実際に読み込んで**、新規 `tools/base_mod/prepare_original_research_presign.py` で秘密鍵・ADBなしの原作JP15.7.1研究版6分割APKを構築。GitHub Actions [native scene研究用PASSIVE ARM64成果物 #38079740747](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/actions/runs/38079740747) のSHA受領書と実`libkneekura.so`を照合し、同じ公式ShadowHook 2.0.1 AAR（Main + `nothing` 2本のSHA固定）を使った。`verify_staged_original_scene_before_signing`が `PINNED_REPACKAGED_JP1571_ORIGINAL_SCENE_VMA_AND_EXPORT_VERIFIED`、原作vs研究版の`verify_static_http_bridge`・通信権限なし・ネイティブの静的合格、**6つの署名前APK SHA256を個別にgitignored `private/`のJSONへ記録**。原作の6分割APKと派生バイトはGitHub/チャットに出していない。
+- **合格したのは署名前、かつ静的原作コード保全まで。** 現物研究版は `Android_APK_signed=false` / `Android_game_installed_or_launched=false`。元原作UI表示・黒画面解消・初回本物SAVE・育成Lv60/MAX・操作i/ガチャ/運営・まどか/シンゴジラ・真の外部通信ゼロはいずれも**実機受入未合格**。次に必要なオーナー側操作は、本人の秘密研究用署名鍵のパスワード入力を伴う候補署名と、実機上の現存署名一致を読み取り確認した後の**明示的な**研究版更新／1回の収集。本人の許可なしに署名・端末上書き・SAVE変更はせえへん。
+- 再現・検証の一次ソースは既存 `tools/base_mod/BUILD-OWNER-RESEARCH-PAIR.ps1`、`CHECK-OWNER-RESEARCH-DEVICE-SIGNER.ps1`、`INSTALL-OWNER-RESEARCH-PAIR.ps1`、`CAPTURE-OWNER-ORIGINAL-CRASH.ps1`。追加の署名前工程・合成テストは `prepare_original_research_presign.py` と `tests/test_prepare_original_research_presign.py`。旧ShadowHook単独`.so`トライアルに戻さない。
+
 ## このファイルの後に読むもの（最大限絞る）
 
 **普段の新規AIセッション：** このファイル → PRODUCT_IDENTITY.md → 実装ロードマップの「実行順序と次の担当者向け開始地点」→ 今動かす1タスクのソース/証拠だけ。毎回すべてのdocs/を巡回する必要はない。
