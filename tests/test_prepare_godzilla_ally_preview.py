@@ -190,6 +190,23 @@ class GodzillaNo703FirstFormCandidateTests(unittest.TestCase):
                                      "sprite index outside"):
             preview.preview_converted_ally_rig(bad)
 
+    def test_mamodel_only_changes_two_approved_fields_other_text_untouched(self):
+        source = dict(self.source)
+        before = source["550_e.mamodel"]
+        # Real model CSV comments and signed formatting aren't necessarily
+        # canonical decimal strings. Don't rewrite unrelated coordinates.
+        before = before.replace(
+            b"0,550,1,0,0,0,0,0,1000,1000",
+            b"0,550,1,0,+000,0,0,0,1000,1000", 1,
+        )
+        source["550_e.mamodel"] = before
+        output, _ = preview.preview_converted_ally_rig(source)
+        model = output["702_f.mamodel"]
+        self.assertIn(b"0,702,1,0,+000,0,0,0,1000,1000", model)
+        self.assertNotIn(b"0,702,1,0,0,0,0,0,1000,1000", model)
+        self.assertEqual(source["550_e.mamodel"], before)
+        self.assertIn(b"0,0,-48,350,10,0,collision", model)
+
     def test_original_empty_animation_zero_tracks_is_valid(self):
         # Owner JP ImageDataLocal contains eight entire .maanim files
         # with zero tracks. This is a legitimate original state.
