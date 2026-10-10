@@ -390,6 +390,87 @@ def _cold_scene_branch_target(elf: bytes, pc: int, kind: str) -> int:
     return pc + _s(offset, bits) * 4
 
 
+# Every BLR in the original app virtual 0x724544..0x725744 is an
+# libc++ shared control-block release call on the local vtable+0x10. The
+# exact target of that destructor virtual remains runtime-dependent; the
+# sequence is *not* evidence of a first-time gameplay SAVE writer.
+# Site and object register are pinned to the owner-private original ELF.
+SCENE102_VIRTUAL_FDE = (0x724544, 0x725744)
+SCENE102_VIRTUAL_SHARED_RELEASE_BLR = {
+    0x724720: 23,
+    0x72475C: 23,
+    0x7247D4: 22,
+    0x72515C: 22,
+}
+SCENE102_RELEASE_WEAK_TARGET = 0xAD76B0
+SCENE102_SHARED_DEC_TARGET = 0xAD3520
+
+
+def inspect_scene102_virtual_indirect_release_sites(elf: bytes) -> dict[str, Any]:
+    """Check every root-level BLR and its shared-weak-count release pattern.
+
+    Only the bounded root FDE is exhaustively scanned. This excludes neither
+    deeper transitive calls nor other paths creating gameplay player-state.
+    """
+    lo, hi = SCENE102_VIRTUAL_FDE
+    if len(elf) < hi or (lo % 4 or hi % 4):
+        raise OriginalVirginSaveGateError("original scene102 virtual FDE bounds invalid")
+    blr_sites = [
+        pc for pc in range(lo, hi, 4)
+        if (_u32(elf, pc) & 0xFFFFFC1F) == 0xD63F0000
+    ]
+    if blr_sites != sorted(SCENE102_VIRTUAL_SHARED_RELEASE_BLR):
+        raise OriginalVirginSaveGateError(
+            "unclassified or missing original scene102 virtual BLR"
+        )
+    for pc, object_register in SCENE102_VIRTUAL_SHARED_RELEASE_BLR.items():
+        # AArch64:
+        #  bl __aarch64_ldadd8_acq_rel (shared ref count decrement)
+        #  cbnz x0, after weak release
+        #  ldr x8,[object] ; mov x0,object ; ldr x8,[x8,#16]
+        #  blr x8 ; mov x0,object ; bl __shared_weak_count::__release_weak
+        # The runtime indirect call is for the reference-counted object
+        # (vtable +0x10). We do NOT execute any of these instructions.
+        words = {
+            pc - 16: 0xB50000E0,
+            pc - 12: 0xF9400008 | (object_register << 5),
+            pc - 8: 0xAA0003E0 | (object_register << 16),
+            pc - 4: 0xF9400908,
+            pc: 0xD63F0100,
+            pc + 4: 0xAA0003E0 | (object_register << 16),
+        }
+        for offset, opcode in words.items():
+            if _u32(elf, offset) != opcode:
+                raise OriginalVirginSaveGateError(
+                    f"original scene102 shared-release instruction drift 0x{offset:x}"
+                )
+        if _bl_target(elf, pc - 20) != SCENE102_SHARED_DEC_TARGET:
+            raise OriginalVirginSaveGateError("original shared-ref decrement changed")
+        if _bl_target(elf, pc + 8) != SCENE102_RELEASE_WEAK_TARGET:
+            raise OriginalVirginSaveGateError("original shared-weak release target changed")
+        cbnz = _u32(elf, pc - 16)
+        displacement = _s((cbnz >> 5) & 0x7FFFF, 19) * 4
+        if pc - 16 + displacement != pc + 12:
+            raise OriginalVirginSaveGateError(
+                "original reference-release conditional skip drift"
+            )
+    return {
+        "status": "ALL_FOUR_ORIGINAL_SCENE102_ROOT_BLR_ARE_SHARED_REFERENCE_RELEASES",
+        "original_function_FDE": "0x724544..0x725744 (exclusive)",
+        "root_BLR_site_count": len(blr_sites),
+        "root_BLR_shared_ref_release_sites": [f"0x{pc:x}" for pc in blr_sites],
+        "all_root_BLR_use_object_vtable_offset": 16,
+        "shared_decrement_target": "0xad3520",
+        "followup_shared_weak_release_target": "0xad76b0",
+        "root_level_unclassified_BLR_count": 0,
+        "root_BLR_are_identified_as_gameplay_save_writers": False,
+        "destructor_runtime_targets_statically_determined": False,
+        "transitive_or_other_gameplay_save_creators_excluded": False,
+        "original_SAVED_state_observed_on_android": False,
+        "original_apk_or_player_SAVE_modified": False,
+    }
+
+
 def inspect_original_cold_scene102_to_101(elf: bytes) -> dict[str, Any]:
     """Exact source-only path: JNI cold start -> scene102 -> guarded scene101.
 
@@ -449,6 +530,7 @@ def inspect_original_cold_scene102_to_101(elf: bytes) -> dict[str, Any]:
         raise OriginalVirginSaveGateError(
             "original scene102 app virtual now directly writes SAVE_DATA"
         )
+    classified_indirect = inspect_scene102_virtual_indirect_release_sites(elf)
     return {
         "status": "PINNED_ORIGINAL_COLD_SCENE102_GUARDED_SCENE101_TRANSITION",
         "original_cold_native_entry": "0x31753c -> 0x9c89cc",
@@ -461,6 +543,7 @@ def inspect_original_cold_scene102_to_101(elf: bytes) -> dict[str, Any]:
         "application_virtual_before_scene101": "0x7231b4/1bc/1c0 vtable+0x38 -> 0x724544",
         "original_virtual_method_unwind_range": "0x724544..0x725744 (ELF .eh_frame)",
         "bounded_virtual_method_direct_SAVE_writer_calls": virtual_direct_saves,
+        "original_virtual_indirect_callsite_classification": classified_indirect,
         "transitive_or_indirect_SAVE_writer_calls_excluded": False,
         "conditional_next_scene": "0x7231c8 w1=101; 0x7231cc -> 0x71c408",
         "scene101_save_probe": "0x71c6e4 CMP #101; 0x71c9b0 -> 0x35d620; 0x71c9c8 absent SAVE -> AppLaunchLoad path",
