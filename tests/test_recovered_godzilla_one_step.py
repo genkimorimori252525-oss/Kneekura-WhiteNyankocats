@@ -114,7 +114,9 @@ class OwnerRecoveredGodzillaOneStepTests(unittest.TestCase):
         for name, data in self.actual.items():
             (self.cache / name).write_bytes(data)
         invalid = self.cache / "WImageDataServer.pack"
-        invalid.write_bytes(invalid.read_bytes() + b"!")  # original checksum fails
+        tampered = bytearray(invalid.read_bytes())
+        tampered[0] ^= 1  # same byte count; original MD5 must reject
+        invalid.write_bytes(tampered)
         with self.assertRaisesRegex(ValueError, "mismatch"):
             recovery.extract_verified_local_godzilla_rig(
                 self.cache, self.rig, private_root=self.root / "private"
