@@ -119,9 +119,15 @@ def from_private_capture(*, repo: Path, raw: Path) -> tuple[dict, Path]:
     private = repo / "private"
     if not private.is_dir() or private.is_symlink():
         raise OriginalCrashLogBlocked("research private directory missing")
-    input_file = raw.resolve(strict=True)
-    if (raw.is_symlink() or not input_file.is_file()
-        or input_file.parent != (private / "original-crash-captures").resolve()
+    capture_dir = private / "original-crash-captures"
+    if capture_dir.is_symlink() or not capture_dir.is_dir() or raw.is_symlink():
+        raise OriginalCrashLogBlocked("original private capture folder unsafe")
+    try:
+        input_file = raw.resolve(strict=True)
+    except OSError as exc:
+        raise OriginalCrashLogBlocked("original private capture file unavailable") from exc
+    if (not input_file.is_file()
+        or input_file.parent != capture_dir.resolve(strict=True)
         or not input_file.name.endswith("-filtered-logcat-PRIVATE.txt")
         or input_file.stat().st_size > 10_000_000):
         raise OriginalCrashLogBlocked("only the gitignored bounded research capture is allowed")
