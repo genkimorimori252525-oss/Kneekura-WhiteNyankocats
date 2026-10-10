@@ -17,6 +17,8 @@ from tools.base_mod.package_flavor import FLAVOR_PACKAGES, ORIGINAL_PACKAGE
 from tools.base_mod.prepare_original_scene_witness import (
     EXTRA_NATIVE_ENTRY, EXTRA_NATIVE_COMPANION_ENTRY,
     SCENE_WITNESS_COMPILED_MARKER,
+    APPROVED_OFFICIAL_SHADOWHOOK_V201_ARM64_SHA256,
+    APPROVED_OFFICIAL_SHADOWHOOK_V201_COMPANION_SHA256,
 )
 from tools.base_mod.original_scene_native_image_gate import (
     verify_mapped_original_scene_image,
@@ -140,6 +142,12 @@ def verify_static_http_bridge(
         or research_shadowhook_nothing_sha256 is not None
     ):
         raise ValueError("third-party inline hook pair forbidden without explicit scene witness")
+    if research_scene_witness and (
+        research_shadowhook_sha256 != APPROVED_OFFICIAL_SHADOWHOOK_V201_ARM64_SHA256
+        or research_shadowhook_nothing_sha256
+            != APPROVED_OFFICIAL_SHADOWHOOK_V201_COMPANION_SHA256
+    ):
+        raise ValueError("original research requires exact official ShadowHook v2.0.1 native pair")
 
     bridge_launcher = package_name + ".MyActivity"
     bridge_descriptor = "L" + package_name.replace(".", "/") + "/MyActivity;"
