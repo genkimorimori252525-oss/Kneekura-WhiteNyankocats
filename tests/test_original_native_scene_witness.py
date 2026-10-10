@@ -69,7 +69,7 @@ class OriginalNativeSceneResearchObserverTests(unittest.TestCase):
         self.assertIn("shadowhook_hook_sym_addr_2", code)
         self.assertIn("shadowhook_hook_func_addr_2", code)
         self.assertIn("SHADOWHOOK_FORCE_UNIQUE_MODE = 2u", code)
-        self.assertEqual(code.count("SHADOWHOOK_FORCE_UNIQUE_MODE\n"), 3)
+        self.assertEqual(code.count("SHADOWHOOK_FORCE_UNIQUE_MODE\n"), 5)
         self.assertIn("SHADOWHOOK_FORCE_UNIQUE_MODE\n        );", code)
         self.assertIn("ShadowHookFuncAddr2Fn hook_func_fn", code)
         # Exactly ONE exported JNI symbol can use hook_sym_addr.
