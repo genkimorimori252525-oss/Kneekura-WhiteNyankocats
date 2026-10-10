@@ -21,7 +21,7 @@ from pathlib import Path
 import tempfile
 from typing import Any
 
-from tools.battlecats_pack import PackReader
+from tools.battlecats_pack import PackReader, decrypt_manifest_bytes
 from tools.base_mod.battlecats_pack_writer import append_pack_entries, rebuild_pack
 from tools.base_mod.fetch_godzilla_server_assets import (
     FILES as EXACT_FILES, verify as verify_jp_original,
@@ -71,6 +71,28 @@ def prepare_wimage_first_form_candidate(
         raise OriginalGodzillaResourcePreviewError("candidate 702_f.png is not PNG")
 
     source = PackReader(FAMILY, original_manifest, original_pack, region="jp")
+    # The existing generic pack writer serializes each manifest entry as
+    # "filename,offset,size". Fail closed if the real owned source carries
+    # additional columns, holes or trailing bytes that such a rewrite would
+    # otherwise discard without a proper native-format proof.
+    plain_manifest = decrypt_manifest_bytes(original_manifest)
+    plain_rows = plain_manifest.decode("utf-8-sig").splitlines()
+    if (len(plain_rows) - 1 != len(source.entries)
+        or any(len(line.split(",")) != 3 for line in plain_rows[1:])):
+        raise OriginalGodzillaResourcePreviewError(
+            "original WImageDataServer manifest has unsupported extra metadata"
+        )
+    cursor = 0
+    for entry in source.entries:
+        if entry.offset != cursor:
+            raise OriginalGodzillaResourcePreviewError(
+                "original WImageDataServer contains a noncontiguous pack span"
+            )
+        cursor += entry.size
+    if cursor != len(original_pack):
+        raise OriginalGodzillaResourcePreviewError(
+            "original WImageDataServer has unknown trailing pack data"
+        )
     missing_first = [name for name in FIRST_FORM_DATA if not source.has(name)]
     missing_second = [name for name in SECOND_FORM_PRESERVE if not source.has(name)]
     if missing_first or missing_second:
@@ -131,6 +153,7 @@ def prepare_wimage_first_form_candidate(
         "changed_original_first_form_entries": list(FIRST_FORM_DATA),
         "candidate_extra_PNG_in_earlier_WImageDataServer": PNG_NAME,
         "original_source_entry_count": len(source.entries),
+        "original_source_manifest_exact_three_column_and_contiguous": True,
         "candidate_entry_count": len(inspected.entries),
         "original_second_form_names_preserved": list(SECOND_FORM_PRESERVE),
         "original_second_form_bytes_changed": False,
