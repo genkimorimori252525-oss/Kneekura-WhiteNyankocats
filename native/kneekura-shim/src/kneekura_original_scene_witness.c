@@ -37,6 +37,15 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+/* These extra APIs are compiled ONLY for an explicitly enabled, research-only
+ * new-player transaction experiment, never in the default/passive observer. */
+#ifdef KNEEKURA_RESEARCH_VIRGIN_SAVE_TRIAL
+#include <errno.h>
+#include <dirent.h>
+#include <jni.h>
+#include <stdlib.h>
+#include <sys/stat.h>
+#endif
 
 #include "kneekura_scene_witness_policy.h"
 
@@ -113,6 +122,132 @@ static void *gSaveHookStub = NULL;
 static void *gAppLaunchReadHookStub = NULL;
 static void *gShadowHookLibrary = NULL;
 
+/*
+ * NEVER a default behavior. The whole experiment requires a special native
+ * build, matching Java build flag, owner-private isolated first-run app root,
+ * independently reviewed hook dependency and all exact original opcodes.
+ */
+static int current_process_is_isolated_original_research(void);
+#ifdef KNEEKURA_RESEARCH_VIRGIN_SAVE_TRIAL
+__attribute__((used, visibility("default")))
+const char kneekura_virgin_trial_build_identity[] =
+    "kneekura-original-virgin-save-trial-v1";
+enum {
+    VIRGIN_TRIAL_NOT_ATTESTED = 0,
+    VIRGIN_TRIAL_ATTESTED = 1,
+    VIRGIN_TRIAL_ATTEMPTED = 2,
+    VIRGIN_TRIAL_COMPLETED = 3,
+    VIRGIN_TRIAL_BLOCKED = 4,
+};
+static _Atomic uint32_t gVirginTrialState = VIRGIN_TRIAL_NOT_ATTESTED;
+static int gVirginRootFd = -1;
+
+/* Do not build absolute app-private paths from tainted logcat/native input. */
+static int exact_private_original_root_path(const char *path) {
+    if (path == NULL) return 0;
+    size_t len = strlen(path);
+    const char suffix[] = "/jp.kn.local.battlecats/files";
+    const size_t suffix_len = sizeof(suffix) - 1u;
+    if (len < suffix_len + 1u || len > 512u
+        || strcmp(path + len - suffix_len, suffix) != 0) return 0;
+    const size_t prefix_len = len - suffix_len;
+    if (prefix_len == strlen("/data/data")
+        && memcmp(path, "/data/data", prefix_len) == 0) return 1;
+    const char prefix[] = "/data/user/";
+    if (prefix_len <= sizeof(prefix) - 1u
+        || memcmp(path, prefix, sizeof(prefix) - 1u) != 0) return 0;
+    for (size_t i = sizeof(prefix) - 1u; i < prefix_len; ++i) {
+        if (path[i] < '0' || path[i] > '9') return 0;
+    }
+    return 1;
+}
+
+static int virgin_save_files_all_absent(int root_fd) {
+    if (root_fd < 0) return 0;
+    const char *const names[] = {
+        "SAVE_DATA", "SAVE_DATA4", "SAVE_DATA8"
+    };
+    for (size_t i = 0; i < sizeof(names)/sizeof(names[0]); ++i) {
+        struct stat item = {0};
+        errno = 0;
+        if (fstatat(root_fd, names[i], &item, AT_SYMLINK_NOFOLLOW) == 0
+            || errno != ENOENT) return 0;
+    }
+    /* Also refuse file variants such as SAVE_DATA.tmp or .bak, to avoid
+     * overwriting any pre-existing state in a previous research experiment. */
+    int cloned = dup(root_fd);
+    if (cloned < 0) return 0;
+    DIR *directory = fdopendir(cloned);
+    if (directory == NULL) {
+        close(cloned);
+        return 0;
+    }
+    int safe = 1;
+    struct dirent *member;
+    errno = 0;
+    while ((member = readdir(directory)) != NULL) {
+        if (strncmp(member->d_name, "SAVE_DATA", 9u) == 0) {
+            safe = 0;
+            break;
+        }
+        errno = 0;
+    }
+    if (errno != 0) safe = 0;
+    closedir(directory);
+    return safe;
+}
+
+static int virgin_source_root_remains_trusted(void) {
+    if (gVirginRootFd < 0) return 0;
+    struct stat root = {0}, marker = {0};
+    if (fstat(gVirginRootFd, &root) != 0
+        || !S_ISDIR(root.st_mode) || root.st_uid != geteuid()
+        || fstatat(gVirginRootFd, ".kneekura-virgin-local-jp15-7-1",
+                   &marker, AT_SYMLINK_NOFOLLOW) != 0
+        || !S_ISREG(marker.st_mode) || marker.st_size != 0
+        || marker.st_uid != geteuid()) return 0;
+    return virgin_save_files_all_absent(gVirginRootFd);
+}
+
+/* JNI handshake MUST originate from MyActivity immediately after a NEW
+ * marker was created and exactly three source SAVE filenames were absent.
+ * A pre-existing marker on a later boot MUST NEVER call this handshake. */
+__attribute__((visibility("default")))
+JNIEXPORT jboolean JNICALL
+Java_jp_kn_local_battlecats_MyActivity_kneekuraAttestVirginRoot(
+        JNIEnv *env, jclass owner_class, jstring java_canonical_root) {
+    (void)owner_class;
+    if (env == NULL || java_canonical_root == NULL
+        || !current_process_is_isolated_original_research()
+        || gShadowHookLibrary == NULL || gAppLaunchReadHookStub == NULL
+        || gOriginalAppLaunchLoader == NULL || gOriginalSaveWrapper == NULL
+        || atomic_load_explicit(&gVirginTrialState, memory_order_acquire)
+            != VIRGIN_TRIAL_NOT_ATTESTED) return JNI_FALSE;
+    const char *root_path = (*env)->GetStringUTFChars(
+        env, java_canonical_root, NULL);
+    if (root_path == NULL) return JNI_FALSE;
+    int fd = -1;
+    if (exact_private_original_root_path(root_path)) {
+        fd = open(root_path, O_RDONLY | O_CLOEXEC | O_DIRECTORY | O_NOFOLLOW);
+    }
+    (*env)->ReleaseStringUTFChars(env, java_canonical_root, root_path);
+    if (fd < 0) return JNI_FALSE;
+    gVirginRootFd = fd;
+    if (!virgin_source_root_remains_trusted()) {
+        gVirginRootFd = -1;
+        close(fd);
+        return JNI_FALSE;
+    }
+    atomic_store_explicit(
+        &gVirginTrialState, VIRGIN_TRIAL_ATTESTED, memory_order_release);
+    __android_log_write(
+        ANDROID_LOG_INFO, WITNESS_TAG,
+        "original-native-virgin-save-trial-v1 root-attested");
+    return JNI_TRUE;
+}
+#endif
+
+/* Forward reference for optional JNI root attestation. */
 static int current_process_is_isolated_original_research(void) {
     char process_name[96] = {0};
     int fd = open("/proc/self/cmdline", O_RDONLY | O_CLOEXEC);
@@ -409,7 +544,9 @@ static int32_t research_original_save_wrapper_proxy(void *context) {
  * Source exact call: AppLaunchLoad 0x492be8 BL -> 0x9bb764.
  * The caller checks bit0 of W0 at 0x492bec. A returned bit0 is NOT
  * proof of a new account-free SAVE, disk persistence, or a successful reboot.
- * This is an OBSERVER ONLY and never creates/truncates/touches a SAVE.
+ * Default research build is an OBSERVER ONLY and never touches a SAVE.
+ * Separate KNEEKURA_RESEARCH_VIRGIN_SAVE_TRIAL build can issue a one-time
+ * original-native write in its newly attested isolated package root only.
  */
 static int32_t research_original_app_launch_read_proxy(void *game_context) {
     OriginalAppLaunchLoaderFn original = NULL;
@@ -418,6 +555,67 @@ static int32_t research_original_app_launch_read_proxy(void *game_context) {
         return 0;
     }
     int32_t result = original(game_context);
+#ifdef KNEEKURA_RESEARCH_VIRGIN_SAVE_TRIAL
+    /*
+     * User explicitly selected virgin-save trial AND Java attested a newly
+     * created private root. Only original AppLaunchLoad callsite may try it:
+     * source 0x492be8 BL -> reader; LR is 0x492bec, before worker TBZ W0,#0.
+     * On ANY failure preserve the original reader failure (never forge W0).
+     */
+    const uintptr_t caller = (uintptr_t)__builtin_return_address(0);
+    const uintptr_t expected_caller = (
+        gOriginalLoadBias + ORIGINAL_APP_LAUNCH_READ_CALL + 4u
+        + gOriginalVmaShift
+    );
+    if ((result & 1) == 0
+        && game_context != NULL
+        && caller == expected_caller
+        && gShadowHookLibrary != NULL
+        && virgin_source_root_remains_trusted()) {
+        uint32_t expected = VIRGIN_TRIAL_ATTESTED;
+        if (atomic_compare_exchange_strong_explicit(
+                &gVirginTrialState, &expected, VIRGIN_TRIAL_ATTEMPTED,
+                memory_order_acq_rel, memory_order_acquire)) {
+            /* The native original wrapper is the owner of the actual SAVE
+             * format. One original write, at most one original read retry.
+             * No account ID or pseudo save container is synthesized here. */
+            OriginalSaveWrapperFn native_writer = NULL;
+            memcpy(&native_writer, &gOriginalSaveWrapper, sizeof(native_writer));
+            int32_t wrote = native_writer == NULL ? 0 : native_writer(game_context);
+            struct stat saved = {0};
+            if ((wrote & 1) != 0 && gVirginRootFd >= 0
+                && fstatat(gVirginRootFd, "SAVE_DATA", &saved,
+                           AT_SYMLINK_NOFOLLOW) == 0
+                && S_ISREG(saved.st_mode) && saved.st_uid == geteuid()
+                && saved.st_size > 0) {
+                int32_t retried = original(game_context);
+                if ((retried & 1) != 0) {
+                    result = retried;
+                    atomic_store_explicit(
+                        &gVirginTrialState, VIRGIN_TRIAL_COMPLETED,
+                        memory_order_release);
+                    __android_log_write(
+                        ANDROID_LOG_INFO, WITNESS_TAG,
+                        "original-native-virgin-save-trial-v1 read-accepted");
+                } else {
+                    atomic_store_explicit(
+                        &gVirginTrialState, VIRGIN_TRIAL_BLOCKED,
+                        memory_order_release);
+                    __android_log_write(
+                        ANDROID_LOG_INFO, WITNESS_TAG,
+                        "original-native-virgin-save-trial-v1 read-rejected");
+                }
+            } else {
+                atomic_store_explicit(
+                    &gVirginTrialState, VIRGIN_TRIAL_BLOCKED,
+                    memory_order_release);
+                __android_log_write(
+                    ANDROID_LOG_INFO, WITNESS_TAG,
+                    "original-native-virgin-save-trial-v1 writer-rejected");
+            }
+        }
+    }
+#endif
     if ((result & 1) != 0) {
         record_native_event_once(
             &gSawAppLaunchReadAccepted,
