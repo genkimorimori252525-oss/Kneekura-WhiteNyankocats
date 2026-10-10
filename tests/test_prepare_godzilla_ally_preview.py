@@ -190,6 +190,56 @@ class GodzillaNo703FirstFormCandidateTests(unittest.TestCase):
                                      "sprite index outside"):
             preview.preview_converted_ally_rig(bad)
 
+    def test_original_empty_animation_zero_tracks_is_valid(self):
+        # Owner JP ImageDataLocal contains eight entire .maanim files
+        # with zero tracks. This is a legitimate original state.
+        original = b"[modelanim:animation2]\n2\n0\n"
+        source = dict(self.source)
+        source["550_e03.maanim"] = original
+        out, receipt = preview.preview_converted_ally_rig(source)
+        self.assertEqual(out["702_f03.maanim"], original)
+        summary = receipt["animations_untouched"]["550_e03.maanim"]
+        self.assertEqual(summary["track_count"], 0)
+        self.assertEqual(summary["keyframe_count"], 0)
+        self.assertTrue(summary["empty_animation_tracks_accepted"])
+        self.assertTrue(summary["model_node_references_validated"])
+
+    def test_valid_original_negative_frames_and_minus_two_sentinel_preserved(self):
+        # The user-owned original corpus uses signed negative keyframes
+        # and a -2 node sentinel for a few special non-unit animations.
+        source = dict(self.source)
+        negative = source["550_e00.maanim"].replace(
+            b"0,0,0,0\r\n", b"-10,0,0,0\r\n", 1
+        )
+        negative = negative.replace(
+            b"1,11,-1,0,0,Attack\r\n",
+            b"-2,11,-1,0,0,Attack\r\n", 1,
+        )
+        source["550_e00.maanim"] = negative
+        converted, result = preview.preview_converted_ally_rig(source)
+        self.assertEqual(converted["702_f00.maanim"], negative)
+        stats = result["animations_untouched"]["550_e00.maanim"]
+        self.assertEqual(stats["negative_frame_key_count"], 1)
+        self.assertEqual(stats["special_minus_two_node_track_count"], 1)
+        self.assertTrue(stats["model_node_references_validated"])
+
+    def test_invalid_animation_track_node_or_keyframe_shape_is_rejected(self):
+        base = self.source["550_e00.maanim"]
+        invalid_tracks = [
+            base.replace(b"1,5,-1,0,0,Move", b"330,5,-1,0,0,Move"),
+            base.replace(b"1,5,-1,0,0,Move", b"-1,5,-1,0,0,Move"),
+            base.replace(b"1,5,-1,0,0,Move", b"junk,5,-1,0,0,Move"),
+            base.replace(b"0,0,0,0", b"0,0,0", 1),
+            base.replace(b"0,0,0,0", b"0,junk,0,0", 1),
+            base.replace(b"0,0,0,0", b"1000001,0,0,0", 1),
+        ]
+        for i, modified in enumerate(invalid_tracks):
+            with self.subTest(modification=i):
+                source = dict(self.source)
+                source["550_e00.maanim"] = modified
+                with self.assertRaises(preview.OriginalGodzillaRigPreviewError):
+                    preview.preview_converted_ally_rig(source)
+
     def test_truncated_model_and_animations_fail_before_output(self):
         one = dict(self.source)
         one["550_e.mamodel"] = one["550_e.mamodel"].replace(
