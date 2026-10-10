@@ -15,7 +15,8 @@ from tools.base_mod.inject_java_http_bridge import BRIDGE_DEX_ENTRY
 from tools.base_mod.inject_shim import NATIVE_ENTRY, SHIM_ENTRY, SHIM_SONAME
 from tools.base_mod.package_flavor import FLAVOR_PACKAGES, ORIGINAL_PACKAGE
 from tools.base_mod.prepare_original_scene_witness import (
-    EXTRA_NATIVE_ENTRY, SCENE_WITNESS_COMPILED_MARKER,
+    EXTRA_NATIVE_ENTRY, EXTRA_NATIVE_COMPANION_ENTRY,
+    SCENE_WITNESS_COMPILED_MARKER,
 )
 from tools.base_mod.original_scene_native_image_gate import (
     verify_mapped_original_scene_image,
@@ -117,6 +118,7 @@ def verify_static_http_bridge(
     research_deny_internet: bool = False,
     research_scene_witness: bool = False,
     research_shadowhook_sha256: str | None = None,
+    research_shadowhook_nothing_sha256: str | None = None,
     allow_datalocal_patch: bool = False,
     allow_downloadlocal_patch: bool = False,
 ) -> dict:
@@ -130,10 +132,14 @@ def verify_static_http_bridge(
     if research_scene_witness and (
         flavor != "local-research" or not research_deny_internet
         or research_shadowhook_sha256 is None
+        or research_shadowhook_nothing_sha256 is None
     ):
         raise ValueError("native scene hook audit requires isolated no-INTERNET local-research")
-    if not research_scene_witness and research_shadowhook_sha256 is not None:
-        raise ValueError("third-party inline hook forbidden without explicit scene witness")
+    if not research_scene_witness and (
+        research_shadowhook_sha256 is not None
+        or research_shadowhook_nothing_sha256 is not None
+    ):
+        raise ValueError("third-party inline hook pair forbidden without explicit scene witness")
 
     bridge_launcher = package_name + ".MyActivity"
     bridge_descriptor = "L" + package_name.replace(".", "/") + "/MyActivity;"
@@ -179,7 +185,7 @@ def verify_static_http_bridge(
                     f"bridge arm64 changed surface drifted: {diff['changed']}"
                 )
             expected_added = sorted(
-                [SHIM_ENTRY, EXTRA_NATIVE_ENTRY]
+                [SHIM_ENTRY, EXTRA_NATIVE_ENTRY, EXTRA_NATIVE_COMPANION_ENTRY]
                 if research_scene_witness else [SHIM_ENTRY]
             )
             if diff["added"] != expected_added:
@@ -339,6 +345,12 @@ def verify_static_http_bridge(
                 review_lib = final_arm.read(EXTRA_NATIVE_ENTRY)
                 if hashlib.sha256(review_lib).hexdigest() != research_shadowhook_sha256:
                     raise ValueError("research native inline hook dependency hash drift")
+                # This second helper is REQUIRED by official ShadowHook's
+                # linker initialization. A one-.so APK was seen on owner
+                # Android with repeated hook-init failures and process deaths.
+                companion_lib = final_arm.read(EXTRA_NATIVE_COMPANION_ENTRY)
+                if hashlib.sha256(companion_lib).hexdigest() != research_shadowhook_nothing_sha256:
+                    raise ValueError("official ShadowHook nothing.so companion hash drift")
                 if any(required not in review_lib for required in (
                     b"shadowhook_init\x00",
                     b"shadowhook_hook_sym_addr_2\x00",
@@ -397,6 +409,9 @@ def verify_static_http_bridge(
         "repackaged_original_native_scene_layout": original_scene_native_layout,
         "reviewed_external_hook_binary_hash_pinned": (
             research_shadowhook_sha256 if research_scene_witness else None
+        ),
+        "reviewed_official_shadowhook_companion_hash_pinned": (
+            research_shadowhook_nothing_sha256 if research_scene_witness else None
         ),
         "actual_native_scene_event_seen_on_device": False,
         "frida_absent": True,
