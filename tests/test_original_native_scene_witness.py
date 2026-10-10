@@ -195,6 +195,97 @@ class OriginalNativeSceneResearchObserverTests(unittest.TestCase):
             self.assertIn(b"jp.kn.local.battlecats", optimized_binary)
             self.assertIn(b"original-native-scene-v1 id=%u", optimized_binary)
 
+    def test_research_level_proxies_forward_original_inputs_returns_and_log_once(self):
+        """Executable HOST-C ABI regression, not original-device gameplay.
+
+        Include the existing native witness C in a local temporary program.
+        Stub ONLY the Android log API and original functions; never load
+        copyrighted game code, a third-party hook, APK or user SAVE.
+        """
+        compiler = shutil.which("gcc") or shutil.which("clang")
+        if not compiler:
+            self.skipTest("host C compiler unavailable")
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "android").mkdir()
+            (root / "android" / "log.h").write_text(
+                "#ifndef KNEEKURA_TEST_ANDROID_LOG_H\\n"
+                "#define KNEEKURA_TEST_ANDROID_LOG_H\\n"
+                "#define ANDROID_LOG_INFO 4\\n"
+                "int __android_log_write(int, const char *, const char *);\\n"
+                "#endif\\n",
+                encoding="utf-8",
+            )
+            witness_path = str(WITNESS).replace("\\\\", "/")
+            harness = r'''
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "'''+witness_path+r'''"
+static int cap_arg = -1, gate_arg = -1;
+static void *save_arg = NULL;
+static int cap_count = 0, gate_count = 0, save_count = 0;
+static int32_t original_cap(int32_t idx) {
+    cap_arg = idx;
+    return idx + 170;
+}
+static int32_t original_gate(int32_t idx) {
+    gate_arg = idx;
+    return (idx == 101) ? 1 : 0;
+}
+static int32_t original_save(void *ctx) {
+    save_arg = ctx;
+    return 1;
+}
+int __android_log_write(int priority, const char *tag, const char *msg) {
+    if (priority != ANDROID_LOG_INFO ||
+        strcmp(tag, "KNEEKURA_STATIC_HTTP") != 0) return -1;
+    if (strcmp(msg, "original-native-level-cap-getter-v1 original-returned") == 0) {
+        cap_count++;
+    } else if (strcmp(msg,
+              "original-native-upgrade-gate-v1 original-returned") == 0) {
+        gate_count++;
+    } else if (strcmp(msg,
+              "original-native-save-wrapper-v1 original-returned") == 0) {
+        save_count++;
+    }
+    return 0;
+}
+int main(void) {
+    int sentinel = 42;
+    gOriginalCapGetter = (void *)&original_cap;
+    gOriginalUpgradeGate = (void *)&original_gate;
+    gOriginalSaveWrapper = (void *)&original_save;
+    if (research_original_cap_getter_proxy(5) != 175 || cap_arg != 5) return 1;
+    if (research_original_cap_getter_proxy(6) != 176 || cap_arg != 6) return 2;
+    if (research_original_upgrade_gate_proxy(101) != 1 || gate_arg != 101) return 3;
+    if (research_original_upgrade_gate_proxy(22) != 0 || gate_arg != 22) return 4;
+    if (research_original_save_wrapper_proxy(&sentinel) != 1 ||
+        save_arg != &sentinel) return 5;
+    if (research_original_save_wrapper_proxy(&sentinel) != 1) return 6;
+    if (cap_count != 1 || gate_count != 1 || save_count != 1) return 7;
+    return 0;
+}
+'''
+            source = root / "check_original_proxies.c"
+            executable = root / "check_original_proxies"
+            source.write_text(harness, encoding="utf-8")
+            built = subprocess.run(
+                [compiler, "-std=c11", "-Wall", "-Wextra", "-Werror",
+                 "-D__ANDROID__", "-D__aarch64__",
+                 "-DKNEEKURA_RESEARCH_SCENE_WITNESS=1",
+                 "-I", str(root), "-I", str(NATIVE / "include"),
+                 str(source), str(POLICY), "-ldl",
+                 "-o", str(executable)],
+                capture_output=True, text=True, timeout=45,
+            )
+            self.assertEqual(built.returncode, 0, built.stderr)
+            run = subprocess.run(
+                [str(executable)], capture_output=True, text=True, timeout=15
+            )
+            self.assertEqual(run.returncode, 0, run.stderr)
+
     def test_without_research_flag_compile_is_rejected_before_any_hook(self):
         compiler = shutil.which("gcc") or shutil.which("clang")
         if not compiler:
