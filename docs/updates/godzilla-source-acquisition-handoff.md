@@ -162,6 +162,47 @@ made available by these two Server family pairs; never equate the two-pair
 recovery with a complete 615 MiB original game local asset cache.
 
 
+## One-command private end-to-end verification (2026-10-10)
+
+This is the lowest-friction owner-only research route. **With a current
+checkout of the branch**, run the command below once from the repository root
+using the existing, locally recovered **4/4 size-and-MD5-matched** Server
+sources. It never starts or installs an APK and never writes SAVE_DATA:
+
+~~~powershell
+$owned = Join-Path $env:USERPROFILE 'Downloads\kneekura-server-recovery-jp1571\kneekura_server_recovery\server_archive_cache\files'
+py -3 -m tools.base_mod.fetch_godzilla_server_assets --from-dir "$owned" --extract-original-godzilla-rig --prepare-ally-preview --prepare-native-resource-candidate
+~~~
+
+All **four** stages are gated in sequence:
+
+1. Original Server .list/.pack 4/4 size + MD5, private cache only
+2. Actual original encrypted 550_e sprite/model/4-animation extraction
+3. Source-validated 702_f first-form preview, with unmodified 4 animations
+4. Experimental WImageDataServer copy containing 6 converted first-form
+   model/motion slots and one additional 702_f.png, preserving original
+   702_c and every other resource
+
+Outputs are Git-ignored, in four separate locations under \`private/\` and
+each output directory MUST NOT already exist. Existing source caches,
+original recovered archives, enemy 550_e, 702_c, player SAVE and game APK
+are never silently overwritten. If any output already exists, use the
+individual source/preview command with a new distinct private output path;
+do not delete prior data solely to rerun the research tool.
+
+One fully synthetic encrypted-server end-to-end test now exercises ALL four
+steps together: \`tests/test_godzilla_full_private_pipeline.py\`, including
+original owner-byte preservation, existing second-form 702_c, final
+candidate readback and source MD5 fail-closed behavior. This is a
+**synthetic** test and NOT proof that this execution environment possesses
+the owner's 4 real recovered Server files.
+
+The WImageDataServer candidate is NOT INSTALLABLE, since changing the bytes
+also changes the original download-table MD5. It does NOT prove that the
+original Android resource loader accepts the added earlier PNG or that its
+original renderer can use the modified model. Never copy it into the
+installed original game cache or bypass the original H01 integrity checks.
+
 ## WImageDataServer first-form resource-priority candidate (research only)
 
 Static JP15.7.1 source confirms original Server registration indices:
