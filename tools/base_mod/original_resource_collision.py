@@ -15,6 +15,20 @@ NATIVE_SHA256 = "333d2974ab2ff881fd70087fd62dea7d12d82addbc55cab2f2a675ad67e3a7e
 # Exact original AArch64 opcode words at registry insert and comparison sites.
 # The owner-proprietary native binary itself is never shipped or committed.
 ORIGINAL_COLLISION_ANCHORS = {
+    0x364980: 0x97FFA1A5,  # original named stream registry singleton
+    0x364988: 0xAA1403E1,  # original resource key as lookup argument
+    0x364990: 0x97FFA3D5,  # first registered-resource source lookup
+    0x3649EC: 0xB40003D7,  # missing first stream -> fallback
+    0x364A64: 0x97FFA16C,  # original registry singleton reused
+    0x364A68: 0x910083E8,  # fallback output placement
+    0x364A6C: 0xAA1403E1,  # SAME request key as first lookup
+    0x364A70: 0x97FFA420,  # alternate registered-source lookup
+    0x34D924: 0xAA1303E0,  # first lookup x0 registry
+    0x34D928: 0xAA1403E1,  # first lookup x1 key
+    0x34D92C: 0x940002FE,  # first lookup registry-map search
+    0x34DB2C: 0xAA1303E0,  # alternate lookup x0 registry
+    0x34DB30: 0xAA1503E1,  # alternate lookup x1 key
+    0x34DB34: 0x9400027C,  # alternate lookup SAME registry-map search
     0x741B84: 0x97F02D5C,  # loop registers 92 .list/.pack mappings
     0x34D2EC: 0x54000D60,  # parsed .list entry loop termination
     0x34D304: 0x94005A48,  # parse inner resource key (column 0)
@@ -51,6 +65,12 @@ ORIGINAL_COLLISION_ANCHORS = {
 }
 # Pin linked callers too: generic cmp helpers and parse/open insertion paths.
 DIRECT_BL_TARGETS = {
+    0x364980: 0x34D014,
+    0x364990: 0x34D8E4,
+    0x364A64: 0x34D014,
+    0x364A70: 0x34DAF0,
+    0x34D92C: 0x34E524,
+    0x34DB34: 0x34E524,
     0x741B84: 0x34D0F4,
     0x34D304: 0x363C24,
     0x34D36C: 0xAD7880,
@@ -60,6 +80,7 @@ DIRECT_BL_TARGETS = {
 }
 # Deliberately bounded: no guessed links across virtual callbacks.
 BRANCH_TARGETS = {
+    0x3649EC: ("cbz", 0x364A64),
     0x34D2EC: ("b.cond", 0x34D498),
     0x34D310: ("cbz", 0x34D3BC),
     0x34D384: ("tbnz", 0x34D334),
@@ -143,6 +164,9 @@ def inspect_original_registration_collision_cfg(elf: bytes) -> dict[str, Any]:
     return {
         "status": "ORIGINAL_NATIVE_RESOURCE_DUPLICATE_KEY_SKIP_VERIFIED_STATIC",
         "original_registration_loop": "0x741b84 -> 0x34d0f4",
+        "normal_stream_lookup": "0x364990 -> 0x34d8e4 -> 0x34e524",
+        "fallback_stream_lookup": "0x3649ec CBZ -> 0x364a64; 0x364a70 -> 0x34daf0 -> 0x34e524",
+        "primary_and_fallback_use_same_registry_singleton_and_key_tree": True,
         "source_list_inner_key_parser": "0x34d304 -> 0x363c24 (column 0)",
         "original_resource_tree_root": "0x34d308 (registry +0x8)",
         "lexicographic_key_compare": [
