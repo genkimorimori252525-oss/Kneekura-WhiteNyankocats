@@ -10,7 +10,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from tools.battlecats_pack import PackReader
+from tools.battlecats_pack import PackReader, decrypt_manifest_bytes
 from tools.base_mod.battlecats_pack_writer import _encrypt_entry, encrypt_manifest_bytes
 from tools.base_mod import prepare_godzilla_native_resource_preview as native
 
@@ -73,6 +73,39 @@ class GodzillaOriginalNativeResourceCandidateTests(unittest.TestCase):
                 self.assertEqual(candidate.read(name)[0], original.read(name)[0])
         self.assertFalse(original.has(native.PNG_NAME))
         self.assertTrue(candidate.has(native.PNG_NAME))
+
+    def test_source_manifest_must_have_only_three_columns_no_gaps_or_tail(self):
+        base = decrypt_manifest_bytes(self.original_list).decode("utf-8")
+        lines = base.splitlines()
+        # Generic pack parser supports extra CSV columns; the rebuild writer
+        # does NOT preserve them and must fail rather than drop owner data.
+        metadata = lines[:]
+        metadata[1] = metadata[1] + ",original-unknown-field"
+        corrupted_manifest = encrypt_manifest_bytes(
+            ("\n".join(metadata) + "\n").encode()
+        )
+        with self.assertRaisesRegex(native.OriginalGodzillaResourcePreviewError,
+                                     "extra metadata"):
+            native.prepare_wimage_first_form_candidate(
+                corrupted_manifest, self.original_pack, self.preview
+            )
+        offset_drift = lines[:]
+        columns = offset_drift[2].split(",")
+        columns[1] = str(int(columns[1]) + 1)
+        offset_drift[2] = ",".join(columns)
+        gap_manifest = encrypt_manifest_bytes(
+            ("\n".join(offset_drift) + "\n").encode()
+        )
+        with self.assertRaisesRegex(native.OriginalGodzillaResourcePreviewError,
+                                     "noncontiguous"):
+            native.prepare_wimage_first_form_candidate(
+                gap_manifest, self.original_pack, self.preview
+            )
+        with self.assertRaisesRegex(native.OriginalGodzillaResourcePreviewError,
+                                     "trailing"):
+            native.prepare_wimage_first_form_candidate(
+                self.original_list, self.original_pack + b"UNKNOWN", self.preview
+            )
 
     def test_source_missing_original_form_slot_or_second_form_fails_closed(self):
         for missing in ("702_f02.maanim", "702_c.mamodel"):
