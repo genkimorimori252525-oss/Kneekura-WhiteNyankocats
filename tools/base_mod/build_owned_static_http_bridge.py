@@ -33,6 +33,10 @@ from tools.base_mod.inject_java_http_bridge import (
     inject_bridge_split_set,
 )
 from tools.base_mod.repack import baseline_resign
+from tools.base_mod.prepare_original_scene_witness import (
+    check_original_scene_witness_build_contract,
+    include_reviewed_shadowhook_in_private_split_set,
+)
 from tools.base_mod.verify_static_http_bridge import verify_static_http_bridge
 
 
@@ -48,6 +52,8 @@ def build_owned_static_http_bridge(
     enable_backup_offline_replay: bool = False,
     research_isolate_original_native_files_dir: bool = False,
     research_deny_internet: bool = False,
+    research_shadowhook_so: Path | None = None,
+    research_shadowhook_sha256: str | None = None,
     keypass: str | None = None,
     zipalign: str | None = None,
     apksigner: str | None = None,
@@ -74,6 +80,12 @@ def build_owned_static_http_bridge(
         if research_isolate_original_native_files_dir and flavor != "research":
             raise ValueError("original native files research isolation requires research flavor")
 
+    # Validate the optional native observer and exact package BEFORE staging.
+    witness_contract = check_original_scene_witness_build_contract(
+        flavor=flavor, no_internet=research_deny_internet,
+        shim=shim, shadowhook=research_shadowhook_so,
+        shadowhook_sha256=research_shadowhook_sha256,
+    )
     export_zip = export_zip.resolve()
     shim = shim.resolve()
     keystore = keystore.resolve()
@@ -89,6 +101,7 @@ def build_owned_static_http_bridge(
     original = work / "original-splits"
     bootstrap = work / "bootstrap-splits"
     flavored = work / "flavored-splits"
+    scene_paired = work / "reviewed-native-scene-dependency-splits"
     bridged = work / "bridged-splits"
     bridge_dex = work / "kneekura-http-bridge.dex"
     signed = output_dir / f"{flavor}-static-http-signed-splits"
@@ -101,8 +114,17 @@ def build_owned_static_http_bridge(
         bootstrap,
         shim,
     )
+    source_for_flavor = bootstrap
+    native_witness_ledger = None
+    if research_shadowhook_so is not None:
+        native_witness_ledger = include_reviewed_shadowhook_in_private_split_set(
+            bootstrap, scene_paired,
+            shadowhook=research_shadowhook_so,
+            expected_sha256=research_shadowhook_sha256,
+        )
+        source_for_flavor = scene_paired
     flavor_ledger = apply_package_flavor(
-        bootstrap,
+        source_for_flavor,
         flavored,
         flavor=flavor,
         research_native_extraction=False,
@@ -143,6 +165,8 @@ def build_owned_static_http_bridge(
         flavor=flavor,
         replay_enabled=enable_backup_offline_replay,
         research_deny_internet=research_deny_internet,
+        research_scene_witness=witness_contract["research_scene_witness_build_enabled"],
+        research_shadowhook_sha256=research_shadowhook_sha256,
     )
 
     ledgers = {
@@ -153,6 +177,8 @@ def build_owned_static_http_bridge(
         "http-bridge-ledger.json": bridge_ledger,
         "parity-report.json": parity,
     }
+    if native_witness_ledger is not None:
+        ledgers["original-scene-witness-optional-dependency.json"] = native_witness_ledger
     for name, payload in ledgers.items():
         (signed / name).write_text(
             json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
@@ -169,6 +195,8 @@ Launcher: {launcher}
 Backup offline replay enabled: {str(enable_backup_offline_replay).lower()}
 Original native file root isolation (RESEARCH ONLY): {str(research_isolate_original_native_files_dir).lower()}
 Fresh original game local package (NO independent SAVE schema): {str(flavor == "local-research").lower()}
+Original scene hook compiled/bundled (research only): {str(witness_contract["research_scene_witness_build_enabled"]).lower()}
+Actual native scene run/restart proof: FALSE; no Android scene acceptance established
 INTERNET permission removal (RESEARCH ONLY): {str(research_deny_internet).lower()}
 
 This build contains NO Frida Gadget.
@@ -205,6 +233,8 @@ Final device smoke should be performed only after repository parity is green.
         "backup_offline_replay_enabled": enable_backup_offline_replay,
         "research_original_native_files_dir_isolation": research_isolate_original_native_files_dir,
         "research_no_internet_manifest": research_deny_internet,
+        "original_native_scene_witness_build_contract": witness_contract,
+        "original_native_scene_witness_device_runtime_verified": False,
         "original_independent_local_save_verified": False,
         "fresh_local_original_package": flavor == "local-research",
         "original_native_file_root_is_super": flavor == "local-research",
@@ -229,6 +259,10 @@ def main() -> int:
     parser.add_argument("--storepass", required=True)
     parser.add_argument("--keypass")
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--research-shadowhook-so", type=Path,
+                        help="Opt-in owned arm64 hook library, ONLY local-research")
+    parser.add_argument("--research-shadowhook-sha256",
+                        help="Explicit SHA256 of reviewed owner-private libshadowhook.so")
     parser.add_argument("--enable-backup-offline-replay", action="store_true")
     parser.add_argument(
         "--research-isolate-original-native-files-dir",
@@ -260,6 +294,8 @@ def main() -> int:
         enable_backup_offline_replay=args.enable_backup_offline_replay,
         research_isolate_original_native_files_dir=args.research_isolate_original_native_files_dir,
         research_deny_internet=args.research_no_internet_permission,
+        research_shadowhook_so=args.research_shadowhook_so,
+        research_shadowhook_sha256=args.research_shadowhook_sha256,
         zipalign=args.zipalign,
         apksigner=args.apksigner,
         javac=args.javac,
