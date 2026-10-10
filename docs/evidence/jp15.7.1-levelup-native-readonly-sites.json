@@ -1051,7 +1051,9 @@
     "original_legitimate_no_account_fresh_game_path_still_unproven": true,
     "original_worker_calls_game_RAM_init_before_reader": "0x492b98 -> 0x719044; 0x492be8 -> 0x9bb764",
     "original_onCreate_game_services_lambda_found": true,
-    "original_onCreate_status_lambda_guarantees_local_first_boot": false
+    "original_onCreate_status_lambda_guarantees_local_first_boot": false,
+    "original_cold_scene102_to_scene101_to_error_route_static_proven": true,
+    "original_native_fresh_account_free_SAVE_created": false
   },
   "original_native_player_zero_default_and_reset_save_paths": {
     "source_sha256": "333d2974ab2ff881fd70087fd62dea7d12d82addbc55cab2f2a675ad67e3a7e2",
@@ -1116,6 +1118,32 @@
     "actual_original_JNI_appInit_cold_start": "Java_jp_co_ponos_battlecats_MyActivity_appInit (0x31748c) -> 0x31753c B 0x9c89cc",
     "actual_original_JNI_draw_update_loop": "Java_jp_co_ponos_battlecats_MyActivity_appUpdateDraw (0x31755c) -> 0x3175ec BL 0x9c80c0",
     "cold_init_and_oncreate_status_callback_not_same_entrypoint": true,
-    "native_cold_start_data_save_integration_traced_to_completion": false
+    "native_cold_start_data_save_integration_traced_to_completion": false,
+    "exact_original_cold_scene102_101_condition_path_reconstructed": true,
+    "original_device_first_boot_still_not_achieved": true
+  },
+  "original_native_cold_scene102_to_scene101_save_probe": {
+    "source_identity": "exact user-owned JP15.7.1 ARM64 libnative-lib.so SHA256 333d2974ab2ff881fd70087fd62dea7d12d82addbc55cab2f2a675ad67e3a7e2",
+    "status": "STATIC_GUARDED_ORIGINAL_APPINIT_SCENE102_TO_101_WITH_SAVE_PRESENCE_PROBE",
+    "android_cold_entry": "0x31753c B -> 0x9c89cc",
+    "native_initial_application_virtual": "0x9c8afc obtains singleton; 0x9c8b00 LDR vtable; 0x9c8b04 LDR slot0; 0x9c8b08 BLR -> original .rela.dyn 0xafd490→0x71bf30",
+    "first_scene_dispatch": "0x9c8b10 -> 0x71c350; 0x71c3b0 MOV w1=102; 0x71c3b4 ->0x71c408",
+    "per_frame_scene102_selection": "0x722ce8 CMP scene 102; 0x722cec B.EQ ->0x723034",
+    "per_frame_counter_and_flag": "0x723034 reads [x21+0x3c], 0x723044 increments, 0x723048 stores; 0x723058 CBZ local flag or 0x723060 B.GT after CMP previous counter83 -> 0x7231ac",
+    "conditional_counter_gate": "0x7231ac CMP previous counter99; 0x7231b0 B.LT ->0x72298c frame return; otherwise continue",
+    "guarded_app_virtual": "0x7231b4/0x7231bc/0x7231c0 calls app vtable +0x38; original .rela.dyn 0xafd4c8→0x724544",
+    "guarded_next_scene": "0x7231c8 MOV w1=101; 0x7231cc original dispatcher 0x71c408",
+    "scene101_save_presence": "0x71c6e4 original CMP #101; 0x71c9b0 original SAVE_DATA file probe; 0x71c9c8 SAVE absent branch -> AppLaunchLoad",
+    "full_original_status_virtual_unwind_range": "0x724544..0x725744 verified read-only from ELF eh_frame",
+    "bounded_direct_original_save_writer_calls": 0,
+    "indirect_or_transitive_SAVE_writer_absent_proven": false,
+    "scenario_guaranteed_to_satisfy_frame_flag_and_counter_on_offline_hardware": false,
+    "original_virtual_method_online_status_outcome_proven": false,
+    "account_free_new_player_SAVE_created_or_accepted": false,
+    "native_first_boot_scene102_101_original_android_device_seen": false,
+    "original_game_Lv60_MAX_Madoka_Godzilla_Jolly_ops_zero_egress_all_verified": false,
+    "source_code": "tools/base_mod/trace_original_virgin_save_gate.py::inspect_original_cold_scene102_to_101",
+    "synthetic_regression": "tests/test_original_virgin_save_gate.py",
+    "original_owner_APK_binary_PACK_SAVE_or_keys_modified": false
   }
 }
