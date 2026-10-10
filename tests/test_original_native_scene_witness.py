@@ -130,6 +130,23 @@ class OriginalNativeSceneResearchObserverTests(unittest.TestCase):
             init_part.count("dlclose(library);\n        return;"), 2
         )
 
+    def test_shadowhook_v201_exact_public_header_abi_and_modes(self):
+        """Pinned against ByteDance official ShadowHook v2.0.1 header.
+
+        Official mode enum: SHARED=0, UNIQUE=1, MULTI=2.
+        Official per-hook flag: WITH_UNIQUE_MODE=2 (different namespace).
+        This source-only assertion does not replace an Android test.
+        """
+        source = WITNESS.read_text(encoding="utf-8")
+        self.assertIn("typedef int (*ShadowHookInitFn)(int, _Bool);", source)
+        self.assertIn("int shadowhook_init_status = init_fn(1, 0);", source)
+        self.assertIn("SHADOWHOOK_FORCE_UNIQUE_MODE = 2u", source)
+        self.assertIn("uint32_t, ...);", source)
+        self.assertIn("shadowhook_hook_sym_addr_2", source)
+        self.assertIn("shadowhook_hook_func_addr_2", source)
+        self.assertNotIn("init_fn(2, 0)", source)
+        self.assertNotIn("SHADOWHOOK_FORCE_UNIQUE_MODE = 1u", source)
+
     def test_native_loader_walks_all_elf_modules_before_uniqueness_decision(self):
         """Do not stop at first basename match and miss a duplicate ELF.
 
