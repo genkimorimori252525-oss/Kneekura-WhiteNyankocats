@@ -112,10 +112,18 @@ jobs:
               section = binary.get_section(".text")
               if section is None or not section.content:
                   raise ValueError("generated Android native .text not found")
+              reloc_sections = {}
+              for name in (".note.gnu.build-id", ".dynstr", ".rodata",
+                           ".eh_frame", ".text", ".plt", ".data.rel.ro",
+                           ".dynamic", ".got"):
+                  current = binary.get_section(name)
+                  if current is not None:
+                      reloc_sections[name] = int(current.virtual_address)
               return {
                   "vma": int(section.virtual_address),
                   "size": int(section.size),
                   "sha256": sha256(bytes(section.content)).hexdigest(),
+                  "other_section_VMA_metadata": reloc_sections,
               }
 
           result = {
