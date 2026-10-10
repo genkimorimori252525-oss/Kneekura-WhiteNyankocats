@@ -49,6 +49,13 @@ DOWNLOAD_MESSAGE = re.compile(
 NATIVE_SCENE_MESSAGE = re.compile(
     r"^original-native-scene-v1 id=(4|97|101|102|104)$"
 )
+# No player IDs, level amounts, inventory/currency values or SAVE contents.
+# These fixed native events are accepted ONLY after exact-PID hook install.
+NATIVE_LEVEL_EVENTS = frozenset({
+    "original-native-level-cap-getter-v1 original-returned",
+    "original-native-upgrade-gate-v1 original-returned",
+    "original-native-save-wrapper-v1 original-returned",
+})
 ALLOWED_STANDALONE_EVENTS = {
     "original-local-fresh-package-root active",
     "original-save-event-observer-v1 active",
@@ -109,6 +116,10 @@ def sanitized_original_activity_events(logcat: str, *, pid: int) -> dict[str, An
             if msg == "original-native-scene-hook-v1 installed":
                 hook_install_marker_seen = True
             continue
+        if msg in NATIVE_LEVEL_EVENTS:
+            if hook_install_marker_seen:
+                counts[msg] += 1
+            continue
         scene_match = NATIVE_SCENE_MESSAGE.fullmatch(msg)
         if scene_match:
             # Discard untrusted scene-looking logs before a native-hook
@@ -158,6 +169,15 @@ def sanitized_original_activity_events(logcat: str, *, pid: int) -> dict[str, An
         ),
         "denied_HTTP_calls_observed": counts["original-local-denied-http-v1"],
         "optional_native_hook_installed_marker_seen": hook_install_marker_seen,
+        "original_level_cap_getter_called": (
+            counts["original-native-level-cap-getter-v1 original-returned"] > 0
+        ),
+        "original_upgrade_gate_called": (
+            counts["original-native-upgrade-gate-v1 original-returned"] > 0
+        ),
+        "original_SAVE_wrapper_called": (
+            counts["original-native-save-wrapper-v1 original-returned"] > 0
+        ),
         "optional_native_scene_ID_sequence": scene_events,
         "optional_native_scene102_then101_reported": (
             102 in scene_events
@@ -224,6 +244,17 @@ def build_original_local_boot_metadata_receipt(
             root_seen and observation["optional_native_hook_installed_marker_seen"]
         ),
         "native_scene_witness_is_current_process_log_only": True,
+        "observed_original_level_cap_getter_call": (
+            root_seen and observation["original_level_cap_getter_called"]
+        ),
+        "observed_original_upgrade_gate_call": (
+            root_seen and observation["original_upgrade_gate_called"]
+        ),
+        "observed_original_SAVE_wrapper_call": (
+            root_seen and observation["original_SAVE_wrapper_called"]
+        ),
+        # A wrapper invocation cannot establish XP debit, first SAVE
+        # creation, fsync, correct readback, Lv60 upgrade, or 0 egress.
         "original_gameplay_SAVE_validated_or_generated": False,
         "original_stage_level60_xp_catseye_gameplay_verified": False,
         "original_Jolly_i_gacha_events_stage_liveops_verified": False,

@@ -44,6 +44,20 @@ class OriginalNativeSceneResearchObserverTests(unittest.TestCase):
         for offset in ("0x31755C", "0x71BF24", "0x71C408", "0x71C458", "0x3480"):
             self.assertIn(offset, code)
         self.assertIn("source_words_match_exact_original", code)
+        for exact_address in ("0x53B2BC", "0x53BE0C", "0x8B9FC8"):
+            self.assertIn(exact_address, code)
+        for proxy in ("research_original_cap_getter_proxy",
+                      "research_original_upgrade_gate_proxy",
+                      "research_original_save_wrapper_proxy"):
+            self.assertIn(proxy, code)
+        self.assertIn("gOriginalCapGetter", code)
+        self.assertIn("gOriginalUpgradeGate", code)
+        self.assertIn("gOriginalSaveWrapper", code)
+        self.assertIn("gSaveHookStub", code)
+        self.assertIn("gUpgradeHookStub", code)
+        self.assertIn("gCapHookStub", code)
+        self.assertIn("original-native-save-wrapper-v1 original-returned", code)
+        self.assertIn("int rollback_failed = 0;", code)
         self.assertIn("shadowhook_hook_sym_addr", code)
         self.assertNotIn('"shadowhook_hook_sym_name"', code)
         self.assertIn("witness.base + ORIGINAL_JNI_DRAW", code)
@@ -51,6 +65,9 @@ class OriginalNativeSceneResearchObserverTests(unittest.TestCase):
         self.assertIn("shadowhook_unhook", code)
         self.assertIn("original-native-scene-hook-v1 partial-unhook-failed", code)
         self.assertIn("original_draw(jni_env, jni_class);", code)
+        self.assertIn("result = original(asset_index);", code)
+        self.assertIn("result = original(context);", code)
+        self.assertIn("return result;", code)
         self.assertIn("get_game_context()", code)
         self.assertIn("original-native-scene-v1 id=%u", code)
         # These are not APIs for any original game SAVE mutation, online login

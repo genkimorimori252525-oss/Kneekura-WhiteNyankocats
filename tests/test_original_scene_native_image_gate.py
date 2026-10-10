@@ -62,7 +62,7 @@ class OriginalSceneSourceRepackPreflightTests(unittest.TestCase):
     def test_unchanged_synthetic_pinned_arm64_mapping_and_export(self):
         result = verify_mapped_original_scene_image(self.original_fixture)
         self.assertTrue(result["repacked_original_native_hook_layout_safe_static"])
-        self.assertEqual(result["verified_executable_instruction_anchors"], 6)
+        self.assertEqual(result["verified_executable_instruction_anchors"], 9)
         self.assertEqual(result["original_JNI_draw_export_vma"],
                          f"0x{ORIGINAL_DRAW_VMA:x}")
         self.assertEqual(result["pinned_original_build_id"], ORIGINAL_JP1571_BUILD_ID)

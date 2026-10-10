@@ -28,6 +28,11 @@ ORIGINAL_SCENE_ANCHORS = {
     0x71BF2C: 0xD65F03C0,
     0x71C408: 0xA9BB7BFD,  # original scene dispatcher
     0x71C458: 0xB9348001,  # STR W1,[X0,#0x3480]
+    # Passive LEVEL original JNI research witness; fail closed if LIEF moved
+    # any exact original function before owner-private APK signing.
+    0x53B2BC: 0xA9BB7BFD,  # original unit effective-cap getter(int)
+    0x53BE0C: 0xA9BA7BFD,  # original upgrade-allowed predicate(int)
+    0x8B9FC8: 0xD10103FF,  # original SAVE_DATA serializer wrapper(void*)
 }
 ELF64_LOAD = 1
 ELF64_DYNSYM = 11

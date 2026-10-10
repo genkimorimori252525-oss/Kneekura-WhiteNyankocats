@@ -161,6 +161,56 @@ class OriginalNativeLocalFirstBootMetadataTests(TestCase):
         self.assertNotIn("secret.example", repr(events))
         self.assertTrue(events["optional_native_scene102_then101_reported"])
 
+    def test_original_level_and_save_events_require_full_hook_before_recording(self):
+        events = "".join([
+            safe_thread(PID, "original-native-level-cap-getter-v1 original-returned"),
+            safe_thread(PID, "original-native-upgrade-gate-v1 original-returned"),
+            safe_thread(PID, "original-native-save-wrapper-v1 original-returned"),
+            safe_thread(PID, "original-native-scene-hook-v1 installed"),
+            safe_thread(PID, "original-native-level-cap-getter-v1 original-returned"),
+            safe_thread(PID, "original-native-upgrade-gate-v1 original-returned"),
+            safe_thread(PID, "original-native-save-wrapper-v1 original-returned"),
+            safe_thread(PID+1, "original-native-save-wrapper-v1 original-returned"),
+            safe_thread(PID, "original-native-save-wrapper-v1 original-returned token=SECRET"),
+        ])
+        receipt = obs.build_original_local_boot_metadata_receipt(
+            pm_paths=PM_PATHS, dumpsys_package=DUMPSYS,
+            pid_output=str(PID), logcat=SAMPLE + events,
+        )
+        for key in ("observed_original_level_cap_getter_call",
+                    "observed_original_upgrade_gate_call",
+                    "observed_original_SAVE_wrapper_call"):
+            self.assertTrue(receipt[key], key)
+        signals = receipt["signals"]
+        self.assertTrue(signals["original_level_cap_getter_called"])
+        self.assertTrue(signals["original_upgrade_gate_called"])
+        self.assertTrue(signals["original_SAVE_wrapper_called"])
+        self.assertEqual(
+            signals["allowlisted_event_counts"]
+                ["original-native-save-wrapper-v1 original-returned"], 1
+        )
+        self.assertNotIn("SECRET", repr(receipt))
+        self.assertFalse(receipt["original_gameplay_SAVE_validated_or_generated"])
+        self.assertFalse(receipt["original_stage_level60_xp_catseye_gameplay_verified"])
+        self.assertFalse(receipt["finished_original_game_offline_product"])
+
+    def test_level_and_save_spoof_missing_hook_or_original_research_root_refused(self):
+        native = "".join([
+            safe_thread(PID, "original-native-level-cap-getter-v1 original-returned"),
+            safe_thread(PID, "original-native-upgrade-gate-v1 original-returned"),
+            safe_thread(PID, "original-native-save-wrapper-v1 original-returned"),
+        ])
+        for addition in (native, safe_thread(PID, "original-native-scene-hook-v1 installed") + native):
+            receipt = obs.build_original_local_boot_metadata_receipt(
+                pm_paths=PM_PATHS, dumpsys_package=DUMPSYS,
+                pid_output=str(PID),
+                logcat=(SAMPLE + addition if addition == native else addition),
+            )
+            for key in ("observed_original_level_cap_getter_call",
+                        "observed_original_upgrade_gate_call",
+                        "observed_original_SAVE_wrapper_call"):
+                self.assertFalse(receipt[key], key)
+
     def test_no_research_root_event_is_hard_blocked_not_fake_boot(self):
         receipt = obs.build_original_local_boot_metadata_receipt(
             pm_paths=PM_PATHS, dumpsys_package=DUMPSYS,

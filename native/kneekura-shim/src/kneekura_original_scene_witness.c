@@ -72,8 +72,14 @@ enum {
     ORIGINAL_SCENE_DISPATCH = 0x71C408,
     ORIGINAL_SCENE_STORE = 0x71C458,
     ORIGINAL_SCENE_RECORD_OFFSET = 0x3480,
+    /* Exact JP15.7.1 original-game functions, NOT local save implementations. */
+    ORIGINAL_UNIT_CAP_GETTER = 0x53B2BC,
+    ORIGINAL_UPGRADE_GATE = 0x53BE0C,
+    ORIGINAL_SAVE_WRAPPER = 0x8B9FC8,
 };
 typedef void (*OriginalDrawFn)(void *, void *);
+typedef int32_t (*OriginalIndexResultFn)(int32_t);
+typedef int32_t (*OriginalSaveWrapperFn)(void *);
 /* Hook the exact already-mapped ELF address, never a basename-driven
  * future/pending symbol match that could attach to another library. */
 typedef void *(*ShadowHookSymAddrFn)(void *, void *, void **);
@@ -81,9 +87,18 @@ typedef int (*ShadowHookInitFn)(int, _Bool);
 typedef int (*ShadowHookUnhookFn)(void *);
 
 static void *gOriginalDraw = NULL;
+static void *gOriginalCapGetter = NULL;
+static void *gOriginalUpgradeGate = NULL;
+static void *gOriginalSaveWrapper = NULL;
 static uintptr_t gOriginalLoadBias = 0u;
 static _Atomic uint32_t gLastScene = UINT32_MAX;
+static _Atomic uint32_t gSawCapGetter = 0u;
+static _Atomic uint32_t gSawUpgradeGate = 0u;
+static _Atomic uint32_t gSawSaveReturned = 0u;
 static void *gHookStub = NULL;
+static void *gCapHookStub = NULL;
+static void *gUpgradeHookStub = NULL;
+static void *gSaveHookStub = NULL;
 static void *gShadowHookLibrary = NULL;
 
 static int current_process_is_isolated_original_research(void) {
@@ -186,6 +201,9 @@ static int source_words_match_exact_original(uintptr_t base) {
         {ORIGINAL_APP_CONTEXT_GETTER + 8u, 0xD65F03C0u},
         {ORIGINAL_SCENE_DISPATCH, 0xA9BB7BFDu},
         {ORIGINAL_SCENE_STORE, 0xB9348001u},
+        {ORIGINAL_UNIT_CAP_GETTER, 0xA9BB7BFDu},
+        {ORIGINAL_UPGRADE_GATE, 0xA9BA7BFDu},
+        {ORIGINAL_SAVE_WRAPPER, 0xD10103FFu},
     };
     for (size_t i = 0; i < sizeof(anchors) / sizeof(anchors[0]); ++i) {
         uint32_t actual = 0u;
@@ -241,6 +259,57 @@ static void research_draw_proxy(void *jni_env, void *jni_class) {
     }
 }
 
+/*
+ * Three extra EXACT-VMA research witnesses for original LEVEL #12.
+ * Do not log unit IDs, levels, cap numbers, XP, SAVE names, or paths.
+ * Calls always forward FIRST and preserve the original return register.
+ * This is neither a purchase implementation nor a first-SAVE generator.
+ */
+static void record_native_event_once(_Atomic uint32_t *seen, const char *tag) {
+    if (atomic_exchange_explicit(seen, 1u, memory_order_relaxed) == 0u) {
+        __android_log_write(ANDROID_LOG_INFO, WITNESS_TAG, tag);
+    }
+}
+
+static int32_t research_original_cap_getter_proxy(int32_t asset_index) {
+    OriginalIndexResultFn original = NULL;
+    memcpy(&original, &gOriginalCapGetter, sizeof(original));
+    if (original == NULL) {
+        return 0; /* Cannot act as an implementation without the trampoline. */
+    }
+    int32_t result = original(asset_index);
+    record_native_event_once(&gSawCapGetter,
+                             "original-native-level-cap-getter-v1 original-returned");
+    return result;
+}
+
+static int32_t research_original_upgrade_gate_proxy(int32_t asset_index) {
+    OriginalIndexResultFn original = NULL;
+    memcpy(&original, &gOriginalUpgradeGate, sizeof(original));
+    if (original == NULL) {
+        return 0;
+    }
+    int32_t result = original(asset_index);
+    record_native_event_once(&gSawUpgradeGate,
+                             "original-native-upgrade-gate-v1 original-returned");
+    return result;
+}
+
+static int32_t research_original_save_wrapper_proxy(void *context) {
+    OriginalSaveWrapperFn original = NULL;
+    memcpy(&original, &gOriginalSaveWrapper, sizeof(original));
+    if (original == NULL) {
+        return 0;
+    }
+    int32_t result = original(context);
+    /* Source wrapper 0x8ba030 returns bit0 of internal serializer result.
+     * This indicates only that the wrapper returned; no fsync, file
+     * persistence, fresh player or restart acceptance is thereby proven. */
+    record_native_event_once(&gSawSaveReturned,
+                             "original-native-save-wrapper-v1 original-returned");
+    return result;
+}
+
 __attribute__((constructor))
 static void kneekura_init_scene_witness_research_only(void) {
     if (!current_process_is_isolated_original_research()) {
@@ -272,7 +341,10 @@ static void kneekura_init_scene_witness_research_only(void) {
         (ShadowHookInitFn)dlsym(library, "shadowhook_init");
     ShadowHookSymAddrFn hook_fn =
         (ShadowHookSymAddrFn)dlsym(library, "shadowhook_hook_sym_addr");
-    if (init_fn == NULL || hook_fn == NULL || init_fn(1, 0) != 0) {
+    ShadowHookUnhookFn unhook_fn =
+        (ShadowHookUnhookFn)dlsym(library, "shadowhook_unhook");
+    if (init_fn == NULL || hook_fn == NULL || unhook_fn == NULL
+        || init_fn(1, 0) != 0) {
         __android_log_write(
             ANDROID_LOG_INFO, WITNESS_TAG,
             "original-native-scene-hook-v1 hook-initialization-failed");
@@ -280,41 +352,67 @@ static void kneekura_init_scene_witness_research_only(void) {
         return;
     }
     gOriginalLoadBias = witness.base;
-    /* No symbol lookup by basename and no pending future-load hook.
-     * Source BuildID, sole mapped native ELF, and exact JNI opcode already
-     * verified. Source VMA is also checked in the pre-sign APK verifier. */
-    void *pinned_original_JNI_draw =
-        (void *)(witness.base + ORIGINAL_JNI_DRAW);
+    /* Hook only the loaded library with verified BuildID/opcodes. All
+     * observers are REQUIRED together so a partial research report is
+     * never misread as one coherent upgrade/save lifecycle. */
     gHookStub = hook_fn(
-        pinned_original_JNI_draw, (void *)&research_draw_proxy, &gOriginalDraw
+        (void *)(witness.base + ORIGINAL_JNI_DRAW),
+        (void *)&research_draw_proxy, &gOriginalDraw
     );
-    if (gHookStub == NULL || gOriginalDraw == NULL) {
-        /* A successful inline patch without a usable original trampoline
-           cannot safely forward the game's JNI call. Undo that patch BEFORE
-           ever unloading the library. A failed unhook must keep its library
-           mapped (no use-after-dlclose), and must never report installed. */
-        if (gHookStub != NULL) {
-            ShadowHookUnhookFn unhook_fn =
-                (ShadowHookUnhookFn)dlsym(library, "shadowhook_unhook");
-            if (unhook_fn == NULL || unhook_fn(gHookStub) != 0) {
-                gShadowHookLibrary = library;
-                gOriginalLoadBias = 0u;
-                __android_log_write(
-                    ANDROID_LOG_INFO, WITNESS_TAG,
-                    "original-native-scene-hook-v1 partial-unhook-failed");
-                return;
+    if (gHookStub != NULL && gOriginalDraw != NULL) {
+        gCapHookStub = hook_fn(
+            (void *)(witness.base + ORIGINAL_UNIT_CAP_GETTER),
+            (void *)&research_original_cap_getter_proxy, &gOriginalCapGetter
+        );
+    }
+    if (gCapHookStub != NULL && gOriginalCapGetter != NULL) {
+        gUpgradeHookStub = hook_fn(
+            (void *)(witness.base + ORIGINAL_UPGRADE_GATE),
+            (void *)&research_original_upgrade_gate_proxy, &gOriginalUpgradeGate
+        );
+    }
+    if (gUpgradeHookStub != NULL && gOriginalUpgradeGate != NULL) {
+        gSaveHookStub = hook_fn(
+            (void *)(witness.base + ORIGINAL_SAVE_WRAPPER),
+            (void *)&research_original_save_wrapper_proxy, &gOriginalSaveWrapper
+        );
+    }
+    if (gHookStub == NULL || gOriginalDraw == NULL
+        || gCapHookStub == NULL || gOriginalCapGetter == NULL
+        || gUpgradeHookStub == NULL || gOriginalUpgradeGate == NULL
+        || gSaveHookStub == NULL || gOriginalSaveWrapper == NULL) {
+        /* A partially patched JNI/level/save path can corrupt execution
+         * if left behind. Undo in reverse order. Any failed unhook keeps
+         * ShadowHook mapped; logging must not claim coherent attachment. */
+        void *installed[] = {
+            gSaveHookStub, gUpgradeHookStub, gCapHookStub, gHookStub
+        };
+        int rollback_failed = 0;
+        for (size_t i = 0; i < sizeof(installed) / sizeof(installed[0]); ++i) {
+            if (installed[i] != NULL && unhook_fn(installed[i]) != 0) {
+                rollback_failed = 1;
             }
-            gHookStub = NULL;
         }
         gOriginalLoadBias = 0u;
+        if (rollback_failed) {
+            gShadowHookLibrary = library;
+            __android_log_write(
+                ANDROID_LOG_INFO, WITNESS_TAG,
+                "original-native-scene-hook-v1 partial-unhook-failed");
+            return;
+        }
+        gHookStub = NULL;
+        gCapHookStub = NULL;
+        gUpgradeHookStub = NULL;
+        gSaveHookStub = NULL;
         __android_log_write(
             ANDROID_LOG_INFO, WITNESS_TAG,
             "original-native-scene-hook-v1 hook-unavailable");
         dlclose(library);
         return;
     }
-    /* Keep the hooking library mapped as long as the process's inline
-       trampoline uses it; no unhook during JNI/GL callbacks. */
+    /* Keep the trampoline library alive. Never log 'installed' until
+     * ALL exact original-level and original-SAVE observers are usable. */
     gShadowHookLibrary = library;
     __android_log_write(
         ANDROID_LOG_INFO, WITNESS_TAG,

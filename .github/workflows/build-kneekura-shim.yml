@@ -77,6 +77,13 @@ jobs:
           readelf -Ws build/kneekura-scene-research/libkneekura.so | grep -F "kneekura_scene_research_event_format"
           strings build/kneekura-scene-research/libkneekura.so | grep -Fx "jp.kn.local.battlecats"
           strings build/kneekura-scene-research/libkneekura.so | grep -Fx "original-native-scene-v1 id=%u"
+          for TAG in \
+            "original-native-level-cap-getter-v1 original-returned" \
+            "original-native-upgrade-gate-v1 original-returned" \
+            "original-native-save-wrapper-v1 original-returned"; do
+            strings build/kneekura-scene-research/libkneekura.so | grep -Fx "$TAG"
+            ! strings build/kneekura-shim/libkneekura.so | grep -Fq "$TAG"
+          done
           strings build/kneekura-scene-research/libkneekura.so | grep -F "shadowhook_hook_sym_addr"
           ! strings build/kneekura-scene-research/libkneekura.so | grep -Fq "shadowhook_hook_sym_name"
           ! strings build/kneekura-shim/libkneekura.so | grep -Fq "original-native-scene-v1 id=%u"
