@@ -1,6 +1,6 @@
 ﻿# Single owner-triggered original JP15.7.1 research crash capture, Windows PowerShell 5.1.
 # PRIVATE log is never automatically shared. No app/data clear, no reinstall,
-# no original PONOS app/SAVE, no logcat -c, no Android force-stop.
+# no original PONOS app/SAVE, no log buffer deletion, no Android app force-stop.
 # Only one isolated research launcher request, AFTER log capture starts.
 [CmdletBinding()]
 param(
