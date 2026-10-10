@@ -97,6 +97,9 @@ class OriginalVirginSaveGateTests(unittest.TestCase):
         self.assertIn("aGameServices::Status", report["status_callback_type"])
         self.assertIn("0xb0bca8", report["lambda_original_registration"])
         self.assertIn("0x724544", report["app_virtual_method_target"])
+        self.assertIn("0x31753c", report["original_app_cold_init"])
+        self.assertIn("0x3175ec", report["original_app_update_draw"])
+        self.assertTrue(report["cold_appInit_and_frame_GameServices_callback_are_distinct"])
         self.assertEqual(report["bounded_lambda_direct_SAVE_writer_calls"], [])
         self.assertTrue(report["oncreate_status_callback_is_not_proven_native_new_player_writer"])
         self.assertFalse(report["actual_game_services_status_or_network_requirement_verified"])
@@ -116,7 +119,8 @@ class OriginalVirginSaveGateTests(unittest.TestCase):
     def test_oncreate_callback_vtable_lambda_and_ram_reset_instruction_drift(self):
         origin = _oncreate_status_fixture()
         for pc in (
-            0x3175EC, 0x9C80E4, 0x9C8120, 0x9C8168,
+            0x31748C, 0x31753C, 0x9C89CC, 0x3175EC,
+            0x9C80E4, 0x9C8120, 0x9C8168,
             0x9C82A0, 0x9C82A4, 0x9C82B4, 0x9C82C4,
             0x9C82D0, 0x9C9BC0, 0x9C9BC8, 0x9C9BD0,
             0x492B98, 0x492BE8, 0x492BEC, 0x492D2C,
