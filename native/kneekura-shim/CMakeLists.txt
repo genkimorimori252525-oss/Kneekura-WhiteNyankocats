@@ -52,7 +52,8 @@ if(KNEEKURA_RESEARCH_SCENE_WITNESS)
     endif()
     target_sources(kneekura PRIVATE
         src/kneekura_original_scene_witness.c
-        src/kneekura_scene_witness_policy.c)
+        src/kneekura_scene_witness_policy.c
+        src/kneekura_scene97_resolver_probe.c)
     target_compile_definitions(kneekura PRIVATE
         KNEEKURA_RESEARCH_SCENE_WITNESS=1)
     target_link_libraries(kneekura PRIVATE log dl)
