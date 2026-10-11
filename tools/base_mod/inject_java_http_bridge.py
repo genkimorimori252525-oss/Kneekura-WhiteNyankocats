@@ -159,6 +159,7 @@ def render_bridge_source(
     use_external_files_dir: bool = False,
     isolate_original_native_files_dir: bool = False,
     virgin_save_trial: bool = False,
+    offline_393_import_enabled: bool = False,
 ) -> str:
     """Render the ORIGINAL MyActivity subclass, rejecting unsafe file modes.
 
@@ -209,6 +210,10 @@ def render_bridge_source(
             "true" if flavor == "local-research" else "false",
         )
         .replace(
+            "__KNEEKURA_OFFLINE_IMPORT_ENABLED__",
+            "true" if offline_393_import_enabled else "false",
+        )
+        .replace(
             "__KNEEKURA_RESEARCH_VIRGIN_SAVE_TRIAL__",
             "true" if virgin_save_trial else "false",
         )
@@ -245,6 +250,7 @@ def build_bridge_dex(
         use_external_files_dir=use_external_files_dir,
         isolate_original_native_files_dir=isolate_original_native_files_dir,
         virgin_save_trial=virgin_save_trial,
+        offline_393_import_enabled=offline_import_installpack is not None,
     )
     # Feature disabled by default in every existing build/profile. The index
     # is compiled only from the owner's exact original JP15.7.1 InstallPack.
