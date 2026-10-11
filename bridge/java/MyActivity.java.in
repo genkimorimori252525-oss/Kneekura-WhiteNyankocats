@@ -40,6 +40,8 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
             __KNEEKURA_LOCAL_RESEARCH_FRESH_ROOT__;
     private static final boolean LOCAL_RESEARCH_DENY_HTTP =
             __KNEEKURA_LOCAL_RESEARCH_DENY_HTTP__;
+    private static final boolean LOCAL_RESEARCH_IMPORT_OWNER_ASSETS =
+            __KNEEKURA_OFFLINE_IMPORT_ENABLED__;
     // Extra explicit opt-in, absent from default and passive research builds.
     private static final boolean RESEARCH_VIRGIN_SAVE_TRIAL =
             __KNEEKURA_RESEARCH_VIRGIN_SAVE_TRIAL__;
@@ -310,7 +312,22 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
             // from THIS isolated package's ADB-staged external files root,
             // verifying all source-pinned game assets before any internal copy.
             // Never block the native JNI/render thread on 668 MB of I/O.
-            KneekuraOfflineAssetImporter.schedule(this, root);
+            if (LOCAL_RESEARCH_IMPORT_OWNER_ASSETS) {
+                try {
+                    // Original Activity compiles independently in research
+                    // fixture runners. Reflective opt-in is enabled only in
+                    // exact owner asset importer builds, where the secondary
+                    // Java class is compiled into the same classes5.dex.
+                    Class<?> importer = Class.forName(
+                            "__KNEEKURA_PACKAGE__.KneekuraOfflineAssetImporter");
+                    java.lang.reflect.Method schedule = importer.getDeclaredMethod(
+                            "schedule", MyActivity.class, File.class);
+                    schedule.setAccessible(true);
+                    schedule.invoke(null, this, root);
+                } catch (Exception unavailable) {
+                    debugResearch("original-local-import-v1 unavailable");
+                }
+            }
             debugResearch("original-local-fresh-package-root active");
             return root;
         }
