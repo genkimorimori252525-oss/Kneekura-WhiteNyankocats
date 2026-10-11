@@ -140,8 +140,24 @@ $secretEnvName = 'KNEEKURA_OWNER_SIGN_' + [Guid]::NewGuid().ToString('N').ToUppe
 [Environment]::SetEnvironmentVariable($secretEnvName, $password, 'Process')
 $password = $null
 try {
+    # Check the existing owner research keystore BEFORE rebuilding ~166 MiB
+    # of original game APKs. If the alias or password is wrong, no new signed
+    # private candidate is attempted and no raw Java error/password is shown.
+    $keytoolPath = Join-Path (Split-Path -Parent $javacPath) 'keytool.exe'
+    $keytoolPath = RequireFile $keytoolPath 'existing local JDK keytool'
     Push-Location $repo
     try {
+        $signerPreflightArgs = @(
+            '-3.12', '-m', 'tools.base_mod.verify_original_research_signer',
+            '--keystore', $keystore, '--alias', $SigningAlias,
+            '--storepass-env', $secretEnvName,
+            '--previous-signed-base', $existingBase,
+            '--keytool', $keytoolPath, '--apksigner', $apksigner
+        )
+        & py @signerPreflightArgs
+        if ($LASTEXITCODE -ne 0) {
+            throw 'EXISTING_RESEARCH_KEYSTORE_PREFLIGHT_BLOCKED_NO_SIGNING_ATTEMPT'
+        }
         $buildArgs = @(
             '-3.12', '-m', 'tools.base_mod.build_owned_static_http_bridge',
             $zip, '--flavor', 'local-research',
