@@ -148,20 +148,3 @@ if (-not $?) {
     throw 'Existing-signer original build was not successful; nothing installed'
 }
 Write-Host 'Private signing completed, but REAL DEVICE SIGNER PREFLIGHT is still required.' -ForegroundColor Yellow
-) {
-    throw 'RESEARCH_SIGNING_ALIAS_FORMAT_INVALID_NO_ACTION'
-}
-$buildScript = Join-Path $PSScriptRoot 'BUILD-OWNER-RESEARCH-PAIR.ps1'
-if (-not (Test-Path -LiteralPath $buildScript -PathType Leaf)) {
-    throw 'Existing private build-only owner script unavailable'
-}
-# This call signs ONLY local derived original research APKs. It does NOT install
-# anything or access the phone. The target script asks for the private password.
-& $buildScript -RepositoryRoot $repo -OwnerExportZip $ownerExport `
-    -PassiveShimSo $native -PassiveShimReceipt $receipt `
-    -ResearchKeystore $keystore -PreviouslySignedBaseApk $previousBase `
-    -SigningAlias $SigningAlias -OfficialShadowHookAar $official
-if (-not $?) {
-    throw 'Existing-signer original build was not successful; nothing installed'
-}
-Write-Host 'Private signing completed, but REAL DEVICE SIGNER PREFLIGHT is still required.' -ForegroundColor Yellow
