@@ -56,7 +56,7 @@ class OriginalOfflineNativeBootMarkerTests(unittest.TestCase):
         self.assertFalse(report["original_615mb_gate_bypassed_proven"])
 
     def test_backup_request_shape_mask_is_bounded_and_has_no_request_data(self):
-        source="\\n".join([
+        source=chr(10).join([
             "KNEEKURA_STATIC_HTTP: original-local-backup-shape-v1 mask=7fd",
             "KNEEKURA_STATIC_HTTP: original-local-backup-shape-v1 mask=000",
             "KNEEKURA_STATIC_HTTP: original-local-backup-shape-v1 mask=800",
