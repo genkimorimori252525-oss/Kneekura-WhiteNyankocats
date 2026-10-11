@@ -122,6 +122,14 @@
 - 本人Windows Python3.12全**660件中653成功/7 skip、失敗0**、GitHub [Test tooling #38112978208](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/actions/runs/38112978208) と[Agent terminal #38112978195](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/actions/runs/38112978195) PASS。**必要358件、現在254件取得済み、104件不足**。原作の615MBアーカイブ`battlecats_*.zip`がそのまま回収できたわけではない（MD5照合済みは抽出メンバ254件）。
 - 次の実装焦点は、元Server assets残り104件の正当な入手/元TSV size・MD5厳密検証と原作scene97/DownloadBatchTaskが実際に使用する私有ファイル配置、元native integrity/H01/SAVE保全の確証。**不完全キャッシュの実機インポート・パッケージ上書き・追加ゲーム起動は行っていない**。原作UI/Lv60/XP/MAX/運営i/まどか/シンゴジラ/完全外部通信ゼロは引き続き未合格。別ゲームAlphaへ逃がさない。
 
+### 2026-10-11 615MB画面を維持してscene97の35区分を原本MD5で監査（実スマホ操作なし）
+
+- ユーザーは原作の「最新ゲームデータ615MBをダウンロード」画面を維持して休息中。**スマホへの追加タップ、ダウンロード開始、再起動、APK更新、SAVE変更、機内モード操作はいずれも行っていない**。スマホ通信を切る必要はないが、端末内の研究版に`INTERNET`権限がないという既存実証と、完全なSDK/IPCゼロ通信を未証明であることは区別。
+- 本人PCの原作研究用`split_InstallPack.apk/assets/download_0.tsv`～`download_34.tsv`と、`private/original-jp1571-verified-server-cache`の元MD5/長さ検証済みファイルを**完全ローカル・read-only再走査**。`35`区分のうち**20区分の全構成ファイルがそろい、15区分で未取得**。合計 **254/358原本ファイル／394,559,432バイトがサイズ・MD5一致、104件／273,426,832バイトが未取得**。区分34ではX系10件がすべて不足。20区分完了は元ZIPアーカイブ20本のMD5復元を意味せず、元エンジンによる読込・表示成功でもない。
+- `tools/base_mod/audit_scene97_offline_readiness.py` を追加。**35個の原本TSV**からlaneごとのファイル数・不足名・MD5一致数・元アーカイブMD5（メタデータのみ）とTSV SHAを固定し、**358/358でなければ`require_complete_source`は必ず拒否**。全358ファイルが将来一致しても、元35 ZIPアーカイブのMD5、元nativeのsource-index `0x321138`登録、resolver `0x320be0`の成功、scene97 DownloadBatchTaskによる実ロード、原作Android UIの受入は**別の未証明ゲート**。ソース監査はAndroidへのインポートを許可しない。欠落ファイル名を含むレポートは本人のgitignored `private/`のJSONにのみ保存。再実行した監査は`SCENE97_ORIGINAL_358_MEMBER_SOURCE_INCOMPLETE_NO_ANDROID_IMPORT`、`android_import_authorized=false`。ネット通信・ゲームAPK/SAVE/設定変更を実装しない。
+- 合成テスト（35 TSV／358ファイル、0バイトファイル、誤MD5、外部パス・シンボリックリンク、重複TSV、private一意レポート、完全でもnative受入とはしない）**6件PASS**。本人Windowsの既存全**666テスト実行・659成功／7スキップ**、[Test tooling #38114324404](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/actions/runs/38114324404) は **666件／665成功／1スキップ**、[Agent terminal #38114324384](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/actions/runs/38114324384) PASS。
+- **次の実装する1差分：** 原作JNI source resolver`0x320be0`が`0x321138`で照会するsource-indexの正規登録経路を、本人JP15.7.1 ELF/元Javaの一次証拠と突き合わせて特定。APK内蔵35 TSV、loose TSV（前回のprivate root存在0/35）、ミラー照合済254件のどこから元resolverが読み込むのかを証明するまでは、古いH01/アセット整合性を壊す投機的なcopy・完全オフライン合格宣言・Androidインポートをしない。
+
 ## このファイルの後に読むもの（最大限絞る）
 
 **普段の新規AIセッション：** このファイル → PRODUCT_IDENTITY.md → 実装ロードマップの「実行順序と次の担当者向け開始地点」→ 今動かす1タスクのソース/証拠だけ。毎回すべてのdocs/を巡回する必要はない。
