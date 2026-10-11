@@ -71,6 +71,26 @@ class OriginalOfflineNativeBootMarkerTests(unittest.TestCase):
         self.assertNotIn("PRIVATE",repr(report))
         self.assertFalse(report["original_cat_base_visible_proven"])
 
+    def test_file_access_witness_is_bounded_and_does_not_name_files(self):
+        report=summarize_runtime_events("\\n".join([
+            "KNEEKURA_STATIC_HTTP: original-local-file-access-v1 watching",
+            "KNEEKURA_STATIC_HTTP: original-local-file-access-v1 download-tsv",
+            "KNEEKURA_STATIC_HTTP: original-local-file-access-v1 server-list",
+            "KNEEKURA_STATIC_HTTP: original-local-file-access-v1 server-pack",
+            "KNEEKURA_STATIC_HTTP: original-local-file-access-v1 media",
+            "KNEEKURA_STATIC_HTTP: original-local-file-access-v1 SAVE_DATA",
+            "KNEEKURA_STATIC_HTTP: original-local-file-access-v1 /private/account",
+        ]))
+        self.assertEqual(
+            report["original_file_source_access_kind_counts"],
+            {"download-tsv":1, "media":1, "server-list":1,
+             "server-pack":1, "watching":1},
+        )
+        self.assertFalse(report["real_native_source_consumed_original_TSV_proven"])
+        self.assertFalse(report["original_game_cat_base_visible_proven"])
+        self.assertNotIn("SAVE_DATA",repr(report))
+        self.assertNotIn("/private/account",repr(report))
+
     def test_cold_restart_marker_and_no_source_md5_repetition(self):
         text=("KNEEKURA_STATIC_HTTP: original-local-import-v1 already-complete\n"
               "KNEEKURA_STATIC_HTTP: original-native-scene-v1 id=97\n")
