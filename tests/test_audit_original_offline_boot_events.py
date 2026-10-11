@@ -28,7 +28,7 @@ class OriginalOfflineNativeBootMarkerTests(unittest.TestCase):
         self.assertFalse(report["original_cat_base_visible_proven"])
         self.assertFalse(report["original_615mb_gate_bypassed_proven"])
 
-    def test_exact_backup_failure_callback_is_not_publisher_success(self):
+    def test_legacy_backup_completed_marker_was_only_queued(self):
         report=summarize_runtime_events(
             "KNEEKURA_STATIC_HTTP: original-local-backup-failure-fallback-v1 completed\n"
             "KNEEKURA_STATIC_HTTP: original-local-backup-failure-fallback-v1 unavailable\n"
@@ -36,23 +36,33 @@ class OriginalOfflineNativeBootMarkerTests(unittest.TestCase):
             "KNEEKURA_STATIC_HTTP: original-local-http-kind-v1 publisher-other\n"
         )
         self.assertEqual(
-            report["exact_backup_original_network_failure_callbacks_completed"],1)
+            report["exact_backup_original_network_failure_callbacks_completed"],0)
+        self.assertEqual(
+            report["exact_backup_original_network_failure_callbacks_enqueued"],1)
+        self.assertEqual(report["legacy_misnamed_callback_completed_tags_observed"],1)
         self.assertEqual(
             report["exact_backup_original_network_failure_callbacks_unavailable"],1)
         self.assertEqual(report["denied_http_requests_observed"],1)
         self.assertFalse(report["actual_publisher_backup_server_success_claimed"])
         self.assertFalse(report["original_cat_base_visible_proven"])
 
-    def test_timeout_variant_failure_marker_is_bounded_and_not_success(self):
+    def test_timeout_variant_enqueued_and_real_gl_return_are_distinct(self):
         report=summarize_runtime_events(
-            "KNEEKURA_STATIC_HTTP: original-local-backup-failure-fallback-v1 completed\n"
-            "KNEEKURA_STATIC_HTTP: original-local-backup-timeout-variant-v1 completed\n"
+            "KNEEKURA_STATIC_HTTP: original-local-backup-failure-fallback-v1 enqueued\n"
+            "KNEEKURA_STATIC_HTTP: original-local-backup-timeout-variant-v1 enqueued\n"
+            "KNEEKURA_STATIC_HTTP: original-local-backup-callback-v1 returned\n"
+            "KNEEKURA_STATIC_HTTP: original-local-backup-timeout-variant-v1 returned\n"
             "KNEEKURA_STATIC_HTTP: original-local-backup-timeout-variant-v1 URL/secret\n"
         )
         self.assertEqual(
             report["backup_timeout_variant_original_failure_callbacks_completed"],1)
         self.assertEqual(
+            report["backup_timeout_variant_original_failure_callbacks_enqueued"],1)
+        self.assertEqual(
             report["exact_backup_original_network_failure_callbacks_completed"],1)
+        self.assertEqual(
+            report["exact_backup_original_network_failure_callbacks_enqueued"],1)
+        self.assertEqual(report["legacy_misnamed_callback_completed_tags_observed"],0)
         self.assertFalse(report["actual_publisher_backup_server_success_claimed"])
         self.assertFalse(report["original_cat_base_visible_proven"])
         self.assertNotIn("URL/secret",repr(report))
@@ -60,7 +70,8 @@ class OriginalOfflineNativeBootMarkerTests(unittest.TestCase):
     def test_isolated_game_offline_network_gate_is_not_device_airplane_mode(self):
         report=summarize_runtime_events(
             "KNEEKURA_STATIC_HTTP: original-local-network-availability-v1 offline\n"
-            "KNEEKURA_STATIC_HTTP: original-local-backup-failure-fallback-v1 completed\n"
+            "KNEEKURA_STATIC_HTTP: original-local-backup-failure-fallback-v1 enqueued\n"
+            "KNEEKURA_STATIC_HTTP: original-local-backup-callback-v1 returned\n"
             "KNEEKURA_STATIC_HTTP: original-native-scene-v1 id=97\n"
         )
         self.assertTrue(report["original_local_network_availability_false_observed"])
