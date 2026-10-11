@@ -86,7 +86,10 @@ class Original615MBPrivateDownloadDiffTests(unittest.TestCase):
         self.assertEqual(report["after_exact_size_and_md5_verified_members"], 0)
         self.assertFalse(report["SAVE_DATA_or_account_content_read"])
         self.assertFalse(report["other_unlisted_APP_files_read"])
-        self.assertNotIn("SAVE_DATA", str(report))
+        self.assertFalse(any(
+            item["member"] == "SAVE_DATA"
+            for item in report["changed_original_member_metadata"]
+        ))
 
     def test_full_358_members_verified_still_not_zip_or_game_boot(self):
         for name, value in self.content.items():
