@@ -78,7 +78,7 @@ class OwnerSignerReadOnlyPreflightTests(unittest.TestCase):
         self.assertTrue(any("-storepass:env" in x for x in fake.requests))
         for request in fake.requests:
             self.assertNotIn("DO_NOT_PRINT_SYNTHETIC_SECRET", str(request))
-            self.assertNotIn("pass:", " ".join(request))
+            self.assertFalse(any(token.startswith("pass:") for token in request))
 
     def test_wrong_storepass_stops_before_touching_old_signed_cert(self):
         fake = FakeKeyAndAPKVerifier(password_valid=False)
