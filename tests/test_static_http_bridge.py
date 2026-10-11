@@ -226,7 +226,7 @@ class StaticHttpBridgeTests(unittest.TestCase):
             ),
             "android/os/FileObserver.java": (
                 "package android.os; public abstract class FileObserver {"
-                "public static final int CREATE=256,CLOSE_WRITE=8,MOVED_TO=128,DELETE=512;"
+                "public static final int CREATE=256,CLOSE_WRITE=8,MOVED_TO=128,DELETE=512,OPEN=32,ACCESS=1;"
                 "public static FileObserver latest;"
                 "public FileObserver(String path,int flags) { latest=this; }"
                 "public void startWatching() {}"
@@ -415,7 +415,7 @@ class StaticHttpBridgeTests(unittest.TestCase):
             ),
             "android/os/FileObserver.java": (
                 "package android.os; public abstract class FileObserver {"
-                "public static final int CREATE=256,CLOSE_WRITE=8,MOVED_TO=128,DELETE=512;"
+                "public static final int CREATE=256,CLOSE_WRITE=8,MOVED_TO=128,DELETE=512,OPEN=32,ACCESS=1;"
                 "public static FileObserver latest;"
                 "public FileObserver(String path,int flags) { latest=this; }"
                 "public void startWatching() {}"
