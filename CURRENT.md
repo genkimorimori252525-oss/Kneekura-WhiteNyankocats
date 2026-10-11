@@ -130,6 +130,17 @@
 - 合成テスト（35 TSV／358ファイル、0バイトファイル、誤MD5、外部パス・シンボリックリンク、重複TSV、private一意レポート、完全でもnative受入とはしない）**6件PASS**。本人Windowsの既存全**666テスト実行・659成功／7スキップ**、[Test tooling #38114324404](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/actions/runs/38114324404) は **666件／665成功／1スキップ**、[Agent terminal #38114324384](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/actions/runs/38114324384) PASS。
 - **次の実装する1差分：** 原作JNI source resolver`0x320be0`が`0x321138`で照会するsource-indexの正規登録経路を、本人JP15.7.1 ELF/元Javaの一次証拠と突き合わせて特定。APK内蔵35 TSV、loose TSV（前回のprivate root存在0/35）、ミラー照合済254件のどこから元resolverが読み込むのかを証明するまでは、古いH01/アセット整合性を壊す投機的なcopy・完全オフライン合格宣言・Androidインポートをしない。
 
+### 2026-10-11 615MB一回取得・差分提案への現物調査：旧研究版に元追加ファイル358/358が残存
+
+- 本人の提案は「原作から一度615MBを取得し、取得前後の全差分を観測してから完全オフライン化」。正しい実証方針だが、**現在615MB画面にいる`jp.kn.local.battlecats`は`INTERNET`権限なし・非debuggableで`run-as`が使えず、同じパッケージで今ダウンロードボタンを押しても正常な取得/差分を観測できない**。この画面と既存SAVEは今回**一切変更しなかった**。Android API31でのADB読取検査で確認。
+- **決定的な現物発見**：本人Androidには別の研究版`jp.kn.trace.battlecats`がインストール済み、こちらは`INTERNET`宣言あり・`debuggable`なしだが、`/sdcard/Android/data/jp.kn.trace.battlecats/files`にADB読み取りアクセスができた。**原本JP15.7.1の35 TSVで宣言された358個と同じファイル名が全358個存在**。この別研究版の外部キャッシュを**ADBのread-only `md5sum`で358/358原本MD5一致**検証。X系10件を含む。その他の非対象20エントリは**名前数だけ計測し、SAVE/アカウント等のファイル内容は一切開かず、コピーもしていない**。
+- 以前PC側`private/original-jp1571-verified-server-cache`に**原本一致254件**が存在。端末の別研究版に存在した不足**104件だけ**を、**ADB pull（端末read-only）→private一時ファイル→個別元サイズ/MD5確認→新規ファイルへの昇格**という手順で取得。その後PC側の**358/358ファイルを全件再照合**、抽出ファイル総計 **667,986,264 bytes**、元の35 TSVとの長さとMD5が**全件一致**。新たな615MBダウンロード、公式オンラインアプリの起動、端末へのアップロード・上書き、`pm clear`、SAVE内容アクセスは**ゼロ**。
+- 既存`tools/base_mod/audit_scene97_offline_readiness.py --require-complete`が本人PCで**`SCENE97_ORIGINAL_MEMBER_BYTES_COMPLETE_NATIVE_LOADER_UNVERIFIED`**、35/35区分・358/358ファイル・欠落0・`android_import_authorized=false`を返すことを実測。**完全なのは元の抽出ファイルのサイズ/MD5**であり、元の35本の圧縮ZIPアーカイブ本体MD5・native source index `0x321138`登録・scene97による受入・基地画面移行・H01無しは未検証。
+- **93組の暗号化`Server.list/pack`構造の現物解析**：本人PCの完全キャッシュから93/93の`.list`をAES復号し、対応する93`.pack`に対する**33,780個の内部ファイル・オフセット・境界をすべて検査**。サイズ超過・非ゼロエントリの重複領域0件。内部内訳：PNG **17,615**、maanim **10,795**、imgcut **2,685**、mamodel **2,685**。これらの数字は暗号化済み元データのINDEXを読んだ**メタデータ**であり、各PNG/モデル/アニメーションの意味付けや原作ロード完了を意味しない。 `tools/base_mod/audit_complete_original_server_structure.py` を追加して再現可能にした。
+- ユーザーの「ダウンロード前後を比較する」方針のため、`tools/base_mod/compare_original_download_snapshots.py` を追加。所有元TSVが指定する**358件のゲーム追加データだけ**について、明示的にPRIVATEに準備された前後スナップショットを差分（追加/変更/削除/同一）として比較し、元サイズ/MD5を検証。SAVE・SDK/アカウント・それ以外のファイルは**読まない**。合成テスト6件は実行。**旧研究版の取得「前」の実スナップショットは存在しないため、過去の実通信順序や圧縮35ZIPの取得差分そのものを遡って復元したとは主張しない**。
+- **本人Windows Python3.12全677件実行・669成功/8スキップ**、[Test tooling #38115440186](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/actions/runs/38115440186) と[Agent terminal validation #38115440178](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/actions/runs/38115440178)はPASS。ファイル実体、端末のログ、署名/SAVE、秘密情報をGitHubへアップロードせず、`CURRENT.md`とIssue #15/#12は結果の数値メタデータのみ。
+- **次に書く実コード**：原作シーン97の`0x320be0`・`0x321138`によるSource Index形成と、既に整合性が確認できた358ファイルの**独立研究版内プライベートルートへの一度限りの安全な導入**を結ぶ。ただし今の`jp.kn.local.battlecats`は非debuggableで内部rootにADB直接コピー不可。再署名やパッケージ変更を伴う実装は元SAVE/原作コード等の不変性と受入テストを作ってから**別途明示的に実行**。当面615MB画面のままでよい。機内モード不要。旧`jp.kn.trace`のデータ/SAVEも改変しない。
+
 ## このファイルの後に読むもの（最大限絞る）
 
 **普段の新規AIセッション：** このファイル → PRODUCT_IDENTITY.md → 実装ロードマップの「実行順序と次の担当者向け開始地点」→ 今動かす1タスクのソース/証拠だけ。毎回すべてのdocs/を巡回する必要はない。
