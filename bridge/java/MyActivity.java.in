@@ -468,6 +468,23 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
     }
 
     @Override
+    public boolean isNetworkAvailable() {
+        if (LOCAL_RESEARCH_DENY_HTTP) {
+            // Original JP15.7.1's owner-device airplane-mode trace proves
+            // this false result prevents event-sale HTTP after a backup GET.
+            // Keep the PHONE Wi-Fi ON; only this isolated research game uses
+            // the original offline path. Never grant INTERNET to the app.
+            if (LOCAL_RESEARCH_IMPORT_OWNER_ASSETS) {
+                debugResearch("original-local-network-availability-v1 offline");
+            }
+            return false;
+        }
+        // For personal/practice/online research preserve exact inherited
+        // original connectivity detection, not a synthetic always-false.
+        return super.isNetworkAvailable();
+    }
+
+    @Override
     @SuppressWarnings({"rawtypes", "unchecked"})
     public int newHttpRequest(
             String method,
