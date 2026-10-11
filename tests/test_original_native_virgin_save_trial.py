@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 NATIVE = ROOT / "native" / "kneekura-shim"
 WITNESS = NATIVE / "src" / "kneekura_original_scene_witness.c"
 POLICY = NATIVE / "src" / "kneekura_scene_witness_policy.c"
+PROBE = NATIVE / "src" / "kneekura_scene97_resolver_probe.c"
 
 FAKE_JNI = r"""
 #ifndef KNEEKURA_SYNTH_JNI_H
@@ -167,7 +168,7 @@ class SyntheticNativeOriginalVirginSaveTrialTests(unittest.TestCase):
                  "-DKNEEKURA_RESEARCH_SCENE_WITNESS=1",
                  "-DKNEEKURA_RESEARCH_VIRGIN_SAVE_TRIAL=1",
                  "-I", str(tmp), "-I", str(NATIVE / "include"),
-                 str(c), str(POLICY), "-ldl", "-o", str(exe)],
+                 str(c), str(POLICY), str(PROBE), "-ldl", "-o", str(exe)],
                 capture_output=True, text=True, timeout=45,
             )
             self.assertEqual(built.returncode, 0, built.stdout + built.stderr)
