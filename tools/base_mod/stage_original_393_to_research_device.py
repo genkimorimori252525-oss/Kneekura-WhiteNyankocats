@@ -37,7 +37,8 @@ def _md5_of(data: bytes) -> str:
     return md5(data).hexdigest()
 
 def stage_owner_original(*, repo: Path, candidate: Path, cache: Path, adb: Path,
-                         stage: bool = False, announce=lambda text: None) -> dict:
+                         stage: bool = False, repair_incomplete: bool = False,
+                         announce=lambda text: None) -> dict:
     repo = repo.resolve(strict=True)
     candidate = _private_path(repo, candidate, exists=True)
     cache = _private_path(repo, cache, exists=True)
@@ -92,12 +93,38 @@ def stage_owner_original(*, repo: Path, candidate: Path, cache: Path, adb: Path,
             if old.returncode==0:
                 tokens=old.stdout.strip().split()
                 if len(tokens)<2 or tokens[0].lower()!=expected_md5:
-                    raise OwnerStageBlocked("EXISTING_RESEARCH_STAGE_MD5_MISMATCH_STOP")
-                already+=1
+                    if not repair_incomplete:
+                        raise OwnerStageBlocked("EXISTING_RESEARCH_STAGE_MD5_MISMATCH_STOP")
+                    # This is OUR fixed isolated research EXTERNAL staging leaf,
+                    # with a source-pinned safe name. Never delete files from
+                    # app internal, publisher, or any other folder.
+                    cleanup = _call([str(adb), "-s", serial, "shell",
+                                     "rm", "-f", remote], timeout=30)
+                    if cleanup.returncode:
+                        raise OwnerStageBlocked("PARTIAL_RESEARCH_STAGE_CLEANUP_REFUSED")
+                    old = _call([str(adb), "-s", serial, "shell",
+                                 "md5sum", remote], timeout=30)
+                    if old.returncode == 0:
+                        raise OwnerStageBlocked("PARTIAL_RESEARCH_STAGE_STILL_PRESENT")
+                    sent = _call([str(adb), "-s", serial, "push",
+                                  str(local_source), remote], timeout=240)
+                    if sent.returncode:
+                        raise OwnerStageBlocked("RESEARCH_EXTERNAL_ASSET_REPAIR_PUSH_FAILED")
+                    post = _call([str(adb), "-s", serial, "shell",
+                                  "md5sum", remote], timeout=40)
+                    if post.returncode or not post.stdout.strip().lower().startswith(expected_md5+" "):
+                        raise OwnerStageBlocked("REPAIRED_RESEARCH_ASSET_MD5_MISMATCH")
+                    completed+=1
+                else:
+                    already+=1
             else:
                 sent=_call([str(adb), "-s", serial, "push",
                             str(local_source),remote],timeout=240)
                 if sent.returncode:
+                    retry_devices=_call([str(adb),"devices"],timeout=15)
+                    if not any(re.fullmatch(r"\\S+\\s+device",x.strip())
+                               for x in retry_devices.stdout.splitlines()):
+                        raise OwnerStageBlocked("ADB_DISCONNECTED_DURING_RESEARCH_EXTERNAL_STAGE")
                     raise OwnerStageBlocked("ADB_PUSH_ORIGINAL_MEMBER_FAILED_STOP")
                 post=_call([str(adb), "-s", serial, "shell", "md5sum", remote],timeout=40)
                 if post.returncode or not post.stdout.strip().lower().startswith(expected_md5+" "):
@@ -123,10 +150,13 @@ def main() -> int:
     p.add_argument("--cache", type=Path, required=True)
     p.add_argument("--adb", type=Path, required=True)
     p.add_argument("--stage", action="store_true", help="Explicit owner-device external-only staging")
+    p.add_argument("--repair-incomplete", action="store_true",
+                   help="Repair ONLY wrong-MD5 files in our dedicated external 393 stage leaf")
     a=p.parse_args()
     try:
         result=stage_owner_original(repo=a.repo,candidate=a.candidate,
                                     cache=a.cache,adb=a.adb,stage=a.stage,
+                                    repair_incomplete=a.repair_incomplete,
                                     announce=print)
     except (OSError,ValueError) as exc:
         p.error(str(exc))
