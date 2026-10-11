@@ -93,12 +93,23 @@ $zipalign = RequireFile (Join-Path $toolDir 'zipalign.exe') 'zipalign 35'
 $apksigner = RequireFile (Join-Path $toolDir 'apksigner.bat') 'apksigner 35'
 $d8 = RequireFile (Join-Path $toolDir 'd8.bat') 'd8 35'
 $androidJar = RequireFile (Join-Path $sdk 'platforms\android-35\android.jar') 'Android API 35'
-$javac = (Get-Command javac.exe -ErrorAction SilentlyContinue)
-if ($null -ne $javac) {
-    $javacPath = $javac.Source
-} else {
-    $javacPath = RequireFile 'C:\Program Files\Android\Android Studio\jbr\bin\javac.exe' 'Java compiler 17'
+# Select an actual installed JDK containing BOTH Java 17 compiler and keytool.
+# A Windows Oracle "javapath" shim exposes javac.exe without keytool.exe next
+# to it; deriving keytool from Get-Command javac was the confirmed cause of
+# the owner's previous blocked first signing preflight. Resolve this BEFORE
+# asking for any private signing password.
+$javaHelper = RequireFile (Join-Path $PSScriptRoot 'resolve_java_keytool.ps1') 'JDK keytool resolver'
+. $javaHelper
+$keytoolPath = RequireFile (Resolve-JavaKeytool) 'existing local JDK keytool'
+$javacPath = RequireFile (Join-Path (Split-Path -Parent $keytoolPath) 'javac.exe') 'JDK javac paired with keytool'
+# The original native bridge is compiled with JDK 17; reject unsupported
+# JDK versions rather than silently relying on Oracle PATH forwarding.
+$javacOutput = @(& $javacPath -version 2>&1)
+$javacExit = $LASTEXITCODE
+if ($javacExit -ne 0 -or (($javacOutput -join ' ') -notmatch '^javac 17[.\\s]')) {
+    throw 'EXISTING_JDK17_JAVAC_KEYTOOL_PAIR_REQUIRED_NO_SIGNING_ATTEMPT'
 }
+Write-Host 'EXISTING_JDK17_JAVAC_KEYTOOL_PAIR_VERIFIED_NO_KEY_USED'
 if ([string]::IsNullOrWhiteSpace($OfficialShadowHookAar)) {
     $OfficialShadowHookAar = Join-Path $repo 'private\official-shadowhook-2.0.1.aar'
 }
@@ -144,8 +155,6 @@ try {
     # Check the existing owner research keystore BEFORE rebuilding ~166 MiB
     # of original game APKs. If the alias or password is wrong, no new signed
     # private candidate is attempted and no raw Java error/password is shown.
-    $keytoolPath = Join-Path (Split-Path -Parent $javacPath) 'keytool.exe'
-    $keytoolPath = RequireFile $keytoolPath 'existing local JDK keytool'
     Push-Location $repo
     try {
         $signerPreflightArgs = @(
