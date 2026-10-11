@@ -6,7 +6,9 @@ Run with ``py -3.12 -B -m tools.pc_lab --state <private/pc-lab> <command>``.
 from __future__ import annotations
 
 import argparse
+import base64
 from collections import Counter
+from contextlib import contextmanager
 import ctypes
 from ctypes import wintypes
 from datetime import datetime, timezone
@@ -27,7 +29,8 @@ from tools.base_mod.prepare_original_research_presign import prepare_unsigned_re
 from tools.base_mod.audit_original_offline_boot_events import summarize_runtime_events
 from tools.base_mod.summarize_original_crash_capture import summarize as summarize_crash
 from tools.base_mod.offline_server_import_manifest import original_offline_asset_manifest
-from tools.pc_lab_diagnostics import observer_summary, anr_trace_paths, verify_artifacts
+from tools.pc_lab_diagnostics import observer_summary, anr_trace_paths, verify_artifacts, scene97_task_summary
+from tools.pc_lab_diagnostics import pc_balance_summary
 
 AVD = 'kneekura-pc-api35'
 SERIAL = 'emulator-5580'
@@ -49,25 +52,43 @@ def validate_identity(serial: str, avd_name: str) -> None:
         raise ValueError('PC_LAB_IDENTITY_MISMATCH_NO_DEVICE_MUTATION')
 
 
-def scope_research_log(source: str, observed_pids: set[int]) -> str:
+def scope_research_log(source: str, observed_pids: set[int], *, version: int = 2) -> str:
     """Corroborate log PIDs with package starts; don't trust public tags alone."""
     verified = set(observed_pids)
     verified.update(int(p) for p in re.findall(
         r'Start proc (\d+):jp\.kn\.local\.battlecats/', source))
+    if version not in (1, 2):
+        raise ValueError('PC_CAPTURE_UNKNOWN_LOG_SCOPE_VERSION')
+    normalized = [re.sub(r'^(\d\d-\d\d\s+\S+)\s+[+-]\d{4}\s+', r'\1 ', line)
+                  for line in source.splitlines()]
+    tag_pattern = (r'^\d\d-\d\d\s+\S+\s+(\d+)\s+\d+\s+[VDIWEF]\s+(\S+):'
+                   if version == 1 else
+                   r'^\d\d-\d\d\s+\S+\s+(\d+)\s+\d+\s+[VDIWEF]\s+(\S+)\s*:')
+    verified_dumps = set()
+    if version == 2:
+        for line in normalized:
+            match = re.match(tag_pattern, line)
+            inner = re.search(r'\bpid[: ]+\s*(\d+)\b', line)
+            if match and match[2] == 'DEBUG' and inner and int(inner[1]) in verified:
+                verified_dumps.add(int(match[1]))
     kept = []
-    for line in source.splitlines():
-        line = re.sub(r'^(\d\d-\d\d\s+\S+)\s+[+-]\d{4}\s+', r'\1 ', line)
-        match = re.match(r'^\d\d-\d\d\s+\S+\s+(\d+)\s+\d+\s+[VDIWEF]\s+(\S+):', line)
+    for line in normalized:
+        match = re.match(tag_pattern, line)
         if not match:
             continue
         pid, tag = int(match[1]), match[2]
+        if version == 2:
+            # Downstream aggregate parsers require tag immediately followed by ':'.
+            # Keep historical v1 bytes unchanged for existing capture verification.
+            line = line[:match.end(2)] + line[match.end(2):].lstrip()
         if tag == 'KNEEKURA_STATIC_HTTP' and pid in verified:
             kept.append(line)
         elif tag == 'ActivityManager' and PACKAGE in line:
             kept.append(line)
         elif tag in ('libc', 'DEBUG', 'AndroidRuntime'):
             inner = re.search(r'\bpid (\d+)\b', line)
-            if pid in verified or (inner and int(inner[1]) in verified):
+            if pid in verified or (inner and int(inner[1]) in verified) or (
+                    tag == 'DEBUG' and pid in verified_dumps):
                 kept.append(line)
     return '\n'.join(kept)
 
@@ -173,12 +194,12 @@ class Lab:
         self.adb_bin = self.sdk / 'platform-tools/adb.exe'
 
     def command(self, argv: list, *, check: bool = True, timeout: int = 120,
-                binary: bool = False, env: dict | None = None):
+                binary: bool = False, env: dict | None = None, input: bytes | None = None):
         result = subprocess.run([str(a) for a in argv], capture_output=True,
                                 timeout=timeout, env=env or self.env,
                                 creationflags=subprocess.CREATE_NO_WINDOW,
                                 text=not binary, encoding=None if binary else 'utf-8',
-                                errors=None if binary else 'replace')
+                                errors=None if binary else 'replace', input=input)
         if check and result.returncode:
             # Tool output remains private, and command/env secrets never propagate.
             raise RuntimeError(f'PC_LAB_TOOL_FAILED_{Path(str(argv[0])).name}')
@@ -192,6 +213,28 @@ class Lab:
         validate_identity(SERIAL, result.stdout)
         if self.adb('shell', 'getprop', 'sys.boot_completed').stdout.strip() != '1':
             raise RuntimeError('PC_LAB_NOT_BOOTED')
+
+    @contextmanager
+    def app_operation_lock(self):
+        """Serialize guest install/provision/launch/capture and profile mutation."""
+        import msvcrt
+        path = self.state / '.app-operation-v1.lock'
+        if path.is_symlink():
+            raise ValueError('PC_LAB_APP_OPERATION_LOCK_LINK_REFUSED')
+        with path.open('a+b') as guard:
+            if guard.seek(0, 2) == 0:
+                guard.write(b'\0')
+                guard.flush()
+            guard.seek(0)
+            try:
+                msvcrt.locking(guard.fileno(), msvcrt.LK_NBLCK, 1)
+            except OSError:
+                raise RuntimeError('PC_LAB_APP_OPERATION_BUSY_NO_MUTATION') from None
+            try:
+                yield
+            finally:
+                guard.seek(0)
+                msvcrt.locking(guard.fileno(), msvcrt.LK_UNLCK, 1)
 
     def setup(self) -> dict:
         for name in ('avd', 'runtime', 'keys', 'builds', 'captures'):
@@ -258,7 +301,10 @@ class Lab:
             secret.write_bytes(dpapi(password.encode()))
         return store, dpapi(secret.read_bytes(), decrypt=True).decode()
 
-    def build(self, owner_zip: Path, official_aar: Path) -> dict:
+    def build(self, owner_zip: Path, official_aar: Path, *, local_boot: bool = False,
+              balance: bool = False) -> dict:
+        if balance and not local_boot:
+            raise ValueError('PC_BALANCE_REQUIRES_LOCAL_BOOT')
         write_json(self.state / 'inputs.json', {'owner_zip': str(owner_zip.resolve()),
                                                'official_aar': str(official_aar.resolve())})
         private = REPO / 'private'
@@ -266,12 +312,22 @@ class Lab:
         build_id = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ') + '-' + uuid.uuid4().hex[:8]
         scratch = private / ('pc-native-' + build_id)
         scratch.mkdir()
+        balance_inputs = None
+        if balance:
+            from tools.base_mod.pc_balance_assets import prepare_assets, load_pinned_assets
+            cached = prepare_assets(owner_zip, self.state.parent / 'original-jp1571-verified-server-cache',
+                                    self.state / 'balance-cache')
+            balance_inputs = scratch / 'approved-balance'
+            balance_inputs.mkdir()
+            for name, payload in load_pinned_assets(cached).items():
+                (balance_inputs / name).write_bytes(payload)
         # Archive the exact inputs, including uncommitted/new source, before
         # compiling. Refuse publication if any source changes during the build.
         source_files = [p for base in ('native/kneekura-shim', 'bridge/java', 'tools/base_mod')
                         for p in (REPO / base).rglob('*')
                         if p.is_file() and p.suffix in ('.c', '.h', '.txt', '.in', '.java', '.py', '.ps1')]
-        source_files += [REPO / p for p in ('tools/pc_lab.py', 'tools/pc_lab_diagnostics.py', 'tools/PC-LAB.ps1')]
+        source_files += [REPO / p for p in ('tools/pc_lab.py', 'tools/pc_lab_diagnostics.py',
+                                           'tools/pc_profile_install.py', 'tools/pc_viewer.py', 'tools/PC-LAB.ps1')]
         source_hashes = {p.relative_to(REPO).as_posix(): sha256_file(p) for p in source_files}
         source_archive = scratch / 'BUILD-SOURCE.zip'
         with ZipFile(source_archive, 'w') as archive:
@@ -286,6 +342,7 @@ class Lab:
                      '-DANDROID_ABI=arm64-v8a', '-DANDROID_PLATFORM=android-29',
                      '-DKNEEKURA_RESEARCH_SCENE_WITNESS=ON',
                      '-DKNEEKURA_RESEARCH_PC_JNI_SCENE_OBSERVER=ON',
+                     '-DKNEEKURA_RESEARCH_PC_BALANCE=' + ('ON' if balance else 'OFF'),
                      '-DKNEEKURA_RESEARCH_VIRGIN_SAVE_TRIAL=OFF', '-DCMAKE_BUILD_TYPE=Release']
         config = self.command(arguments, check=False)
         compiler_log = scratch / 'compiler.log'
@@ -329,7 +386,10 @@ class Lab:
             repo=REPO, owner_export=owner_zip, passive_shim=shim,
             passive_receipt=receipt, official_aar=aar, javac=str(self.java / 'bin/javac.exe'),
             d8=str(tools / 'd8.bat'), android_jar=str(self.sdk / 'platforms/android-35/android.jar'),
-            offline_393_import=True, allow_local_pc=True, pc_jni_scene_observer=True)
+            offline_393_import=True, allow_local_pc=True, pc_jni_scene_observer=True,
+            pc_boot_authority=local_boot,
+            pc_boot_public_key=self.local_boot_key().public_key().export_key('PEM') if local_boot else None,
+            pc_balance_assets=balance_inputs)
         store, password = self.key()
         destination = self.state / 'builds' / build_id
         destination.mkdir(parents=True)
@@ -372,6 +432,143 @@ class Lab:
         if 'source_archive_sha256' in meta and sha256_file(folder / 'BUILD-SOURCE.zip') != meta['source_archive_sha256']:
             raise ValueError('PC_LAB_BUILD_SOURCE_ARCHIVE_HASH_MISMATCH')
         return meta
+
+    def local_boot_key(self):
+        from Crypto.PublicKey import RSA
+        import msvcrt
+        protected = self.state / 'keys/local-boot-rsa4096.dpapi'
+        # The PC signing folder already has owner-only ACLs. Serialize host
+        # generation across processes; never replace a published/corrupt key.
+        self.key()
+        with protected.with_suffix('.lock').open('a+b') as guard:
+            if guard.tell() == 0:
+                guard.write(b'\0')
+                guard.flush()
+            guard.seek(0)
+            msvcrt.locking(guard.fileno(), msvcrt.LK_LOCK, 1)
+            try:
+                if not protected.exists():
+                    key = RSA.generate(4096)
+                    temporary = protected.with_name(protected.name + '.' + uuid.uuid4().hex + '.pending')
+                    with temporary.open('xb') as output:
+                        output.write(dpapi(key.export_key('DER', pkcs=8)))
+                        output.flush()
+                        os.fsync(output.fileno())
+                    temporary.replace(protected)
+            finally:
+                guard.seek(0)
+                msvcrt.locking(guard.fileno(), msvcrt.LK_UNLCK, 1)
+        key = RSA.import_key(dpapi(protected.read_bytes(), decrypt=True))
+        if not key.has_private() or key.size_in_bits() != 4096:
+            raise ValueError('PC_LAB_LOCAL_BOOT_KEY_INVALID_NO_REPLACEMENT')
+        return key
+
+    def provision_local_boot_key(self, build: dict) -> None:
+        trust = build['presign'].get('pc_independent_boot_trust')
+        if trust is None:
+            return
+        self.identity()
+        key = self.local_boot_key()
+        if hashlib.sha256(key.public_key().export_key('DER')).hexdigest() != trust['public_key_sha256']:
+            raise ValueError('PC_LAB_LOCAL_BOOT_KEY_DIFFERS_NO_LAUNCH')
+        if self.adb('shell', 'id', '-u').stdout.strip() != '0':
+            raise ValueError('PC_LAB_LOCAL_BOOT_KEY_REQUIRES_DEDICATED_USERDEBUG_AVD')
+        uid = re.fullmatch(r'package:' + re.escape(PACKAGE) + r' uid:(1[0-9]{4})',
+                          self.adb('shell', 'cmd', 'package', 'list', 'packages', '-U', PACKAGE).stdout.strip())
+        if uid is None:
+            raise ValueError('PC_LAB_LOCAL_BOOT_PACKAGE_UID_UNAVAILABLE')
+        directory = f'/data/user/0/{PACKAGE}/files'
+        self.adb('shell', 'mkdir', '-p', directory)
+        self.adb('shell', 'chown', f'{uid[1]}:{uid[1]}', directory)
+        self.adb('shell', 'chmod', '700', directory)
+        remote = directory + '/kneekura-local-signing-v1.pk8'
+        # Private bytes pass through stdin only, never argv, logcat, or a source ZIP.
+        encoded = key.export_key('DER', pkcs=8)
+        self.adb('shell', f'umask 077; touch {remote}; chmod 600 {remote}')
+        # Windows adb shell binary stdin truncates at Ctrl-Z even with -T;
+        # raw exec-in may close before all bytes reach the guest. ASCII stdin
+        # with the framed shell protocol avoids both, then SHA proves delivery.
+        self.adb('shell', '-T', f'base64 -d > {remote}', binary=True,
+                 input=base64.b64encode(encoded) + b'\n')
+        self.adb('shell', 'chown', f'{uid[1]}:{uid[1]}', remote)
+        self.adb('shell', 'chmod', '600', remote)
+        self.adb('shell', 'restorecon', '-F', directory, remote)
+        observed = self.adb('shell', 'sha256sum', remote).stdout.split()[0]
+        if observed != hashlib.sha256(encoded).hexdigest():
+            raise ValueError('PC_LAB_LOCAL_BOOT_KEY_DELIVERY_BYTES_DIFFER_NO_LAUNCH')
+
+    def provision_local_age_assets(self, build: dict) -> None:
+        """Host caches public, pinned static bytes; the offline guest never fetches them."""
+        if build['presign'].get('pc_independent_boot_trust') is None:
+            return
+        import urllib.request
+        with ZipFile(Path(build['directory']) / 'BUILD-SOURCE.zip') as archive:
+            source = archive.read('bridge/java/KneekuraPcAgeAssets.java.in').decode('utf-8')
+        paths_match = re.search(r'PATHS = \{(.*?)\};', source, re.S)
+        hashes_match = re.search(r'SHA256 = \{(.*?)\};', source, re.S)
+        if not paths_match or not hashes_match:
+            raise ValueError('PC_LAB_AGE_BUILD_INDEX_MISSING')
+        paths = re.findall(r'"([^"\n]+)"', paths_match[1])
+        hashes = re.findall(r'"([0-9a-f]{64})"', hashes_match[1])
+        if len(paths) != 6 or len(hashes) != 6 or any(
+                not re.fullmatch(r'(?:index\.html|css/(?:reset\.css|age\.css\?01)|'
+                                 r'js/age\.js\?01|img/btn_ok_(?:on|off)\.png)', p) for p in paths):
+            raise ValueError('PC_LAB_AGE_BUILD_INDEX_INVALID')
+        class NoRedirect(urllib.request.HTTPRedirectHandler):
+            def redirect_request(self, request, response, code, message, headers, newurl):
+                raise ValueError('PC_LAB_AGE_SOURCE_REDIRECT_REFUSED')
+        opener = urllib.request.build_opener(NoRedirect())
+        cache = self.state / 'original-age-private-cache/kneekura-local-age-v1'
+        cache.parent.mkdir(parents=True, exist_ok=True)
+        import msvcrt
+        guard = (cache.parent / '.age-cache.lock').open('a+b')
+        if guard.tell() == 0:
+            guard.write(b'\0')
+            guard.flush()
+        guard.seek(0)
+        msvcrt.locking(guard.fileno(), msvcrt.LK_LOCK, 1)
+        try:
+            self._cache_local_age_assets(cache, paths, hashes, opener)
+        finally:
+            guard.seek(0)
+            msvcrt.locking(guard.fileno(), msvcrt.LK_UNLCK, 1)
+            guard.close()
+        self.identity()
+        uid = re.fullmatch(r'package:' + re.escape(PACKAGE) + r' uid:(1[0-9]{4})',
+                          self.adb('shell', 'cmd', 'package', 'list', 'packages', '-U', PACKAGE).stdout.strip())
+        if uid is None or self.adb('shell', 'id', '-u').stdout.strip() != '0':
+            raise ValueError('PC_LAB_AGE_DEDICATED_GUEST_UID_REQUIRED')
+        remote = f'/data/user/0/{PACKAGE}/files/kneekura-local-age-v1'
+        self.adb('push', cache, f'/data/user/0/{PACKAGE}/files/', timeout=60)
+        self.adb('shell', 'chown', '-R', f'{uid[1]}:{uid[1]}', remote)
+        self.adb('shell', 'chmod', '-R', 'u=rwX,go=', remote)
+        self.adb('shell', 'restorecon', '-RF', remote)
+        for path, digest in zip(paths, hashes):
+            if self.adb('shell', 'sha256sum', remote + '/' + path.split('?')[0]).stdout.split()[0] != digest:
+                raise ValueError('PC_LAB_AGE_DELIVERY_HASH_MISMATCH_NO_LAUNCH')
+
+    @staticmethod
+    def _cache_local_age_assets(cache: Path, paths: list[str], hashes: list[str], opener) -> None:
+        # Caller holds the cross-process cache lock. Never publish partial bytes.
+        for path, digest in zip(paths, hashes):
+            target = cache / path.split('?')[0]
+            target.parent.mkdir(parents=True, exist_ok=True)
+            if not target.is_file():
+                with opener.open('https://ponosgames.com/information/appli/battlecats/age/' + path,
+                                 timeout=20) as response:
+                    raw = response.read(32769)
+                if len(raw) > 32768 or hashlib.sha256(raw).hexdigest() != digest:
+                    raise ValueError('PC_LAB_AGE_PUBLIC_SOURCE_CHANGED_NO_LAUNCH')
+                temporary = target.with_name('.' + target.name + '.' + uuid.uuid4().hex + '.pending')
+                with temporary.open('xb') as output:
+                    output.write(raw)
+                    output.flush()
+                    os.fsync(output.fileno())
+                if target.exists():
+                    raise ValueError('PC_LAB_AGE_CACHE_CHANGED_BEFORE_PUBLICATION')
+                temporary.replace(target)
+            if hashlib.sha256(target.read_bytes()).hexdigest() != digest:
+                raise ValueError('PC_LAB_AGE_PRIVATE_CACHE_CORRUPT_NO_REPLACEMENT')
 
     def stage_assets(self, build: dict) -> dict:
         """Reuse the pinned source index, push only to the dedicated guest's research app."""
@@ -432,8 +629,12 @@ class Lab:
         return proof
 
     def capture(self, seconds: int, *, install: bool = False) -> dict:
-        if not 10 <= seconds <= 300:
-            raise ValueError('PC_LAB_CAPTURE_DURATION_10_TO_300_SECONDS')
+        with self.app_operation_lock():
+            return self._capture_locked(seconds, install=install)
+
+    def _capture_locked(self, seconds: int, *, install: bool = False) -> dict:
+        if not 10 <= seconds <= 1800:
+            raise ValueError('PC_LAB_CAPTURE_DURATION_10_TO_1800_SECONDS')
         self.identity()
         build = self.verify_build()
         if install:
@@ -450,11 +651,14 @@ class Lab:
         verify_installed_hashes({p['name']: p['output_sha256']
                                  for p in build['signing']['splits']}, actual)
         self.adb('shell', 'am', 'force-stop', PACKAGE)
+        self.provision_local_boot_key(build)
+        self.provision_local_age_assets(build)
         run_id = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ') + '-' + uuid.uuid4().hex[:8]
         folder = self.state / 'captures' / run_id
         folder.mkdir(parents=True)
         log = folder / 'logcat-threadtime.log'
         evidence = dict(schema='kneekura-pc-capture-v1', run_id=run_id, package=PACKAGE,
+                        log_scope_version=2,
                         avd=AVD, serial=SERIAL, started_utc=utc(), build=build,
                         start_barrier=False, end_barrier=False, launch_ok=False,
                         collector_exit=None, screenshots=0, errors=[], log_loss=False,
@@ -479,7 +683,7 @@ class Lab:
         evidence['source_untracked_sha256'] = {p: sha256_file(REPO / p) for p in untracked if (REPO / p).is_file()}
         # Keep the new runner's exact bytes as well as hashes; it may still be untracked.
         with ZipFile(folder / 'source-snapshot.zip', 'w') as archive:
-            for relative in ('tools/pc_lab.py', 'tools/pc_lab_diagnostics.py', 'tools/PC-LAB.ps1',
+            for relative in ('tools/pc_lab.py', 'tools/pc_lab_diagnostics.py', 'tools/pc_profile_install.py', 'tools/pc_viewer.py', 'tools/PC-LAB.ps1',
                              'tools/base_mod/prepare_original_research_presign.py'):
                 archive.write(REPO / relative, relative)
         if 'source_archive_sha256' in build:
@@ -523,7 +727,9 @@ class Lab:
                 evidence['launch_ok'] = launch.returncode == 0 and 'Status: ok' in launch.stdout
                 snapshot('launch')
                 deadline = time.monotonic() + seconds
-                next_screen = time.monotonic() + 10
+                screen_interval = 10 if seconds <= 300 else 60
+                evidence['screenshot_interval_seconds'] = screen_interval
+                next_screen = time.monotonic() + screen_interval
                 while time.monotonic() < deadline:
                     pids = self.adb('shell', 'pidof', PACKAGE, check=False)
                     values = [int(v) for v in pids.stdout.split() if v.isdigit()]
@@ -534,7 +740,7 @@ class Lab:
                         break
                     if time.monotonic() >= next_screen:
                         snapshot('screen-' + str(evidence['screenshots']))
-                        next_screen = time.monotonic() + 10
+                        next_screen = time.monotonic() + screen_interval
                     time.sleep(1)
                 snapshot('final')
                 evidence['end_barrier'] = barrier('END', collector)
@@ -561,9 +767,11 @@ class Lab:
         evidence['log_loss'] = has_log_loss(source, stderr)
         if stderr.strip():
             evidence['errors'].append('collector-stderr-nonempty')
-        scoped = scope_research_log(source, observed)
+        scoped = scope_research_log(source, observed, version=evidence['log_scope_version'])
         evidence['runtime_summary'] = summarize_runtime_events(scoped)
         evidence['observer_summary'] = observer_summary(scoped)
+        evidence['scene97_task_summary'] = scene97_task_summary(scoped)
+        evidence['pc_balance_summary'] = pc_balance_summary(scoped)
         evidence['crash_summary'] = summarize_crash(scoped)
         evidence['java_crash_summary'] = summarize_java_crash(scoped)
         for name, command in {
@@ -637,7 +845,7 @@ class Lab:
                 or ('Status: ok' in (folder / 'launch.txt').read_text(encoding='utf-8')) != proof['launch_ok']):
             raise ValueError('PC_CAPTURE_COLLECTION_EVIDENCE_DIFFERS')
         observed = {p for sample in proof['pid_observations'] for p in sample['pids']}
-        scoped = scope_research_log(source, observed)
+        scoped = scope_research_log(source, observed, version=proof.get('log_scope_version', 1))
         if summarize_runtime_events(scoped) != proof['runtime_summary'] or capture_quality(proof) != proof['status']:
             raise ValueError('PC_CAPTURE_DERIVED_EVIDENCE_DIFFERS')
         if (summarize_java_crash(scoped) != proof['java_crash_summary']
@@ -645,6 +853,14 @@ class Lab:
             raise ValueError('PC_CAPTURE_CRASH_EVIDENCE_DIFFERS')
         if 'observer_summary' in proof and observer_summary(scoped) != proof['observer_summary']:
             raise ValueError('PC_CAPTURE_OBSERVER_EVIDENCE_DIFFERS')
+        if 'scene97_task_summary' in proof:
+            expected = proof['scene97_task_summary']
+            schemas = {'pc-scene97-task-evidence-v1': 1, 'pc-scene97-task-evidence-v2': 2}
+            version = schemas.get(expected.get('schema')) if isinstance(expected, dict) else None
+            if version is None or scene97_task_summary(scoped, version=version) != expected:
+                raise ValueError('PC_CAPTURE_SCENE97_TASK_EVIDENCE_DIFFERS')
+        if 'pc_balance_summary' in proof and pc_balance_summary(scoped) != proof['pc_balance_summary']:
+            raise ValueError('PC_CAPTURE_BALANCE_COUNTER_EVIDENCE_DIFFERS')
         return dict(status='PC_CAPTURE_ARTIFACTS_AND_SUMMARIES_VERIFIED', run_id=folder.name,
                     artifacts=count, capture_status=proof['status'], observer=proof.get('observer_summary'))
 
@@ -659,13 +875,20 @@ def main() -> int:
     build = sub.add_parser('build')
     build.add_argument('--owner-zip', type=Path, required=True)
     build.add_argument('--official-aar', type=Path, required=True)
+    build.add_argument('--local-boot', action='store_true')
+    build.add_argument('--balance', action='store_true')
     run = sub.add_parser('run')
     run.add_argument('--seconds', type=int, default=30)
     run.add_argument('--install', action='store_true')
+    play = sub.add_parser('play')
+    play.add_argument('--seconds', type=int, default=1800)
     sub.add_parser('check')
+    sub.add_parser('initialize-profile')
     verify = sub.add_parser('verify-capture')
     verify.add_argument('--directory', type=Path)
     args = parser.parse_args()
+    if args.command in ('run','play') and not 10 <= args.seconds <= 1800:
+        parser.error('PC capture duration must be 10..1800 seconds')
     if os.name != 'nt':
         parser.error('Windows PC lab only; pure evidence gates remain portable')
     lab = Lab(args.state, args.sdk, args.java)
@@ -673,16 +896,28 @@ def main() -> int:
         lab.setup()
         print('PC_LAB_READY')
     elif args.command == 'build':
-        result = lab.build(args.owner_zip, args.official_aar)
+        result = lab.build(args.owner_zip, args.official_aar, local_boot=args.local_boot, balance=args.balance)
         print('PC_BUILD_VERIFIED_SIX_SPLITS ' + Path(result['directory']).name)
     elif args.command == 'run':
         lab.setup()
         result = lab.capture(args.seconds, install=args.install)
         print(result['status'] + ' ' + result['run_id'])
         return 0 if result['status'] == 'COMPLETE_BOUNDED_CAPTURE' else 1
+    elif args.command == 'play':
+        from tools.pc_viewer import start_viewer
+        lab.setup()
+        start_viewer(lab)
+        result = lab.capture(args.seconds)
+        print(result['status'] + ' ' + result['run_id'])
+        return 0 if result['status'] == 'COMPLETE_BOUNDED_CAPTURE' else 1
     elif args.command == 'verify-capture':
         result = lab.verify_capture(args.directory)
         print(result['status'] + ' ' + result['run_id'])
+    elif args.command == 'initialize-profile':
+        from tools.pc_profile_install import install_once
+        lab.setup()
+        result = install_once(lab)
+        print(result['status'])
     else:
         lab.identity()
         lab.verify_build()

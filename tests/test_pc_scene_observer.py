@@ -89,6 +89,7 @@ class PcSceneObserverTests(unittest.TestCase):
         template = (ROOT / 'bridge/java/MyActivity.java.in').read_text(encoding='utf-8')
         default = render_bridge_source(template, flavor='local-research', enabled=False)
         self.assertIn('PC_JNI_SCENE_OBSERVER = false;', default)
+        self.assertNotIn('original-local-pc-boot-operation-v1', default)
         selected = render_bridge_source(template, flavor='local-research', enabled=False,
                                         pc_jni_scene_observer=True)
         self.assertIn('PC_JNI_SCENE_OBSERVER = true;', selected)

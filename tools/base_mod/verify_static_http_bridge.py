@@ -123,10 +123,21 @@ def verify_static_http_bridge(
     research_shadowhook_nothing_sha256: str | None = None,
     allow_datalocal_patch: bool = False,
     allow_downloadlocal_patch: bool = False,
+    pc_boot_public_key_sha256: str | None = None,
+    pc_balance_assets_enabled: bool = False,
 ) -> dict:
     package_name = FLAVOR_PACKAGES.get(flavor)
     if package_name is None:
         raise ValueError(f"unknown flavor: {flavor!r}")
+    if pc_balance_assets_enabled and pc_boot_public_key_sha256 is None:
+        raise ValueError('PC_BALANCE_REQUIRES_INDEPENDENT_PC_TRUST')
+    if pc_boot_public_key_sha256 is not None and (
+        not research_scene_witness or flavor != 'local-research' or not research_deny_internet
+        or allow_datalocal_patch or allow_downloadlocal_patch
+        or len(pc_boot_public_key_sha256) != 64
+        or any(c not in '0123456789abcdef' for c in pc_boot_public_key_sha256)
+    ):
+        raise ValueError('PC_BOOT_TRUST_AUDIT_REQUIRES_ISOLATED_PC_PROFILE')
     if flavor == "local-research" and not research_deny_internet:
         raise ValueError("local-research original host must omit INTERNET permission")
     if research_deny_internet and flavor not in ("research", "local-research"):
@@ -200,6 +211,18 @@ def verify_static_http_bridge(
                 raise ValueError(
                     f"bridge arm64 added surface drifted: {diff['added']}"
                 )
+        elif name == 'split_InstallPack.apk' and pc_boot_public_key_sha256 is not None:
+            from tools.base_mod.pc_boot_trust import ENTRY, validate_public_key
+            expected_changed = {'AndroidManifest.xml', ENTRY}
+            if pc_balance_assets_enabled:
+                from tools.base_mod.pc_balance_assets import PAIR, verify_overlay
+                expected_changed.update(PAIR)
+                verify_overlay(original, modified)
+            if set(diff['changed']) != expected_changed or diff['added']:
+                raise ValueError('PC_BOOT_TRUST_EXTRA_ASSET_CHANGE')
+            with zipfile.ZipFile(modified) as archive:
+                if validate_public_key(archive.read(ENTRY)) != pc_boot_public_key_sha256:
+                    raise ValueError('PC_BOOT_TRUST_KEY_FINGERPRINT_MISMATCH')
         elif name == "split_InstallPack.apk" and (
             allow_datalocal_patch or allow_downloadlocal_patch
         ):
@@ -352,6 +375,7 @@ def verify_static_http_bridge(
                 expected_research_native_package=(
                     package_name if flavor == "local-research" else None
                 ),
+                pc_balance_enabled=pc_balance_assets_enabled,
             )
             if research_scene_witness:
                 review_lib = final_arm.read(EXTRA_NATIVE_ENTRY)
@@ -392,6 +416,11 @@ def verify_static_http_bridge(
         "kneekura_feature_mask",
         "kneekura_feature_enabled",
     }
+    from tools.base_mod.pc_native_balance import DISPATCH_SYMBOL
+    if pc_balance_assets_enabled:
+        required_shim_exports.add(DISPATCH_SYMBOL)
+    elif DISPATCH_SYMBOL in shim_elf["exports"]:
+        raise ValueError("PC balance dispatch present without PC balance opt-in")
     if not required_shim_exports.issubset(set(shim_elf["exports"])):
         raise ValueError("bridge shim export contract is incomplete")
 
@@ -429,6 +458,7 @@ def verify_static_http_bridge(
         "frida_absent": True,
         "datalocal_patch_allowed": allow_datalocal_patch,
         "downloadlocal_patch_allowed": allow_downloadlocal_patch,
+        "pc_pinned_balance_assets_enabled": pc_balance_assets_enabled,
         "split_diffs": reports,
     }
 

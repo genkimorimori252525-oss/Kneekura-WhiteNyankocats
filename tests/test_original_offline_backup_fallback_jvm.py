@@ -18,6 +18,12 @@ ROOT=Path(__file__).resolve().parents[1]
 
 class OriginalLocalBackupOfflineFallbackJvmTests(unittest.TestCase):
     def test_exact_original_failure_completion_and_unknown_strict_deny(self):
+        self._exercise()
+
+    def test_pc_authority_delivers_local_origin_and_direct_body(self):
+        self._exercise(authority=True)
+
+    def _exercise(self, *, authority=False):
         javac=shutil.which("javac")
         java=shutil.which("java")
         if not javac or not java:
@@ -26,8 +32,11 @@ class OriginalLocalBackupOfflineFallbackJvmTests(unittest.TestCase):
             (ROOT/"bridge/java/MyActivity.java.in").read_text(encoding="utf-8"),
             flavor="local-research",enabled=False,
             offline_393_import_enabled=True,
+            pc_jni_scene_observer=True,
+            pc_boot_authority=authority,
         )
         source={
+            "android/os/Bundle.java":"package android.os; public class Bundle {}",
             "android/opengl/GLSurfaceView.java":(
                 "package android.opengl;"
                 "public class GLSurfaceView {"
@@ -62,6 +71,9 @@ class OriginalLocalBackupOfflineFallbackJvmTests(unittest.TestCase):
                 import java.util.Map;
                 import android.opengl.GLSurfaceView;
                 public class MyActivity {
+                  protected void onCreate(android.os.Bundle state) {}
+                  public void runOnUiThread(Runnable run) {run.run();}
+                  public void setWebViewUrl(int handle,String url,String[] cookies) {}
                   private int mNextRequestHandle = 1;
                   private Map mRequestHandles = new HashMap();
                   private GLSurfaceView mGLView = new GLSurfaceView();
@@ -74,6 +86,9 @@ class OriginalLocalBackupOfflineFallbackJvmTests(unittest.TestCase):
                   public static int nativeResponseCount;
                   public static int lastNativeCode;
                   public static String lastNativeBody;
+                  public static String lastNativeUrl;
+                  public static boolean lastNativeDirect;
+                  public static boolean lastNativeLocalBody;
                   public static boolean lastNativeFinal;
                   public int newHttpRequest(String method,String url,
                     float timeout,HashMap headers,ByteBuffer body,
@@ -84,6 +99,16 @@ class OriginalLocalBackupOfflineFallbackJvmTests(unittest.TestCase):
                   public static void newResponse(int id,int code,String url,
                     String json,Object body,boolean end) {
                     nativeResponseCount++;
+                    lastNativeUrl=url;
+                    lastNativeDirect=body instanceof ByteBuffer && ((ByteBuffer)body).isDirect();
+                    lastNativeLocalBody=false;
+                    if (body instanceof ByteBuffer) {
+                      ByteBuffer copy=((ByteBuffer)body).duplicate();
+                      byte[] bytes=new byte[copy.remaining()]; copy.get(bytes);
+                      String payload=new String(bytes,java.nio.charset.StandardCharsets.UTF_8);
+                      lastNativeLocalBody=payload.contains("\\\"authority\\\":\\\"kneekura-local\\\"")
+                        && payload.contains("\\\"success\\\":true") && payload.contains("\\\"timestamp\\\":");
+                    }
                     lastNativeCode=code;
                     lastNativeBody=json;
                     lastNativeFinal=end;
@@ -110,6 +135,7 @@ class OriginalLocalBackupOfflineFallbackJvmTests(unittest.TestCase):
                 public class Harness {
                   public static void main(String[] args) {
                     MyActivity app=new MyActivity();
+                    new java.io.File(System.getProperty("kn.local.dir")).mkdirs();
                     int request=app.newHttpRequest(
                        "GET","https://nyanko-backups.ponosgames.com/?safe-shape=1",
                        10.0f,new HashMap(),null,new String[0],false,false);
@@ -182,6 +208,18 @@ class OriginalLocalBackupOfflineFallbackJvmTests(unittest.TestCase):
                       uppercaseHostBlocked=true;
                     }
                     System.out.println("UPPERCASE_HOST_BLOCKED="+uppercaseHostBlocked);
+                    __PC_AUTH_EXERCISE__
+                    app.newHttpRequest("GET",
+                        "https://nyanko-backups.ponosgames.com/?action=createAccount&referenceId=PRIVATE_VALUE",
+                        10.0f,new HashMap(),null,new String[0],false,false);
+                    app.newHttpRequest("GET",
+                        "https://nyanko-backups.ponosgames.com/?action=getTime&private=PRIVATE_VALUE",
+                        10.0f,new HashMap(),null,new String[0],false,false);
+                    System.out.println("PC_LOCAL_CODE="+jp.co.ponos.battlecats.MyActivity.lastNativeCode);
+                    System.out.println("PC_LOCAL_ERROR="+jp.co.ponos.battlecats.MyActivity.lastNativeFinal);
+                    System.out.println("PC_LOCAL_ORIGIN="+jp.co.ponos.battlecats.MyActivity.lastNativeUrl.startsWith("file:///kneekura-local/boot/"));
+                    System.out.println("PC_LOCAL_DIRECT="+jp.co.ponos.battlecats.MyActivity.lastNativeDirect);
+                    System.out.println("PC_LOCAL_BODY="+jp.co.ponos.battlecats.MyActivity.lastNativeLocalBody);
                     System.out.println("ORIGINAL_SUPER_HTTP_CALLS="+
                       jp.co.ponos.battlecats.MyActivity.superCalled);
                     System.out.println("LOCAL_ONLY_NETWORK_AVAILABLE="+
@@ -192,8 +230,62 @@ class OriginalLocalBackupOfflineFallbackJvmTests(unittest.TestCase):
                 }
             """,
         }
+        if authority:
+            source['jp/kn/local/battlecats/KneekuraPcBootAuthority.java'] = (
+                ROOT/'bridge/java/KneekuraPcBootAuthority.java.in').read_text(encoding='utf-8').replace(
+                    '__KNEEKURA_PACKAGE__', 'jp.kn.local.battlecats')
+            auth_test = '''
+                    try {
+                      java.io.File files=app.getFilesDir();
+                      String id=KneekuraPcBootAuthority.player(files);
+                      java.nio.ByteBuffer payload=java.nio.ByteBuffer.wrap(
+                        ("{\\\"accountCode\\\":\\\""+id+"\\\",\\\"nonce\\\":\\\"synthetic-nonce\\\"}").getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                      app.newHttpRequest("POST","https://nyanko-auth.ponosgames.com/v1/users",
+                        65.0f,new HashMap(),payload,new String[0],false,false);
+                      System.out.println("PC_AUTH_LOCAL="+(jp.co.ponos.battlecats.MyActivity.lastNativeCode==200
+                        && !jp.co.ponos.battlecats.MyActivity.lastNativeFinal
+                        && jp.co.ponos.battlecats.MyActivity.lastNativeUrl.equals("file:///kneekura-local/boot/register")));
+                      String deliveredHeaders=jp.co.ponos.battlecats.MyActivity.lastNativeBody;
+                      System.out.println("PC_AUTH_HEADER_STRING="+(deliveredHeaders.contains("\\\"Nyanko-Signature\\\":\\\"")
+                        && !deliveredHeaders.contains("[")));
+                      boolean rejected=false;
+                      try {
+                        app.newHttpRequest("POST","https://nyanko-auth.ponosgames.com/v1/users",
+                          65.0f,new HashMap(),java.nio.ByteBuffer.wrap("{\\\"accountCode\\\":\\\"FOREIGN_ACCOUNT\\\"}".getBytes()),
+                          new String[0],false,false);
+                      } catch(IllegalStateException expected) { rejected=true; }
+                      System.out.println("PC_AUTH_FOREIGN_REJECTED="+rejected);
+                    } catch(java.io.IOException failure) { throw new AssertionError(failure); }
+            '''
+        else:
+            auth_test = ''
+        source['jp/kn/local/battlecats/Harness.java'] = source['jp/kn/local/battlecats/Harness.java'].replace('__PC_AUTH_EXERCISE__', auth_test)
         with tempfile.TemporaryDirectory(prefix="kn-backup-fallback-synthetic-") as tmp:
             root=Path(tmp)
+            if authority:
+                source['jp/kn/local/battlecats/KneekuraPcAgeAssets.java'] = (ROOT/
+                    'bridge/java/KneekuraPcAgeAssets.java.in').read_text(encoding='utf-8').replace(
+                        '__KNEEKURA_PACKAGE__', 'jp.kn.local.battlecats')
+                # This HTTP harness never creates a WebView; the actual adapter
+                # is compiled against Android in the real APK build.
+                source['jp/kn/local/battlecats/KneekuraPcAgeWebView.java'] = '''package jp.kn.local.battlecats;
+final class KneekuraPcAgeWebView {
+ static void install(jp.co.ponos.battlecats.MyActivity activity,int handle,java.io.File files)
+   throws ReflectiveOperationException {throw new AssertionError("no WebView in HTTP harness");}
+}'''
+                try:
+                    from Crypto.PublicKey import RSA
+                except ImportError:
+                    self.skipTest('existing RSA tooling unavailable')
+                import hashlib
+                key = RSA.generate(4096)
+                isolated = root / 'isolated'
+                isolated.mkdir()
+                (isolated / 'kneekura-local-signing-v1.pk8').write_bytes(key.export_key('DER', pkcs=8))
+                source['jp/kn/local/battlecats/KneekuraPcBootAuthority.java'] = source[
+                    'jp/kn/local/battlecats/KneekuraPcBootAuthority.java'].replace(
+                        '__KNEEKURA_PC_BOOT_PUBLIC_KEY_SHA256__', hashlib.sha256(
+                            key.public_key().export_key('DER')).hexdigest())
             sources=[]
             for name,code in source.items():
                 file=root/"src"/name
@@ -211,8 +303,21 @@ class OriginalLocalBackupOfflineFallbackJvmTests(unittest.TestCase):
                 capture_output=True,text=True,errors="replace",timeout=25)
             self.assertEqual(test.returncode,0,test.stderr)
             observed=set(test.stdout.splitlines())
+            if authority:
+                self.assertIn('PC_AUTH_LOCAL=true', observed)
+                self.assertIn('PC_AUTH_HEADER_STRING=true', observed)
+                self.assertIn('PC_AUTH_FOREIGN_REJECTED=true', observed)
+            for exact in ('PC_LOCAL_CODE=' + ('200' if authority else '0'),
+                          'PC_LOCAL_ERROR=' + ('false' if authority else 'true'),
+                          'PC_LOCAL_ORIGIN=' + str(authority).lower(),
+                          'PC_LOCAL_BODY=' + str(authority).lower(),
+                          'PC_LOCAL_DIRECT=' + str(authority).lower()):
+                self.assertIn(exact, observed)
             for exact in (
                 "EXACT_REQUEST_ID=1",
+                "original-local-pc-boot-operation-v1 create-account",
+                "original-local-pc-boot-operation-v1 time",
+                "original-local-pc-boot-operation-v1 other",
                 "ORIGINAL_FALLBACK_COUNT=1",
                 "ORIGINAL_FALLBACK_CODE=0",
                 "ORIGINAL_FALLBACK_BODY={}",
@@ -236,15 +341,17 @@ class OriginalLocalBackupOfflineFallbackJvmTests(unittest.TestCase):
                 "original-local-http-kind-v1 backup",
                 "original-local-backup-shape-v1 mask=7fd",
                 "ORIGINAL_SUPER_HTTP_CALLS=0",
-                "LOCAL_ONLY_NETWORK_AVAILABLE=false",
+                "LOCAL_ONLY_NETWORK_AVAILABLE=" + ("true" if authority else "false"),
                 "ORIGINAL_SUPER_NETWORK_CHECK_CALLS=0",
-                "original-local-network-availability-v1 offline",
+                ("original-local-pc-authority-readiness-v1 ready" if authority else
+                 "original-local-network-availability-v1 offline"),
                 "original-local-backup-failure-fallback-v1 enqueued",
                 "original-local-denied-http-v1",
                 "original-local-http-kind-v1 publisher-other",
             ):
                 self.assertIn(exact,observed)
             self.assertNotIn("https://service.ponosgames.com/unknown",test.stdout)
+            self.assertNotIn("PRIVATE_VALUE", test.stdout)
 
 if __name__=="__main__":
     unittest.main()

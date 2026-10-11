@@ -5,6 +5,88 @@ from datetime import datetime
 from pathlib import Path
 
 
+def pc_balance_summary(scoped: str) -> dict:
+    pattern=(r'KNEEKURA_STATIC_HTTP:\s*pc-native-balance-v1 calls='
+             + ','.join([r'(\d{1,20})']*8)
+             + r' castle_credit=(\d{1,20}) castle_zero=(\d{1,20})'
+             + r' delayed_rejected=(\d{1,20}) query_capacity=(\d{1,20})$')
+    latest=None
+    observations=0
+    resets=0
+    for line in scoped.splitlines():
+        match=re.search(pattern,line)
+        if not match: continue
+        values=list(map(int,match.groups()))
+        if any(v >= 1<<64 for v in values): raise ValueError('PC_BALANCE_COUNTER_OUT_OF_RANGE')
+        if latest and any(a<b for a,b in zip(values,latest)): resets+=1
+        latest=values
+        observations+=1
+    return dict(schema='pc-native-balance-counters-v1',observations=observations,
+                counter_resets_observed=resets,adapter_calls=latest[:8] if latest else None,
+                castle_credited_hits=latest[8] if latest else None,
+                castle_zero_hits=latest[9] if latest else None,
+                delayed_generator_rejections=latest[10] if latest else None,
+                query_capacity_rejections=latest[11] if latest else None,
+                counts_are_not_gameplay_acceptance=True)
+
+
+def scene97_task_summary(scoped: str, *, version: int = 2) -> dict:
+    if type(version) is not int or version not in (1, 2):
+        raise ValueError('PC_SCENE97_TASK_SCHEMA_UNSUPPORTED')
+    observations = []
+    queue_observations = []
+    unavailable = set()
+    pattern = (r'original-native-scene97-task-v1 active=(\d{1,2}) disabled=(\d{1,2}) '
+               r'present=(\d) failed=(\d) needed=(\d) pending=(\d{1,2}) completed=(\d)')
+    for line in scoped.splitlines():
+        missing = re.search(r'KNEEKURA_STATIC_HTTP:\s*original-native-scene97-'
+                            r'(task|queue)-unavailable-v1 (context-read|task-read|task-identity|'
+                            r'task-flags|header-read|header-range)$', line)
+        if missing:
+            unavailable.add(missing[1] + ':' + missing[2])
+        queue = re.search(r'KNEEKURA_STATIC_HTTP:\s*original-native-scene97-queue-v1 '
+                          r'head=([0-4]) completed=([01]) phase=(\d{1,2}) waiting=(\d)$', line)
+        if queue:
+            head, complete, phase, waiting = map(int, queue.groups())
+            if phase > 65 or waiting > 9:
+                raise ValueError('PC_SCENE97_QUEUE_OBSERVATION_INVALID')
+            item = dict(head=('none', 'download', 'create-account', 'public-config', 'other')[head],
+                        completed=bool(complete) if head in (2, 3) else None,
+                        phase=phase if phase < 65 else None,
+                        waiting=waiting if waiting < 9 else None)
+            if not queue_observations or item != queue_observations[-1]:
+                queue_observations.append(item)
+            if len(queue_observations) > 4:
+                raise ValueError('PC_SCENE97_QUEUE_OBSERVATION_LIMIT')
+        match = re.search(r'KNEEKURA_STATIC_HTTP:\s*' + pattern + r'$', line)
+        if not match:
+            continue
+        active, disabled, present, failed, needed, pending, completed = map(int, match.groups())
+        if (active + disabled != 35 or max(active, disabled, pending) > 35
+                or max(present, failed, needed, completed) > 1
+                or (not present and (failed or needed or pending))):
+            raise ValueError('PC_SCENE97_TASK_OBSERVATION_INVALID')
+        item = dict(active=active, disabled=disabled, present=bool(present),
+                    failed=bool(failed) if present else None,
+                    needed=bool(needed) if present else None, pending=pending if present else None,
+                    completed=bool(completed))
+        if ((version == 1 and item not in observations)
+                or (version == 2 and (not observations or item != observations[-1]))):
+            observations.append(item)
+        if len(observations) > 4:
+            raise ValueError('PC_SCENE97_TASK_OBSERVATION_LIMIT')
+    if version == 1:
+        for item in observations:
+            if not item['present']:
+                item.update(failed=False, needed=False, pending=0)
+        return dict(schema='pc-scene97-task-evidence-v1', observations=observations,
+                    resource_acceptance_proven=False)
+    return dict(schema='pc-scene97-task-evidence-v2', observations=observations,
+                queue_observations=queue_observations,
+                unavailable_categories=sorted(unavailable),
+                resource_acceptance_proven=False)
+
+
 def verify_artifacts(folder: Path, manifest: dict) -> int:
     if not isinstance(manifest, dict) or not manifest:
         raise ValueError('PC_CAPTURE_ARTIFACT_MANIFEST_MISSING')

@@ -97,7 +97,18 @@ def prepare_unsigned_research(
     offline_393_import: bool = False,
     allow_local_pc: bool = False,
     pc_jni_scene_observer: bool = False,
+    pc_boot_authority: bool = False,
+    pc_boot_public_key: bytes | None = None,
+    pc_balance_assets: Path | None = None,
 ) -> tuple[dict, Path]:
+    if pc_boot_authority and not (allow_local_pc and pc_jni_scene_observer and offline_393_import):
+        raise UnsignedOriginalBuildBlocked('Local boot authority is dedicated PC-only and opt-in')
+    if pc_boot_authority != (pc_boot_public_key is not None):
+        raise UnsignedOriginalBuildBlocked('Local boot authority and independent trust key must agree')
+    if pc_balance_assets is not None and not pc_boot_authority:
+        raise UnsignedOriginalBuildBlocked('PC balance assets require independent PC boot authority')
+    from tools.base_mod.pc_boot_trust import validate_public_key, replace_local_boot_public_key
+    local_key_hash = validate_public_key(pc_boot_public_key) if pc_boot_authority else None
     repo = repo.resolve(strict=True)
     private = repo / "private"
     if not private.is_dir() or private.is_symlink():
@@ -149,6 +160,8 @@ def prepare_unsigned_research(
             isolate_original_native_files_dir=False,
             virgin_save_trial=False, output=bridge,
             pc_jni_scene_observer=pc_jni_scene_observer,
+            pc_boot_authority=pc_boot_authority,
+            pc_boot_public_key_sha256=local_key_hash,
             javac=javac, d8=d8, android_jar=android_jar, root=repo,
             offline_import_installpack=(
                 original / "split_InstallPack.apk" if offline_393_import else None),
@@ -157,9 +170,30 @@ def prepare_unsigned_research(
             flavored, final, flavor="local-research",
             bridge_dex_path=bridge, research_deny_internet=True,
         )
+        balance_proof = None
+        if pc_balance_assets is not None:
+            from tools.base_mod.pc_balance_assets import load_pinned_assets, verify_overlay
+            from tools.base_mod.patch_installpack_downloadlocal import patch_installpack_apk
+            assets = _inside_private(repo, pc_balance_assets, folder=True)
+            staged_installpack = scratch / 'pc-balance-InstallPack.apk'
+            patch_installpack_apk(final / 'split_InstallPack.apk', staged_installpack,
+                                  load_pinned_assets(assets))
+            balance_proof = verify_overlay(original / 'split_InstallPack.apk', staged_installpack)
+            staged_installpack.replace(final / 'split_InstallPack.apk')
+            from tools.base_mod.pc_native_balance import patch_split, DISPATCH_SYMBOL
+            if DISPATCH_SYMBOL.encode('ascii') not in passive_shim.read_bytes():
+                raise UnsignedOriginalBuildBlocked('PC_BALANCE_COMPILED_DISPATCH_MISSING')
+            staged_arm64 = scratch / 'pc-balance-arm64.apk'
+            balance_proof['native_adapter'] = patch_split(
+                final / 'split_config.arm64_v8a.apk', staged_arm64)
+            staged_arm64.replace(final / 'split_config.arm64_v8a.apk')
+        local_trust = replace_local_boot_public_key(
+            final / 'split_InstallPack.apk', pc_boot_public_key, dedicated_pc=True
+        ) if pc_boot_authority else None
         native_gate = verify_staged_original_scene_before_signing(
             final, research_scene_witness=True,
             expected_research_native_package=ISOLATED_PACKAGE,
+            pc_balance_enabled=pc_balance_assets is not None,
         )
         static_parity = verify_static_http_bridge(
             original, final, flavor="local-research",
@@ -167,6 +201,8 @@ def prepare_unsigned_research(
             research_scene_witness=True,
             research_shadowhook_sha256=APPROVED_OFFICIAL_SHADOWHOOK_V201_ARM64_SHA256,
             research_shadowhook_nothing_sha256=APPROVED_OFFICIAL_SHADOWHOOK_V201_COMPANION_SHA256,
+            pc_boot_public_key_sha256=local_key_hash,
+            pc_balance_assets_enabled=pc_balance_assets is not None,
         )
         unique = "unsigned-original-native-pair-" + uuid4().hex
         destination = private / unique
@@ -204,6 +240,9 @@ def prepare_unsigned_research(
             "exact_original_native_presign_status": native_gate["status"],
             "compiled_original_virgin_SAVE_writer_enabled": False,
             "owner_original_393_file_import_feature_opt_in": offline_393_import,
+            "pc_independent_boot_identity_authority_enabled": pc_boot_authority,
+            "pc_independent_boot_trust": local_trust,
+            "pc_pinned_balance_overlay": balance_proof,
             "original_native_scene97_accepted": False,
             "original_user_SAVE_read_or_written": False,
             "original_user_APK_source_mutated": False,

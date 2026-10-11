@@ -120,25 +120,25 @@ class OriginalOffline393Tests(unittest.TestCase):
             '!(LOCAL_RESEARCH_DENY_HTTP && LOCAL_RESEARCH_IMPORT_OWNER_ASSETS)',
             source)
         self.assertIn(
-            'if (LOCAL_RESEARCH_DENY_HTTP && !originalBackupFailureShape)',source)
-        self.assertIn('if (!originalBackupFailureShape)',source)
+            'if (LOCAL_RESEARCH_DENY_HTTP && !originalBackupFailureShape && !independentRegistration)',source)
+        self.assertIn('if (!originalBackupFailureShape && !independentRegistration)',source)
         self.assertIn('original-local-backup-failure-fallback-v1 enqueued',source)
         self.assertIn('original-local-backup-callback-v1 returned',source)
         self.assertIn('original-local-backup-failure-fallback-v1 unavailable',source)
         self.assertIn('throw new IllegalStateException("original local backup fallback unavailable")',source)
         self.assertIn('jp.co.ponos.battlecats.MyActivity.newResponse(',source)
-        self.assertIn('                            "{}",',source)
-        self.assertIn('                            true);',source)
+        self.assertIn('String responseHeaders = "{}";',source)
+        self.assertIn('boolean responseError = true;',source)
         self.assertIn('view.queueEvent(new Runnable()',source)
         self.assertLess(
-            source.index('if (LOCAL_RESEARCH_DENY_HTTP && !originalBackupFailureShape)'),
-            source.index('if (!originalBackupFailureShape)'))
+            source.index('if (LOCAL_RESEARCH_DENY_HTTP && !originalBackupFailureShape && !independentRegistration)'),
+            source.index('if (!originalBackupFailureShape && !independentRegistration)'))
         self.assertLess(
             source.index('throw new IllegalStateException("original local backup fallback unavailable")'),
             source.rindex('return super.newHttpRequest('))
         self.assertNotIn('super.newHttpRequest(',source[
-            source.index('if (LOCAL_RESEARCH_DENY_HTTP && !originalBackupFailureShape)'):
-            source.index('if (!originalBackupFailureShape)')])
+            source.index('if (LOCAL_RESEARCH_DENY_HTTP && !originalBackupFailureShape && !independentRegistration)'):
+            source.index('if (!originalBackupFailureShape && !independentRegistration)')])
 
     def test_owner_signing_opt_in_separate_from_android_installer(self):
         owner=(ROOT/"tools/base_mod/OWNER-READY-TO-SIGN.ps1").read_text(encoding="utf-8-sig")

@@ -71,6 +71,18 @@ if(KNEEKURA_RESEARCH_PC_JNI_SCENE_OBSERVER)
     target_compile_definitions(kneekura PRIVATE KNEEKURA_RESEARCH_PC_JNI_SCENE_OBSERVER=1)
 endif()
 
+option(KNEEKURA_RESEARCH_PC_BALANCE
+       "Exact PC-only approved forms and native castle limit (never phone shipping)" OFF)
+if(KNEEKURA_RESEARCH_PC_BALANCE)
+    if(NOT KNEEKURA_RESEARCH_PC_JNI_SCENE_OBSERVER)
+        message(FATAL_ERROR "PC balance requires the isolated PC JNI research build")
+    endif()
+    target_sources(kneekura PRIVATE src/kneekura_pc_balance.c)
+    set_source_files_properties(src/kneekura_pc_balance.c PROPERTIES
+        COMPILE_OPTIONS "-mno-outline-atomics")
+    target_compile_definitions(kneekura PRIVATE KNEEKURA_RESEARCH_PC_BALANCE=1)
+endif()
+
 # Deliberately separate from the passive scene/LEVEL/SAVE observer.
 # ONLY an independently signed original-game local-research package may
 # enable this experiment; never a default release or an account-restoration

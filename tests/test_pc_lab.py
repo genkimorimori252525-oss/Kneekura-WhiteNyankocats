@@ -13,6 +13,7 @@ from tools.base_mod.prepare_original_research_presign import (
 from tools.pc_lab import (validate_identity, scope_research_log, capture_quality,
                           verify_installed_hashes, parse_installed_paths, has_log_loss,
                           summarize_java_crash, bound_to_barriers, Lab)
+from tools.base_mod.summarize_original_crash_capture import summarize as summarize_crash
 
 
 class FailedBuildEvidenceTests(unittest.TestCase):
@@ -87,7 +88,7 @@ class FailedBuildEvidenceTests(unittest.TestCase):
                                                     'synthetic compiler stderr')
 
             (root / 'tools').mkdir()
-            for name in ('pc_lab.py', 'pc_lab_diagnostics.py', 'PC-LAB.ps1'):
+            for name in ('pc_lab.py', 'pc_lab_diagnostics.py', 'pc_profile_install.py', 'pc_viewer.py', 'PC-LAB.ps1'):
                 (root / 'tools' / name).write_text('synthetic source')
             with patch('tools.pc_lab.REPO', root), patch.object(lab, 'command', failed_command):
                 with self.assertRaises(RuntimeError):
@@ -126,6 +127,25 @@ class CaptureGateTests(unittest.TestCase):
         scoped = scope_research_log(line, {4939})
         self.assertIn('hook-runtime-init-failed', scoped)
         self.assertNotIn('+0000', scoped)
+
+    def test_padded_native_crash_tag_and_dump_pid_are_scoped_to_research_process(self):
+        source = ('10-12 00:59:59.999 100 100 I ActivityManager: '
+                  'Start proc 123:jp.kn.local.battlecats/u0a1 for activity\n'
+                  '10-12 01:00:00.000 123 123 F libc    : '
+                  'Fatal signal 11 (SIGSEGV) in jp.kn.local.battlecats\n'
+                  '10-12 01:00:00.001 456 456 F DEBUG   : pid: 123, tid: 124, name: GLThread\n'
+                  '10-12 01:00:00.002 456 456 F DEBUG   : #00 pc 000000000045e550 libnative-lib.so\n'
+                  '10-12 01:00:00.003 777 777 F DEBUG   : pid: 999, tid: 998, name: foreign\n'
+                  '10-12 01:00:00.004 777 777 F DEBUG   : foreign-frame\n')
+        scoped = scope_research_log(source, {123})
+        self.assertIn('SIGSEGV', scoped)
+        self.assertIn('45e550', scoped)
+        self.assertNotIn('foreign', scoped)
+        aggregate = summarize_crash(scoped)
+        self.assertEqual(aggregate['research_SIGSEGV_signal_lines_in_filtered_log'], 1)
+        self.assertEqual(aggregate['known_native_backtrace_frames_in_filtered_log'], 1)
+        self.assertNotIn('libc    :', scoped)
+        self.assertNotIn('DEBUG   :', scoped)
 
     def test_binder_dropped_transaction_is_not_log_capture_loss(self):
         self.assertFalse(has_log_loss('I IPCThreadState: results will be dropped', ''))

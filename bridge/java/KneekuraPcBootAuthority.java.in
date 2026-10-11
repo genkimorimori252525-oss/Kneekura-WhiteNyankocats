@@ -1,0 +1,477 @@
+package __KNEEKURA_PACKAGE__;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+import java.nio.channels.FileLock;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.UUID;
+
+/** PC-only independent boot identity. No publisher account or original SAVE. */
+final class KneekuraPcBootAuthority {
+    private static final String FILE = "kneekura-local-boot-v1.record";
+    private static final String MAGIC = "KNEEKURA_LOCAL_BOOT_V1\n";
+    private static final String TRUST_PUBLIC_SHA256 = "__KNEEKURA_PC_BOOT_PUBLIC_KEY_SHA256__";
+
+    private static String checksum(String content) throws IOException {
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(content.getBytes(StandardCharsets.US_ASCII));
+            StringBuilder out = new StringBuilder(64);
+            for (byte value : digest) out.append(String.format(java.util.Locale.ROOT, "%02x", value & 255));
+            return out.toString();
+        } catch (NoSuchAlgorithmException unavailable) {
+            throw new IOException("LOCAL_BOOT_CHECKSUM_UNAVAILABLE");
+        }
+    }
+
+    static synchronized String player(File appFiles) throws IOException {
+        File directory = appFiles.getCanonicalFile();
+        if (!directory.isDirectory()) throw new IOException("LOCAL_BOOT_ROOT_UNAVAILABLE");
+        File lock = new File(directory, "kneekura-local-boot-v1.lock");
+        if (!lock.getCanonicalFile().equals(lock)) throw new IOException("LOCAL_BOOT_RECORD_UNSAFE");
+        try (FileOutputStream guard = new FileOutputStream(lock, true);
+             FileLock held = guard.getChannel().lock()) {
+            return lockedPlayer(directory);
+        }
+    }
+
+    private static String lockedPlayer(File directory) throws IOException {
+        File record = new File(directory, FILE);
+        if (!record.getCanonicalFile().equals(record)) throw new IOException("LOCAL_BOOT_RECORD_UNSAFE");
+        if (!record.exists()) {
+            String id = "kneekura-local-" + UUID.randomUUID().toString().replace("-", "");
+            String content = MAGIC + "player=" + id + "\ncreated=" + (System.currentTimeMillis() / 1000L) + "\n";
+            byte[] bytes = (content + "checksum=" + checksum(content) + "\n").getBytes(StandardCharsets.US_ASCII);
+            File temporary = File.createTempFile("kneekura-local-boot-", ".pending", directory);
+            try {
+                try (FileOutputStream output = new FileOutputStream(temporary)) {
+                    output.write(bytes);
+                    output.getFD().sync();
+                }
+                // PC API35 only. Same-filesystem atomic publication; existing
+                // corrupt records are never replaced or converted to success.
+                Files.move(temporary.toPath(), record.toPath(), StandardCopyOption.ATOMIC_MOVE);
+            } finally {
+                if (temporary.exists()) temporary.delete();
+            }
+        }
+        if (!record.isFile() || record.length() < 100L || record.length() > 256L)
+            throw new IOException("LOCAL_BOOT_RECORD_INVALID");
+        byte[] bytes = new byte[257];
+        int size = 0;
+        try (FileInputStream input = new FileInputStream(record)) {
+            for (int read; size < bytes.length && (read = input.read(bytes, size, bytes.length - size)) > 0;) size += read;
+        }
+        String data = new String(bytes, 0, size, StandardCharsets.US_ASCII);
+        if (!data.matches("KNEEKURA_LOCAL_BOOT_V1\nplayer=kneekura-local-[0-9a-f]{32}\ncreated=[0-9]{10}\nchecksum=[0-9a-f]{64}\n"))
+            throw new IOException("LOCAL_BOOT_RECORD_INVALID");
+        int checksumStart = data.indexOf("checksum=");
+        if (!checksum(data.substring(0, checksumStart)).equals(data.substring(checksumStart + 9, data.length() - 1)))
+            throw new IOException("LOCAL_BOOT_RECORD_CHECKSUM_FAILED");
+        return data.split("\n")[1].substring(7);
+    }
+
+    static String operation(String query) {
+        if (query == null) return "other";
+        int separator = query.indexOf('&');
+        String first = separator < 0 ? query : query.substring(0, separator);
+        if ("action=createAccount".equals(first)) return "create-account";
+        if ("action=getTime".equals(first)) return "time";
+        return "other";
+    }
+
+    static synchronized String registration(File appFiles) throws IOException {
+        String id = player(appFiles);
+        File directory = appFiles.getCanonicalFile();
+        File lock = new File(directory, "kneekura-local-boot-v1.lock");
+        File record = new File(directory, "kneekura-local-auth-v1.record");
+        if (!lock.getCanonicalFile().equals(lock) || !record.getCanonicalFile().equals(record))
+            throw new IOException("LOCAL_BOOT_RECORD_UNSAFE");
+        try (FileOutputStream guard = new FileOutputStream(lock, true);
+             FileLock held = guard.getChannel().lock()) {
+            if (!record.exists()) {
+                String content = "KNEEKURA_LOCAL_AUTH_V1\nplayer=" + id
+                    + "\npassword=kneekura-local-" + UUID.randomUUID().toString().replace("-", "")
+                    + "\nrefresh=kneekura-local-" + UUID.randomUUID().toString().replace("-", "") + "\n";
+                File temporary = File.createTempFile("kneekura-local-auth-", ".pending", directory);
+                try {
+                    try (FileOutputStream output = new FileOutputStream(temporary)) {
+                        output.write((content + "checksum=" + checksum(content) + "\n").getBytes(StandardCharsets.US_ASCII));
+                        output.getFD().sync();
+                    }
+                    Files.move(temporary.toPath(), record.toPath(), StandardCopyOption.ATOMIC_MOVE);
+                } finally {
+                    if (temporary.exists()) temporary.delete();
+                }
+            }
+            if (!record.isFile() || record.length() > 512L) throw new IOException("LOCAL_AUTH_RECORD_INVALID");
+            byte[] bytes = new byte[513];
+            int size = 0;
+            try (FileInputStream input = new FileInputStream(record)) {
+                for (int read; size < bytes.length && (read = input.read(bytes, size, bytes.length - size)) > 0;) size += read;
+            }
+            String data = new String(bytes, 0, size, StandardCharsets.US_ASCII);
+            if (!data.matches("KNEEKURA_LOCAL_AUTH_V1\nplayer=kneekura-local-[0-9a-f]{32}\npassword=kneekura-local-[0-9a-f]{32}\nrefresh=kneekura-local-[0-9a-f]{32}\nchecksum=[0-9a-f]{64}\n"))
+                throw new IOException("LOCAL_AUTH_RECORD_INVALID");
+            int checksumStart = data.indexOf("checksum=");
+            if (!checksum(data.substring(0, checksumStart)).equals(data.substring(checksumStart + 9, data.length() - 1)))
+                throw new IOException("LOCAL_AUTH_RECORD_CHECKSUM_FAILED");
+            String[] fields = data.split("\n");
+            if (!fields[1].equals("player=" + id)) throw new IOException("LOCAL_AUTH_IDENTITY_MISMATCH");
+            return "{\"authority\":\"kneekura-local\",\"statusCode\":1,\"payload\":{\"accountCode\":\"" + id
+                + "\",\"password\":\"" + fields[2].substring(9)
+                + "\",\"passwordRefreshToken\":\"" + fields[3].substring(8) + "\"}}";
+        }
+    }
+
+    static boolean registrationMatches(String method, java.net.URL url, java.nio.ByteBuffer body, File files) throws IOException {
+        if (!"POST".equals(method) || !"https".equals(url.getProtocol())
+                || !"nyanko-auth.ponosgames.com".equals(url.getHost()) || !"/v1/users".equals(url.getPath())
+                || url.getQuery() != null || url.getRef() != null || url.getUserInfo() != null
+                || (url.getPort() != -1 && url.getPort() != 443) || body == null) return false;
+        try {
+            java.util.Map<String, Object> request = requestObject(body);
+            return player(files).equals(request.get("accountCode")) && validNonce(request.get("nonce"));
+        } catch (IOException invalid) {
+            return false;
+        }
+    }
+
+    static String authOperation(String method, java.net.URL url, java.nio.ByteBuffer body, File files) throws IOException {
+        return authOperation(method, url, body, files, new java.util.HashMap<String, String>());
+    }
+
+    static String authOperation(String method, java.net.URL url, java.nio.ByteBuffer body, File files,
+            java.util.Map<?, ?> headers) throws IOException {
+        if (registrationMatches(method, url, body, files)) return "register";
+        if ("POST".equals(method) && "https".equals(url.getProtocol())
+                && "nyanko-managed-item.ponosgames.com".equals(url.getHost())
+                && "/v1/managed-items".equals(url.getPath()) && url.getQuery() == null
+                && url.getRef() == null && url.getUserInfo() == null
+                && (url.getPort() == -1 || url.getPort() == 443)) {
+            try { managedRequest(body, files, headers); return "managed-bootstrap"; }
+            catch (IOException invalid) { return "other"; }
+        }
+        if (!"POST".equals(method) || !"https".equals(url.getProtocol())
+                || !"nyanko-auth.ponosgames.com".equals(url.getHost()) || !"/v1/tokens".equals(url.getPath())
+                || url.getQuery() != null || url.getRef() != null || url.getUserInfo() != null
+                || (url.getPort() != -1 && url.getPort() != 443)) return "other";
+        try {
+            tokenRequest(body, files);
+            return "tokens";
+        } catch (IOException invalid) { return "other"; }
+    }
+
+    static final class SignedResponse {
+        final String body, signature;
+        SignedResponse(String body, String signature) { this.body = body; this.signature = signature; }
+    }
+
+    static SignedResponse signedRegistration(java.nio.ByteBuffer requestBody, File files) throws IOException {
+        java.util.Map<String, Object> request = requestObject(requestBody);
+        if (!player(files).equals(request.get("accountCode")) || !validNonce(request.get("nonce")))
+            throw new IOException("LOCAL_AUTH_REQUEST_INVALID");
+        String payload = registration(files);
+        payload = "{\"nonce\":" + quote((String) request.get("nonce")) + "," + payload.substring(1);
+        return new SignedResponse(payload, java.util.Base64.getEncoder().encodeToString(sign(payload, files)));
+    }
+
+    @SuppressWarnings("unchecked")
+    private static java.util.Map<String, Object> tokenRequest(java.nio.ByteBuffer body, File files) throws IOException {
+        java.util.Map<String, Object> request = requestObject(body);
+        java.util.Map<String, Object> record = requestObject(java.nio.ByteBuffer.wrap(
+            registration(files).getBytes(StandardCharsets.UTF_8)));
+        java.util.Map<String, Object> credentials = (java.util.Map<String, Object>) record.get("payload");
+        if (!player(files).equals(request.get("accountCode")) || !validNonce(request.get("nonce"))
+                || !credentials.get("password").equals(request.get("password")))
+            throw new IOException("LOCAL_AUTH_REQUEST_INVALID");
+        return request;
+    }
+
+    static SignedResponse signedTokens(java.nio.ByteBuffer body, File files) throws IOException {
+        java.util.Map<String, Object> request = tokenRequest(body, files);
+        long now = System.currentTimeMillis() / 1000L;
+        String header = "{\"alg\":\"RS256\",\"typ\":\"JWT\",\"kid\":\"kneekura-local-v1\"}";
+        String claims = "{\"iss\":\"kneekura-local\",\"aud\":\"kneekura-local\",\"sub\":"
+            + quote(player(files)) + ",\"iat\":" + now + ",\"exp\":" + (now + 3600L)
+            + ",\"jti\":" + quote(UUID.randomUUID().toString()) + "}";
+        java.util.Base64.Encoder encoder = java.util.Base64.getUrlEncoder().withoutPadding();
+        String unsigned = encoder.encodeToString(header.getBytes(StandardCharsets.UTF_8)) + "."
+            + encoder.encodeToString(claims.getBytes(StandardCharsets.UTF_8));
+        String token = unsigned + "." + encoder.encodeToString(sign(unsigned, files));
+        String payload = "{\"authority\":\"kneekura-local\",\"nonce\":" + quote((String) request.get("nonce"))
+            + ",\"statusCode\":1,\"payload\":{\"token\":" + quote(token) + "}}";
+        return new SignedResponse(payload, java.util.Base64.getEncoder().encodeToString(sign(payload, files)));
+    }
+
+    private static java.security.interfaces.RSAPrivateCrtKey signingKey(File files) throws IOException {
+        return loadSigningKey(files);
+    }
+
+    static boolean available(File files) {
+        try { loadSigningKey(files); player(files); return true; }
+        catch (IOException | RuntimeException unavailable) { return false; }
+    }
+
+    private static void verifyLocalToken(File files, java.util.Map<?, ?> headers) throws IOException {
+        Object authorization = headers == null ? null : headers.get("Authorization");
+        if (!(authorization instanceof String) || !((String)authorization).startsWith("Bearer "))
+            throw new IOException("LOCAL_AUTH_REQUEST_INVALID");
+        String token = ((String)authorization).substring(7);
+        if (token.length() > 4096 || !token.matches("[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+"))
+            throw new IOException("LOCAL_AUTH_REQUEST_INVALID");
+        String[] fields = token.split("\\.");
+        try {
+            java.util.Map<String, Object> header = requestObject(java.nio.ByteBuffer.wrap(
+                java.util.Base64.getUrlDecoder().decode(fields[0])));
+            java.util.Map<String, Object> claims = requestObject(java.nio.ByteBuffer.wrap(
+                java.util.Base64.getUrlDecoder().decode(fields[1])));
+            if (!"RS256".equals(header.get("alg")) || !"kneekura-local-v1".equals(header.get("kid"))
+                    || !"kneekura-local".equals(claims.get("iss")) || !"kneekura-local".equals(claims.get("aud"))
+                    || !player(files).equals(claims.get("sub")) || !(claims.get("exp") instanceof java.math.BigDecimal))
+                throw new IOException("LOCAL_AUTH_REQUEST_INVALID");
+            long expires = ((java.math.BigDecimal)claims.get("exp")).longValueExact();
+            long now = System.currentTimeMillis() / 1000L;
+            if (expires <= now || expires > now + 3660L) throw new IOException("LOCAL_AUTH_REQUEST_INVALID");
+            java.security.interfaces.RSAPrivateCrtKey key = signingKey(files);
+            java.security.Signature verifier = java.security.Signature.getInstance("SHA256withRSA");
+            verifier.initVerify(java.security.KeyFactory.getInstance("RSA").generatePublic(
+                new java.security.spec.RSAPublicKeySpec(key.getModulus(), key.getPublicExponent())));
+            verifier.update((fields[0] + "." + fields[1]).getBytes(StandardCharsets.US_ASCII));
+            if (!verifier.verify(java.util.Base64.getUrlDecoder().decode(fields[2])))
+                throw new IOException("LOCAL_AUTH_REQUEST_INVALID");
+        } catch (java.security.GeneralSecurityException | IllegalArgumentException | ArithmeticException invalid) {
+            throw new IOException("LOCAL_AUTH_REQUEST_INVALID");
+        }
+    }
+
+    private static final String[] MANAGED_AMOUNTS = {
+        "catfoodAmount", "rareTicketAmount", "platinumTicketAmount", "legendTicketAmount"
+    };
+
+    private static boolean validManagedShape(java.util.Map<String, Object> request) {
+        java.util.Set<String> expected = new java.util.HashSet<String>(java.util.Arrays.asList(MANAGED_AMOUNTS));
+        expected.add("nonce"); expected.add("isPaid");
+        if (!request.keySet().equals(expected)) return false;
+        for (String name : MANAGED_AMOUNTS) {
+            Object value = request.get(name);
+            if (!(value instanceof java.math.BigDecimal)) return false;
+            try { if (((java.math.BigDecimal)value).intValueExact() < 0) return false; }
+            catch (ArithmeticException invalid) { return false; }
+        }
+        return true;
+    }
+
+    private static java.util.Map<String, Object> managedRequest(java.nio.ByteBuffer body, File files,
+            java.util.Map<?, ?> headers) throws IOException {
+        verifyLocalToken(files, headers);
+        java.util.Map<String, Object> request = requestObject(body);
+        if (!validNonce(request.get("nonce")) || !Boolean.FALSE.equals(request.get("isPaid"))
+                || !validManagedShape(request))
+            throw new IOException("LOCAL_AUTH_REQUEST_INVALID");
+        return request;
+    }
+
+    static String managedDiagnostic(java.nio.ByteBuffer body, File files, java.util.Map<?, ?> headers) {
+        try { verifyLocalToken(files, headers); }
+        catch (IOException | RuntimeException invalid) { return "token-invalid"; }
+        try {
+            java.util.Map<String, Object> request = requestObject(body);
+            if (!validNonce(request.get("nonce"))) return "nonce-invalid";
+            if (!validManagedShape(request)) return "inventory-shape-invalid";
+            if (Boolean.TRUE.equals(request.get("isPaid"))) return "paid-true";
+            if (Boolean.FALSE.equals(request.get("isPaid"))) return "bootstrap-unpaid";
+            return "paid-type-invalid";
+        } catch (IOException | RuntimeException invalid) { return "json-invalid"; }
+    }
+
+    static synchronized SignedResponse signedManagedBootstrap(java.nio.ByteBuffer body, File files,
+            java.util.Map<?, ?> headers) throws IOException {
+        java.util.Map<String, Object> request = managedRequest(body, files, headers);
+        String id = player(files);
+        File directory = files.getCanonicalFile();
+        File record = new File(directory, "kneekura-local-managed-v2.record");
+        File lock = new File(directory, "kneekura-local-boot-v1.lock");
+        if (!record.getCanonicalFile().equals(record) || !lock.getCanonicalFile().equals(lock))
+            throw new IOException("LOCAL_BOOT_RECORD_UNSAFE");
+        // JP15.7.1 CreateAccountTask supplies exactly these four owned amounts.
+        // Initialize a real local snapshot; unknown deltas/paid updates stay denied.
+        String content = "KNEEKURA_LOCAL_MANAGED_V2\nplayer=" + id + "\n";
+        for (String name : MANAGED_AMOUNTS)
+            content += name + "=" + ((java.math.BigDecimal)request.get(name)).intValueExact() + "\n";
+        byte[] expected = (content + "checksum=" + checksum(content) + "\n").getBytes(StandardCharsets.US_ASCII);
+        try (FileOutputStream guard = new FileOutputStream(lock, true); FileLock held = guard.getChannel().lock()) {
+            if (!record.exists()) {
+                File temporary = File.createTempFile("kneekura-local-managed-", ".pending", directory);
+                try {
+                    try (FileOutputStream output = new FileOutputStream(temporary)) {
+                        output.write(expected); output.getFD().sync();
+                    }
+                    Files.move(temporary.toPath(), record.toPath(), StandardCopyOption.ATOMIC_MOVE);
+                } finally { if (temporary.exists()) temporary.delete(); }
+            }
+            if (!record.isFile() || record.length() != expected.length
+                    || !java.util.Arrays.equals(expected, Files.readAllBytes(record.toPath())))
+                throw new IOException("LOCAL_MANAGED_RECORD_INVALID");
+        }
+        String payload = "{\"authority\":\"kneekura-local\",\"nonce\":" + quote((String)request.get("nonce"))
+            + ",\"statusCode\":1,\"payload\":{}}";
+        return new SignedResponse(payload, java.util.Base64.getEncoder().encodeToString(sign(payload, files)));
+    }
+
+    private static java.security.interfaces.RSAPrivateCrtKey loadSigningKey(File files) throws IOException {
+        File keyFile = new File(files.getCanonicalFile(), "kneekura-local-signing-v1.pk8");
+        if (!keyFile.getCanonicalFile().equals(keyFile) || !keyFile.isFile() || keyFile.length() > 8192L)
+            throw new IOException("LOCAL_AUTH_KEY_UNAVAILABLE");
+        try {
+            java.security.KeyFactory factory = java.security.KeyFactory.getInstance("RSA");
+            java.security.interfaces.RSAPrivateCrtKey key = (java.security.interfaces.RSAPrivateCrtKey)
+                factory.generatePrivate(new java.security.spec.PKCS8EncodedKeySpec(Files.readAllBytes(keyFile.toPath())));
+            java.security.PublicKey publicKey = factory.generatePublic(
+                new java.security.spec.RSAPublicKeySpec(key.getModulus(), key.getPublicExponent()));
+            if (key.getModulus().bitLength() != 4096 || !TRUST_PUBLIC_SHA256.equals(hex(
+                    MessageDigest.getInstance("SHA-256").digest(publicKey.getEncoded()))))
+                throw new IOException("LOCAL_AUTH_KEY_FINGERPRINT_MISMATCH");
+            return key;
+        } catch (java.security.GeneralSecurityException | ClassCastException invalid) {
+            throw new IOException("LOCAL_AUTH_SIGNATURE_UNAVAILABLE");
+        }
+    }
+
+    private static byte[] sign(String payload, File files) throws IOException {
+        try {
+            java.security.Signature signer = java.security.Signature.getInstance("SHA256withRSA");
+            java.security.interfaces.RSAPrivateCrtKey key = loadSigningKey(files);
+            signer.initSign(key);
+            signer.update(payload.getBytes(StandardCharsets.UTF_8));
+            return signer.sign();
+        } catch (java.security.GeneralSecurityException | ClassCastException invalid) {
+            throw new IOException("LOCAL_AUTH_SIGNATURE_UNAVAILABLE");
+        }
+    }
+
+    private static String hex(byte[] bytes) {
+        StringBuilder out = new StringBuilder(bytes.length * 2);
+        for (byte value : bytes) out.append(String.format(java.util.Locale.ROOT, "%02x", value & 255));
+        return out.toString();
+    }
+
+    private static boolean validNonce(Object value) {
+        return value instanceof String && ((String) value).length() >= 1 && ((String) value).length() <= 256;
+    }
+
+    private static String quote(String value) {
+        StringBuilder out = new StringBuilder("\"");
+        for (char c : value.toCharArray()) {
+            if (c == '"' || c == '\\') out.append('\\').append(c);
+            else if (c < 32) out.append(String.format(java.util.Locale.ROOT, "\\u%04x", (int)c));
+            else out.append(c);
+        }
+        return out.append('"').toString();
+    }
+
+    @SuppressWarnings("unchecked")
+    private static java.util.Map<String, Object> requestObject(java.nio.ByteBuffer body) throws IOException {
+        if (body == null || body.remaining() < 1 || body.remaining() > 32768)
+            throw new IOException("LOCAL_AUTH_JSON_INVALID");
+        String data;
+        try {
+            data = StandardCharsets.UTF_8.newDecoder().onMalformedInput(java.nio.charset.CodingErrorAction.REPORT)
+                .onUnmappableCharacter(java.nio.charset.CodingErrorAction.REPORT).decode(body.duplicate()).toString();
+        } catch (java.nio.charset.CharacterCodingException invalid) {
+            throw new IOException("LOCAL_AUTH_JSON_INVALID");
+        }
+        JsonReader reader = new JsonReader(data);
+        Object result = reader.value(0);
+        reader.space();
+        if (!(result instanceof java.util.Map) || reader.position != data.length())
+            throw new IOException("LOCAL_AUTH_JSON_INVALID");
+        return (java.util.Map<String, Object>) result;
+    }
+
+    /** Bounded strict JSON reader: root fields only, reject duplicates and trailing bytes. */
+    private static final class JsonReader {
+        final String source;
+        int position;
+        JsonReader(String source) { this.source = source; }
+        IOException invalid() { return new IOException("LOCAL_AUTH_JSON_INVALID"); }
+        void space() { while (position < source.length() && " \r\n\t".indexOf(source.charAt(position)) >= 0) position++; }
+        boolean take(char c) { space(); if (position < source.length() && source.charAt(position) == c) {position++; return true;} return false; }
+        String string() throws IOException {
+            if (!take('"')) throw invalid();
+            StringBuilder out = new StringBuilder();
+            while (position < source.length()) {
+                char c = source.charAt(position++);
+                if (c == '"') return out.toString();
+                if (c < 32) throw invalid();
+                if (c == '\\') {
+                    if (position == source.length()) throw invalid();
+                    char escaped = source.charAt(position++);
+                    int index = "\"\\/bfnrt".indexOf(escaped);
+                    if (index >= 0) c = "\"\\/\b\f\n\r\t".charAt(index);
+                    else if (escaped == 'u' && position + 4 <= source.length()) {
+                        String digits = source.substring(position, position + 4);
+                        if (!digits.matches("[0-9a-fA-F]{4}")) throw invalid();
+                        c = (char) Integer.parseInt(digits, 16); position += 4;
+                    } else throw invalid();
+                }
+                out.append(c);
+            }
+            throw invalid();
+        }
+        Object value(int depth) throws IOException {
+            if (depth > 16) throw invalid();
+            space();
+            if (position == source.length()) throw invalid();
+            char c = source.charAt(position);
+            if (c == '"') return string();
+            if (take('{')) {
+                java.util.Map<String, Object> out = new java.util.HashMap<>();
+                if (take('}')) return out;
+                do {
+                    String name = string();
+                    if (out.containsKey(name) || !take(':')) throw invalid();
+                    out.put(name, value(depth + 1));
+                    if (take('}')) return out;
+                } while (take(','));
+                throw invalid();
+            }
+            if (take('[')) {
+                java.util.List<Object> out = new java.util.ArrayList<>();
+                if (take(']')) return out;
+                do { out.add(value(depth + 1)); if (take(']')) return out; } while (take(','));
+                throw invalid();
+            }
+            for (String literal : new String[]{"true", "false", "null"}) {
+                if (source.startsWith(literal, position)) {
+                    position += literal.length();
+                    return "null".equals(literal) ? null : Boolean.valueOf(literal);
+                }
+            }
+            java.util.regex.Matcher number = java.util.regex.Pattern.compile(
+                "-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?(?:[eE][+-]?[0-9]+)?").matcher(source);
+            number.region(position, source.length());
+            if (!number.lookingAt()) throw invalid();
+            String found = number.group();
+            position = number.end();
+            if (found.length() > 128) throw invalid();
+            try { return new java.math.BigDecimal(found); }
+            catch (NumberFormatException invalid) { throw invalid(); }
+        }
+    }
+
+    static String payload(String operation, File files) throws IOException {
+        // These compatibility fields acknowledge actual local operations.
+        // The local origin is explicit; no remote success is asserted.
+        if ("create-account".equals(operation))
+            return "{\"authority\":\"kneekura-local\",\"success\":true,\"accountId\":\"" + player(files) + "\"}";
+        if ("time".equals(operation))
+            return "{\"authority\":\"kneekura-local\",\"success\":true,\"timestamp\":" + (System.currentTimeMillis() / 1000L) + "}";
+        throw new IOException("LOCAL_BOOT_OPERATION_UNSUPPORTED");
+    }
+}

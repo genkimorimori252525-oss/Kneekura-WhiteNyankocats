@@ -108,6 +108,27 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
 
     private static volatile ReflectionCache reflectionCache;
 
+    // PC_BOOT_BEGIN
+    @Override public void setWebViewUrl(final int handle, final String url, final String[] cookies) {
+        if (!KneekuraPcAgeAssets.isPage(url)) {
+            super.setWebViewUrl(handle, url, cookies);
+            return;
+        }
+        // Ordered after the original newWebView runnable, before its loadUrl.
+        runOnUiThread(new Runnable() {
+            @Override public void run() {
+                try {
+                    KneekuraPcAgeWebView.install(MyActivity.this, handle, getFilesDir());
+                    MyActivity.super.setWebViewUrl(handle, url, cookies);
+                    debugResearch("original-local-pc-age-page-v1 ready");
+                } catch (ReflectiveOperationException | RuntimeException ignored) {
+                    debugResearch("original-local-pc-age-page-v1 unavailable");
+                }
+            }
+        });
+    }
+    // PC_BOOT_END
+
     private static final class ReflectionCache {
         final Field nextRequestHandle;
         final Field requestHandles;
@@ -640,6 +661,14 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
     @Override
     public boolean isNetworkAvailable() {
         if (LOCAL_RESEARCH_DENY_HTTP) {
+    // PC_BOOT_BEGIN
+            // Report readiness of the independent local authority. This does
+            // not enable publisher transport or grant Android INTERNET.
+            if (KneekuraPcBootAuthority.available(super.getFilesDir())) {
+                debugResearch("original-local-pc-authority-readiness-v1 ready");
+                return true;
+            }
+    // PC_BOOT_END
             // Original JP15.7.1's owner-device airplane-mode trace proves
             // this false result prevents event-sale HTTP after a backup GET.
             // Keep the PHONE Wi-Fi ON; only this isolated research game uses
@@ -668,7 +697,75 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
         final boolean originalBackupFailureShape = isExactBackupRequest(
                 method, requestUrl, timeout, headers, body, strings,
                 flag1, flag2);
-        if (LOCAL_RESEARCH_DENY_HTTP && !originalBackupFailureShape) {
+        boolean independentRegistration = false;
+    // PC_BOOT_BEGIN
+        String independentAuthOperation = "other";
+        if (LOCAL_RESEARCH_DENY_HTTP) {
+            try {
+                independentAuthOperation = KneekuraPcBootAuthority.authOperation(
+                    method, new URL(requestUrl), body, super.getFilesDir(), headers);
+                independentRegistration = !"other".equals(independentAuthOperation);
+            } catch (IOException | RuntimeException ignored) {
+                // Invalid state or foreign identity remains denied.
+            }
+        }
+    // PC_BOOT_END
+    // PC_OBSERVER_BEGIN
+        if (PC_JNI_SCENE_OBSERVER && LOCAL_RESEARCH_DENY_HTTP && originalBackupFailureShape) {
+            // Fixed operation names only. Never record query values or URLs.
+            // JP15.7.1 puts action first; unexpected syntax stays "other".
+            String operation = "other";
+            try {
+                String query = new URL(requestUrl).getQuery();
+                int separator = query.indexOf('&');
+                String first = separator < 0 ? query : query.substring(0, separator);
+                if ("action=createAccount".equals(first)) operation = "create-account";
+                else if ("action=getTime".equals(first)) operation = "time";
+                else if ("action=canBackup".equals(first)) operation = "can-backup";
+                else if ("action=store".equals(first)) operation = "store";
+            } catch (RuntimeException | IOException ignored) {
+                // Observation failure does not change original failure replay.
+            }
+            debugResearch("original-local-pc-boot-operation-v1 " + operation);
+        }
+    // PC_OBSERVER_END
+        if (LOCAL_RESEARCH_DENY_HTTP && !originalBackupFailureShape && !independentRegistration) {
+    // PC_OBSERVER_BEGIN
+            String service = "other";
+            try {
+                URL url = new URL(requestUrl);
+                String path = url.getPath();
+                if ("nyanko-auth.ponosgames.com".equals(url.getHost())) {
+                    if ("/v1/users".equals(path)) service = "auth-users";
+                    else if ("/v1/user".equals(path)) service = "auth-user";
+                    else if ("/v1/user/password".equals(path)) service = "auth-password";
+                    else if ("/v1/tokens".equals(path)) service = "auth-tokens";
+                    else service = "auth-other";
+                } else if ("nyanko-managed-item.ponosgames.com".equals(url.getHost())) service = "managed-items";
+                else if ("nyanko-events.ponosgames.com".equals(url.getHost())) service = "events";
+                else if ("nyanko-webview.ponosgames.com".equals(url.getHost())) service = "webview";
+                else if ("nyanko-items.ponosgames.com".equals(url.getHost())) service = "items";
+                else if ("nyanko-purchase.ponosgames.com".equals(url.getHost())) service = "purchase";
+                else if ("nyanko-club.ponosgames.com".equals(url.getHost())) service = "club";
+                else if ("nyanko-announcement.ponosgames.com".equals(url.getHost())) service = "announcement";
+                else if ("nyanko-receipts.ponosgames.com".equals(url.getHost())) service = "receipts";
+                else if ("/control.json".equals(path)) service = "web-control";
+                else if (path.matches("/control/ad/battlecats[^/]{0,8}/adcontrol[^/]{0,8}\\.json")) service = "ad-control";
+                else if (path.endsWith("/age/index.html") || path.endsWith("/age/gdpr.html")) service = "age-page";
+                else if ("nyanko-assets.ponosgames.com".equals(url.getHost())) service = "publisher-assets";
+                else if ("ponosgames.com".equals(url.getHost())) service = "publisher-web";
+                else if ("www.ponosgames.com".equals(url.getHost())) service = "publisher-web";
+            } catch (IOException | RuntimeException ignored) {
+                // Fixed classification only; request remains denied.
+            }
+            debugResearch("original-local-pc-denied-service-v1 " + service);
+    // PC_BOOT_BEGIN
+            if ("managed-items".equals(service)) {
+                debugResearch("original-local-pc-managed-shape-v1 "
+                        + KneekuraPcBootAuthority.managedDiagnostic(body, super.getFilesDir(), headers));
+            }
+    // PC_BOOT_END
+    // PC_OBSERVER_END
             // All unknown services remain strictly blocked. No invented
             // publisher payload and no original super transport fallback.
             // This remains a separate research package with zero INTERNET.
@@ -695,7 +792,7 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
             throw new IllegalStateException("original local research HTTP disabled");
         }
 
-        if (!originalBackupFailureShape) {
+        if (!originalBackupFailureShape && !independentRegistration) {
             return super.newHttpRequest(
                     method,
                     requestUrl,
@@ -712,7 +809,47 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
             final int requestId = cache.nextRequestHandle.getInt(this);
             cache.nextRequestHandle.setInt(this, requestId + 1);
 
-            final URL parsedUrl = new URL(requestUrl);
+            String responseUrl = requestUrl;
+            int responseStatus = 0;
+            String responseHeaders = "{}";
+            ByteBuffer responseBody = null;
+            boolean responseError = true;
+    // PC_BOOT_BEGIN
+            final String localOperation = independentRegistration ? independentAuthOperation
+                : KneekuraPcBootAuthority.operation(new URL(requestUrl).getQuery());
+            if (!"other".equals(localOperation)) {
+                // Actual independent operation first, compatibility delivery
+                // second. URI and header explicitly identify local origin.
+                // No official account, socket, or remote success claim.
+                KneekuraPcBootAuthority.SignedResponse signedResponse = independentRegistration
+                    ? ("register".equals(localOperation)
+                        ? KneekuraPcBootAuthority.signedRegistration(body, super.getFilesDir())
+                        : ("tokens".equals(localOperation)
+                            ? KneekuraPcBootAuthority.signedTokens(body, super.getFilesDir())
+                            : KneekuraPcBootAuthority.signedManagedBootstrap(body, super.getFilesDir(), headers))) : null;
+                String payload = independentRegistration ? signedResponse.body
+                    : KneekuraPcBootAuthority.payload(localOperation, super.getFilesDir());
+                byte[] bytes = payload.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                responseBody = ByteBuffer.allocateDirect(bytes.length);
+                responseBody.put(bytes);
+                responseBody.flip();
+                responseUrl = "file:///kneekura-local/boot/" + localOperation;
+                responseStatus = 200;
+                responseError = false;
+                // JNI newResponse reads each header's JSON string getter,
+                // not a list. An array decodes to an empty signature buffer.
+                responseHeaders = "{\"X-Kneekura-Authority\":\"local\"}";
+                if (signedResponse != null) responseHeaders = "{\"X-Kneekura-Authority\":\"local\","
+                    + "\"Nyanko-Signature\":\"" + signedResponse.signature + "\"}";
+                debugResearch("original-local-pc-boot-authority-v1 " + localOperation);
+            }
+    // PC_BOOT_END
+            final String callbackUrl = responseUrl;
+            final int callbackStatus = responseStatus;
+            final String callbackHeaders = responseHeaders;
+            final ByteBuffer callbackBody = responseBody;
+            final boolean callbackError = responseError;
+            final URL parsedUrl = new URL(callbackUrl);
             final Object request = cache.requestConstructor.newInstance(
                     requestId,
                     method,
@@ -731,11 +868,17 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
                 public void run() {
                     jp.co.ponos.battlecats.MyActivity.newResponse(
                             requestId,
-                            0,
-                            requestUrl,
-                            "{}",
-                            null,
-                            true);
+                            callbackStatus,
+                            callbackUrl,
+                            callbackHeaders,
+                            callbackBody,
+                            callbackError);
+    // PC_BOOT_BEGIN
+                    if (!callbackError) {
+                        debugResearch("original-local-pc-boot-authority-v1 returned");
+                        return;
+                    }
+    // PC_BOOT_END
                     if (LOCAL_RESEARCH_DENY_HTTP) {
                         // This fires after the real GL-thread callback RETURNS,
                         // unlike the legacy misnamed "completed" marker which
@@ -749,6 +892,12 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
                 }
             });
             if (LOCAL_RESEARCH_DENY_HTTP) {
+    // PC_BOOT_BEGIN
+                if (!callbackError) {
+                    debugResearch("original-local-pc-boot-authority-v1 enqueued");
+                    return requestId;
+                }
+    // PC_BOOT_END
                 // Scheduling is NOT evidence the callback actually ran.
                 debugResearch("original-local-backup-failure-fallback-v1 enqueued");
                 if (Float.compare(timeout, 10.0f) != 0) {
@@ -760,6 +909,17 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
             return requestId;
         } catch (Throwable ignored) {
             if (LOCAL_RESEARCH_DENY_HTTP) {
+    // PC_BOOT_BEGIN
+                String failure = "other";
+                String detail = ignored.getMessage();
+                if ("LOCAL_AUTH_KEY_UNAVAILABLE".equals(detail)) failure = "key-unavailable";
+                else if ("LOCAL_AUTH_KEY_FINGERPRINT_MISMATCH".equals(detail)) failure = "key-fingerprint";
+                else if ("LOCAL_AUTH_SIGNATURE_UNAVAILABLE".equals(detail)) failure = "signature";
+                else if ("LOCAL_AUTH_REQUEST_INVALID".equals(detail)) failure = "request";
+                else if ("LOCAL_AUTH_JSON_INVALID".equals(detail)) failure = "json";
+                else if (ignored instanceof IOException) failure = "local-io";
+                debugResearch("original-local-pc-boot-authority-error-v1 " + failure);
+    // PC_BOOT_END
                 // Never invoke original HTTP if local reflection/callback
                 // invariants drift. No request payload, URL or exception log.
                 debugResearch("original-local-backup-failure-fallback-v1 unavailable");

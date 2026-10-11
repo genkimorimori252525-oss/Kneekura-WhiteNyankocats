@@ -1,0 +1,69 @@
+package __KNEEKURA_PACKAGE__;
+
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
+import android.webkit.WebResourceError;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.lang.reflect.Field;
+import java.util.Map;
+import java.util.Collections;
+
+/** Preserve original client/JNI protocol; serve only six pinned private resources. */
+final class KneekuraPcAgeWebView extends WebViewClient {
+    private final WebViewClient original;
+    private final File files;
+    private KneekuraPcAgeWebView(WebViewClient original, File files) {
+        this.original = original; this.files = files;
+    }
+    static void install(jp.co.ponos.battlecats.MyActivity activity, int handle, File files)
+            throws ReflectiveOperationException {
+        Field field = jp.co.ponos.battlecats.MyActivity.class.getDeclaredField("gViewMap");
+        field.setAccessible(true);
+        WebView view = (WebView) ((Map<?, ?>) field.get(activity)).get(handle);
+        if (view == null) throw new IllegalStateException("LOCAL_AGE_VIEW_UNAVAILABLE");
+        WebViewClient client = view.getWebViewClient();
+        if (client instanceof KneekuraPcAgeWebView) return;
+        if (client == null || !"cn1".equals(client.getClass().getName()))
+            throw new IllegalStateException("LOCAL_AGE_ORIGINAL_CLIENT_MISMATCH");
+        // The ORIGINAL gCustomWebViewClientMap remains untouched: its cn1 state
+        // is still set by original setWebViewUrl. Only resource loading is wrapped.
+        view.setWebViewClient(new KneekuraPcAgeWebView(client, files));
+    }
+    private WebResourceResponse response(String url, String method) {
+        int index = KneekuraPcAgeAssets.asset(url);
+        KneekuraPcAgeAssets.Resource resource = "GET".equals(method)
+                ? KneekuraPcAgeAssets.resource(files, url) : new KneekuraPcAgeAssets.Resource(null, "method");
+        byte[] body = resource.body;
+        boolean valid = body != null;
+        android.util.Log.i("KNEEKURA_STATIC_HTTP", "original-local-pc-age-resource-v1 "
+                + (valid ? "served" : "denied") + " asset=" + index + " reason=" + resource.state);
+        return new WebResourceResponse(valid ? KneekuraPcAgeAssets.mime(index) : "text/plain",
+                "UTF-8", valid ? 200 : 403, valid ? "OK" : "Forbidden",
+                Collections.singletonMap("Cache-Control", "no-store"),
+                new ByteArrayInputStream(valid ? body : new byte[0]));
+    }
+    @Override public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+        return response(request.getUrl().toString(), request.getMethod());
+    }
+    @Override public WebResourceResponse shouldInterceptRequest(WebView view, String url) {
+        return response(url, "GET");
+    }
+    @Override public boolean shouldOverrideUrlLoading(WebView view, String url) {
+        if (url != null && url.startsWith("ponos-api://")) {
+            boolean result = original.shouldOverrideUrlLoading(view, url);
+            android.util.Log.i("KNEEKURA_STATIC_HTTP", "original-local-pc-age-callback-v1 delegated");
+            return result;
+        }
+        return !KneekuraPcAgeAssets.isPage(url);
+    }
+    @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+        return shouldOverrideUrlLoading(view, request.getUrl().toString());
+    }
+    @Override public void onPageFinished(WebView view, String url) { original.onPageFinished(view, url); }
+    @Override public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+        original.onReceivedError(view, request, error);
+    }
+}

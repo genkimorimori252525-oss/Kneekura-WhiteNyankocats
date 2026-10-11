@@ -161,6 +161,7 @@ def render_bridge_source(
     virgin_save_trial: bool = False,
     offline_393_import_enabled: bool = False,
     pc_jni_scene_observer: bool = False,
+    pc_boot_authority: bool = False,
 ) -> str:
     """Render the ORIGINAL MyActivity subclass, rejecting unsafe file modes.
 
@@ -173,7 +174,14 @@ def render_bridge_source(
         raise ValueError(f"unknown flavor: {flavor!r}")
     if pc_jni_scene_observer and (flavor != 'local-research' or virgin_save_trial):
         raise ValueError('PC JNI scene observer requires passive local research')
-    if not pc_jni_scene_observer and '// PC_OBSERVER_BEGIN' in template:
+    if pc_boot_authority and (flavor != 'local-research' or not pc_jni_scene_observer
+                              or not offline_393_import_enabled or virgin_save_trial):
+        raise ValueError('PC boot authority requires explicit isolated PC observer and owner import')
+    while not pc_boot_authority and '// PC_BOOT_BEGIN' in template:
+        start = template.index('    // PC_BOOT_BEGIN')
+        end = template.index('    // PC_BOOT_END', start) + len('    // PC_BOOT_END')
+        template = template[:start] + template[end:]
+    while not pc_jni_scene_observer and '// PC_OBSERVER_BEGIN' in template:
         start = template.index('    // PC_OBSERVER_BEGIN')
         end = template.index('    // PC_OBSERVER_END', start) + len('    // PC_OBSERVER_END')
         template = template[:start] + template[end:]
@@ -236,6 +244,8 @@ def build_bridge_dex(
     flavor: str,
     enabled: bool,
     pc_jni_scene_observer: bool = False,
+    pc_boot_authority: bool = False,
+    pc_boot_public_key_sha256: str | None = None,
     output: Path,
     javac: str | None = None,
     d8: str | None = None,
@@ -251,6 +261,12 @@ def build_bridge_dex(
         raise ValueError(f"unknown flavor: {flavor!r}")
     launcher = package_name + ".MyActivity"
     root = root.resolve()
+    if pc_boot_authority and (pc_boot_public_key_sha256 is None
+            or len(pc_boot_public_key_sha256) != 64
+            or any(c not in '0123456789abcdef' for c in pc_boot_public_key_sha256)):
+        raise ValueError('PC_BOOT_TRUST_KEY_FINGERPRINT_REQUIRED')
+    if not pc_boot_authority and pc_boot_public_key_sha256 is not None:
+        raise ValueError('PC_BOOT_TRUST_KEY_WITHOUT_AUTHORITY')
     template = (root / BRIDGE_TEMPLATE).read_text(encoding="utf-8")
     rendered = render_bridge_source(
         template,
@@ -261,6 +277,7 @@ def build_bridge_dex(
         virgin_save_trial=virgin_save_trial,
         offline_393_import_enabled=offline_import_installpack is not None,
         pc_jni_scene_observer=pc_jni_scene_observer,
+        pc_boot_authority=pc_boot_authority,
     )
     # Feature disabled by default in every existing build/profile. The index
     # is compiled only from the owner's exact original JP15.7.1 InstallPack.
@@ -295,6 +312,17 @@ def build_bridge_dex(
         source_path = source_root / Path(*package_name.split(".")) / "MyActivity.java"
         source_path.parent.mkdir(parents=True)
         source_path.write_text(rendered, encoding="utf-8")
+        boot_source = source_path.with_name('KneekuraPcBootAuthority.java')
+        age_sources = []
+        if pc_boot_authority:
+            boot_source.write_text((root / 'bridge/java/KneekuraPcBootAuthority.java.in').read_text(
+                encoding='utf-8').replace('__KNEEKURA_PACKAGE__', package_name).replace(
+                    '__KNEEKURA_PC_BOOT_PUBLIC_KEY_SHA256__', pc_boot_public_key_sha256), encoding='utf-8')
+            for name in ('KneekuraPcAgeAssets', 'KneekuraPcAgeWebView'):
+                age_source = source_path.with_name(name + '.java')
+                age_source.write_text((root / ('bridge/java/' + name + '.java.in')).read_text(
+                    encoding='utf-8').replace('__KNEEKURA_PACKAGE__', package_name), encoding='utf-8')
+                age_sources.append(str(age_source))
         importer_path = source_path.with_name("KneekuraOfflineAssetImporter.java")
         # Shipping personal/practice profiles have zero local-import logic or
         # KNEEKURA_STATIC_HTTP instrumentation in DEX. Reflection is never
@@ -326,6 +354,8 @@ def build_bridge_dex(
             "-d", str(bridge_classes),
             str(source_path),
             *([str(importer_path)] if include_importer else []),
+            *([str(boot_source)] if pc_boot_authority else []),
+            *age_sources,
         ])
 
         class_files = sorted(str(path) for path in bridge_classes.rglob("*.class"))
@@ -372,6 +402,7 @@ def build_bridge_dex(
         "explicit_native_virgin_save_trial": virgin_save_trial,
         "offline_393_exact_owner_files_background_import_enabled": offline_import_installpack is not None,
         "offline_original_gameplay_accepted": False,
+        "pc_independent_boot_identity_authority_enabled": pc_boot_authority,
         "original_virgin_save_trial_device_acceptance": False,
         "original_native_files_root": (
             "super.getFilesDir() in separate app UID" if flavor == "local-research"

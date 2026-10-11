@@ -34,12 +34,16 @@
 #include <link.h>
 #include <stdatomic.h>
 #include <stdint.h>
+#ifdef KNEEKURA_RESEARCH_PC_BALANCE
+#include "kneekura_pc_balance.h"
+#endif
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 #ifdef KNEEKURA_RESEARCH_PC_JNI_SCENE_OBSERVER
 #include <jni.h>
 #include <sys/syscall.h>
+#include <sys/uio.h>
 #endif
 /* These extra APIs are compiled ONLY for an explicitly enabled, research-only
  * new-player transaction experiment, never in the default/passive observer. */
@@ -341,6 +345,10 @@ struct NativeElfWitness {
     unsigned exact_build_id_count;
     unsigned original_library_count;
     unsigned executable_load_count;
+#ifdef KNEEKURA_RESEARCH_PC_BALANCE
+    unsigned balance_executable_load_count;
+    uintptr_t balance_executable_begin;
+#endif
 };
 
 static int inspect_original_library(struct dl_phdr_info *info,
@@ -366,6 +374,18 @@ static int inspect_original_library(struct dl_phdr_info *info,
     for (ElfW(Half) index = 0; index < info->dlpi_phnum; ++index) {
         const ElfW(Phdr) *phdr = &info->dlpi_phdr[index];
         if (phdr->p_type == PT_LOAD && (phdr->p_flags & PF_X)) {
+#ifdef KNEEKURA_RESEARCH_PC_BALANCE
+            static const char marker[] = "KNEEKURA_PC_BALANCE_RX_V1";
+            if (phdr->p_flags == (PF_R | PF_X) && phdr->p_memsz == 4096u
+                && phdr->p_filesz == 4096u && phdr->p_vaddr % 4096u == 0u
+                && phdr->p_vaddr <= UINTPTR_MAX - (uintptr_t)info->dlpi_addr
+                && memcmp((const void *)(uintptr_t)(info->dlpi_addr + phdr->p_vaddr),
+                          marker, sizeof(marker)) == 0) {
+                witness->balance_executable_load_count++;
+                witness->balance_executable_begin = info->dlpi_addr + phdr->p_vaddr;
+                continue; /* Only this bounded, signer-verified PC adapter LOAD. */
+            }
+#endif
             witness->executable_load_count++;
             if (witness->executable_load_count == 1u
                 && phdr->p_memsz >= 4u
@@ -408,6 +428,24 @@ static const struct OriginalCodeWordAnchor kSourceWordAnchors[] = {
     {0x73CA20u, 0x5285F70Au},
     {0x73CA64u, 0xF1008EBFu},
     {0x73CAB0u, 0xB8357B40u},
+#ifdef KNEEKURA_RESEARCH_PC_JNI_SCENE_OBSERVER
+    /* Post-lookup masking, task ownership and immutable constructor flags. */
+    {0x73CA5Cu, 0xB8357B5Fu},
+    {0x73CAC0u, 0xB8757AE8u},
+    {0x73CAC4u, 0x36F80148u},
+    {0x73CB3Cu, 0x3900A268u},
+    {0x725F28u, 0xF9432F08u},
+    {0x73D65Cu, 0xF9400408u},
+    {0x73D668u, 0x38696900u},
+    {0x73CA44u, 0x90001F37u},
+    {0x73CA48u, 0x912F72F7u},
+    {0x371678u, 0x90003D89u},
+    {0x37168Cu, 0xF9400D2Au},
+    {0x371690u, 0xF9400129u},
+    {0x3716A0u, 0xF86B6929u},
+    {0x3716A4u, 0x3CEA7920u},
+    {0x73E0D0u, 0x39404000u},
+#endif
     {ORIGINAL_UNIT_CAP_GETTER, 0xA9BB7BFDu},
     {ORIGINAL_UPGRADE_GATE, 0xA9BA7BFDu},
     {ORIGINAL_SAVE_WRAPPER, 0xD10103FFu},
@@ -482,13 +520,33 @@ static int select_unique_original_source_vma_shift(
     if (matches != 1u) {
         return 0;
     }
+#ifdef KNEEKURA_RESEARCH_PC_BALANCE
+    if (native->balance_executable_load_count != 1u) return 0;
+    static const uintptr_t sites[8] = {
+        0x99c4e0u, 0x5e5178u, 0x990f54u, 0x8ee878u,
+        0x99cb94u, 0x99ce18u, 0x488b78u, 0x488b30u
+    };
+    for (unsigned i = 0; i < 8u; ++i) {
+        uintptr_t pc = native->base + selected + sites[i];
+        uintptr_t target = native->balance_executable_begin + 64u + i * 448u;
+        if (pc < native->executable_begin || pc + 4u > native->executable_end) return 0;
+        intptr_t delta = (intptr_t)target - (intptr_t)pc;
+        if (delta % 4 || delta < -(1 << 27) || delta >= (1 << 27)) return 0;
+        uint32_t actual;
+        memcpy(&actual, (const void *)pc, sizeof(actual));
+        uint32_t expected = (i == 1u || i == 3u || i == 7u) ? 0x94000000u : 0x14000000u;
+        expected |= (uint32_t)(delta / 4) & 0x03ffffffu;
+        if (actual != expected) return 0;
+    }
+#endif
     *out_shift = selected;
     return 1;
 }
 
 /*
  * Observe only the ORIGINAL scene97 DownloadBatchTask constructor's
- * 35 signed resolver return slots. Caller already proved exact JP BuildID,
+ * 35 signed postprocessed resolver slots (negative eligibility masks to zero).
+ * Caller already proved exact JP BuildID,
  * original source opcodes, same context root and isolated process.
  * This is a bounded aggregate, NOT a progress bar, error screen detector,
  * file-content audit, or successful original resource acceptance.
@@ -536,6 +594,117 @@ static void observe_original_scene97_resolver_histogram(
     }
 }
 
+#ifdef KNEEKURA_RESEARCH_PC_JNI_SCENE_OBSERVER
+/* Kernel copies avoid dereferencing a stale or corrupt heap task pointer.
+ * No addresses, bytes, filenames, SAVE or account data enter the log. */
+static int pc_read_observation(uintptr_t address, void *out, size_t length) {
+    /* ARM64 Android heap pointers can carry a top-byte allocator tag. */
+    address &= UINT64_C(0x00FFFFFFFFFFFFFF);
+    if (address == 0u || address > INT64_MAX - length) return 0;
+    /* Android can deny /proc/self/mem. The same-process kernel copy retains
+     * the fail-closed unmapped-address behavior without ptrace/root/SELinux changes. */
+    struct iovec local = {out, length};
+    struct iovec remote = {(void *)address, length};
+    return syscall(SYS_process_vm_readv, getpid(), &local, 1ul, &remote, 1ul, 0ul)
+            == (ssize_t)length;
+}
+
+static void pc_task_unavailable(const char *fixed_reason) {
+    static uint32_t reported = 0u;
+    if (reported != 0u) return;
+    reported = 1u;
+    __android_log_write(ANDROID_LOG_INFO, WITNESS_TAG, fixed_reason);
+}
+
+static void observe_pc_scene97_task(const uint8_t *context, uint32_t scene) {
+    static uint32_t emitted = 0u;
+    static char previous[160] = {0};
+    if (scene != 97u || emitted >= 4u
+            || atomic_load_explicit(&gPcSceneObserverState, memory_order_acquire) != 2u) return;
+    int32_t eligibility[35];
+    uintptr_t task = 0u;
+    uint8_t done = 0u;
+    uintptr_t data_base = gOriginalLoadBias + gOriginalVmaShift;
+    if (!pc_read_observation(data_base + 0xB20BDCu, eligibility, sizeof(eligibility))
+            || !pc_read_observation((uintptr_t)context + 0x334658u, &task, sizeof(task))
+            || !pc_read_observation((uintptr_t)context + 0x334668u, &done, sizeof(done))) {
+        pc_task_unavailable("original-native-scene97-task-unavailable-v1 context-read"); return;
+    }
+    unsigned active = 0u, failed = 0u, needed = 0u, pending = 0u;
+    for (unsigned i = 0; i < 35u; ++i) active += eligibility[i] >= 0;
+    if (task != 0u) {
+        uint8_t bytes[0x38];
+        uintptr_t vtable = 0u, owner = 0u;
+        if (!pc_read_observation(task, bytes, sizeof(bytes))) {
+            pc_task_unavailable("original-native-scene97-task-unavailable-v1 task-read"); return;
+        }
+        memcpy(&vtable, bytes, sizeof(vtable));
+        memcpy(&owner, bytes + 8u, sizeof(owner));
+        if (vtable != data_base + 0xAFE100u || owner != (uintptr_t)context) {
+            pc_task_unavailable("original-native-scene97-task-unavailable-v1 task-identity"); return;
+        }
+        failed = bytes[0x28]; needed = bytes[0x29];
+        memcpy(&pending, bytes + 0x2Cu, sizeof(pending));
+    }
+    if (failed > 1u || needed > 1u || pending > 35u || done > 1u) {
+        pc_task_unavailable("original-native-scene97-task-unavailable-v1 task-flags"); return;
+    }
+    char message[160];
+    int size = snprintf(message, sizeof(message),
+        "original-native-scene97-task-v1 active=%u disabled=%u present=%u failed=%u needed=%u pending=%u completed=%u",
+        active, 35u - active, task != 0u, failed, needed, pending, done);
+    if (size > 0 && (size_t)size < sizeof(message) && strcmp(previous, message) != 0) {
+        memcpy(previous, message, (size_t)size + 1u);
+        ++emitted;
+        __android_log_write(ANDROID_LOG_INFO, WITNESS_TAG, message);
+    }
+}
+
+static void observe_pc_scene97_queue(const uint8_t *context, uint32_t scene) {
+    static unsigned emitted = 0u;
+    static char previous[128] = {0};
+    if (scene != 97u || emitted >= 4u
+            || atomic_load_explicit(&gPcSceneObserverState, memory_order_acquire) != 2u) return;
+    uintptr_t data_base = gOriginalLoadBias + gOriginalVmaShift;
+    uint64_t queue[5], block = 0u, task = 0u, vtable = 0u;
+    uint32_t phase = 0u, waiting = 0u;
+    unsigned head = 0u, complete = 0u;
+    if (!pc_read_observation(data_base + 0xB21870u, queue, sizeof(queue))
+            || !pc_read_observation((uintptr_t)context + 0x3388u, &phase, sizeof(phase))
+            || !pc_read_observation((uintptr_t)context + 0x338Cu, &waiting, sizeof(waiting))) {
+        pc_task_unavailable("original-native-scene97-queue-unavailable-v1 header-read"); return;
+    }
+    if (queue[4] > 128u || queue[3] > 65535u) {
+        pc_task_unavailable("original-native-scene97-queue-unavailable-v1 header-range"); return;
+    }
+    if (phase > 64u) phase = 65u;
+    if (waiting > 8u) waiting = 9u;
+    if (queue[4] != 0u) {
+        if (!pc_read_observation(queue[0] + (queue[3] / 256u) * 8u, &block, sizeof(block))
+                || !pc_read_observation(block + (queue[3] % 256u) * 16u, &task, sizeof(task))
+                || !pc_read_observation(task, &vtable, sizeof(vtable))) {
+            pc_task_unavailable("original-native-scene97-queue-unavailable-v1 task-read"); return;
+        }
+        head = vtable == data_base + 0xAFE100u ? 1u
+             : vtable == data_base + 0xAFE198u ? 2u
+             : vtable == data_base + 0xAFE5C8u ? 3u : 4u;
+        if (head == 2u || head == 3u) {
+            uint8_t flag = 0u;
+            if (!pc_read_observation(task + 0x10u, &flag, sizeof(flag)) || flag > 1u) return;
+            complete = flag;
+        }
+    }
+    char message[128];
+    int size = snprintf(message, sizeof(message),
+        "original-native-scene97-queue-v1 head=%u completed=%u phase=%u waiting=%u",
+        head, complete, phase, waiting);
+    if (size > 0 && (size_t)size < sizeof(message) && strcmp(previous, message) != 0) {
+        memcpy(previous, message, (size_t)size + 1u); ++emitted;
+        __android_log_write(ANDROID_LOG_INFO, WITNESS_TAG, message);
+    }
+}
+#endif
+
 static void research_draw_proxy(void *jni_env, void *jni_class) {
     /* ALWAYS forward the exact original JNI invocation before observing.
        The function has original DEX prototype static ()V (two JNI args).
@@ -579,9 +748,32 @@ static void research_draw_proxy(void *jni_env, void *jni_class) {
     if (context == NULL) {
         return;
     }
+#ifdef KNEEKURA_RESEARCH_PC_BALANCE
+    static uint32_t balance_frames;
+    if ((balance_frames++ % 120u) == 0u) {
+        uint64_t count[KNEEKURA_PC_BALANCE_COUNTERS];
+        kneekura_pc_balance_counters(count, KNEEKURA_PC_BALANCE_COUNTERS);
+        char diagnostic[384];
+        int length = snprintf(diagnostic, sizeof(diagnostic),
+            "pc-native-balance-v1 calls=%llu,%llu,%llu,%llu,%llu,%llu,%llu,%llu "
+            "castle_credit=%llu castle_zero=%llu delayed_rejected=%llu query_capacity=%llu",
+            (unsigned long long)count[0], (unsigned long long)count[1],
+            (unsigned long long)count[2], (unsigned long long)count[3],
+            (unsigned long long)count[4], (unsigned long long)count[5],
+            (unsigned long long)count[6], (unsigned long long)count[7],
+            (unsigned long long)count[8], (unsigned long long)count[9],
+            (unsigned long long)count[10], (unsigned long long)count[11]);
+        if (length > 0 && (size_t)length < sizeof(diagnostic))
+            __android_log_write(ANDROID_LOG_INFO, WITNESS_TAG, diagnostic);
+    }
+#endif
     uint32_t scene = 0u;
     memcpy(&scene, context + ORIGINAL_SCENE_RECORD_OFFSET, sizeof(scene));
     observe_original_scene97_resolver_histogram(context, scene);
+#ifdef KNEEKURA_RESEARCH_PC_JNI_SCENE_OBSERVER
+    observe_pc_scene97_task(context, scene);
+    observe_pc_scene97_queue(context, scene);
+#endif
 
     uint32_t previous = atomic_exchange_explicit(
         &gLastScene, scene, memory_order_relaxed);

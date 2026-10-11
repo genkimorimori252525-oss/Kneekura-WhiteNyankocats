@@ -12,6 +12,9 @@ import java.util.HashMap;
  * flavor-specific subclass that is injected as an additional DEX.
  */
 public class MyActivity extends Activity {
+    public void setWebViewUrl(int handle, String url, String[] cookies) {
+        throw new AssertionError("compile-only stub");
+    }
     public int newHttpRequest(
             String method,
             String requestUrl,
