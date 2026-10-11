@@ -131,15 +131,30 @@ class OriginalLocalBackupOfflineFallbackJvmTests(unittest.TestCase):
                       unknownBlocked=true;
                     }
                     System.out.println("UNKNOWN_BLOCKED="+unknownBlocked);
-                    boolean nonmatchingBackupBlocked=false;
+                    int observedTimeoutVariant=app.newHttpRequest(
+                        "GET","https://nyanko-backups.ponosgames.com/?synthetic=1",
+                        11.0f,new HashMap(),null,new String[0],false,false);
+                    System.out.println("OBSERVED_TIMEOUT_VARIANT_ID="+observedTimeoutVariant);
+                    System.out.println("FALLBACK_COUNT_AFTER_VARIANT="+
+                      jp.co.ponos.battlecats.MyActivity.nativeResponseCount);
+                    boolean nonfiniteTimeoutBlocked=false;
                     try {
                       app.newHttpRequest(
                         "GET","https://nyanko-backups.ponosgames.com/?synthetic=1",
-                        11.0f,new HashMap(),null,new String[0],false,false);
+                        Float.NaN,new HashMap(),null,new String[0],false,false);
                     } catch(IllegalStateException expected) {
-                      nonmatchingBackupBlocked=true;
+                      nonfiniteTimeoutBlocked=true;
                     }
-                    System.out.println("NONMATCH_BACKUP_BLOCKED="+nonmatchingBackupBlocked);
+                    System.out.println("NONFINITE_TIMEOUT_BLOCKED="+nonfiniteTimeoutBlocked);
+                    boolean wrongBackupPathBlocked=false;
+                    try {
+                      app.newHttpRequest(
+                        "GET","https://nyanko-backups.ponosgames.com/unapproved?synthetic=1",
+                        10.0f,new HashMap(),null,new String[0],false,false);
+                    } catch(IllegalStateException expected) {
+                      wrongBackupPathBlocked=true;
+                    }
+                    System.out.println("WRONG_BACKUP_PATH_BLOCKED="+wrongBackupPathBlocked);
                     System.out.println("ORIGINAL_SUPER_HTTP_CALLS="+
                       jp.co.ponos.battlecats.MyActivity.superCalled);
                     System.out.println("LOCAL_ONLY_NETWORK_AVAILABLE="+
@@ -176,7 +191,11 @@ class OriginalLocalBackupOfflineFallbackJvmTests(unittest.TestCase):
                 "ORIGINAL_FALLBACK_BODY={}",
                 "ORIGINAL_FALLBACK_FINAL=true",
                 "UNKNOWN_BLOCKED=true",
-                "NONMATCH_BACKUP_BLOCKED=true",
+                "OBSERVED_TIMEOUT_VARIANT_ID=2",
+                "FALLBACK_COUNT_AFTER_VARIANT=2",
+                "NONFINITE_TIMEOUT_BLOCKED=true",
+                "WRONG_BACKUP_PATH_BLOCKED=true",
+                "original-local-backup-timeout-variant-v1 completed",
                 "original-local-http-kind-v1 backup",
                 "original-local-backup-shape-v1 mask=7fd",
                 "ORIGINAL_SUPER_HTTP_CALLS=0",
