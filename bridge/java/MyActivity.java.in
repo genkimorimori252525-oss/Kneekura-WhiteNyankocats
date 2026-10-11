@@ -404,7 +404,11 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
             String[] strings,
             boolean flag1,
             boolean flag2) {
-        if (!ENABLE_BACKUP_OFFLINE_REPLAY) {
+        // The strict offline original-game research profile may reproduce
+        // ONLY the exact previously observed original backup *failure*
+        // response shape. The normal feature-OFF shipping profiles never do.
+        if (!ENABLE_BACKUP_OFFLINE_REPLAY
+                && !(LOCAL_RESEARCH_DENY_HTTP && LOCAL_RESEARCH_IMPORT_OWNER_ASSETS)) {
             return false;
         }
         if (!"GET".equals(method) || Float.compare(timeout, 10.0f) != 0) {
@@ -474,12 +478,13 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
             String[] strings,
             boolean flag1,
             boolean flag2) {
-        if (LOCAL_RESEARCH_DENY_HTTP) {
-            // Strict local-research mode cannot return to original HTTP code.
-            // This intentionally surfaces a missing local service dependency
-            // instead of reconnecting a refused SAVE or PONOS account.
-            // Diagnostic is metadata-only: never emit URL, method, headers,
-            // body, response payload, credentials or player identifiers.
+        final boolean originalBackupFailureShape = isExactBackupRequest(
+                method, requestUrl, timeout, headers, body, strings,
+                flag1, flag2);
+        if (LOCAL_RESEARCH_DENY_HTTP && !originalBackupFailureShape) {
+            // All unknown services remain strictly blocked. No invented
+            // publisher payload and no original super transport fallback.
+            // This remains a separate research package with zero INTERNET.
             debugResearch("original-local-denied-http-v1");
             if (LOCAL_RESEARCH_IMPORT_OWNER_ASSETS) {
                 debugResearch("original-local-http-kind-v1 "
@@ -488,15 +493,7 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
             throw new IllegalStateException("original local research HTTP disabled");
         }
 
-        if (!isExactBackupRequest(
-                method,
-                requestUrl,
-                timeout,
-                headers,
-                body,
-                strings,
-                flag1,
-                flag2)) {
+        if (!originalBackupFailureShape) {
             return super.newHttpRequest(
                     method,
                     requestUrl,
@@ -539,12 +536,26 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
                             true);
                 }
             });
-            debugResearch("backup-local-replay requestId=" + requestId);
+            if (LOCAL_RESEARCH_DENY_HTTP) {
+                // This is the exact offline network-failure completion from
+                // the original JP15.7.1 a32/z22 implementation: status 0,
+                // JSON {}, null body, flag true, queued on GLThread. It is
+                // NOT a successful backup server response or SAVE replay.
+                debugResearch("original-local-backup-failure-fallback-v1 completed");
+            } else {
+                debugResearch("backup-local-replay requestId=" + requestId);
+            }
             return requestId;
         } catch (Throwable ignored) {
+            if (LOCAL_RESEARCH_DENY_HTTP) {
+                // Never invoke original HTTP if local reflection/callback
+                // invariants drift. No request payload, URL or exception log.
+                debugResearch("original-local-backup-failure-fallback-v1 unavailable");
+                throw new IllegalStateException("original local backup fallback unavailable");
+            }
             debugResearch("backup-local-replay fallback-to-original");
-            // Fail closed: any unexpected reflection/runtime drift returns to
-            // the exact original JP 15.7.1 implementation.
+            // Fail closed: unexpected research replay drift returns to the
+            // exact original JP 15.7.1 implementation only outside local mode.
             return super.newHttpRequest(
                     method,
                     requestUrl,
