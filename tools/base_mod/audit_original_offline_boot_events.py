@@ -48,6 +48,10 @@ def summarize_runtime_events(source: str) -> dict:
             counts["native_hook_installed"] += 1
         elif msg == "original-local-denied-http-v1":
             counts["denied_http"] += 1
+        elif msg == "original-local-backup-failure-fallback-v1 completed":
+            counts["backup_original_failure_response_completed"] += 1
+        elif msg == "original-local-backup-failure-fallback-v1 unavailable":
+            counts["backup_original_failure_response_unavailable"] += 1
         elif msg.startswith("original-local-import-v1 "):
             status = msg[len("original-local-import-v1 "):]
             if status in IMPORT_ALLOWED:
@@ -100,6 +104,11 @@ def summarize_runtime_events(source: str) -> dict:
         "original_native_scene_ids_observed": scenes[:20],
         "last_original_loose_tsv_presence": last_loose,
         "denied_http_requests_observed": counts["denied_http"],
+        "exact_backup_original_network_failure_callbacks_completed": (
+            counts["backup_original_failure_response_completed"]),
+        "exact_backup_original_network_failure_callbacks_unavailable": (
+            counts["backup_original_failure_response_unavailable"]),
+        "actual_publisher_backup_server_success_claimed": False,
         "safe_denied_http_category_counts": dict(sorted(kinds.items())),
         "original_scene97_completed_successfully_proven": False,
         "original_615mb_gate_bypassed_proven": False,
