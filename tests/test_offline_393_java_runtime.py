@@ -84,7 +84,9 @@ class OriginalOfflineImporterJvmTests(unittest.TestCase):
                                 new MyActivity(),root);
                             File mark = new File(root,
                                 ".kneekura-original-jp1571-393-import-complete-v1");
-                            for(int i=0;i<70 && !mark.isFile();i++){
+                            int maxPolls = Integer.parseInt(
+                                System.getProperty("kn.wait.retries","70"));
+                            for(int i=0;i<maxPolls && !mark.isFile();i++){
                                 Thread.sleep(100);
                             }
                             Thread.sleep(200);
@@ -105,12 +107,13 @@ class OriginalOfflineImporterJvmTests(unittest.TestCase):
                 capture_output=True,text=True,errors="replace",timeout=45)
             self.assertEqual(c.returncode,0,c.stderr)
 
-            def run() -> str:
+            def run(*, wait_retries: int = 70) -> str:
                 env=dict(os.environ)
                 r=subprocess.run(
                     [java,"-cp",str(build),"-Dkn.external="+str(stage.parent),
-                     "-Dkn.internal="+str(internal),PKG+".Harness"],
-                    capture_output=True,text=True,errors="replace",timeout=40,env=env)
+                     "-Dkn.internal="+str(internal),
+                     "-Dkn.wait.retries="+str(wait_retries),PKG+".Harness"],
+                    capture_output=True,text=True,errors="replace",timeout=65,env=env)
                 self.assertEqual(r.returncode,0,r.stderr)
                 return r.stdout
 
@@ -121,7 +124,10 @@ class OriginalOfflineImporterJvmTests(unittest.TestCase):
             self.assertEqual(existing_save.read_bytes(),b"SYNTHETIC_UNTOUCHED_SAVE")
             # Complete staged source permits all pinned assets, not SAVE.
             (stage/"S000Server.list").write_bytes(assets["S000Server.list"])
-            accepted=run()
+            # 393 source and destination MD5 scans plus fsync/rename can
+            # exceed the default 7s on loaded owner Windows/Defender.
+            # The FAILED-stage phase still uses its original bounded 7s.
+            accepted=run(wait_retries=300)
             self.assertIn("MARKER=true",accepted)
             self.assertIn("original-local-import-v1 completed-393",accepted)
             self.assertTrue(all((internal/name).read_bytes()==value
