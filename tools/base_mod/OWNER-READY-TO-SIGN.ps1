@@ -74,7 +74,11 @@ $previousBase = Require-One @(
     Get-ChildItem -LiteralPath $private -Recurse -File -Filter 'base.apk' |
         Where-Object {
             $_.FullName -notlike '*\unsigned-original-native-pair-*' -and
-            $_.FullName -notlike '*\passive-arm64-public-*'
+            $_.FullName -notlike '*\passive-arm64-public-*' -and
+            # A failed rebuild leaves .static-http-work/original-splits,
+            # bootstrap/bridge intermediates and sometimes a partial APK.
+            # None is a trustworthy previously INSTALLED signed baseline.
+            $_.FullName -notmatch '[\\/]official-shadowhook-pair-passive-[^\\/]+[\\/]'
         }
 ) 'previously signed local research base.apk'
 $sdk = Join-Path $env:LOCALAPPDATA 'Android\Sdk'
