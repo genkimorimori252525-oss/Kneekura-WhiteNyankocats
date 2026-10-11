@@ -1,0 +1,137 @@
+name: Public-only original-game local research toolchain
+on:
+  push:
+    branches:
+      - "jolly/**"
+    paths:
+      - ".github/workflows/owner-local-original-research-toolchain.yml"
+      - "tools/base_mod/original_scene_native_image_gate.py"
+      - "tools/base_mod/build_owned_static_http_bridge.py"
+      - "tools/base_mod/verify_static_http_bridge.py"
+      - "tools/base_mod/prepare_original_scene_witness.py"
+      - "tools/base_mod/build_owned_static_http_bridge.py"
+      - "native/kneekura-shim/src/kneekura_original_scene_witness.c"
+      - "bridge/java/MyActivity.java.in"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prepare-public-tools:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Install public Android SDK build-only tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"             "platforms;android-35" "build-tools;35.0.0"
+          test -f "$ANDROID_HOME/platforms/android-35/android.jar"
+          test -f "$ANDROID_HOME/build-tools/35.0.0/lib/d8.jar"
+          test -f "$ANDROID_HOME/build-tools/35.0.0/lib/apksigner.jar"
+      - name: Compile opt-in ORIGINAL Java root attestation bridge with real Android D8
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import os, hashlib, json, shutil, tempfile
+          from tools.base_mod.inject_java_http_bridge import build_bridge_dex
+          with tempfile.TemporaryDirectory(prefix="kn-real-android-virgin-trial-d8-") as root:
+              path=Path(root)/"classes5.dex"
+              r=build_bridge_dex(
+                  flavor="local-research", enabled=False,
+                  virgin_save_trial=True, output=path,
+                  javac=shutil.which("javac"),
+                  d8=os.environ["ANDROID_HOME"]+"/build-tools/35.0.0/d8",
+                  android_jar=os.environ["ANDROID_HOME"]+"/platforms/android-35/android.jar",
+              )
+              assert path.read_bytes()[:4] == bytes((100, 101, 120, 10))
+              assert r["explicit_native_virgin_save_trial"] is True
+              assert r["original_virgin_save_trial_device_acceptance"] is False
+              print(json.dumps({
+                  "public_research_source_only_java_virgin_trial_compiled": True,
+                  "compiled_classes5_dex_SHA256": hashlib.sha256(path.read_bytes()).hexdigest(),
+                  "original_game_or_SAVE_used":False,
+                  "original_device_first_SAVE_or_Lv60":False,
+              },sort_keys=True))
+          PY
+      - name: Stage ONLY public Android tools and repository research source
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT=build/owner-local-original-research-toolchain
+          SDK="$OUT/sdk"
+          mkdir -p "$SDK/build-tools/35.0.0" "$SDK/platforms/android-35" "$OUT/tools"
+          cp "$ANDROID_HOME/platforms/android-35/android.jar" "$SDK/platforms/android-35/android.jar"
+          cp "$ANDROID_HOME/build-tools/35.0.0/d8" "$SDK/build-tools/35.0.0/d8"
+          cp "$ANDROID_HOME/build-tools/35.0.0/apksigner" "$SDK/build-tools/35.0.0/apksigner"
+          cp "$ANDROID_HOME/build-tools/35.0.0/zipalign" "$SDK/build-tools/35.0.0/zipalign"
+          cp -R "$ANDROID_HOME/build-tools/35.0.0/lib" "$SDK/build-tools/35.0.0/lib"
+          # zipalign links against the SDK's libc++.so on Ubuntu. It is not
+          # bundled with a plain Android platform or d8/apksigner jars.
+          mkdir -p "$SDK/build-tools/35.0.0/lib64"
+          cp "$ANDROID_HOME/build-tools/35.0.0/lib64/libc++.so"              "$SDK/build-tools/35.0.0/lib64/libc++.so"
+          test -s "$SDK/build-tools/35.0.0/lib64/libc++.so"
+          cp -R tools/base_mod "$OUT/tools/base_mod"
+          cp tools/__init__.py "$OUT/tools/__init__.py"
+          cp -R bridge "$OUT/bridge"
+          cp requirements-patching.txt "$OUT/requirements-patching.txt"
+          test ! -d "$OUT/private"
+          test ! -d "$OUT/apk"
+          for target in "$SDK/build-tools/35.0.0/d8"                         "$SDK/build-tools/35.0.0/zipalign"                         "$SDK/build-tools/35.0.0/apksigner"; do
+            test -x "$target"
+          done
+          # zipalign -h may return 255 even when functional; copy and hash
+          # it here and verify its actual alignment functionality privately.
+          echo "Public-only executable tools staged"
+          cat > "$OUT/README-TOOLCHAIN-ONLY.txt" <<'EOF'
+          PUBLIC TOOLCHAIN ONLY. No original game, APK, SAVE, signing key or player bytes.
+          Original JP15.7.1 is NEVER uploaded to this workflow.
+          The user-owned ZIP must only be processed locally and privately.
+          This is NOT a finished, validated or playable Battle Cats APK.
+          EOF
+          python - <<'PY'
+          from pathlib import Path
+          from hashlib import sha256
+          import json
+          out=Path('build/owner-local-original-research-toolchain')
+          items={}
+          for p in sorted(out.rglob('*')):
+              if p.is_file():
+                  items[p.relative_to(out).as_posix()]={
+                      'bytes':p.stat().st_size,
+                      'sha256':sha256(p.read_bytes()).hexdigest()
+                  }
+          assert 'sdk/platforms/android-35/android.jar' in items
+          assert 'sdk/build-tools/35.0.0/lib/d8.jar' in items
+          assert not any('apk/' in s or 'SAVE_DATA' in s for s in items)
+          report={
+              'schema':'kneekura-public-build-toolchain-v1',
+              'original_game_or_SAVE_present':False,
+              'actual_owner_original_6_split_build_run':False,
+              'ready_to_install_or_ship':False,
+              'platform':'linux-amd64',
+              'sdk_build_tools':'35.0.0',
+              'files':items
+          }
+          (out/'PUBLIC_ONLY_MANIFEST.json').write_text(
+              json.dumps(report,sort_keys=True,indent=2)+'\n',encoding='utf-8'
+          )
+          print('PUBLIC ONLY files:',len(items),
+                'total bytes:',sum(x['bytes'] for x in items.values()))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kneekura-public-android-build-tools-and-repo-research-source-ONLY
+          path: build/owner-local-original-research-toolchain/
+          if-no-files-found: error
+          retention-days: 2

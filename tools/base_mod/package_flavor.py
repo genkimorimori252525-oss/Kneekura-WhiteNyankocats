@@ -32,6 +32,7 @@ FLAVOR_PACKAGES = {
     "personal": "jp.kn.white.battlecats",
     "practice": "jp.kn.clean.battlecats",
     "research": "jp.kn.trace.battlecats",
+    "local-research": "jp.kn.local.battlecats",  # original engine, virgin Android sandbox
 }
 
 _BASE_SUFFIXES = (

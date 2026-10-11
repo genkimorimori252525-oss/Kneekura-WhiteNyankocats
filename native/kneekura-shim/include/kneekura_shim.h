@@ -18,6 +18,7 @@ extern "C" {
 #define KNEEKURA_FEATURE_SUPER_GACHA (1ull << 4)
 #define KNEEKURA_FEATURE_LOGIN_BONUS (1ull << 5)
 #define KNEEKURA_FEATURE_STAGE_CATFOOD (1ull << 6)
+#define KNEEKURA_FEATURE_BATTLE101 (1ull << 7) /* default OFF; no native hook */
 
 #define KNEEKURA_PROVIDER_ABI_VERSION 1u
 #define KNEEKURA_GACHA_KIND_SUPER 1u

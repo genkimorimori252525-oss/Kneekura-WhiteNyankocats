@@ -1,0 +1,64 @@
+{
+  "schema_version": 2,
+  "bootstrap_id": "kneekura:story:post-itf1-superior",
+  "authority": "kneekura-independent-local-only",
+  "policy": "only-once-additive-on-existing-independent-story",
+  "chapter_index_system": "public-one-based; JP15.7.1 main story indices eoc=0..2, itf1=4; historical index3 reserved",
+  "stage_count_per_complete_chapter": 48,
+  "superior_treasure_rank": 3,
+  "chapters": [
+    {
+      "id": "eoc1",
+      "campaign": "eoc",
+      "chapter": 1,
+      "original_jp_chapter_index": 0,
+      "progress": 48,
+      "stage_clear_count_min": 1,
+      "treasure_rank_min": 3
+    },
+    {
+      "id": "eoc2",
+      "campaign": "eoc",
+      "chapter": 2,
+      "original_jp_chapter_index": 1,
+      "progress": 48,
+      "stage_clear_count_min": 1,
+      "treasure_rank_min": 3
+    },
+    {
+      "id": "eoc3",
+      "campaign": "eoc",
+      "chapter": 3,
+      "original_jp_chapter_index": 2,
+      "progress": 48,
+      "stage_clear_count_min": 1,
+      "treasure_rank_min": 3
+    },
+    {
+      "id": "itf1",
+      "campaign": "itf",
+      "chapter": 1,
+      "original_jp_chapter_index": 4,
+      "progress": 48,
+      "stage_clear_count_min": 1,
+      "treasure_rank_min": 3
+    }
+  ],
+  "other_story_chapters_initially_uncleared": [
+    "itf2",
+    "itf3",
+    "cotc1",
+    "cotc2",
+    "cotc3",
+    "sol"
+  ],
+  "safety": {
+    "modifies_original_ponos_save": false,
+    "affects_stage_rewards": false,
+    "affects_gacha_ownership": false,
+    "erases_existing_progress": false,
+    "changes_treasure_on_other_chapters": false,
+    "affects_stage_availability": false
+  },
+  "status": "APPROVED_INITIAL_STATE_NOT_ORIGINAL_SAVE_IMPORT"
+}

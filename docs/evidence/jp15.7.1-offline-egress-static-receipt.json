@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "anchor": "JP15.7.1",
+  "verification_date": "2026-10-09",
+  "owner_export_sha256": "38c3bbb8d2cf2101793c9462617d4293e19fc99588b6655fd40299fd61a0ef56",
+  "base_apk_sha256": "60e5e9df891b7be487abc4590fb3ca2e98218225efedbe4ba26b39dc10ce5c9a",
+  "android_manifest_sha256": "21d93803f3a3d439088ee0f3e7430cc01ed90fc3b2f1c318c536d12c436b45de",
+  "inspection_method": "Read-only ZIP extraction + AXML start-element/attributes parser (not mere strings)",
+  "permissions_actual": [
+    "android.permission.INTERNET",
+    "android.permission.ACCESS_NETWORK_STATE",
+    "android.permission.ACCESS_WIFI_STATE",
+    "com.android.vending.BILLING",
+    "com.google.android.gms.permission.AD_ID"
+  ],
+  "sdk_components_present": [
+    {
+      "type": "provider",
+      "name": "com.google.firebase.provider.FirebaseInitProvider"
+    },
+    {
+      "type": "provider",
+      "name": "com.adjust.sdk.SystemLifecycleContentProvider"
+    },
+    {
+      "type": "provider",
+      "name": "com.applovin.sdk.AppLovinInitProvider"
+    },
+    {
+      "type": "provider",
+      "name": "com.google.android.gms.ads.MobileAdsInitProvider"
+    },
+    {
+      "type": "provider",
+      "name": "com.facebook.ads.AudienceNetworkContentProvider"
+    },
+    {
+      "type": "provider",
+      "name": "com.ironsource.lifecycle.IronsourceLifecycleProvider"
+    },
+    {
+      "type": "service",
+      "name": "com.google.android.gms.measurement.AppMeasurementService"
+    },
+    {
+      "type": "service",
+      "name": "com.google.android.datatransport.runtime.backends.TransportBackendDiscovery"
+    }
+  ],
+  "installed_bridge_source": "bridge/java/MyActivity.java.in",
+  "source_behavior": "Any non-matching request and replay exception -> super.newHttpRequest(...) original online transport",
+  "offline_guarantee": "NOT_PROVEN",
+  "network_packets_captured": false,
+  "actual_server_transfer_confirmed": null,
+  "invalid_save_dialog_source_confirmed": null,
+  "limitations": [
+    "Original APK static capability, not affected-session traffic log or server decision evidence",
+    "SDK declaration does not prove SDK actually initialized or transmitted",
+    "The available owner archive does not show last device installed split versions, installed signature or runtime network traces",
+    "No original-game save data was read or uploaded for this audit"
+  ]
+}

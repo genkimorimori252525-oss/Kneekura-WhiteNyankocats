@@ -19,6 +19,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+import uuid
 import zipfile
 
 
@@ -125,14 +126,50 @@ def find_android_tool(name: str, explicit: str | None = None) -> str:
     return str(sorted(candidates)[-1])
 
 
-def _run(command: list[str]) -> subprocess.CompletedProcess[str]:
+def _run(
+    command: list[str], *, environment: dict[str, str] | None = None,
+) -> subprocess.CompletedProcess[str]:
+    """Launch child tools without recording secrets in the argv/exception."""
     return subprocess.run(
         command,
         check=True,
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
+        env=environment,
     )
+
+
+def _classify_signer_failure(raw_tool_output: str | None) -> str:
+    """Map raw (possibly identifying) Java/apksigner errors to fixed codes.
+
+    Never propagate the original exception, tool stdout/stderr, alias,
+    keystore path, password or certificate fingerprint into public receipts
+    or the owner's shareable console transcript.
+    """
+    message = (raw_tool_output or "").lower()
+    if ("alias" in message or "key entry" in message) and (
+        "does not exist" in message or "not found" in message
+        or "not contain" in message or "no key" in message
+    ):
+        return "EXISTING_RESEARCH_KEY_ALIAS_NOT_FOUND"
+    if "password" in message and (
+        "keystore" in message or "store" in message
+    ) and any(token in message for token in (
+        "incorrect", "invalid", "failed", "wrong", "tampered",
+    )):
+        return "EXISTING_RESEARCH_KEYSTORE_PASSWORD_REJECTED"
+    if any(token in message for token in (
+        "unrecoverablekeyexception", "cannot recover key",
+        "failed to load private key", "key password was incorrect",
+    )):
+        return "EXISTING_RESEARCH_PRIVATE_KEY_PASSWORD_OR_ENTRY_REJECTED"
+    if "keystore" in message and (
+        "not found" in message or "no such file" in message
+        or "could not find" in message
+    ):
+        return "EXISTING_RESEARCH_KEYSTORE_FILE_NOT_FOUND"
+    return "RESEARCH_APKSIGNER_FAILED_WITH_UNCLASSIFIED_TOOL_ERROR"
 
 
 def _cert_digest(apksigner: str, apk: Path) -> str:
@@ -182,6 +219,21 @@ def baseline_resign(
     ledger_splits: list[dict] = []
     signer_digests: set[str] = set()
 
+    # The Android SDK apksigner officially supports --ks-pass env:<VAR>.
+    # Putting pass:<secret> in argv exposes the owner's key password in OS
+    # process listings and Python CalledProcessError.cmd. Use private,
+    # per-run child environment values instead. No password goes to Git/JSON.
+    if not isinstance(storepass, str) or not storepass:
+        raise ValueError("nonempty private signing password required")
+    if keypass is not None and (not isinstance(keypass, str) or not keypass):
+        raise ValueError("nonempty private signing key password required")
+    env_store_name = "KNEEKURA_APKSIGN_STORE_" + uuid.uuid4().hex.upper()
+    env_key_name = "KNEEKURA_APKSIGN_KEY_" + uuid.uuid4().hex.upper()
+    signer_env = os.environ.copy()
+    signer_env[env_store_name] = storepass
+    if keypass is not None:
+        signer_env[env_key_name] = keypass
+
     with tempfile.TemporaryDirectory(prefix="kneekura-baseline-") as temp_name:
         temp = Path(temp_name)
         for source in sources:
@@ -200,7 +252,7 @@ def baseline_resign(
                 "--ks-key-alias",
                 alias,
                 "--ks-pass",
-                f"pass:{storepass}",
+                f"env:{env_store_name}",
                 "--v1-signing-enabled",
                 "true",
                 "--v2-signing-enabled",
@@ -211,9 +263,18 @@ def baseline_resign(
                 str(target),
             ]
             if keypass is not None:
-                sign_command.extend(["--key-pass", f"pass:{keypass}"])
+                sign_command.extend(["--key-pass", f"env:{env_key_name}"])
             sign_command.append(str(aligned))
-            _run(sign_command)
+            try:
+                _run(sign_command, environment=signer_env)
+            except subprocess.CalledProcessError as exc:
+                # CalledProcessError contains owner file paths and alias.
+                # Never let its original __str__ escape into the console.
+                failure = _classify_signer_failure(exc.stdout)
+                raise RuntimeError(
+                    "RESEARCH_SIGNING_BLOCKED: " + failure
+                    + " (existing signer not changed; no device action)"
+                ) from None
 
             _run([apksigner_bin, "verify", "--verbose", str(target)])
             signer = _cert_digest(apksigner_bin, target)

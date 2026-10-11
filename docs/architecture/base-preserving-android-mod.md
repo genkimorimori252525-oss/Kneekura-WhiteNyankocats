@@ -1,5 +1,8 @@
 # Kneekura WhiteNyankocats — Base-Preserving Android Mod Design
 
+> **2026-10-09 OWNER DECISION (product requirement; supersedes reclassification language):** The owner wants the **real Battle Cats game experience**, not a Battle Cats-like clone. Original JP15.7.1 base preservation remains the default research target wherever full offline isolation can be proven. If the original engine cannot be isolated safely, a separate engine is allowed only as a **compatibility research path**; it must achieve verified original UI/battle/animation/contents/gacha/progression parity and owner approval before it could qualify as the requested product. The standalone Java Stage Fidelity Alpha is NOT the product. Strict zero egress + source fidelity are both compulsory. [PRODUCT_IDENTITY.md](../../PRODUCT_IDENTITY.md), [release criteria](product-identity-gates.json).
+
+
 Status: proposed current architecture after the 2026-10-06 direction correction.
 
 Target anchor: JP 15.7.1, exact verified user-owned APK/export.

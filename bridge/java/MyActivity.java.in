@@ -1,8 +1,10 @@
 package __KNEEKURA_PACKAGE__;
 
 import android.opengl.GLSurfaceView;
+import android.os.FileObserver;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.net.URL;
@@ -22,6 +24,45 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
     private static final boolean ENABLE_BACKUP_OFFLINE_REPLAY = __KNEEKURA_ENABLE_BACKUP_REPLAY__;
     private static final boolean DEBUG_RESEARCH_LOG = __KNEEKURA_DEBUG_LOG__;
     private static final boolean USE_EXTERNAL_FILES_DIR = __KNEEKURA_USE_EXTERNAL_FILES_DIR__;
+    // Research-only: redirect ORIGINAL native getFilesDir() consumers to a
+    // fresh, app-private versioned root. This is not an independent SAVE schema
+    // or proof that original game boot/level-up works without remote services.
+    private static final boolean ISOLATE_ORIGINAL_NATIVE_FILES_DIR =
+            __KNEEKURA_ISOLATE_ORIGINAL_NATIVE_FILES_DIR__;
+    private static final String ORIGINAL_NATIVE_FILES_LEAF = "kneekura-native-jp15-7-1";
+    // A DIFFERENT Android package has its own internal files directory.
+    // This exact-version local-research flavor is intentionally distinct
+    // from both PONOS and older jp.kn.trace.battlecats installations.
+    // It keeps the ORIGINAL native file root (no child redirection) to avoid
+    // hiding the game's non-SAVE_DATA assets. This gate is NOT a new save
+    // schema and does NOT yet certify original-game first-run compatibility.
+    private static final boolean LOCAL_RESEARCH_FRESH_ROOT =
+            __KNEEKURA_LOCAL_RESEARCH_FRESH_ROOT__;
+    private static final boolean LOCAL_RESEARCH_DENY_HTTP =
+            __KNEEKURA_LOCAL_RESEARCH_DENY_HTTP__;
+    private static final boolean LOCAL_RESEARCH_IMPORT_OWNER_ASSETS =
+            __KNEEKURA_OFFLINE_IMPORT_ENABLED__;
+    // Extra explicit opt-in, absent from default and passive research builds.
+    private static final boolean RESEARCH_VIRGIN_SAVE_TRIAL =
+            __KNEEKURA_RESEARCH_VIRGIN_SAVE_TRIAL__;
+    private static native boolean kneekuraAttestVirginRoot(String canonicalRoot);
+    private static boolean virginMarkerCreatedInThisProcess;
+    private static boolean virginNativeRootAttested;
+    private static final String LOCAL_RESEARCH_MARKER = ".kneekura-virgin-local-jp15-7-1";
+    private static final String[] FORBIDDEN_PREEXISTING_SAVES = {
+            "SAVE_DATA", "SAVE_DATA4", "SAVE_DATA8"
+    };
+
+
+    // Debug-only metadata: no SAVE_DATA bytes or account identifiers are read.
+    // Used solely to witness whether the ORIGINAL native host created a new
+    // local SAVE file between getFilesDir calls/restarts.
+    private static volatile String lastLocalSavePresence;
+    // Only local-research: retain a FileObserver so changes made by the
+    // ORIGINAL native writer can be noticed after getFilesDir has returned.
+    // Initial snapshots alone cannot observe a late SAVE_DATA creation.
+    private static volatile FileObserver originalLocalSaveObserver;
+    private static volatile String originalLocalSaveObserverRoot;
 
     private static final String BACKUP_SCHEME = "https";
     private static final String BACKUP_HOST = "nyanko-backups.ponosgames.com";
@@ -67,8 +108,333 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
         }
     }
 
+    /**
+     * Existing JP15.7.1 native code references Activity.getFilesDir().
+     * Only research builds explicitly requesting the local-source seam use
+     * this isolated folder. Fail CLOSED instead of falling back to the
+     * original PONOS file root if this folder is unavailable/unsafe.
+     *
+     * IMPORTANT: the original native app may expect additional local assets
+     * under getFilesDir. This method alone neither seeds a fresh gameplay
+     * state nor implements a network-free game or independent player authority.
+     */
+    private static void probeLocalGameSaveFiles(File root) {
+        if (!LOCAL_RESEARCH_FRESH_ROOT || !DEBUG_RESEARCH_LOG) {
+            return;
+        }
+        // File metadata only. No original save content, inquiry code, token,
+        // resource/account data or absolute filesystem path is recorded.
+        StringBuilder status = new StringBuilder("original-save-presence-v1");
+        try {
+            String trusted = root.getCanonicalPath() + File.separator;
+            for (String filename : FORBIDDEN_PREEXISTING_SAVES) {
+                File candidate = new File(root, filename);
+                if (!candidate.getCanonicalPath().startsWith(trusted)) {
+                    status.append(" ").append(filename).append("=unsafe");
+                } else if (candidate.isFile()) {
+                    status.append(" ").append(filename).append("=present:");
+                    status.append(candidate.length());
+                } else {
+                    status.append(" ").append(filename).append("=absent");
+                }
+            }
+        } catch (IOException error) {
+            // Never inspect or export a path if canonical containment failed.
+            status = new StringBuilder("original-save-presence-v1 unavailable");
+        }
+        String snapshot = status.toString();
+        synchronized (MyActivity.class) {
+            if (!snapshot.equals(lastLocalSavePresence)) {
+                lastLocalSavePresence = snapshot;
+                debugResearch(snapshot);
+            }
+        }
+    }
+
+    // Once per process: metadata-only diagnosis of the ORIGINAL native
+    // DownloadBatchTask's 35 "download_%d.tsv" candidates. The native
+    // 0x320be0 resolver also checks its own source index; a bare file here
+    // is NOT proof the original engine accepts or even requests it.
+    private static boolean localDownloadTsvProbeCompleted;
+
+    private static void probeLocalDownloadBatchTsvFiles(File root) {
+        if (!LOCAL_RESEARCH_FRESH_ROOT || !DEBUG_RESEARCH_LOG) {
+            return;
+        }
+        synchronized (MyActivity.class) {
+            if (localDownloadTsvProbeCompleted) {
+                return;
+            }
+            int present = 0;
+            int absent = 0;
+            int unsafe = 0;
+            try {
+                String trusted = root.getCanonicalPath() + File.separator;
+                for (int index = 0; index < 35; index++) {
+                    File candidate = new File(root, "download_" + index + ".tsv");
+                    if (!candidate.getCanonicalPath().startsWith(trusted)) {
+                        unsafe++;
+                    } else if (candidate.isFile()) {
+                        present++;
+                    } else {
+                        absent++;
+                    }
+                }
+                debugResearch("original-download-tsv-loose-v1 present=" + present
+                        + " absent=" + absent + " unsafe=" + unsafe);
+            } catch (IOException error) {
+                debugResearch("original-download-tsv-loose-v1 unavailable");
+            }
+            // Logging source-file presence once on first getFilesDir() keeps
+            // the original frame/render loop free of repeated disk scans.
+            localDownloadTsvProbeCompleted = true;
+        }
+    }
+
+
+    private static void watchOriginalLocalSaveChanges(final File root) {
+        if (!LOCAL_RESEARCH_FRESH_ROOT || !DEBUG_RESEARCH_LOG) {
+            return;
+        }
+        synchronized (MyActivity.class) {
+            try {
+                final String canonicalRoot = root.getCanonicalPath();
+                if (originalLocalSaveObserver != null) {
+                    if (!canonicalRoot.equals(originalLocalSaveObserverRoot)) {
+                        throw new IllegalStateException(
+                                "research original files root changed during observation");
+                    }
+                    return;
+                }
+                FileObserver watcher = new FileObserver(
+                        canonicalRoot,
+                        FileObserver.CREATE | FileObserver.CLOSE_WRITE
+                                | FileObserver.MOVED_TO | FileObserver.DELETE
+                ) {
+                    @Override
+                    public void onEvent(int event, String filename) {
+                        if (filename == null || filename.contains("/")
+                                || filename.contains("\\")) {
+                            return;
+                        }
+                        boolean tracked = false;
+                        for (String known : FORBIDDEN_PREEXISTING_SAVES) {
+                            if (known.equals(filename)) {
+                                tracked = true;
+                                break;
+                            }
+                        }
+                        if (tracked) {
+                            // Re-use the existing metadata-only canonical
+                            // containment probe. Never inspect SAVE contents.
+                            probeLocalGameSaveFiles(root);
+                        }
+                    }
+                };
+                watcher.startWatching();
+                originalLocalSaveObserver = watcher;
+                originalLocalSaveObserverRoot = canonicalRoot;
+                debugResearch("original-save-event-observer-v1 active");
+            } catch (IOException | SecurityException error) {
+                // Research diagnostics must not corrupt the native game's
+                // SAVE or convert an unavailable watcher into a fake PASS.
+                debugResearch("original-save-event-observer-v1 unavailable");
+            }
+        }
+    }
+
+    // Dedicated original-research-only OS file-event witness. It observes
+    // access events to the isolated research app's owned root, and emits ONLY
+    // bounded filename CLASSES once per process. It never opens or reads any
+    // asset, SAVE, URL, account data or shared publisher app folder.
+    private static volatile FileObserver originalAssetAccessObserver;
+    private static volatile String originalAssetAccessObserverRoot;
+    private static final java.util.concurrent.atomic.AtomicInteger
+            originalAssetAccessKindsSeen = new java.util.concurrent.atomic.AtomicInteger(0);
+
+    private static void observeOriginalAssetFileAccess(File root) {
+        if (!LOCAL_RESEARCH_FRESH_ROOT || !LOCAL_RESEARCH_IMPORT_OWNER_ASSETS
+                || !DEBUG_RESEARCH_LOG) {
+            return;
+        }
+        synchronized (MyActivity.class) {
+            try {
+                final String canonical = root.getCanonicalPath();
+                if (originalAssetAccessObserver != null
+                        && canonical.equals(originalAssetAccessObserverRoot)) {
+                    return;
+                }
+                FileObserver watcher = new FileObserver(
+                        canonical, FileObserver.OPEN | FileObserver.ACCESS) {
+                    @Override
+                    public void onEvent(int event, String filename) {
+                        if (filename == null || filename.contains("/")
+                                || filename.contains("\\")
+                                || (event & (FileObserver.OPEN | FileObserver.ACCESS)) == 0) {
+                            return;
+                        }
+                        int bit = 0;
+                        String kind = null;
+                        if (filename.matches(
+                                "download_(?:[0-9]|[12][0-9]|3[0-4])\\.tsv")) {
+                            bit = 1;
+                            kind = "download-tsv";
+                        } else if (filename.matches(
+                                "[A-Za-z][A-Za-z0-9_]*Server\\.list")) {
+                            bit = 2;
+                            kind = "server-list";
+                        } else if (filename.matches(
+                                "[A-Za-z][A-Za-z0-9_]*Server\\.pack")) {
+                            bit = 4;
+                            kind = "server-pack";
+                        } else if (filename.matches("[A-Za-z0-9_-]+\\.(ogg|caf)")) {
+                            bit = 8;
+                            kind = "media";
+                        }
+                        if (bit != 0) {
+                            final int matchedBit = bit;
+                            int previous = originalAssetAccessKindsSeen.getAndUpdate(
+                                    value -> value | matchedBit);
+                            if ((previous & matchedBit) == 0) {
+                                debugResearch("original-local-file-access-v1 " + kind);
+                            }
+                        }
+                    }
+                };
+                watcher.startWatching();
+                originalAssetAccessObserver = watcher;
+                originalAssetAccessObserverRoot = canonical;
+                debugResearch("original-local-file-access-v1 watching");
+            } catch (IOException | SecurityException unavailable) {
+                debugResearch("original-local-file-access-v1 unavailable");
+            }
+        }
+    }
+
+    private File newLocalOriginalGameRoot() {
+        // The local-research PACKAGE ALREADY has its own Android app-data root.
+        // Its first observed use must not silently reuse a previous experiment's
+        // SAVE_DATA. The marker records local-origin only; it is NOT an account,
+        // a game-save serializer, an authentication secret, or a format upgrade.
+        if (USE_EXTERNAL_FILES_DIR || ISOLATE_ORIGINAL_NATIVE_FILES_DIR) {
+            throw new IllegalStateException("conflicting original local research file modes");
+        }
+        synchronized (MyActivity.class) {
+            File root = super.getFilesDir();
+            if (root == null || !root.isDirectory()) {
+                throw new IllegalStateException("original local research private files unavailable");
+            }
+            File marker = new File(root, LOCAL_RESEARCH_MARKER);
+            try {
+                String exactMarkerPath = new File(
+                        root.getCanonicalPath(), LOCAL_RESEARCH_MARKER
+                ).getPath();
+                if (marker.exists()) {
+                    // Reject a symlink or replacement marker with foreign content.
+                    if (!marker.getCanonicalPath().equals(exactMarkerPath)
+                            || !marker.isFile() || marker.length() != 0L) {
+                        throw new IllegalStateException("untrusted local research origin marker");
+                    }
+                } else {
+                    for (String filename : FORBIDDEN_PREEXISTING_SAVES) {
+                        if (new File(root, filename).exists()) {
+                            throw new IllegalStateException("unowned prior SAVE_DATA in local research package");
+                        }
+                    }
+                    if (!marker.createNewFile()) {
+                        throw new IllegalStateException("local research origin marker creation failed");
+                    }
+                    // A marker from an earlier process must NEVER authorize
+                    // first-SAVE creation, even if the expected files are absent.
+                    virginMarkerCreatedInThisProcess = true;
+                }
+                // Canonical path check AFTER creation catches symlink relocation.
+                if (!marker.getCanonicalPath().equals(exactMarkerPath)
+                        || !marker.isFile() || marker.length() != 0L) {
+                    throw new IllegalStateException("local research origin marker changed");
+                }
+            } catch (IOException error) {
+                throw new IllegalStateException("original local research origin root unavailable", error);
+            }
+            if (RESEARCH_VIRGIN_SAVE_TRIAL
+                    && virginMarkerCreatedInThisProcess
+                    && !virginNativeRootAttested) {
+                // The native side also verifies the exact original source,
+                // hooks, no prior SAVE files, root UID and empty marker.
+                try {
+                    System.loadLibrary("kneekura");
+                    if (kneekuraAttestVirginRoot(root.getCanonicalPath())) {
+                        virginNativeRootAttested = true;
+                        debugResearch("original-virgin-root-attested-v1");
+                    }
+                } catch (UnsatisfiedLinkError | IOException unavailable) {
+                    // Original ELF hooks can be absent this early in startup.
+                    // No writer is authorized until native attestation succeeds.
+                    debugResearch("original-virgin-root-not-ready-v1");
+                }
+            }
+            probeLocalGameSaveFiles(root);
+            watchOriginalLocalSaveChanges(root);
+            probeLocalDownloadBatchTsvFiles(root);
+            observeOriginalAssetFileAccess(root);
+            // Research-only, feature OFF by default. The importer works only
+            // from THIS isolated package's ADB-staged external files root,
+            // verifying all source-pinned game assets before any internal copy.
+            // Never block the native JNI/render thread on 668 MB of I/O.
+            if (LOCAL_RESEARCH_IMPORT_OWNER_ASSETS) {
+                try {
+                    // Original Activity compiles independently in research
+                    // fixture runners. Reflective opt-in is enabled only in
+                    // exact owner asset importer builds, where the secondary
+                    // Java class is compiled into the same classes5.dex.
+                    Class<?> importer = Class.forName(
+                            "__KNEEKURA_PACKAGE__.KneekuraOfflineAssetImporter");
+                    java.lang.reflect.Method schedule = importer.getDeclaredMethod(
+                            "schedule", MyActivity.class, File.class);
+                    schedule.setAccessible(true);
+                    schedule.invoke(null, this, root);
+                } catch (Exception unavailable) {
+                    debugResearch("original-local-import-v1 unavailable");
+                }
+            }
+            debugResearch("original-local-fresh-package-root active");
+            return root;
+        }
+    }
+
     @Override
     public File getFilesDir() {
+        if (LOCAL_RESEARCH_FRESH_ROOT) {
+            return newLocalOriginalGameRoot();
+        }
+        if (ISOLATE_ORIGINAL_NATIVE_FILES_DIR) {
+            if (USE_EXTERNAL_FILES_DIR) {
+                throw new IllegalStateException("conflicting original save directory modes");
+            }
+            // Never cache an unchecked path: a later symlink replacement must
+            // not escape the original app-private storage boundary.
+            File base = super.getFilesDir();
+            if (base == null || !base.isDirectory()) {
+                throw new IllegalStateException("original app-private files directory unavailable");
+            }
+            File directory = new File(base, ORIGINAL_NATIVE_FILES_LEAF);
+            try {
+                String trusted = base.getCanonicalPath() + File.separator;
+                if (!directory.getCanonicalPath().startsWith(trusted)) {
+                    throw new IllegalStateException("original native private save root escaped");
+                }
+                if (!directory.isDirectory() && (!directory.mkdirs() || !directory.isDirectory())) {
+                    throw new IllegalStateException("original native private save root unavailable");
+                }
+                if (!directory.getCanonicalPath().startsWith(trusted)) {
+                    throw new IllegalStateException("original native private save root changed during creation");
+                }
+            } catch (IOException error) {
+                throw new IllegalStateException("original native private save root unresolved", error);
+            }
+            debugResearch("original-native-private-files-root active");
+            return directory;
+        }
         if (!USE_EXTERNAL_FILES_DIR) {
             return super.getFilesDir();
         }
@@ -107,10 +473,29 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
             String[] strings,
             boolean flag1,
             boolean flag2) {
-        if (!ENABLE_BACKUP_OFFLINE_REPLAY) {
+        // The strict offline original-game research profile may reproduce
+        // ONLY the exact original backup request *identity* and documented
+        // original OFFLINE failure response. The isolated device has also shown
+        // an otherwise-identical timeout variant (mask 0x7fd). Transport-only
+        // timeout tolerance is isolated to research; shipping modes never do.
+        if (!ENABLE_BACKUP_OFFLINE_REPLAY
+                && !(LOCAL_RESEARCH_DENY_HTTP && LOCAL_RESEARCH_IMPORT_OWNER_ASSETS)) {
             return false;
         }
-        if (!"GET".equals(method) || Float.compare(timeout, 10.0f) != 0) {
+        // The original OWNER device emitted backup-shape mask 0x7fd during
+        // scene97: all URI, method, payload and flag invariants matched, but
+        // timeout != 10. In the isolated no-INTERNET research profile ONLY,
+        // timeout is transport policy, not backup identity. As a bounded
+        // RESEARCH HYPOTHESIS only, queue the same source-observed ORIGINAL
+        // failure callback for positive finite timeout variants through 120s.
+        // This may or may not resolve scene97; do not claim source parity.
+        // Personal/practice/replay profiles retain the EXACT timeout=10 gate.
+        final boolean isolatedOfflineResearch =
+                LOCAL_RESEARCH_DENY_HTTP && LOCAL_RESEARCH_IMPORT_OWNER_ASSETS;
+        if (!"GET".equals(method)
+                || (!isolatedOfflineResearch && Float.compare(timeout, 10.0f) != 0)
+                || (isolatedOfflineResearch && (!Float.isFinite(timeout)
+                        || timeout <= 0.0f || timeout > 120.0f))) {
             return false;
         }
         if (headers == null || !headers.isEmpty() || body != null) {
@@ -134,6 +519,103 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
         }
     }
 
+    // Only in the explicit 393-original-data OFFLINE research profile:
+    // classify a blocked request as a tiny fixed category, NOT a raw URL.
+    // No network I/O, credentials, hostnames, paths, method or headers in log.
+    private static String classifyDeniedOriginalHttp(String requestUrl) {
+        if (requestUrl == null || requestUrl.length() > 4096) {
+            return "malformed";
+        }
+        try {
+            java.net.URI uri = new java.net.URI(requestUrl);
+            String scheme = uri.getScheme();
+            String host = uri.getHost();
+            if (scheme == null || !"https".equalsIgnoreCase(scheme)
+                    || host == null || uri.getUserInfo() != null) {
+                return "malformed";
+            }
+            String lowered = host.toLowerCase(java.util.Locale.ROOT);
+            if ("nyanko-assets.ponosgames.com".equals(lowered)) {
+                return "asset-cdn";
+            }
+            if ("nyanko-backups.ponosgames.com".equals(lowered)) {
+                return "backup";
+            }
+            if ("ponosgames.com".equals(lowered)
+                    || lowered.endsWith(".ponosgames.com")) {
+                return "publisher-other";
+            }
+            return "external-other";
+        } catch (java.net.URISyntaxException invalid) {
+            return "malformed";
+        }
+    }
+
+    /**
+     * Source-proof-only shape witness for a blocked BACKUP HOST request.
+     * Each bit means the non-sensitive property of the already observed JP
+     * offline backup GET matches. No URL, query, credential, body, header,
+     * method value or response data is ever serialized to logcat.
+     * A mismatched shape is blocked unless the isolated research-only
+     * bounded timeout A/B is active and the strict URL envelope matches.
+     * The URI bitmask alone never establishes acceptance.
+     */
+    private static int originalBackupShapeMask(
+            String method, String requestUrl, float timeout, HashMap headers,
+            ByteBuffer body, String[] strings, boolean flag1, boolean flag2) {
+        int bits = 0;
+        if ("GET".equals(method)) bits |= 1;
+        if (Float.compare(timeout, 10.0f) == 0) bits |= 2;
+        if (headers != null && headers.isEmpty()) bits |= 4;
+        if (body == null) bits |= 8;
+        if (strings != null && strings.length == 0) bits |= 16;
+        if (!flag1) bits |= 32;
+        if (!flag2) bits |= 64;
+        if (requestUrl == null || requestUrl.length() > 4096) return bits;
+        try {
+            java.net.URI uri = new java.net.URI(requestUrl);
+            if (!"nyanko-backups.ponosgames.com".equalsIgnoreCase(
+                    uri.getHost())) return bits;
+            if ("https".equalsIgnoreCase(uri.getScheme())) bits |= 128;
+            if ("/".equals(uri.getRawPath())) bits |= 256;
+            if (uri.getRawQuery() != null) bits |= 512;
+            if (uri.getPort() == -1 && uri.getRawUserInfo() == null
+                    && uri.getRawFragment() == null) bits |= 1024;
+        } catch (java.net.URISyntaxException ignored) {
+            // Treat malformed raw request as unmatched, never print it.
+        }
+        return bits;
+    }
+
+    // Safe bounded metadata only, recorded for blocked backup-shaped
+    // requests. No raw float/URL/query/token/header/body is ever written.
+    private static String originalBackupTimeoutClass(float timeout) {
+        if (!Float.isFinite(timeout)) return "nonfinite";
+        if (timeout <= 0.0f) return "nonpositive";
+        if (timeout < 10.0f) return "lt10";
+        if (Float.compare(timeout, 10.0f) == 0) return "eq10";
+        if (timeout <= 30.0f) return "gt10-le30";
+        if (timeout <= 120.0f) return "gt30-le120";
+        return "gt120";
+    }
+
+    @Override
+    public boolean isNetworkAvailable() {
+        if (LOCAL_RESEARCH_DENY_HTTP) {
+            // Original JP15.7.1's owner-device airplane-mode trace proves
+            // this false result prevents event-sale HTTP after a backup GET.
+            // Keep the PHONE Wi-Fi ON; only this isolated research game uses
+            // the original offline path. Never grant INTERNET to the app.
+            if (LOCAL_RESEARCH_IMPORT_OWNER_ASSETS) {
+                debugResearch("original-local-network-availability-v1 offline");
+            }
+            return false;
+        }
+        // For personal/practice/online research preserve exact inherited
+        // original connectivity detection, not a synthetic always-false.
+        return super.isNetworkAvailable();
+    }
+
     @Override
     @SuppressWarnings({"rawtypes", "unchecked"})
     public int newHttpRequest(
@@ -145,15 +627,37 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
             String[] strings,
             boolean flag1,
             boolean flag2) {
-        if (!isExactBackupRequest(
-                method,
-                requestUrl,
-                timeout,
-                headers,
-                body,
-                strings,
-                flag1,
-                flag2)) {
+        final boolean originalBackupFailureShape = isExactBackupRequest(
+                method, requestUrl, timeout, headers, body, strings,
+                flag1, flag2);
+        if (LOCAL_RESEARCH_DENY_HTTP && !originalBackupFailureShape) {
+            // All unknown services remain strictly blocked. No invented
+            // publisher payload and no original super transport fallback.
+            // This remains a separate research package with zero INTERNET.
+            debugResearch("original-local-denied-http-v1");
+            if (LOCAL_RESEARCH_IMPORT_OWNER_ASSETS) {
+                final String kind = classifyDeniedOriginalHttp(requestUrl);
+                debugResearch("original-local-http-kind-v1 " + kind);
+                if ("backup".equals(kind)) {
+                    debugResearch("original-local-backup-shape-v1 mask="
+                            + Integer.toHexString(originalBackupShapeMask(
+                            method, requestUrl, timeout, headers, body,
+                            strings, flag1, flag2)));
+                    debugResearch("original-local-backup-timeout-class-v1 "
+                            + originalBackupTimeoutClass(timeout));
+                    // The existing shape mask uses URI/casefolded host;
+                    // the exact backup matcher uses URL/exact hostname.
+                    // A matching mask alone is not proof of safe envelope.
+                    debugResearch("original-local-backup-strict-envelope-v1 "
+                            + (isExactBackupRequest(method, requestUrl, 10.0f,
+                            headers, body, strings, flag1, flag2)
+                            ? "match" : "mismatch"));
+                }
+            }
+            throw new IllegalStateException("original local research HTTP disabled");
+        }
+
+        if (!originalBackupFailureShape) {
             return super.newHttpRequest(
                     method,
                     requestUrl,
@@ -194,14 +698,38 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
                             "{}",
                             null,
                             true);
+                    if (LOCAL_RESEARCH_DENY_HTTP) {
+                        // This fires after the real GL-thread callback RETURNS,
+                        // unlike the legacy misnamed "completed" marker which
+                        // merely meant queued. This still does not prove native
+                        // scene advancement or any real publisher response.
+                        debugResearch("original-local-backup-callback-v1 returned");
+                        if (Float.compare(timeout, 10.0f) != 0) {
+                            debugResearch("original-local-backup-timeout-variant-v1 returned");
+                        }
+                    }
                 }
             });
-            debugResearch("backup-local-replay requestId=" + requestId);
+            if (LOCAL_RESEARCH_DENY_HTTP) {
+                // Scheduling is NOT evidence the callback actually ran.
+                debugResearch("original-local-backup-failure-fallback-v1 enqueued");
+                if (Float.compare(timeout, 10.0f) != 0) {
+                    debugResearch("original-local-backup-timeout-variant-v1 enqueued");
+                }
+            } else {
+                debugResearch("backup-local-replay requestId=" + requestId);
+            }
             return requestId;
         } catch (Throwable ignored) {
+            if (LOCAL_RESEARCH_DENY_HTTP) {
+                // Never invoke original HTTP if local reflection/callback
+                // invariants drift. No request payload, URL or exception log.
+                debugResearch("original-local-backup-failure-fallback-v1 unavailable");
+                throw new IllegalStateException("original local backup fallback unavailable");
+            }
             debugResearch("backup-local-replay fallback-to-original");
-            // Fail closed: any unexpected reflection/runtime drift returns to
-            // the exact original JP 15.7.1 implementation.
+            // Fail closed: unexpected research replay drift returns to the
+            // exact original JP 15.7.1 implementation only outside local mode.
             return super.newHttpRequest(
                     method,
                     requestUrl,

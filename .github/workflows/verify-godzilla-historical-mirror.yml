@@ -1,0 +1,99 @@
+name: Verify recovered Godzilla historical source (ephemeral)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "jolly/**"
+    paths:
+      - ".github/workflows/verify-godzilla-historical-mirror.yml"
+      - "tools/base_mod/verify_godzilla_historical_mirror.py"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: godzilla-ephemeral-mirror
+  cancel-in-progress: true
+
+jobs:
+  verify-public-historical-godzilla:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install only existing local decoder dependencies
+        run: python -m pip install -r requirements-tooling.txt
+      - name: Download exact historical files into volatile OS tmp, verify and destroy
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .agent-validation/reports
+          # No APK, SAVE, user asset, account or device enters this runner.
+          # Only the pinned, publicly archived historical 4 source files
+          # are temporarily downloaded and MD5-checked against JP15.7.1.
+          # The Python tool deletes ALL original/derived binaries and images
+          # from OS tmp BEFORE it reports sanitized metadata in the checkout.
+          python -m tools.base_mod.verify_godzilla_historical_mirror \
+            --allow-historical-mirror-download \
+            --metadata-output .agent-validation/reports/godzilla-real-mirror-metadata.json
+      - name: Print whitelisted numeric Godzilla animation timing metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          document = json.loads(Path(
+              ".agent-validation/reports/godzilla-real-mirror-metadata.json"
+          ).read_text(encoding="utf-8"))
+          if document["status"] != "PASS_ORIGINAL_PUBLIC_ARCHIVE_MATCHED_AND_PRIVATE_PREVIEW_BUILT":
+              raise SystemExit("historical mirror pipeline was not successful")
+          reports = document["original_animation_track_summaries"]
+          expected = ("550_e00.maanim", "550_e01.maanim",
+                      "550_e02.maanim", "550_e03.maanim")
+          if set(reports) != set(expected):
+              raise SystemExit("native Godzilla animation slot set changed")
+          print("Verified original numeric animation timing; NOT native hit events:")
+          for name in expected:
+              data = reports[name]
+              keys = ("track_count", "keyframe_count",
+                      "first_nonnegative_frame_number",
+                      "last_nonnegative_frame_number",
+                      "earliest_negative_frame_number",
+                      "unique_nonnegative_frame_indices",
+                      "tracks_reaching_last_nonnegative_frame")
+              numbers = {key: data[key] for key in keys}
+              if any(value is not None and
+                     (isinstance(value, bool) or not isinstance(value, int))
+                     for value in numbers.values()):
+                  raise SystemExit("non-numeric animation summary")
+              probes = data["candidate_hit_timing_130_170_210_exact_key_counts_only"]
+              if set(probes) != {"130", "170", "210"} or any(
+                  type(v) is not int or v < 0 for v in probes.values()
+              ):
+                  raise SystemExit("malformed numeric frame probes")
+              if data["hit_events_proven_from_maanim"] is not False:
+                  raise SystemExit("animation keyframes must not certify damage timing")
+              print(name, json.dumps({"timeline": numbers, "probe_keys": probes,
+                                     "densest": data["most_keyed_nonnegative_frames"]},
+                                    sort_keys=True))
+          PY
+      - name: Publish METADATA-ONLY proof (never copyrighted game bytes)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: godzilla-jp1571-historical-mirror-METADATA-ONLY
+          path: .agent-validation/reports/godzilla-real-mirror-metadata.json
+          if-no-files-found: warn
+          retention-days: 3

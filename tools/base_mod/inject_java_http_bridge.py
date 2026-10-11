@@ -20,7 +20,10 @@ import subprocess
 import tempfile
 import zipfile
 
-from tools.base_mod.binary_axml import patch_equal_length_strings, string_values
+from tools.base_mod.binary_axml import (
+    patch_equal_length_strings, remove_exact_uses_permission, string_values,
+)
+from tools.base_mod.audit_offline_egress import manifest_components
 from tools.base_mod.package_flavor import (
     FLAVOR_PACKAGES,
     ORIGINAL_PACKAGE,
@@ -32,6 +35,7 @@ from tools.base_mod.repack import JP_15_7_1_SPLITS, payload_fingerprint, sha256_
 
 ORIGINAL_LAUNCHER = ORIGINAL_PACKAGE + ".MyActivity"
 BRIDGE_TEMPLATE = Path("bridge/java/MyActivity.java.in")
+OFFLINE_IMPORT_TEMPLATE = Path("bridge/java/KneekuraOfflineAssetImporter.java.in")
 STUB_SOURCE = Path("bridge/java/stub/jp/co/ponos/battlecats/MyActivity.java")
 BRIDGE_DEX_ENTRY = "classes5.dex"
 
@@ -147,6 +151,78 @@ def _find_android_jar(explicit: str | None = None) -> Path:
     return max(candidates, key=api_key).resolve()
 
 
+def render_bridge_source(
+    template: str,
+    *,
+    flavor: str,
+    enabled: bool,
+    use_external_files_dir: bool = False,
+    isolate_original_native_files_dir: bool = False,
+    virgin_save_trial: bool = False,
+    offline_393_import_enabled: bool = False,
+) -> str:
+    """Render the ORIGINAL MyActivity subclass, rejecting unsafe file modes.
+
+    This function performs no Java compilation, APK modification, networking
+    or player-save I/O. A separate research flavor is mandatory for this
+    original-engine file-root experiment. All shipping callers default OFF.
+    """
+    package_name = FLAVOR_PACKAGES.get(flavor)
+    if package_name is None:
+        raise ValueError(f"unknown flavor: {flavor!r}")
+    if flavor == "local-research" and (
+        enabled or use_external_files_dir or isolate_original_native_files_dir
+    ):
+        raise ValueError("local research must keep original files root and deny online backup replay")
+    if virgin_save_trial and flavor != "local-research":
+        raise ValueError("original virgin SAVE trial is isolated local-research only")
+    if isolate_original_native_files_dir and flavor != "research":
+        raise ValueError("original-game native file isolation requires research flavor")
+    if isolate_original_native_files_dir and use_external_files_dir:
+        raise ValueError("original-game native file isolation conflicts with external files")
+    launcher = package_name + ".MyActivity"
+    if len(launcher.encode("utf-8")) != len(ORIGINAL_LAUNCHER.encode("utf-8")):
+        raise ValueError("bridge launcher must preserve original encoded length")
+    rendered = (
+        template.replace("__KNEEKURA_PACKAGE__", package_name)
+        .replace(
+            "__KNEEKURA_ENABLE_BACKUP_REPLAY__",
+            "true" if enabled else "false",
+        )
+        .replace(
+            "__KNEEKURA_DEBUG_LOG__",
+            "true" if flavor in ("research", "local-research") else "false",
+        )
+        .replace(
+            "__KNEEKURA_USE_EXTERNAL_FILES_DIR__",
+            "true" if use_external_files_dir else "false",
+        )
+        .replace(
+            "__KNEEKURA_ISOLATE_ORIGINAL_NATIVE_FILES_DIR__",
+            "true" if isolate_original_native_files_dir else "false",
+        )
+        .replace(
+            "__KNEEKURA_LOCAL_RESEARCH_FRESH_ROOT__",
+            "true" if flavor == "local-research" else "false",
+        )
+        .replace(
+            "__KNEEKURA_LOCAL_RESEARCH_DENY_HTTP__",
+            "true" if flavor == "local-research" else "false",
+        )
+        .replace(
+            "__KNEEKURA_OFFLINE_IMPORT_ENABLED__",
+            "true" if offline_393_import_enabled else "false",
+        )
+        .replace(
+            "__KNEEKURA_RESEARCH_VIRGIN_SAVE_TRIAL__",
+            "true" if virgin_save_trial else "false",
+        )
+    )
+    if "__KNEEKURA_" in rendered:
+        raise ValueError("bridge template contains unresolved placeholders")
+    return rendered
+
+
 def build_bridge_dex(
     *,
     flavor: str,
@@ -157,34 +233,41 @@ def build_bridge_dex(
     android_jar: str | None = None,
     root: Path = Path("."),
     use_external_files_dir: bool = False,
+    isolate_original_native_files_dir: bool = False,
+    virgin_save_trial: bool = False,
+    offline_import_installpack: Path | None = None,
 ) -> dict:
     package_name = FLAVOR_PACKAGES.get(flavor)
     if package_name is None:
         raise ValueError(f"unknown flavor: {flavor!r}")
-
     launcher = package_name + ".MyActivity"
-    if len(launcher.encode("utf-8")) != len(ORIGINAL_LAUNCHER.encode("utf-8")):
-        raise ValueError("bridge launcher must preserve original encoded length")
-
     root = root.resolve()
     template = (root / BRIDGE_TEMPLATE).read_text(encoding="utf-8")
-    rendered = (
-        template.replace("__KNEEKURA_PACKAGE__", package_name)
-        .replace(
-            "__KNEEKURA_ENABLE_BACKUP_REPLAY__",
-            "true" if enabled else "false",
-        )
-        .replace(
-            "__KNEEKURA_DEBUG_LOG__",
-            "true" if flavor == "research" else "false",
-        )
-        .replace(
-            "__KNEEKURA_USE_EXTERNAL_FILES_DIR__",
-            "true" if use_external_files_dir else "false",
-        )
+    rendered = render_bridge_source(
+        template,
+        flavor=flavor,
+        enabled=enabled,
+        use_external_files_dir=use_external_files_dir,
+        isolate_original_native_files_dir=isolate_original_native_files_dir,
+        virgin_save_trial=virgin_save_trial,
+        offline_393_import_enabled=offline_import_installpack is not None,
     )
-    if "__KNEEKURA_" in rendered:
-        raise ValueError("bridge template contains unresolved placeholders")
+    # Feature disabled by default in every existing build/profile. The index
+    # is compiled only from the owner's exact original JP15.7.1 InstallPack.
+    if offline_import_installpack is not None:
+        if flavor != "local-research" or enabled or use_external_files_dir or isolate_original_native_files_dir:
+            raise ValueError("original 393-asset import requires strict no-network local research mode")
+        from tools.base_mod.offline_server_import_manifest import compiled_java_metadata
+        local_index = compiled_java_metadata(offline_import_installpack)
+    else:
+        local_index = '""'
+    importer = (root / OFFLINE_IMPORT_TEMPLATE).read_text(encoding="utf-8")
+    importer = (importer.replace("__KNEEKURA_PACKAGE__", package_name)
+                .replace("__KNEEKURA_OFFLINE_IMPORT_ENABLED__",
+                         "true" if offline_import_installpack is not None else "false")
+                .replace("__KNEEKURA_OFFLINE_IMPORT_INDEX__", local_index))
+    if "__KNEEKURA_" in importer:
+        raise ValueError("unresolved original offline import template variables")
 
     javac_bin = _find_executable("javac", javac)
     d8_bin = _find_d8(d8)
@@ -202,6 +285,13 @@ def build_bridge_dex(
         source_path = source_root / Path(*package_name.split(".")) / "MyActivity.java"
         source_path.parent.mkdir(parents=True)
         source_path.write_text(rendered, encoding="utf-8")
+        importer_path = source_path.with_name("KneekuraOfflineAssetImporter.java")
+        # Shipping personal/practice profiles have zero local-import logic or
+        # KNEEKURA_STATIC_HTTP instrumentation in DEX. Reflection is never
+        # taken because their bridge flag is compile-time false.
+        include_importer = flavor in ("research", "local-research")
+        if include_importer:
+            importer_path.write_text(importer, encoding="utf-8")
 
         stub_source = root / STUB_SOURCE
         stub_classes.mkdir()
@@ -225,6 +315,7 @@ def build_bridge_dex(
             "-classpath", classpath,
             "-d", str(bridge_classes),
             str(source_path),
+            *([str(importer_path)] if include_importer else []),
         ])
 
         class_files = sorted(str(path) for path in bridge_classes.rglob("*.class"))
@@ -261,6 +352,22 @@ def build_bridge_dex(
         "dex_sha256": sha256_file(output),
         "dex_size": output.stat().st_size,
         "use_external_files_dir": use_external_files_dir,
+        "isolated_original_native_files_dir": isolate_original_native_files_dir,
+        "isolated_original_native_files_leaf": (
+            "kneekura-native-jp15-7-1" if isolate_original_native_files_dir else None
+        ),
+        "original_native_gameplay_persistence_verified": False,
+        "network_egress_guarantee": "NOT_VERIFIED",
+        "strict_local_research_package": flavor == "local-research",
+        "explicit_native_virgin_save_trial": virgin_save_trial,
+        "offline_393_exact_owner_files_background_import_enabled": offline_import_installpack is not None,
+        "offline_original_gameplay_accepted": False,
+        "original_virgin_save_trial_device_acceptance": False,
+        "original_native_files_root": (
+            "super.getFilesDir() in separate app UID" if flavor == "local-research"
+            else "existing original bridge mode"
+        ),
+        "origin_marker_is_gameplay_save": False,
     }
 
 
@@ -270,6 +377,7 @@ def _rewrite_base(
     *,
     launcher: str,
     bridge_dex: bytes,
+    research_deny_internet: bool = False,
 ) -> dict:
     with zipfile.ZipFile(source, "r") as src:
         if BRIDGE_DEX_ENTRY in src.namelist():
@@ -284,6 +392,19 @@ def _rewrite_base(
                 f"expected one original launcher string, got "
                 f"{counts.get(ORIGINAL_LAUNCHER)}"
             )
+        offline_permission_receipt = None
+        if research_deny_internet:
+            original_perms = manifest_components(manifest)["declared_permissions"]
+            if "android.permission.INTERNET" not in original_perms:
+                raise ValueError("original pinned APK lost expected INTERNET declaration")
+            patched_manifest, offline_permission_receipt = remove_exact_uses_permission(
+                patched_manifest, "android.permission.INTERNET"
+            )
+            remaining = manifest_components(patched_manifest)["declared_permissions"]
+            if "android.permission.INTERNET" in remaining:
+                raise ValueError("original research manifest still grants INTERNET")
+            if sorted(x for x in original_perms if x != "android.permission.INTERNET") != sorted(remaining):
+                raise ValueError("research original APK removed an unrelated permission")
 
         values = string_values(patched_manifest)
         if launcher not in values:
@@ -322,6 +443,9 @@ def _rewrite_base(
     return {
         "changed_entries": ["AndroidManifest.xml"],
         "added_entries": [BRIDGE_DEX_ENTRY],
+        "research_no_internet_manifest": research_deny_internet,
+        "exact_permission_removal": offline_permission_receipt,
+        "zero_egress_device_verified": False,
     }
 
 
@@ -331,10 +455,15 @@ def inject_bridge_split_set(
     *,
     flavor: str,
     bridge_dex_path: Path,
+    research_deny_internet: bool = False,
 ) -> dict:
     package_name = FLAVOR_PACKAGES.get(flavor)
     if package_name is None:
         raise ValueError(f"unknown flavor: {flavor!r}")
+    if flavor == "local-research" and not research_deny_internet:
+        raise ValueError("local research must remove Android INTERNET permission")
+    if research_deny_internet and flavor not in ("research", "local-research"):
+        raise ValueError("original INTERNET quarantine is research flavor only")
     launcher = package_name + ".MyActivity"
 
     missing = [
@@ -361,6 +490,7 @@ def inject_bridge_split_set(
                 target,
                 launcher=launcher,
                 bridge_dex=bridge_dex,
+                research_deny_internet=research_deny_internet,
             )
         else:
             shutil.copy2(source, target)
@@ -385,6 +515,9 @@ def inject_bridge_split_set(
         "launcher": launcher,
         "bridge_dex_entry": BRIDGE_DEX_ENTRY,
         "bridge_dex_sha256": sha256_file(bridge_dex_path),
+        "research_no_internet_manifest": research_deny_internet,
+        "network_egress_certified": False,
+        "original_game_first_boot_offline_verified": False,
         "splits": rows,
     }
     (output_dir / "http-bridge-ledger.json").write_text(
@@ -406,6 +539,16 @@ def main() -> int:
     parser.add_argument("--android-jar")
     parser.add_argument("--root", type=Path, default=Path("."))
     parser.add_argument("--use-external-files-dir", action="store_true")
+    parser.add_argument(
+        "--research-no-internet-permission",
+        action="store_true",
+        help="Research original host only; removes manifest INTERNET, NOT a zero-egress certificate",
+    )
+    parser.add_argument(
+        "--research-isolate-original-native-files-dir",
+        action="store_true",
+        help="Research ONLY; original native getFilesDir path isolation, NOT a gameplay save",
+    )
     args = parser.parse_args()
 
     output = args.output.resolve()
@@ -424,6 +567,7 @@ def main() -> int:
             android_jar=args.android_jar,
             root=args.root,
             use_external_files_dir=args.use_external_files_dir,
+            isolate_original_native_files_dir=args.research_isolate_original_native_files_dir,
         )
 
     ledger = inject_bridge_split_set(
@@ -431,6 +575,7 @@ def main() -> int:
         output,
         flavor=args.flavor,
         bridge_dex_path=bridge_dex.resolve(),
+        research_deny_internet=args.research_no_internet_permission,
     )
     if build_ledger is not None:
         ledger["bridge_build"] = build_ledger

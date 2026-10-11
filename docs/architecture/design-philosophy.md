@@ -1,5 +1,8 @@
 # Kneekura WhiteNyankocats — Design Philosophy
 
+> **2026-10-09 OWNER'S NON-NEGOTIABLE PRODUCT DECISION (supersedes prior override):** The owner wants the **actual Battle Cats game experience, not a lookalike replacement**. The product must satisfy **BOTH** original-game UI/animation/battle/stage/gacha/progression fidelity **AND** strict offline/local-save operation. The previous P0 offline directive never authorized shipping the separate simplified Java app as the game. Using an independent engine is an **experimental compatibility technique only**, not permission to lower any fidelity requirement. Prefer to preserve/reuse the original JP15.7.1 native scenes/renderer/data wherever safely possible; if impossible, expose gaps and obtain the owner's explicit decision, do not substitute a different game. **Highest authority: [PRODUCT_IDENTITY.md](../../PRODUCT_IDENTITY.md), [release gates](product-identity-gates.json).**
+
+
 Status: approved by project owner on 2026-10-06.
 
 ## The principle

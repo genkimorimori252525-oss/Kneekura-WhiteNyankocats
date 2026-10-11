@@ -24,6 +24,12 @@ public class MyActivity extends Activity {
         throw new AssertionError("compile-only stub");
     }
 
+    // Exact original JP15.7.1 classes4.dex instance method.
+    // Compile-only stub; never included in any signed APK.
+    public boolean isNetworkAvailable() {
+        throw new AssertionError("compile-only stub");
+    }
+
     public static native void newResponse(
             int requestId,
             int status,
