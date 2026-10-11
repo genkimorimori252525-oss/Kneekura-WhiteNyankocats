@@ -355,6 +355,20 @@ class Lab:
     def stage_assets(self, build: dict) -> dict:
         """Reuse the pinned source index, push only to the dedicated guest's research app."""
         self.identity()
+        # API35 scoped storage hides shell-owned files from the target app.
+        # Only this userdebug disposable AVD may use root to assign ownership.
+        if self.adb('shell', 'id', '-u').stdout.strip() != '0':
+            self.adb('root')
+            self.adb('wait-for-device', timeout=30)
+            self.identity()
+        if self.adb('shell', 'id', '-u').stdout.strip() != '0':
+            raise RuntimeError('PC_LAB_DEDICATED_USERDEBUG_GUEST_ROOT_REQUIRED')
+        uid_result = self.adb('shell', 'cmd', 'package', 'list', 'packages', '-U', PACKAGE)
+        uid_match = re.fullmatch(r'package:' + re.escape(PACKAGE) + r' uid:(1[0-9]{4})',
+                                 uid_result.stdout.strip())
+        if uid_match is None:
+            raise RuntimeError('PC_LAB_TARGET_APP_UID_NOT_EXACT')
+        app_uid = uid_match[1]
         installpack = Path(build['directory']) / 'split_InstallPack.apk'
         entries = original_offline_asset_manifest(installpack)
         if len(entries) != 393:
@@ -380,12 +394,18 @@ class Lab:
         remote_parent = '/sdcard/Android/data/' + PACKAGE + '/files/'
         self.adb('shell', 'mkdir', '-p', remote_parent)
         self.adb('push', staging, remote_parent, timeout=300)
+        owned_stage = '/data/media/0/Android/data/' + PACKAGE + '/files/' + staging.name
+        self.adb('shell', 'chown', '-R', app_uid + ':1078', owned_stage)
+        owners = self.adb('shell', 'stat', '-c', '%u', owned_stage + '/*').stdout.splitlines()
+        if len(owners) != 393 or set(owners) != {app_uid}:
+            raise RuntimeError('PC_LAB_STAGE_APP_OWNERSHIP_NOT_VERIFIED')
         result = self.adb('shell', 'md5sum', remote_parent + staging.name + '/*', timeout=120)
         actual = {line.split()[-1].rsplit('/', 1)[-1]: line.split()[0]
                   for line in result.stdout.splitlines() if len(line.split()) == 2}
         if actual != expected:
             raise ValueError('PC_LAB_REMOTE_393_MD5_MISMATCH')
         proof = dict(status='PC_LAB_EXTERNAL_393_MD5_VERIFIED', count=len(entries),
+                     target_app_stage_ownership_verified=True,
                      installed_build=Path(build['directory']).name, observed_utc=utc())
         write_json(self.state / 'stage-assets.json', proof)
         return proof

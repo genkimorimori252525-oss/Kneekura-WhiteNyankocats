@@ -16,6 +16,65 @@ from tools.pc_lab import (validate_identity, scope_research_log, capture_quality
 
 
 class FailedBuildEvidenceTests(unittest.TestCase):
+    def test_stage_ownership_stops_before_root_on_wrong_avd_or_before_copy_on_bad_uid(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            lab = Lab(root / 'private/pc-lab', root / 'sdk', root / 'jdk')
+            with patch.object(lab, 'identity', side_effect=ValueError('wrong avd')), \
+                    patch.object(lab, 'adb') as adb:
+                with self.assertRaisesRegex(ValueError, 'wrong avd'):
+                    lab.stage_assets({})
+                adb.assert_not_called()
+            for uid in ('package:jp.co.ponos.battlecats uid:10209',
+                        'package:jp.kn.local.battlecats uid:0',
+                        'package:jp.kn.local.battlecats uid:10209\nextra',
+                        'package:jp.kn.local.battlecats uid:10209;other'):
+                def adb(*args, **kwargs):
+                    return subprocess.CompletedProcess(args, 0,
+                        '0\n' if args == ('shell', 'id', '-u') else uid, '')
+                with self.subTest(uid=uid), patch.object(lab, 'identity'), \
+                        patch.object(lab, 'adb', side_effect=adb) as calls:
+                    with self.assertRaisesRegex(RuntimeError, 'UID_NOT_EXACT'):
+                        lab.stage_assets({})
+                    self.assertFalse(any(c.args[0] == 'push' for c in calls.call_args_list))
+
+    def test_staged_assets_are_owned_by_target_app_in_dedicated_guest(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            lab = Lab(root / 'private/pc-lab', root / 'sdk', root / 'jdk')
+            cache = lab.state.parent / 'original-jp1571-verified-server-cache'
+            cache.mkdir()
+            directory = root / 'build'; directory.mkdir()
+            from zipfile import ZipFile
+            with ZipFile(directory / 'split_InstallPack.apk', 'w'):
+                pass
+            digest = hashlib.md5(b'fixture').hexdigest()
+            entries = [(f'asset_{i}.pack', 7, digest) for i in range(393)]
+            for name, _, _ in entries:
+                (cache / name).write_bytes(b'fixture')
+            calls = []
+            def adb(*args, **kwargs):
+                calls.append(args)
+                output = ''
+                if args == ('shell', 'id', '-u'):
+                    output = '0\n'
+                elif args[:4] == ('shell', 'cmd', 'package', 'list'):
+                    output = 'package:jp.kn.local.battlecats uid:10209\n'
+                elif args[:2] == ('shell', 'md5sum'):
+                    output = '\n'.join(f'{h}  /stage/{n}' for n, _, h in entries)
+                elif args[:2] == ('shell', 'stat'):
+                    output = '10209\n' * 393
+                return subprocess.CompletedProcess(args, 0, output, '')
+            with patch('tools.pc_lab.original_offline_asset_manifest', return_value=entries), \
+                    patch.object(lab, 'identity'), patch.object(lab, 'adb', adb):
+                lab.stage_assets({'directory': str(directory)})
+            expected = ('shell', 'chown', '-R', '10209:1078',
+                        '/data/media/0/Android/data/jp.kn.local.battlecats/files/'
+                        'kneekura-original-jp1571-stage')
+            self.assertIn(expected, calls)
+            self.assertLess(next(i for i,c in enumerate(calls) if c[0]=='push'),
+                            calls.index(expected))
+
     def test_failed_cmake_output_is_preserved_before_raising(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)

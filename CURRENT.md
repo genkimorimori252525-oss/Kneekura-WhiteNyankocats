@@ -6,7 +6,9 @@
 
 **2026-10-12 PC単体開発への移行（所有者承認済み）:** 専用API35 AVD `kneekura-pc-api35`、NDK 27.2.12479018、CMake 3.22.1、既存スマホ鍵と別のPC開発鍵を用意。鍵のパスワードはWindowsユーザーのDPAPIで保管し、通常のPC試験で承認・秘密入力を要求しない。最新研究ソースから原作JP15.7.1の6分割研究APKをローカルビルド・自動署名し、専用端末へ導入、端末内APKのSHA-256一致・393外部素材のMD5一致を確認した。`tools/PC-LAB.ps1` / `tools/pc_lab.py` が起動前ログ到達確認、全バッファ継続収集、PID変化、UTC画面、ビルド出所・バイト照合、欠落判定を行う。原本ZIP・公式アプリ・実スマホ・既存AVDは変更していない。詳細は[PC環境計画](docs/research/2026-10-12-pc-local-lab-plan.md)と[PC実測結果](docs/research/2026-10-12-pc-local-lab-results.md)。
 
-**PC実行で分かった制限:** x86_64のARM変換 `libndk_translation.so` 下ではShadowHookが`hook-init-status=12`（公式 `SHADOWHOOK_ERRNO_INIT_LINKER`）で初期化失敗し、native scene97 / 35スロット分布を取得できない。実APKの再起動では原作 `ReceiverInitAlarm` の `Resources$NotFoundException: String resource ID #0x0` とAndroid終了理由 `APP CRASH(EXCEPTION)` を捕捉した。Windows版エミュレーター36.5.11はARM64 AVDの起動を明示的に拒否する。**PCログ収集の合格は原作ゲーム・scene97・完全オフライン製品の合格ではない。** 次はこのリソース参照例外の根拠を原作/隔離パッケージ境界で確認し、ARM変換でも原作内部を正確に観測できる経路を検討する。所有者のスマホ接続やパスワード再入力を通常開発の前提に戻さない。
+**2026-10-12 PC追試・2件修正:** `ReceiverInitAlarm` の文字列ID0は、隔離manifestと4つの `resources.arsc` のUTF-16 `ResTable_package.name` が不一致だったことが原因。元コードはbaseのUTF-8アンカーだけ変更していた。4表の固定パッケージ名だけを修正し、ID・翻訳・画像・原作Javaを保持、3系統の静的検査でリソース表の変更バイトを厳密照合する。PC開発鍵で実6分割を再構築・更新し、アプリ内 `getIdentifier` が `0x7f100020` を返すことと複数回の起動でJava例外0件を確認。API35でADB配置した393素材がshell所有のためアプリから見えない問題も特定。専用userdebug AVDのみrootを利用し、固定stagingフォルダーを検証済み研究アプリUIDへ変更して393所有者＋MD5を照合する。実APKが `completed-393`、再起動後 `already-complete` と35/35 TSV存在を記録。実画面は原作読み込み中の「ネットワークにアクセスできません。」、基地未到達。全体テスト734件、724成功・10スキップ・失敗0。根拠は[PC追試](docs/research/2026-10-12-pc-resource-repair.md)。
+
+**PC実行の残る制限:** ARM変換下のShadowHookは引き続き `hook-init-status=12`（公式 `SHADOWHOOK_ERRNO_INIT_LINKER`）で失敗し、native scene97 / 35スロット分布を取得できない。研究プロセスにはx86_64とARM64両方の `linker64` があり、x86_64の存在だけを原因の証拠にしない。Windowsエミュレーター36.5.11はARM64 AVDの起動を明示的に拒否する。次は失敗したリンカー初期化の位置と、元GLスレッドでのJNI観測経路を検証する。**PCログ収集・393コピー・例外解消は原作ゲーム・scene97・完全オフライン製品の合格ではない。** 所有者のスマホ接続やパスワード再入力を通常開発の前提に戻さない。
 
 **後続予定:** AIが短い構造化仕様からステージ・ガチャ・イベントを制作し、原作品質を維持または改善できるローカル運営ツールを、既存の単一ロードマップに記録した。今回は制作ツールを実装せず、LEVEL / MADOKA / GODZILLA / OFFLINE の既定仕様を維持する。
 

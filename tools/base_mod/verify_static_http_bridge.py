@@ -13,7 +13,7 @@ from tools.base_mod.audit_offline_egress import manifest_components
 from tools.base_mod.dex_methods import defined_methods
 from tools.base_mod.inject_java_http_bridge import BRIDGE_DEX_ENTRY
 from tools.base_mod.inject_shim import NATIVE_ENTRY, SHIM_ENTRY, SHIM_SONAME
-from tools.base_mod.package_flavor import FLAVOR_PACKAGES, ORIGINAL_PACKAGE
+from tools.base_mod.package_flavor import FLAVOR_PACKAGES, ORIGINAL_PACKAGE, RESOURCE_SPLITS
 from tools.base_mod.prepare_original_scene_witness import (
     EXTRA_NATIVE_ENTRY, EXTRA_NATIVE_COMPANION_ENTRY,
     SCENE_WITNESS_COMPILED_MARKER,
@@ -23,7 +23,7 @@ from tools.base_mod.prepare_original_scene_witness import (
 from tools.base_mod.original_scene_native_image_gate import (
     verify_mapped_original_scene_image,
 )
-from tools.base_mod.verify_parity import _lief_binary, _split_diff
+from tools.base_mod.verify_parity import _lief_binary, _split_diff, _verify_resource_package
 
 
 ORIGINAL_DYNAMIC_RECEIVER_PERMISSION = (
@@ -223,11 +223,15 @@ def verify_static_http_bridge(
                     f"{name}: static data-proof surface drifted; diff={diff}"
                 )
         else:
-            if set(diff["changed"]) != {"AndroidManifest.xml"} or diff["added"]:
+            expected = {"AndroidManifest.xml"}
+            if name in RESOURCE_SPLITS:
+                expected.add("resources.arsc")
+            if set(diff["changed"]) != expected or diff["added"]:
                 raise ValueError(
-                    f"{name}: only manifest may change in bridge build; diff={diff}"
+                    f"{name}: package-only bridge surface drifted; diff={diff}"
                 )
 
+        _verify_resource_package(original, modified, name, package_name)
         reports.append({"name": name, **diff})
 
     with zipfile.ZipFile(original_dir / "base.apk", "r") as original_base:

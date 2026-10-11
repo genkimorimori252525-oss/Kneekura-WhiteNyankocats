@@ -362,3 +362,27 @@ Any native hook remains DEFAULT OFF and research-only. Original address drift
 must block before signing. Source tests and unrelated Android debug APK success
 must NEVER be described as a live original game/first-save/device pass.
 No original owner APK, SAVE, asset, account or signing key is modified.
+
+## 2026-10-12 — PC isolated resource namespace and API35 staging ownership
+
+The PC research APK crashed in `ReceiverInitAlarm` because original
+`MyActivity.localize` calls `getIdentifier` with the isolated Context package,
+while the UTF-16 `ResTable_package.name` remained the publisher namespace.
+The old byte patch changed only a base UTF-8 anchor. Patch only the fixed
+package name in all four resource tables (base/en/ja/xxhdpi), preserve IDs and
+other bytes, and require exact expected table bytes in all three parity gates.
+The split fixture failed before repair; actual Android now resolves the local
+string ID and repeated PC launches have zero Java exceptions.
+
+API35 additionally hid all 393 shell-owned staged files from the app even
+though ADB MD5 succeeded. A target-context probe observed missing393 before
+and missing0/size0/MD5-errors0 after assigning the dedicated guest app UID.
+The PC-only runner validates its dedicated userdebug AVD before root, pins the
+exact installed isolated app UID, changes ownership only in its fixed staging
+subtree, and checks all393 owners plus MD5. Wrong AVD/UID fails before copy.
+Actual importer completed393 and reboot observed35 TSVs. No physical phone,
+publisher app, source archive, SAVE contents or existing key was changed.
+
+These repairs do not prove native scene97, original gameplay or zero egress.
+ShadowHook status12 and the original network-unavailable loading screen
+remain. See `2026-10-12-pc-resource-repair.md` for immutable capture IDs.
