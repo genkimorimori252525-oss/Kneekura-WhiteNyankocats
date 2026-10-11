@@ -140,6 +140,38 @@ def _run(
     )
 
 
+def _classify_signer_failure(raw_tool_output: str | None) -> str:
+    """Map raw (possibly identifying) Java/apksigner errors to fixed codes.
+
+    Never propagate the original exception, tool stdout/stderr, alias,
+    keystore path, password or certificate fingerprint into public receipts
+    or the owner's shareable console transcript.
+    """
+    message = (raw_tool_output or "").lower()
+    if ("alias" in message or "key entry" in message) and (
+        "does not exist" in message or "not found" in message
+        or "not contain" in message or "no key" in message
+    ):
+        return "EXISTING_RESEARCH_KEY_ALIAS_NOT_FOUND"
+    if "password" in message and (
+        "keystore" in message or "store" in message
+    ) and any(token in message for token in (
+        "incorrect", "invalid", "failed", "wrong", "tampered",
+    )):
+        return "EXISTING_RESEARCH_KEYSTORE_PASSWORD_REJECTED"
+    if any(token in message for token in (
+        "unrecoverablekeyexception", "cannot recover key",
+        "failed to load private key", "key password was incorrect",
+    )):
+        return "EXISTING_RESEARCH_PRIVATE_KEY_PASSWORD_OR_ENTRY_REJECTED"
+    if "keystore" in message and (
+        "not found" in message or "no such file" in message
+        or "could not find" in message
+    ):
+        return "EXISTING_RESEARCH_KEYSTORE_FILE_NOT_FOUND"
+    return "RESEARCH_APKSIGNER_FAILED_WITH_UNCLASSIFIED_TOOL_ERROR"
+
+
 def _cert_digest(apksigner: str, apk: Path) -> str:
     result = _run([apksigner, "verify", "--verbose", "--print-certs", str(apk)])
     match = _SIGNATURE_RE.search(result.stdout)
@@ -233,7 +265,16 @@ def baseline_resign(
             if keypass is not None:
                 sign_command.extend(["--key-pass", f"env:{env_key_name}"])
             sign_command.append(str(aligned))
-            _run(sign_command, environment=signer_env)
+            try:
+                _run(sign_command, environment=signer_env)
+            except subprocess.CalledProcessError as exc:
+                # CalledProcessError contains owner file paths and alias.
+                # Never let its original __str__ escape into the console.
+                failure = _classify_signer_failure(exc.stdout)
+                raise RuntimeError(
+                    "RESEARCH_SIGNING_BLOCKED: " + failure
+                    + " (existing signer not changed; no device action)"
+                ) from None
 
             _run([apksigner_bin, "verify", "--verbose", str(target)])
             signer = _cert_digest(apksigner_bin, target)
