@@ -103,6 +103,16 @@
 - 次の本人操作はUSBデバッグ許可済みのスマホをPCへ接続するだけで十分。検査担当が `tools/base_mod/CHECK-OWNER-RESEARCH-DEVICE-SIGNER.ps1` の `-CandidateSignedSplitDirectory` に上記6分割成果物フォルダを渡し、**実際にインストール済みの独立研究版との署名**をread-onlyで確認する。異なる署名・構成不足・ADB切断はFail Closed。PASS後も別の本人承認なしに `INSTALL-OWNER-RESEARCH-PAIR.ps1` や原作ゲーム起動・Android状態変更を実行しない。今までの失敗作業フォルダや署名鍵を削除しない。
 - 技術証拠と受入未完了の境界は既存Issue #12へ追記。原作GAME BOOTブロッカーの解決を優先し、別アプリAlpha/新規ロードマップを作らない。
 
+### 2026-10-11 本人Androidで同一署名上書き成功・ShadowHook導入成功／原作scene97追加データ境界が残る
+
+- **現物Android一台の実受入**：Chat On Steroidsのread-only `CHECK-OWNER-RESEARCH-DEVICE-SIGNER.ps1` が **`ACTUAL_INSTALLED_RESEARCH_SIGNER_MATCHED_BUILD_ONLY`** PASS。本人のこの会話での明示許可に基づいて **一度だけ** `INSTALL-OWNER-RESEARCH-PAIR.ps1 -ApproveUpdateOfIsolatedResearchApp` を実行し、元の別パッケージ `jp.kn.local.battlecats` の6分割APKを `-r` 更新。**`SIX_SPLIT_UPDATE_CONFIRMED_BASE_ARM64_BYTES_NOT_GAMEPLAY` PASS**。更新後の端末から `base.apk` と `split_config.arm64_v8a.apk` をprivate一時コピーし、新候補との**バイト完全一致**を検証。アンインストール、`pm clear`、ダウングレード、新鍵発行、公式 `jp.co.ponos.battlecats` 操作は一切しない。残る4分割の**全バイト一致は未確認**（署名/6本存在は検証済み）。
+- 続けて **1回のみ研究版起動**：`CAPTURE-OWNER-ORIGINAL-CRASH.ps1` で18秒の非公開logcatを取得し、`summarize_original_crash_capture.py` で識別子を残さず集計。**研究版プロセス開始1件／死亡0件／`original-native-scene-hook-v1 installed` 1件／旧フック初期化失敗0件／SIGSEGVバックトレース0件**。以前の本人Android同一研究版は18秒中「起動86・死亡85・フック初期化失敗85」だった。**少なくともこの観測窓でShadowHook初期化失敗・急速なプロセス再起動ループは再発していない**（因果の断定はまだ不可）。
+- 原作の**実native固定イベント**：同じPID内で `original-native-scene-v1 id=102`, `id=101`, `id=97` の遷移を順に各1件確認。`original-native-app-launch-save-read-v1 accepted` 1件（原作readerのstatusビットを観測。**実ファイル永続化・オフライン独立SAVE生成・Lv60成功を証明しない**）。研究用ルート有効、`original-local-denied-http-v1` 2件。USBからのread-only `pidof` と `dumpsys` で研究版1プロセス生存・前面window/resumed状態を確認。
+- **画面描画は未受入**：研究版前面を確認した上で、非保存のAndroid画面`screencap`をPython上のメモリだけで色比率分析。約2400x1080のランドスケープ画面中央サンプルでほぼ黒（RGB各最大値12未満）**76.6%**、暗色（38未満）**82.2%**。元ゲームの基地画面やゲームプレイが見えたとは言えず、実画面黒問題は継続調査。
+- **有力な次の原作offlineブロッカー**：シーン `97` は原作ソースで `DownloadBatchTask` 構築に対応。固定native file-presenceログは**`download_0.tsv` ～ `download_34.tsv` の私有ルート存在0/35、欠落35/35、unsafe0**。ただし同じ本人APKの `split_InstallPack.apk/assets/`には**35 TSV全部（約20,432 bytes）存在**。APK内蔵TSVとアプリ私有ルート上のloose TSVは別であり、原作約615.69MiBの追加Serverアーカイブ（93候補pair、native登録92）も現在このアプリにそろった証拠はない。**35 TSV不在だけが黒画面の唯一の原因とは断定しない**。端末のHTTPは明示的に2回拒否されており、外部ネット経由で自然回復する状態とは限らない。
+- 外部アーカイブの本人PCの非認証・read-only `HEAD` 試験は元公式公開URLのlane18とlane34が両方 **HTTP403**。認証回避・別アカウント・無制限再試行はしない。所有者の旧回収ディレクトリには `MNumberServer/WImageDataServer` **実Server4ファイル＝2ファミリーのみ**、35 lane全部を補うものではない。前回の実Server 4/4 MD5一致・ゴジラ候補プレビューPASSと、**追加615MB全部の原作オフライン化**を混同しない。
+- 以上のプライベート生ログ、端末ID、画面画像、署名証明書、元アプリAPK/SAVE本文はGitHubには公開しない。**次のソース実装作業**は、本人保有`split_InstallPack.apk`の35 TSV、本人保有・正規に回収可能な追加archiveのサイズ/MD5、原作scene97の配布/ローカル読み込みの整合性とprivate root受渡しを原本証拠で確定し、勝手に原作ダウンロードゲートを飛ばさない／H01処理を無効化しない。Lv60/MAX・まどか/シンゴジラ・基地i運営・実通信ゼロの合格は別ゲートで継続。
+
 ## このファイルの後に読むもの（最大限絞る）
 
 **普段の新規AIセッション：** このファイル → PRODUCT_IDENTITY.md → 実装ロードマップの「実行順序と次の担当者向け開始地点」→ 今動かす1タスクのソース/証拠だけ。毎回すべてのdocs/を巡回する必要はない。
