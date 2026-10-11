@@ -7,6 +7,8 @@
 param(
     [switch]$DoBuild,
     [switch]$EnableOfflineServerImport,
+    [switch]$RequireScene97ResolverWitness,
+    [string]$ResearchShimFolder,
     [string]$SigningAlias,
     [string]$RepositoryRoot = (Join-Path $HOME 'Downloads\Kneekura-WhiteNyankocats')
 )
@@ -49,7 +51,34 @@ if (-not (Test-Path -LiteralPath $official -PathType Leaf) -or
     throw 'Official paired ShadowHook AAR is missing or does not match verified hash'
 }
 $nativeFolders = @(Get-ChildItem -LiteralPath $private -Directory -Filter 'passive-arm64-public-*')
-$nativeFolder = Require-One $nativeFolders 'PASSIVE ARM64 compiler artifact folder'
+if (-not [string]::IsNullOrWhiteSpace($ResearchShimFolder)) {
+    # The opt-in new observer must come from an EXPLICIT new private folder,
+    # never silently select one among old and new compiled artifacts.
+    if (-not $RequireScene97ResolverWitness) {
+        throw 'EXPLICIT_SCENE97_SHIM_REQUIRES_DIAGNOSTIC_MODE_NO_ACTION'
+    }
+    $nativeFolder = (Resolve-Path -LiteralPath $ResearchShimFolder -ErrorAction Stop).Path
+    $privatePrefix = $private.TrimEnd([IO.Path]::DirectorySeparatorChar) +
+        [IO.Path]::DirectorySeparatorChar
+    if (-not $nativeFolder.StartsWith(
+            $privatePrefix, [StringComparison]::OrdinalIgnoreCase)) {
+        throw 'EXPLICIT_SCENE97_SHIM_MUST_BE_INSIDE_PRIVATE_NO_ACTION'
+    }
+    $walk = Get-Item -LiteralPath $nativeFolder -ErrorAction Stop
+    if (-not $walk.PSIsContainer) {
+        throw 'EXPLICIT_SCENE97_SHIM_NOT_A_FOLDER_NO_ACTION'
+    }
+    while ($null -ne $walk -and
+           $walk.FullName.StartsWith(
+               $privatePrefix, [StringComparison]::OrdinalIgnoreCase)) {
+        if (($walk.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+            throw 'EXPLICIT_SCENE97_SHIM_SYMLINK_NO_ACTION'
+        }
+        $walk = $walk.Parent
+    }
+} else {
+    $nativeFolder = Require-One $nativeFolders 'PASSIVE ARM64 compiler artifact folder'
+}
 $native = Join-Path $nativeFolder 'libkneekura.so'
 $passiveShimReceipt = Join-Path $nativeFolder 'PUBLIC_PASSIVE_SHIM_RECEIPT.json'
 if (-not (Test-Path -LiteralPath $native -PathType Leaf) -or
@@ -62,6 +91,10 @@ if ($nativeProof.schema -ne 'public-original-research-passive-shim-v1' -or
     $nativeProof.fixed_error_markers_compiled -ne $true -or
     (Digest $native) -ne $nativeProof.sha256) {
     throw 'The pinned no-SAVE-writer native artifact does not match its source receipt'
+}
+if ($RequireScene97ResolverWitness -and
+    $nativeProof.scene97_resolver_histogram_compiled -ne $true) {
+    throw 'SCENE97_OBSERVER_RECEIPT_NOT_ATTESTED_NO_BUILD_OR_INSTALL'
 }
 & git -C $repo merge-base --is-ancestor $nativeProof.git_commit HEAD
 if ($LASTEXITCODE -ne 0) { throw 'PASSIVE ARM64 compiler source not in current Git history' }
