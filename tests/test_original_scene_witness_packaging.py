@@ -7,7 +7,7 @@ from unittest.mock import patch as mock_patch
 import struct
 import tempfile
 import unittest
-from zipfile import ZipFile, ZIP_STORED
+from zipfile import ZipFile, ZipInfo, ZIP_STORED, ZIP_STORED
 
 from tools.base_mod import prepare_original_scene_witness as official_checker
 from tools.base_mod.prepare_original_scene_witness import (
@@ -103,12 +103,24 @@ class OriginalNativeSceneWitnessPackagingTests(unittest.TestCase):
             self.addCleanup(pinned.stop)
 
     def write_fixture_aar(self, include_companion=True):
+        # ZipFile.writestr(name, ...) records the current wall-clock ZIP
+        # timestamp. After mutating/recreating a synthetic fixture, its SHA
+        # could change merely because a two-second ZIP time boundary passed,
+        # causing false failures of the otherwise pinned REAL official AAR
+        # evidence gate. Use deterministic metadata for *synthetic* ZIPs only.
         with ZipFile(self.aar, "w") as archive:
-            archive.writestr(official_checker.OFFICIAL_AAR_MAIN_ENTRY,
-                             self.reviewed.read_bytes())
+            entries = [
+                (official_checker.OFFICIAL_AAR_MAIN_ENTRY,
+                 self.reviewed.read_bytes()),
+            ]
             if include_companion:
-                archive.writestr(official_checker.OFFICIAL_AAR_COMPANION_ENTRY,
-                                 self.companion.read_bytes())
+                entries.append(
+                    (official_checker.OFFICIAL_AAR_COMPANION_ENTRY,
+                     self.companion.read_bytes()))
+            for name, payload in entries:
+                entry = ZipInfo(name, date_time=(2020, 1, 1, 0, 0, 0))
+                entry.compress_type = ZIP_STORED
+                archive.writestr(entry, payload)
         return hashlib.sha256(self.aar.read_bytes()).hexdigest()
 
     def contract(self, **changes):
