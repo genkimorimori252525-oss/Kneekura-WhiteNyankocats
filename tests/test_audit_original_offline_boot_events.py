@@ -72,7 +72,7 @@ class OriginalOfflineNativeBootMarkerTests(unittest.TestCase):
         self.assertFalse(report["original_cat_base_visible_proven"])
 
     def test_file_access_witness_is_bounded_and_does_not_name_files(self):
-        report=summarize_runtime_events("\\n".join([
+        report=summarize_runtime_events(chr(10).join([
             "KNEEKURA_STATIC_HTTP: original-local-file-access-v1 watching",
             "KNEEKURA_STATIC_HTTP: original-local-file-access-v1 download-tsv",
             "KNEEKURA_STATIC_HTTP: original-local-file-access-v1 server-list",
