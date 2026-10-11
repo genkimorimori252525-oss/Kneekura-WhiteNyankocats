@@ -113,6 +113,15 @@
 - 外部アーカイブの本人PCの非認証・read-only `HEAD` 試験は元公式公開URLのlane18とlane34が両方 **HTTP403**。認証回避・別アカウント・無制限再試行はしない。所有者の旧回収ディレクトリには `MNumberServer/WImageDataServer` **実Server4ファイル＝2ファミリーのみ**、35 lane全部を補うものではない。前回の実Server 4/4 MD5一致・ゴジラ候補プレビューPASSと、**追加615MB全部の原作オフライン化**を混同しない。
 - 以上のプライベート生ログ、端末ID、画面画像、署名証明書、元アプリAPK/SAVE本文はGitHubには公開しない。**次のソース実装作業**は、本人保有`split_InstallPack.apk`の35 TSV、本人保有・正規に回収可能な追加archiveのサイズ/MD5、原作scene97の配布/ローカル読み込みの整合性とprivate root受渡しを原本証拠で確定し、勝手に原作ダウンロードゲートを飛ばさない／H01処理を無効化しない。Lv60/MAX・まどか/シンゴジラ・基地i運営・実通信ゼロの合格は別ゲートで継続。
 
+### 2026-10-11 原作scene97追加データ：所有原本358件の照合と非公開の部分回収
+
+- 先の**実Android研究版の同一署名6分割上書き成功**・旧ShadowHook初期化失敗ループ改善・原作ネイティブscene102→101→97/reader accepted確認は変わらない。ゲーム画面は未受入で、native scene97追加データ読込境界に留まる疑い。端末内loose `download_0.tsv..download_34.tsv` は0/35だったが、**同じ所有APKのInstallPackアセット内には35件全部**存在する。元の約615.69MiB追加アーカイブと別物であり、TSV単独コピーで画面修復と見なさない。
+- 本人原本の35 TSVの全358ファイルの**ファイル名・バイト数**と、歴史的な公開ミラー `fieryhenry/BCData` の `jp_server` 348ファイルをGitHub APIで比較：**348/358件がファイル名とサイズ完全一致、サイズ相違0、X系Server 10件（`XImageDataServer`, `XImageServer`, `XMapServer`, `XNumberServer`, `XUnitServer` のlist/pack）が不足、計15,661,776 bytes**。348件の対応はサイズ一致だけで、まだ全MD5一致の証明ではない。
+- 非認証公開ミラーからの小サイズサンプル`ANumberServer.list`、`CImageServer.list`、`BUnitServer.list` 3/3は元原本の**サイズ・MD5完全一致**。他を自動検証する私有ツール `tools/base_mod/recover_offline_original_server_cache.py` を実装し、元`split_InstallPack.apk`の35 TSVで正本358件を読み取って、許可された私有フォルダにしか元のMD5/サイズに一致したバイナリを保存しない。対応する合成テスト5件PASS。0バイトの正規元ファイル1件も原本MD5で扱う。
+- 公開ミラーの一括回収実行は途中でツール安全チェックによって停止。**本人PC `private/original-jp1571-verified-server-cache/` に元サイズ・MD5完全一致の254ファイル／394,559,432 bytesを保存**し、オフライン再検査 `--mode verify` で**254 verified／104 missing／`PARTIAL_ORIGINAL_SERVER_CACHE_NOT_INSTALLABLE`**。残る104件の中にはミラー自体が持たないX系10件を含む。中断した4個の`.part`だけをprivateルート確認後に削除、**同時回収プロセス0件**。実元ゲーム/研究版/Android/SAVEはこの追加データ作業では書き換えなし。安全チェックを迂回した継続取得はしない。
+- 本人Windows Python3.12全**660件中653成功/7 skip、失敗0**、GitHub [Test tooling #38112978208](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/actions/runs/38112978208) と[Agent terminal #38112978195](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/actions/runs/38112978195) PASS。**必要358件、現在254件取得済み、104件不足**。原作の615MBアーカイブ`battlecats_*.zip`がそのまま回収できたわけではない（MD5照合済みは抽出メンバ254件）。
+- 次の実装焦点は、元Server assets残り104件の正当な入手/元TSV size・MD5厳密検証と原作scene97/DownloadBatchTaskが実際に使用する私有ファイル配置、元native integrity/H01/SAVE保全の確証。**不完全キャッシュの実機インポート・パッケージ上書き・追加ゲーム起動は行っていない**。原作UI/Lv60/XP/MAX/運営i/まどか/シンゴジラ/完全外部通信ゼロは引き続き未合格。別ゲームAlphaへ逃がさない。
+
 ## このファイルの後に読むもの（最大限絞る）
 
 **普段の新規AIセッション：** このファイル → PRODUCT_IDENTITY.md → 実装ロードマップの「実行順序と次の担当者向け開始地点」→ 今動かす1タスクのソース/証拠だけ。毎回すべてのdocs/を巡回する必要はない。
