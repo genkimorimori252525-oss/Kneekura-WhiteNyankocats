@@ -139,6 +139,32 @@ def _run_smoke(sdk: Path, *, output: Path | None = None) -> dict:
             )
         if len(recorded) != 6 or not ledger["content_invariant"]:
             raise AssertionError("six real Android sign operations were not fully validated")
+        # Exercise the real JDK17 keytool -storepass:env and APK verifier
+        # with a TEST-ONLY ephemeral key. The real owner password never
+        # appears in process argv or public build artifacts.
+        from tools.base_mod.verify_original_research_signer import (
+            verify_before_sign, PrivateSignerPreflightBlocked,
+        )
+        env_name = "KNEEKURA_PUBLIC_SYNTHETIC_KEY_PRECHECK"
+        with mock.patch.dict(os.environ, {env_name: SYNTHETIC_SECRET}):
+            signer_preflight = verify_before_sign(
+                keystore=key, alias="synthetic", storepass_env=env_name,
+                previously_signed_base=signed / "base.apk",
+                keytool=Path(keytool), apksigner=Path(apksigner),
+            )
+            if signer_preflight != "PASS_EXISTING_RESEARCH_KEYSTORE_ALIAS_PASSWORD_AND_CERT_MATCH":
+                raise AssertionError("real JDK synthetic signer preflight failed")
+            try:
+                verify_before_sign(
+                    keystore=key, alias="missing_alias", storepass_env=env_name,
+                    previously_signed_base=signed / "base.apk",
+                    keytool=Path(keytool), apksigner=Path(apksigner),
+                )
+            except PrivateSignerPreflightBlocked as exc:
+                if str(exc) != "EXISTING_RESEARCH_KEY_ALIAS_NOT_FOUND_OR_NO_CERTIFICATE":
+                    raise AssertionError("public negative alias preflight classification failed")
+            else:
+                raise AssertionError("invalid existing synthetic key alias was accepted")
         if len(ledger["splits"]) != 6:
             raise AssertionError("not six synthetic APKs")
         if SYNTHETIC_SECRET in (signed / "patch-ledger.json").read_text():
@@ -155,6 +181,8 @@ def _run_smoke(sdk: Path, *, output: Path | None = None) -> dict:
             "real_android_sdk_tools_executed": True,
             "real_keytool_ephemeral_synthetic_only": True,
             "real_synthetic_apk_signatures_verified": 6,
+            "real_keytool_existing_alias_certificate_preflight_verified": True,
+            "wrong_alias_preflight_blocked": True,
             "signing_password_only_in_environment_not_argv": True,
             "all_six_signed_apk_payloads_preserved": True,
             "synthetic_keystore_removed_after_process": True,
