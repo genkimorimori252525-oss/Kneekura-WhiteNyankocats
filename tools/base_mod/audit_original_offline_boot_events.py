@@ -59,9 +59,19 @@ def summarize_runtime_events(source: str) -> dict:
         elif msg == "original-local-denied-http-v1":
             counts["denied_http"] += 1
         elif msg == "original-local-backup-failure-fallback-v1 completed":
-            counts["backup_original_failure_response_completed"] += 1
+            # Historical legacy marker fires AFTER queueEvent() scheduling,
+            # NOT after GL-thread callback execution. Do not infer completion.
+            counts["backup_original_queued_legacy"] += 1
+        elif msg == "original-local-backup-failure-fallback-v1 enqueued":
+            counts["backup_original_enqueued"] += 1
+        elif msg == "original-local-backup-callback-v1 returned":
+            counts["backup_original_callback_returned"] += 1
         elif msg == "original-local-backup-timeout-variant-v1 completed":
-            counts["backup_timeout_variant_original_failure_completed"] += 1
+            counts["backup_timeout_variant_queued_legacy"] += 1
+        elif msg == "original-local-backup-timeout-variant-v1 enqueued":
+            counts["backup_timeout_variant_enqueued"] += 1
+        elif msg == "original-local-backup-timeout-variant-v1 returned":
+            counts["backup_timeout_variant_callback_returned"] += 1
         elif msg == "original-local-backup-failure-fallback-v1 unavailable":
             counts["backup_original_failure_response_unavailable"] += 1
         elif BACKUP_SHAPE.fullmatch(msg):
@@ -133,9 +143,19 @@ def summarize_runtime_events(source: str) -> dict:
         "original_local_network_unavailable_event_count": (
             counts["original_local_network_unavailable"]),
         "exact_backup_original_network_failure_callbacks_completed": (
-            counts["backup_original_failure_response_completed"]),
+            counts["backup_original_callback_returned"]),
+        "exact_backup_original_network_failure_callbacks_enqueued": (
+            counts["backup_original_enqueued"]
+            + counts["backup_original_queued_legacy"]),
         "backup_timeout_variant_original_failure_callbacks_completed": (
-            counts["backup_timeout_variant_original_failure_completed"]),
+            counts["backup_timeout_variant_callback_returned"]),
+        "backup_timeout_variant_original_failure_callbacks_enqueued": (
+            counts["backup_timeout_variant_enqueued"]
+            + counts["backup_timeout_variant_queued_legacy"]),
+        "legacy_misnamed_callback_completed_tags_observed": (
+            counts["backup_original_queued_legacy"]
+            + counts["backup_timeout_variant_queued_legacy"]),
+        "callback_enqueued_is_not_native_task_or_scene_acceptance": True,
         "exact_backup_original_network_failure_callbacks_unavailable": (
             counts["backup_original_failure_response_unavailable"]),
         "actual_publisher_backup_server_success_claimed": False,
