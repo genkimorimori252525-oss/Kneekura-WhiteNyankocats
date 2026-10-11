@@ -41,7 +41,7 @@ class OriginalOffline393Tests(unittest.TestCase):
         incomplete={f"S{i:03d}Server.list":(3,md5(b"foo").hexdigest())
                     for i in range(357)}
         with patch.object(manifest,"owner_manifest",return_value=incomplete):
-            with self.assertRaisesRegex(ValueError,"393"):
+            with self.assertRaisesRegex(ValueError,"358\\+35"):
                 manifest.original_offline_asset_manifest(self.apk)
 
     def test_feature_off_by_default_and_requires_research(self):
