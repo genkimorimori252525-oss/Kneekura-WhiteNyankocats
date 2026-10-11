@@ -40,6 +40,25 @@ class OriginalResearchSameSignerHandoffTests(unittest.TestCase):
         self.assertIn("if ($before -ne $after)", source)
         self.assertIn("Do NOT install this build", source)
 
+    def test_owner_jdk17_pair_resolved_before_secret_prompt(self):
+        """Regression for owner's Oracle javapath javac.exe with no sibling keytool.
+
+        Reuse the repository's verified resolver to locate one complete JDK17
+        rather than guessing that Get-Command javac.exe has keytool beside it.
+        """
+        source = SCRIPT.read_text(encoding="utf-8-sig")
+        self.assertIn("resolve_java_keytool.ps1", source)
+        self.assertIn(". $javaHelper", source)
+        self.assertIn("$keytoolPath = RequireFile (Resolve-JavaKeytool)", source)
+        self.assertIn("'javac.exe') 'JDK javac paired with keytool'", source)
+        self.assertIn("EXISTING_JDK17_JAVAC_KEYTOOL_PAIR_VERIFIED_NO_KEY_USED", source)
+        self.assertNotIn("Get-Command javac.exe", source)
+        self.assertNotIn("$keytoolPath = Join-Path (Split-Path -Parent $javacPath)", source)
+        self.assertLess(source.index("Resolve-JavaKeytool"),
+                        source.index("$secure = Read-Host"))
+        self.assertLess(source.index("EXISTING_JDK17_JAVAC_KEYTOOL_PAIR_REQUIRED_NO_SIGNING_ATTEMPT"),
+                        source.index("$secure = Read-Host"))
+
     def test_preflight_excludes_failed_build_inputs_and_runs_before_staging(self):
         ready = (ROOT / "tools/base_mod/OWNER-READY-TO-SIGN.ps1").read_text(
             encoding="utf-8-sig")
