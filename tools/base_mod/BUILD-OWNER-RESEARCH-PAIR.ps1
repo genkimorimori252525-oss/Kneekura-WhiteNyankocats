@@ -126,7 +126,8 @@ if (-not (Test-Path -LiteralPath $privateRoot -PathType Container)) {
 }
 $unique = [Guid]::NewGuid().ToString('N')
 $out = Join-Path $privateRoot ('official-shadowhook-pair-passive-' + $unique)
-New-Item -ItemType Directory -Path $out -Force | Out-Null
+# Do not create another ~166 MB staging directory before the alias/password/
+# existing-cert check succeeds. A rejected key leaves no new private output.
 $secure = Read-Host 'Password for the EXISTING research keystore (not the publisher key)' -AsSecureString
 $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
 try {
@@ -158,6 +159,10 @@ try {
         if ($LASTEXITCODE -ne 0) {
             throw 'EXISTING_RESEARCH_KEYSTORE_PREFLIGHT_BLOCKED_NO_SIGNING_ATTEMPT'
         }
+        if (Test-Path -LiteralPath $out) {
+            throw 'Refuse to overwrite an existing private build directory'
+        }
+        New-Item -ItemType Directory -Path $out -ErrorAction Stop | Out-Null
         $buildArgs = @(
             '-3.12', '-m', 'tools.base_mod.build_owned_static_http_bridge',
             $zip, '--flavor', 'local-research',
