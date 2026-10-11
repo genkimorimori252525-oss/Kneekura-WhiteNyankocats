@@ -91,6 +91,24 @@ class OriginalOffline393Tests(unittest.TestCase):
             code.index('throw new IllegalStateException("original local research HTTP disabled")'),
         )
 
+    def test_phone_wifi_preserved_game_reports_original_offline_network(self):
+        """Original source DEX declares PUBLIC VIRTUAL isNetworkAvailable().
+        Only strict no-INTERNET local-research returns false; shipping and
+        ordinary research still inherit the original method.
+        """
+        import json
+        data=json.loads((ROOT/"docs/evidence/myactivity-service-methods-jp15.7.1.json").read_text())
+        methods=[x for x in data["methods"] if x.get("name")=="isNetworkAvailable"]
+        self.assertEqual(len(methods),1)
+        self.assertEqual(methods[0]["access_flags"],"0x1")
+        self.assertEqual(methods[0]["kind"],"virtual")
+        source=(ROOT/"bridge/java/MyActivity.java.in").read_text()
+        self.assertIn("public boolean isNetworkAvailable()",source)
+        self.assertIn("if (LOCAL_RESEARCH_DENY_HTTP) {",source)
+        self.assertIn("original-local-network-availability-v1 offline",source)
+        self.assertIn("return super.isNetworkAvailable();",source)
+        self.assertNotIn("setAirplaneMode",source)
+
     def test_strict_local_exact_backup_original_network_failure_callback(self):
         """A previously observed backup request may complete locally using
         the exact ORIGINAL Java fallback, not pretend a publisher success.
