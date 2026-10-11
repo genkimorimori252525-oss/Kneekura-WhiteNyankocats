@@ -84,7 +84,7 @@ class OriginalOfflineImporterJvmTests(unittest.TestCase):
                                 new MyActivity(),root);
                             File mark = new File(root,
                                 ".kneekura-original-jp1571-393-import-complete-v1");
-                            for(int i=0;i<300 && !mark.isFile();i++){
+                            for(int i=0;i<70 && !mark.isFile();i++){
                                 Thread.sleep(100);
                             }
                             Thread.sleep(200);
