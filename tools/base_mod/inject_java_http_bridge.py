@@ -35,6 +35,7 @@ from tools.base_mod.repack import JP_15_7_1_SPLITS, payload_fingerprint, sha256_
 
 ORIGINAL_LAUNCHER = ORIGINAL_PACKAGE + ".MyActivity"
 BRIDGE_TEMPLATE = Path("bridge/java/MyActivity.java.in")
+OFFLINE_IMPORT_TEMPLATE = Path("bridge/java/KneekuraOfflineAssetImporter.java.in")
 STUB_SOURCE = Path("bridge/java/stub/jp/co/ponos/battlecats/MyActivity.java")
 BRIDGE_DEX_ENTRY = "classes5.dex"
 
@@ -229,6 +230,7 @@ def build_bridge_dex(
     use_external_files_dir: bool = False,
     isolate_original_native_files_dir: bool = False,
     virgin_save_trial: bool = False,
+    offline_import_installpack: Path | None = None,
 ) -> dict:
     package_name = FLAVOR_PACKAGES.get(flavor)
     if package_name is None:
@@ -244,6 +246,22 @@ def build_bridge_dex(
         isolate_original_native_files_dir=isolate_original_native_files_dir,
         virgin_save_trial=virgin_save_trial,
     )
+    # Feature disabled by default in every existing build/profile. The index
+    # is compiled only from the owner's exact original JP15.7.1 InstallPack.
+    if offline_import_installpack is not None:
+        if flavor != "local-research" or enabled or use_external_files_dir or isolate_original_native_files_dir:
+            raise ValueError("original 393-asset import requires strict no-network local research mode")
+        from tools.base_mod.offline_server_import_manifest import compiled_java_metadata
+        local_index = compiled_java_metadata(offline_import_installpack)
+    else:
+        local_index = '""'
+    importer = (root / OFFLINE_IMPORT_TEMPLATE).read_text(encoding="utf-8")
+    importer = (importer.replace("__KNEEKURA_PACKAGE__", package_name)
+                .replace("__KNEEKURA_OFFLINE_IMPORT_ENABLED__",
+                         "true" if offline_import_installpack is not None else "false")
+                .replace("__KNEEKURA_OFFLINE_IMPORT_INDEX__", local_index))
+    if "__KNEEKURA_" in importer:
+        raise ValueError("unresolved original offline import template variables")
 
     javac_bin = _find_executable("javac", javac)
     d8_bin = _find_d8(d8)
@@ -261,6 +279,8 @@ def build_bridge_dex(
         source_path = source_root / Path(*package_name.split(".")) / "MyActivity.java"
         source_path.parent.mkdir(parents=True)
         source_path.write_text(rendered, encoding="utf-8")
+        importer_path = source_path.with_name("KneekuraOfflineAssetImporter.java")
+        importer_path.write_text(importer, encoding="utf-8")
 
         stub_source = root / STUB_SOURCE
         stub_classes.mkdir()
@@ -284,6 +304,7 @@ def build_bridge_dex(
             "-classpath", classpath,
             "-d", str(bridge_classes),
             str(source_path),
+            str(importer_path),
         ])
 
         class_files = sorted(str(path) for path in bridge_classes.rglob("*.class"))
@@ -328,6 +349,8 @@ def build_bridge_dex(
         "network_egress_guarantee": "NOT_VERIFIED",
         "strict_local_research_package": flavor == "local-research",
         "explicit_native_virgin_save_trial": virgin_save_trial,
+        "offline_393_exact_owner_files_background_import_enabled": offline_import_installpack is not None,
+        "offline_original_gameplay_accepted": False,
         "original_virgin_save_trial_device_acceptance": False,
         "original_native_files_root": (
             "super.getFilesDir() in separate app UID" if flavor == "local-research"
