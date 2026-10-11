@@ -24,7 +24,7 @@ HTTP_KINDS = frozenset({
 })
 SOURCE_MSG = re.compile(r"KNEEKURA_STATIC_HTTP:\s*([^\r\n]{1,220})")
 SCENE = re.compile(r"original-native-scene-v1 id=(4|97|101|102|104)\Z")
-BACKUP_SHAPE = re.compile(r"original-local-backup-shape-v1 mask=([0-7a-f]{1,3})\\Z")
+BACKUP_SHAPE = re.compile(r"original-local-backup-shape-v1 mask=([0-7a-f]{1,3})\Z")
 
 LOOSE = re.compile(
     r"original-download-tsv-loose-v1 present=(\d{1,2}) absent=(\d{1,2}) unsafe=(\d{1,2})\Z"
