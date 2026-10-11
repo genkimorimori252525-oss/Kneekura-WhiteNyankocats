@@ -91,6 +91,36 @@ class OriginalOffline393Tests(unittest.TestCase):
             code.index('throw new IllegalStateException("original local research HTTP disabled")'),
         )
 
+    def test_strict_local_exact_backup_original_network_failure_callback(self):
+        """A previously observed backup request may complete locally using
+        the exact ORIGINAL Java fallback, not pretend a publisher success.
+        All unknown requests must still be denied with no super fallthrough.
+        """
+        source=(ROOT/"bridge/java/MyActivity.java.in").read_text(encoding="utf-8")
+        self.assertIn('final boolean originalBackupFailureShape = isExactBackupRequest(',source)
+        self.assertIn(
+            '!(LOCAL_RESEARCH_DENY_HTTP && LOCAL_RESEARCH_IMPORT_OWNER_ASSETS)',
+            source)
+        self.assertIn(
+            'if (LOCAL_RESEARCH_DENY_HTTP && !originalBackupFailureShape)',source)
+        self.assertIn('if (!originalBackupFailureShape)',source)
+        self.assertIn('original-local-backup-failure-fallback-v1 completed',source)
+        self.assertIn('original-local-backup-failure-fallback-v1 unavailable',source)
+        self.assertIn('throw new IllegalStateException("original local backup fallback unavailable")',source)
+        self.assertIn('jp.co.ponos.battlecats.MyActivity.newResponse(',source)
+        self.assertIn('                            "{}",',source)
+        self.assertIn('                            true);',source)
+        self.assertIn('view.queueEvent(new Runnable()',source)
+        self.assertLess(
+            source.index('if (LOCAL_RESEARCH_DENY_HTTP && !originalBackupFailureShape)'),
+            source.index('if (!originalBackupFailureShape)'))
+        self.assertLess(
+            source.index('throw new IllegalStateException("original local backup fallback unavailable")'),
+            source.rindex('return super.newHttpRequest('))
+        self.assertNotIn('super.newHttpRequest(',source[
+            source.index('if (LOCAL_RESEARCH_DENY_HTTP && !originalBackupFailureShape)'):
+            source.index('if (!originalBackupFailureShape)')])
+
     def test_owner_signing_opt_in_separate_from_android_installer(self):
         owner=(ROOT/"tools/base_mod/OWNER-READY-TO-SIGN.ps1").read_text(encoding="utf-8-sig")
         signer=(ROOT/"tools/base_mod/BUILD-OWNER-RESEARCH-PAIR.ps1").read_text(encoding="utf-8-sig")
