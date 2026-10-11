@@ -474,13 +474,26 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
             boolean flag1,
             boolean flag2) {
         // The strict offline original-game research profile may reproduce
-        // ONLY the exact previously observed original backup *failure*
-        // response shape. The normal feature-OFF shipping profiles never do.
+        // ONLY the exact original backup request *identity* and documented
+        // original OFFLINE failure response. The isolated device has also shown
+        // an otherwise-identical timeout variant (mask 0x7fd). Transport-only
+        // timeout tolerance is isolated to research; shipping modes never do.
         if (!ENABLE_BACKUP_OFFLINE_REPLAY
                 && !(LOCAL_RESEARCH_DENY_HTTP && LOCAL_RESEARCH_IMPORT_OWNER_ASSETS)) {
             return false;
         }
-        if (!"GET".equals(method) || Float.compare(timeout, 10.0f) != 0) {
+        // The original OWNER device emitted backup-shape mask 0x7fd during
+        // scene97: all URI, method, payload and flag invariants matched, but
+        // timeout != 10. In the isolated no-INTERNET research profile ONLY,
+        // timeout is transport policy, not backup identity. Complete the same
+        // source-observed ORIGINAL network-failure callback for finite timeout
+        // variants, rather than leaving a native request pending indefinitely.
+        // Personal/practice/replay profiles retain the EXACT timeout=10 gate.
+        final boolean isolatedOfflineResearch =
+                LOCAL_RESEARCH_DENY_HTTP && LOCAL_RESEARCH_IMPORT_OWNER_ASSETS;
+        if (!"GET".equals(method)
+                || (!isolatedOfflineResearch && Float.compare(timeout, 10.0f) != 0)
+                || (isolatedOfflineResearch && !Float.isFinite(timeout))) {
             return false;
         }
         if (headers == null || !headers.isEmpty() || body != null) {
