@@ -122,7 +122,8 @@ class OriginalOffline393Tests(unittest.TestCase):
         self.assertIn(
             'if (LOCAL_RESEARCH_DENY_HTTP && !originalBackupFailureShape)',source)
         self.assertIn('if (!originalBackupFailureShape)',source)
-        self.assertIn('original-local-backup-failure-fallback-v1 completed',source)
+        self.assertIn('original-local-backup-failure-fallback-v1 enqueued',source)
+        self.assertIn('original-local-backup-callback-v1 returned',source)
         self.assertIn('original-local-backup-failure-fallback-v1 unavailable',source)
         self.assertIn('throw new IllegalStateException("original local backup fallback unavailable")',source)
         self.assertIn('jp.co.ponos.battlecats.MyActivity.newResponse(',source)
