@@ -11,7 +11,8 @@ param(
     [Parameter(Mandatory=$true)][string]$ResearchKeystore,
     [Parameter(Mandatory=$true)][string]$PreviouslySignedBaseApk,
     [Parameter(Mandatory=$true)][string]$SigningAlias,
-    [string]$OfficialShadowHookAar
+    [string]$OfficialShadowHookAar,
+    [switch]$EnableOfflineServerImport
 )
 $ErrorActionPreference = 'Stop'
 $package = 'jp.kn.local.battlecats'
@@ -195,6 +196,10 @@ try {
             '--javac', $javacPath, '--d8', $d8, '--android-jar', $androidJar,
             '--root', $repo, '--output', $out
         )
+        if ($EnableOfflineServerImport) {
+            $buildArgs += '--research-offline-393-asset-import'
+            Write-Host 'OPT_IN_ORIGINAL_393_MEMBER_OFFLINE_IMPORT_ONLY_NO_DEVICE_ACTION'
+        }
         & py @buildArgs 1> (Join-Path $out 'PRIVATE-build-receipt.json')
         if ($LASTEXITCODE -ne 0) { throw 'Static research AAR-pair build did not pass' }
     } finally {
