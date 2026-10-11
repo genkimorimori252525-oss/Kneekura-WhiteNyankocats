@@ -38,7 +38,7 @@ class OriginalLocalBackupOfflineFallbackJvmTests(unittest.TestCase):
                 "package android.os;"
                 "public abstract class FileObserver {"
                 " public static final int CREATE=256,CLOSE_WRITE=8,"
-                "MOVED_TO=128,DELETE=512;"
+                "MOVED_TO=128,DELETE=512,OPEN=32,ACCESS=1;"
                 " public FileObserver(String path,int flags) {}"
                 " public void startWatching() {}"
                 " public abstract void onEvent(int kind,String name);"
