@@ -172,65 +172,7 @@ try {
         }
         $aliasReceipt = RequireFile $resolvedAliasPath 'temporary matching research signing alias'
         $verifiedAlias = (Get-Content -LiteralPath $aliasReceipt -Raw -Encoding UTF8).Trim()
-        if ($verifiedAlias -notmatch '^[A-Za-z0-9._-]{1,80}
-            throw 'Refuse to overwrite an existing private build directory'
-        }
-        New-Item -ItemType Directory -Path $out -ErrorAction Stop | Out-Null
-        $buildArgs = @(
-            '-3.12', '-m', 'tools.base_mod.build_owned_static_http_bridge',
-            $zip, '--flavor', 'local-research',
-            '--shim', $shim, '--keystore', $keystore,
-            '--alias', $SigningAlias,
-            '--storepass-env', $secretEnvName, '--keypass-env', $secretEnvName,
-            '--research-no-internet-permission',
-            '--research-shadowhook-aar', $aar,
-            '--zipalign', $zipalign, '--apksigner', $apksigner,
-            '--javac', $javacPath, '--d8', $d8, '--android-jar', $androidJar,
-            '--root', $repo, '--output', $out
-        )
-        & py @buildArgs 1> (Join-Path $out 'PRIVATE-build-receipt.json')
-        if ($LASTEXITCODE -ne 0) { throw 'Static research AAR-pair build did not pass' }
-    } finally {
-        Pop-Location
-    }
-} finally {
-    [Environment]::SetEnvironmentVariable($secretEnvName, $null, 'Process')
-    $password = $null
-    $secure.Dispose()
-}
-$signed = Join-Path $out 'local-research-static-http-signed-splits'
-# Bind the signed 6-split candidate to the same validated public-only
-# PASSIVE native shim/CI receipt. Never put the owner's game or passwords
-# in this receipt. The independent read-only device preflight requires it.
-$copiedReceipt = Join-Path $signed 'PASSIVE_SHIM_BUILD_SOURCE_RECEIPT.json'
-if (Test-Path -LiteralPath $copiedReceipt) {
-    throw 'Unexpected existing signed candidate source receipt; do not overwrite'
-}
-Copy-Item -LiteralPath $receiptPath -Destination $copiedReceipt -ErrorAction Stop
-$newBase = RequireFile (Join-Path $signed 'base.apk') 'newly signed research base APK'
-$before = SignerDigest $existingBase $apksigner
-$after = SignerDigest $newBase $apksigner
-if ($before -ne $after) {
-    throw 'Research APK signer differs from PREVIOUSLY installed baseline. Do NOT install this build.'
-}
-$requiredApks = @('base.apk', 'split_config.arm64_v8a.apk',
-    'split_config.en.apk', 'split_config.ja.apk',
-    'split_config.xxhdpi.apk', 'split_InstallPack.apk')
-foreach ($name in $requiredApks) {
-    [void](RequireFile (Join-Path $signed $name) ('six-split research output ' + $name))
-}
-@(
- 'BUILD_ONLY_STATIC_PASS; PROVIDED_PREVIOUS_SIGNED_BASE_CERT_MATCHED',
- 'The supplied previous signed APK matches the new certificate; installed device signer NOT independently checked.',
- 'Before any -r device update, compare with the actual installed isolated package signer read-only.',
- 'This did not install, uninstall, force-stop, log in, or touch any Android SAVE.',
- 'This is passive hook observation only; virgin SAVE writer NOT enabled.',
- 'Original gameplay, boot, assets, 0 SDK/IPC egress and Level60 NOT verified.'
-) | Out-File -LiteralPath (Join-Path $out 'PRIVATE-BUILD-STATUS.txt') -Encoding utf8
-Write-Host 'BUILD_ONLY_PASS; PROVIDED_PREVIOUS_SIGNED_BASE_CERT_MATCHED' -ForegroundColor Green
-Write-Host ('PRIVATE six-split output: ' + $signed)
-Write-Host 'No device actions were performed. Installed package signer is NOT yet checked; do NOT install until device preflight.'
-) {
+        if ($verifiedAlias -notmatch '^[A-Za-z0-9._-]{1,80}$') {
             throw 'EXISTING_RESEARCH_AUTO_RESOLVED_ALIAS_UNSAFE_NO_SIGNING_ATTEMPT'
         }
         $SigningAlias = $verifiedAlias
