@@ -67,6 +67,30 @@ class OriginalOffline393Tests(unittest.TestCase):
         self.assertNotIn('new File(root, "SAVE_DATA")',java)
         self.assertNotIn("HttpURLConnection",java)
 
+    def test_offline_request_probe_logs_fixed_kinds_only(self):
+        """The next on-device diagnostic must never log a URL or credential.
+
+        Instrument only the explicit 393-import profile; leave network
+        disabled and the original no-import profile unchanged.
+        """
+        code = (ROOT / "bridge/java/MyActivity.java.in").read_text(
+            encoding="utf-8")
+        self.assertIn("classifyDeniedOriginalHttp(String requestUrl)", code)
+        self.assertIn('return "asset-cdn";', code)
+        self.assertIn('return "backup";', code)
+        self.assertIn('return "publisher-other";', code)
+        self.assertIn('return "external-other";', code)
+        self.assertIn('return "malformed";', code)
+        self.assertIn('if (LOCAL_RESEARCH_IMPORT_OWNER_ASSETS)', code)
+        self.assertIn('debugResearch("original-local-http-kind-v1 "', code)
+        self.assertIn('throw new IllegalStateException("original local research HTTP disabled")', code)
+        self.assertNotIn('debugResearch(requestUrl)', code)
+        self.assertNotIn('debugResearch(method)', code)
+        self.assertLess(
+            code.index('debugResearch("original-local-http-kind-v1 "'),
+            code.index('throw new IllegalStateException("original local research HTTP disabled")'),
+        )
+
     def test_owner_signing_opt_in_separate_from_android_installer(self):
         owner=(ROOT/"tools/base_mod/OWNER-READY-TO-SIGN.ps1").read_text(encoding="utf-8-sig")
         signer=(ROOT/"tools/base_mod/BUILD-OWNER-RESEARCH-PAIR.ps1").read_text(encoding="utf-8-sig")
