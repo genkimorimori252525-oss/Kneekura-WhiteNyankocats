@@ -131,6 +131,15 @@ class OriginalLocalBackupOfflineFallbackJvmTests(unittest.TestCase):
                       unknownBlocked=true;
                     }
                     System.out.println("UNKNOWN_BLOCKED="+unknownBlocked);
+                    boolean nonmatchingBackupBlocked=false;
+                    try {
+                      app.newHttpRequest(
+                        "GET","https://nyanko-backups.ponosgames.com/?synthetic=1",
+                        11.0f,new HashMap(),null,new String[0],false,false);
+                    } catch(IllegalStateException expected) {
+                      nonmatchingBackupBlocked=true;
+                    }
+                    System.out.println("NONMATCH_BACKUP_BLOCKED="+nonmatchingBackupBlocked);
                     System.out.println("ORIGINAL_SUPER_HTTP_CALLS="+
                       jp.co.ponos.battlecats.MyActivity.superCalled);
                     System.out.println("LOCAL_ONLY_NETWORK_AVAILABLE="+
@@ -167,6 +176,9 @@ class OriginalLocalBackupOfflineFallbackJvmTests(unittest.TestCase):
                 "ORIGINAL_FALLBACK_BODY={}",
                 "ORIGINAL_FALLBACK_FINAL=true",
                 "UNKNOWN_BLOCKED=true",
+                "NONMATCH_BACKUP_BLOCKED=true",
+                "original-local-http-kind-v1 backup",
+                "original-local-backup-shape-v1 mask=7fd",
                 "ORIGINAL_SUPER_HTTP_CALLS=0",
                 "LOCAL_ONLY_NETWORK_AVAILABLE=false",
                 "ORIGINAL_SUPER_NETWORK_CHECK_CALLS=0",
