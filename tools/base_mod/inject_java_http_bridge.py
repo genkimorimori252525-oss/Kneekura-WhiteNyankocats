@@ -286,7 +286,12 @@ def build_bridge_dex(
         source_path.parent.mkdir(parents=True)
         source_path.write_text(rendered, encoding="utf-8")
         importer_path = source_path.with_name("KneekuraOfflineAssetImporter.java")
-        importer_path.write_text(importer, encoding="utf-8")
+        # Shipping personal/practice profiles have zero local-import logic or
+        # KNEEKURA_STATIC_HTTP instrumentation in DEX. Reflection is never
+        # taken because their bridge flag is compile-time false.
+        include_importer = flavor in ("research", "local-research")
+        if include_importer:
+            importer_path.write_text(importer, encoding="utf-8")
 
         stub_source = root / STUB_SOURCE
         stub_classes.mkdir()
@@ -310,7 +315,7 @@ def build_bridge_dex(
             "-classpath", classpath,
             "-d", str(bridge_classes),
             str(source_path),
-            str(importer_path),
+            *([str(importer_path)] if include_importer else []),
         ])
 
         class_files = sorted(str(path) for path in bridge_classes.rglob("*.class"))
