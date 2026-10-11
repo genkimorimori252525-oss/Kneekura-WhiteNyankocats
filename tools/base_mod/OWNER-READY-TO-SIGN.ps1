@@ -102,15 +102,31 @@ try {
 if ($certificateVerifyExit -ne 0) {
     throw 'The proposed old research base APK is not a valid signed APK'
 }
-$unsigned = @(Get-ChildItem -LiteralPath $private -Directory -Filter 'unsigned-original-native-pair-*')
-if ($unsigned.Count -ne 1) {
-    throw 'Exactly one complete private original unsigned validation output is required'
+# Earlier SAFE unsigned candidates may coexist; never delete owner files
+# merely to choose the current opt-in offline import profile. Require a
+# complete native/source gate whose mode matches this explicit build switch.
+$unsignedCandidates = @(Get-ChildItem -LiteralPath $private -Directory -Filter 'unsigned-original-native-pair-*' |
+    Sort-Object LastWriteTime -Descending)
+$presignReport = $null
+$proof = $null
+foreach ($stage in $unsignedCandidates) {
+    if (($stage.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+        continue
+    }
+    $receipt = Join-Path $stage.FullName 'UNSIGNED-RESEARCH-RECEIPT.json'
+    if (-not (Test-Path -LiteralPath $receipt -PathType Leaf)) {
+        continue
+    }
+    $candidateProof = Get-Content -LiteralPath $receipt -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ([bool]$candidateProof.owner_original_393_file_import_feature_opt_in -eq [bool]$EnableOfflineServerImport) {
+        $presignReport = $receipt
+        $proof = $candidateProof
+        break
+    }
 }
-$presignReport = Join-Path $unsigned[0].FullName 'UNSIGNED-RESEARCH-RECEIPT.json'
-if (-not (Test-Path -LiteralPath $presignReport -PathType Leaf)) {
-    throw 'Missing private original unsigned build evidence'
+if ($null -eq $proof) {
+    throw 'No original private unsigned source parity proof for this selected import mode'
 }
-$proof = Get-Content -LiteralPath $presignReport -Raw -Encoding UTF8 | ConvertFrom-Json
 if ($proof.status -ne 'PASS_PRIVATE_UNSIGNED_ORIGINAL_SIX_SPLITS_NOT_INSTALLABLE' -or
     $proof.exact_original_native_presign_status -ne 'PINNED_REPACKAGED_JP1571_ORIGINAL_SCENE_VMA_AND_EXPORT_VERIFIED' -or
     ($proof.unsigned_original_splits_sha256 | Get-Member -MemberType NoteProperty).Count -ne 6) {
