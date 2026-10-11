@@ -122,7 +122,7 @@ def stage_owner_original(*, repo: Path, candidate: Path, cache: Path, adb: Path,
                             str(local_source),remote],timeout=240)
                 if sent.returncode:
                     retry_devices=_call([str(adb),"devices"],timeout=15)
-                    if not any(re.fullmatch(r"\\S+\\s+device",x.strip())
+                    if not any(re.fullmatch(r"\S+\s+device",x.strip())
                                for x in retry_devices.stdout.splitlines()):
                         raise OwnerStageBlocked("ADB_DISCONNECTED_DURING_RESEARCH_EXTERNAL_STAGE")
                     raise OwnerStageBlocked("ADB_PUSH_ORIGINAL_MEMBER_FAILED_STOP")
