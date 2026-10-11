@@ -66,6 +66,11 @@ class OriginalLocalBackupOfflineFallbackJvmTests(unittest.TestCase):
                   private Map mRequestHandles = new HashMap();
                   private GLSurfaceView mGLView = new GLSurfaceView();
                   public static int superCalled;
+                  public static int networkAvailableSuperCalled;
+                  public boolean isNetworkAvailable(){
+                    networkAvailableSuperCalled++;
+                    return true;
+                  }
                   public static int nativeResponseCount;
                   public static int lastNativeCode;
                   public static String lastNativeBody;
@@ -128,6 +133,10 @@ class OriginalLocalBackupOfflineFallbackJvmTests(unittest.TestCase):
                     System.out.println("UNKNOWN_BLOCKED="+unknownBlocked);
                     System.out.println("ORIGINAL_SUPER_HTTP_CALLS="+
                       jp.co.ponos.battlecats.MyActivity.superCalled);
+                    System.out.println("LOCAL_ONLY_NETWORK_AVAILABLE="+
+                      app.isNetworkAvailable());
+                    System.out.println("ORIGINAL_SUPER_NETWORK_CHECK_CALLS="+
+                      jp.co.ponos.battlecats.MyActivity.networkAvailableSuperCalled);
                   }
                 }
             """,
@@ -159,6 +168,9 @@ class OriginalLocalBackupOfflineFallbackJvmTests(unittest.TestCase):
                 "ORIGINAL_FALLBACK_FINAL=true",
                 "UNKNOWN_BLOCKED=true",
                 "ORIGINAL_SUPER_HTTP_CALLS=0",
+                "LOCAL_ONLY_NETWORK_AVAILABLE=false",
+                "ORIGINAL_SUPER_NETWORK_CHECK_CALLS=0",
+                "original-local-network-availability-v1 offline",
                 "original-local-backup-failure-fallback-v1 completed",
                 "original-local-denied-http-v1",
                 "original-local-http-kind-v1 publisher-other",
