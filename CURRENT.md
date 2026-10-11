@@ -4,6 +4,8 @@
 
 ## 現在の作業位置
 
+**2026-10-11 最新の本人実機訂正（最優先）:** **原作の615MBダウンロード／ロードバーは突破できていない。にゃんこ基地には到達していない。** 本人が画面を見直して明示的に訂正した。これまでの「追加データ取得／取り込み成功」は別の受入であり、615MB画面突破やロード完了を意味しない。実機で確認済みなのはJP15.7.1原本追加データ358＋TSV35＝393ファイルの元サイズ/MD5一致・研究版内部への完了マーカー、再起動後の保持、nativeフック安定、scene102→101→97まで。原作scene97から基地画面への遷移は未受入。**最新ソースの`isNetworkAvailable false`＋既知バックアップ失敗時応答はPC/JVMとCI検証済みだが、実機適用・起動結果は未検証**。Wi-Fiや機内モードを変更する必要はない。元のゲームSAVE、公式パッケージ、アカウントは保護し、架空のダウンロード完了・H01回避・基地成功を宣言しない。
+
 **[親Issue #11 — 実装進捗](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/issues/11)** が唯一の「いま何をしているか」の入口。**直近の次のコード差分は [#12 LEVEL — 本家育成画面のレベル上限](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/issues/12)**。**[#15 OFFLINE — 元ゲーム保持＋通信ゼロ](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/issues/15)** は同時進行。次に **[#13 MADOKA](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/issues/13)**、**[#14 GODZILLA](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/issues/14)**。この順序・実装担当のために新しい基本計画を作らない。
 
 ## 原則の優先順位（不一致ならこの表で決定）
