@@ -71,6 +71,15 @@
 - 新規ソースのテストも含む**本人Windows Python3.12.10の641件実行、634 PASS・7 skip・0 failure**、GitHubの [Test tooling #38087627686](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/actions/runs/38087627686) および [Windows/Ubuntu #38087627670](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/actions/runs/38087627670) PASS。**実原作アプリの初回起動・本当のSAVE/LEVEL/MAX・運営・まどか/シンゴジラ・完全通信ゼロはまだ未検証**。PR#4はDRAFT。
 - 技術原因と引継ぎは親 [Issue #12](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/issues/12) に記録。別系統Alphaへ置換しない。
 
+### 2026-10-11 本人署名実行ログ — `apksigner sign` exit=2、原因の前倒し分類と復旧
+
+- 本人が `OWNER-READY-TO-SIGN.ps1 -DoBuild` を実行し、既存研究用鍵エイリアス（本人入力）とマスクされたパスワードを端末で入力した。準備段階 `OWNER_PRIVATE_ORIGINAL_BUILD_INPUTS_READY_NO_DEVICE_OR_KEY_USED` は PASS。その後最初の**研究版 `base.apk` の `apksigner sign` が終了コード2で失敗**。`tools/base_mod/repack.py::_run` がJava標準出力・エラーをバッファしていたため、過去ログだけから「エイリアス違い」「ストア/鍵パスワード違い」「JDK/PKCS12問題」のどれかは**断定できない**。**APKの署名成功・Android更新・黒画面修正は未実施**。
+- 原因分類のため**既存研究用鍵を一切変更しない** `tools/base_mod/verify_original_research_signer.py` を実装。PowerShellが今まで通りパスワードを1回ローカル入力してプロセス環境変数に保持し、原作166MBのパッケージ変換や署名の**前に**JDK `keytool -list` と `-exportcert` を `-storepass:env` 方式で実行する。PKCS12ストアを開けるか、指定エイリアスが存在して公開X.509証明書を取り出せるか、その証明書SHAが従来の署名済み研究版`base.apk`の`apksigner verify --print-certs`と一致するかを検証する。出力は英数字のみの**固定安全コード**（パスワード/alias/証明書/パスそのものは表示もファイル出力もしない）。誤った鍵は**署名ビルド前に拒否**。
+- `BUILD-OWNER-RESEARCH-PAIR.ps1` でこの事前検査を組み込み、**検査成功前には次の署名ビルド用フォルダを作らない**。署名ツールがさらに失敗しても `repack.py` は raw Javaエラーやpath/alias情報を例外出力せず、`RESEARCH_SIGNING_BLOCKED: ...` の固定分類コードに変換。ストア/鍵パスワードの生値をCLIに載せない旧契約は維持。
+- 一回目失敗で `private/official-shadowhook-pair-passive-*` 内に署名前作業用 `base.apk` が複数残り、`OWNER-READY-TO-SIGN.ps1` の基準APK検索が `Expected exactly one ... (found 6)` で誤停止するWindows固有の現物を実測。**前回の作業フォルダを検索から除外**して、本人PCのread-only準備確認を再実行すると `OWNER_PRIVATE_ORIGINAL_BUILD_INPUTS_READY_NO_DEVICE_OR_KEY_USED` **PASS**。利用者の過去ファイルは勝手に削除していない。
+- **検証**：本人のWindows Python3.12の全648テストは **641合格/7 skip/0 fail**。模擬Java/PKCS12失敗ケース（パスワード・alias・既存証明書不一致）をテスト済み。本人Windowsの実JDK17/SDK35を使う**一時合成鍵と6分割APKだけの実試験**で、keytoolの公開証明書一致／間違いaliasの拒否／Android署名を PASS。GitHub Actionsの [Windows/Linux 実Android署名＋JDK検証](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/actions/runs/38109809851) も両OS PASS（リンクのオーナーは常に `genkimorimori252525-oss`）。実鍵のパスワード自体はAIへ送らず、新しい鍵も発行しない。
+- **次の本人操作**：ローカルの更新済みリポで従来と同じ `OWNER-READY-TO-SIGN.ps1 -DoBuild` を一度実行し、本人だけが研究用署名鍵のaliasとパスワードを端末入力する。最初に固定ステータス `PASS_EXISTING_RESEARCH_KEYSTORE_ALIAS_PASSWORD_AND_CERT_MATCH` が出なければ処理は止まり、**その固定エラーコードだけ**をチャットへ送ってもらう。研究版の実機インストール・SAVE・公式アプリには触れない。署名PASS後も別のread-only 実機署名照合と本人明示の単発更新が必要。
+
 ## このファイルの後に読むもの（最大限絞る）
 
 **普段の新規AIセッション：** このファイル → PRODUCT_IDENTITY.md → 実装ロードマップの「実行順序と次の担当者向け開始地点」→ 今動かす1タスクのソース/証拠だけ。毎回すべてのdocs/を巡回する必要はない。
