@@ -250,6 +250,7 @@ class StaticHttpBridgeTests(unittest.TestCase):
                     public File getExternalFilesDir(String type) {
                         return new File(System.getProperty("bc.externalDir", "no-external-folder"));
                     }
+                    public boolean isNetworkAvailable(){return true;}
                     public int newHttpRequest(
                         String method, String url, float timeout, HashMap headers,
                         ByteBuffer body, String[] values, boolean b1, boolean b2
@@ -440,6 +441,7 @@ class StaticHttpBridgeTests(unittest.TestCase):
                     public File getExternalFilesDir(String type) {
                         throw new AssertionError("external files root must never run");
                     }
+                    public boolean isNetworkAvailable(){return true;}
                     public int newHttpRequest(
                         String method, String url, float timeout,
                         HashMap headers, ByteBuffer body, String[] values,
