@@ -43,6 +43,18 @@ class OriginalOfflineNativeBootMarkerTests(unittest.TestCase):
         self.assertFalse(report["actual_publisher_backup_server_success_claimed"])
         self.assertFalse(report["original_cat_base_visible_proven"])
 
+    def test_isolated_game_offline_network_gate_is_not_device_airplane_mode(self):
+        report=summarize_runtime_events(
+            "KNEEKURA_STATIC_HTTP: original-local-network-availability-v1 offline\n"
+            "KNEEKURA_STATIC_HTTP: original-local-backup-failure-fallback-v1 completed\n"
+            "KNEEKURA_STATIC_HTTP: original-native-scene-v1 id=97\n"
+        )
+        self.assertTrue(report["original_local_network_availability_false_observed"])
+        self.assertEqual(report["original_local_network_unavailable_event_count"],1)
+        self.assertEqual(report["exact_backup_original_network_failure_callbacks_completed"],1)
+        self.assertFalse(report["original_cat_base_visible_proven"])
+        self.assertFalse(report["original_615mb_gate_bypassed_proven"])
+
     def test_cold_restart_marker_and_no_source_md5_repetition(self):
         text=("KNEEKURA_STATIC_HTTP: original-local-import-v1 already-complete\n"
               "KNEEKURA_STATIC_HTTP: original-native-scene-v1 id=97\n")
