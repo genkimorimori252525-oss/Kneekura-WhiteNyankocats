@@ -485,15 +485,17 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
         // The original OWNER device emitted backup-shape mask 0x7fd during
         // scene97: all URI, method, payload and flag invariants matched, but
         // timeout != 10. In the isolated no-INTERNET research profile ONLY,
-        // timeout is transport policy, not backup identity. Complete the same
-        // source-observed ORIGINAL network-failure callback for finite timeout
-        // variants, rather than leaving a native request pending indefinitely.
+        // timeout is transport policy, not backup identity. As a bounded
+        // RESEARCH HYPOTHESIS only, queue the same source-observed ORIGINAL
+        // failure callback for positive finite timeout variants through 120s.
+        // This may or may not resolve scene97; do not claim source parity.
         // Personal/practice/replay profiles retain the EXACT timeout=10 gate.
         final boolean isolatedOfflineResearch =
                 LOCAL_RESEARCH_DENY_HTTP && LOCAL_RESEARCH_IMPORT_OWNER_ASSETS;
         if (!"GET".equals(method)
                 || (!isolatedOfflineResearch && Float.compare(timeout, 10.0f) != 0)
-                || (isolatedOfflineResearch && !Float.isFinite(timeout))) {
+                || (isolatedOfflineResearch && (!Float.isFinite(timeout)
+                        || timeout <= 0.0f || timeout > 120.0f))) {
             return false;
         }
         if (headers == null || !headers.isEmpty() || body != null) {
@@ -673,17 +675,23 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
                             "{}",
                             null,
                             true);
+                    if (LOCAL_RESEARCH_DENY_HTTP) {
+                        // This fires after the real GL-thread callback RETURNS,
+                        // unlike the legacy misnamed "completed" marker which
+                        // merely meant queued. This still does not prove native
+                        // scene advancement or any real publisher response.
+                        debugResearch("original-local-backup-callback-v1 returned");
+                        if (Float.compare(timeout, 10.0f) != 0) {
+                            debugResearch("original-local-backup-timeout-variant-v1 returned");
+                        }
+                    }
                 }
             });
             if (LOCAL_RESEARCH_DENY_HTTP) {
-                // This is the exact offline network-failure completion from
-                // the original JP15.7.1 a32/z22 implementation: status 0,
-                // JSON {}, null body, flag true, queued on GLThread. It is
-                // NOT a successful backup server response or SAVE replay.
-                debugResearch("original-local-backup-failure-fallback-v1 completed");
+                // Scheduling is NOT evidence the callback actually ran.
+                debugResearch("original-local-backup-failure-fallback-v1 enqueued");
                 if (Float.compare(timeout, 10.0f) != 0) {
-                    // One bounded telemetry marker, no timeout value or URL.
-                    debugResearch("original-local-backup-timeout-variant-v1 completed");
+                    debugResearch("original-local-backup-timeout-variant-v1 enqueued");
                 }
             } else {
                 debugResearch("backup-local-replay requestId=" + requestId);
