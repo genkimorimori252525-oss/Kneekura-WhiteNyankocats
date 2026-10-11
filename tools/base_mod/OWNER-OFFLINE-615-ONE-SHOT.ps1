@@ -7,7 +7,11 @@
 param(
     [string]$RepositoryRoot = (Join-Path $HOME 'Downloads\Kneekura-WhiteNyankocats'),
     [string]$SigningAlias = '252525',
-    [switch]$OnlyPreflight
+    [switch]$OnlyPreflight,
+    [switch]$RequireScene97ResolverWitness,
+    [string]$ResearchShimFolder,
+    [switch]$OwnerObservedInternetUnavailable,
+    [switch]$OwnerReported615MBRequestPassed
 )
 $ErrorActionPreference = 'Stop'
 function Require-SafeExistingFile([string]$path) {
