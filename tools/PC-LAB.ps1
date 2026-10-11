@@ -1,6 +1,6 @@
 #requires -Version 5.1
 param(
-    [ValidateSet('Setup','Build','Run','Update','Check')][string]$Action = 'Run',
+    [ValidateSet('Setup','Build','Run','Update','Check','Verify')][string]$Action = 'Run',
     [string]$StateRoot = (Join-Path $env:USERPROFILE 'Downloads\Kneekura-WhiteNyankocats\private\pc-lab'),
     [ValidateRange(10,300)][int]$ObserveSeconds = 30,
     [switch]$Install
@@ -25,6 +25,7 @@ try {
         'Setup' { Invoke-Lab @('setup') }
         'Build' { Invoke-Build }
         'Check' { Invoke-Lab @('check') }
+        'Verify' { Invoke-Lab @('verify-capture') }
         'Update' {
             Invoke-Lab @('setup')
             Invoke-Build

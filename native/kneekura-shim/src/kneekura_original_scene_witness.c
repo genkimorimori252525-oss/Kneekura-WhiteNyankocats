@@ -37,6 +37,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#ifdef KNEEKURA_RESEARCH_PC_JNI_SCENE_OBSERVER
+#include <jni.h>
+#include <sys/syscall.h>
+#endif
 /* These extra APIs are compiled ONLY for an explicitly enabled, research-only
  * new-player transaction experiment, never in the default/passive observer. */
 #ifdef KNEEKURA_RESEARCH_VIRGIN_SAVE_TRIAL
@@ -142,6 +146,13 @@ static void *gAppLaunchReadHookStub = NULL;
 static void *gShadowHookLibrary = NULL;
 /* A partially installed/reverted hook chain MUST NEVER activate the writer. */
 static _Atomic uint32_t gAllOriginalHooksInstalled = 0u;
+#ifdef KNEEKURA_RESEARCH_PC_JNI_SCENE_OBSERVER
+/* Independent of the coherent five-hook LEVEL/SAVE lifecycle. */
+static _Atomic uint32_t gPcSceneObserverState = 0u; /* 0 idle, 1 installing, 2 attached, 3 blocked */
+static _Atomic int gPcSceneGlTid = 0;
+static _Atomic uint32_t gPcSceneFirstDraw = 0u;
+static _Atomic uint32_t gPcSceneThreadMismatch = 0u;
+#endif
 
 /*
  * NEVER a default behavior. The whole experiment requires a special native
@@ -488,8 +499,12 @@ static int select_unique_original_source_vma_shift(
 static void observe_original_scene97_resolver_histogram(
         const uint8_t *game_context, uint32_t scene) {
     if (game_context == NULL || scene != 97u ||
-        atomic_load_explicit(
-            &gAllOriginalHooksInstalled, memory_order_acquire) != 1u) {
+        (atomic_load_explicit(
+            &gAllOriginalHooksInstalled, memory_order_acquire) != 1u
+#ifdef KNEEKURA_RESEARCH_PC_JNI_SCENE_OBSERVER
+         && atomic_load_explicit(&gPcSceneObserverState, memory_order_acquire) != 2u
+#endif
+        )) {
         return;
     }
     struct KneekuraScene97ResolverHistogram counts = {0u, 0u, 0u, 0u};
@@ -532,6 +547,22 @@ static void research_draw_proxy(void *jni_env, void *jni_class) {
     }
     original_draw(jni_env, jni_class);
 
+#ifdef KNEEKURA_RESEARCH_PC_JNI_SCENE_OBSERVER
+    if (atomic_load_explicit(&gPcSceneObserverState, memory_order_acquire) == 2u) {
+        if ((int)syscall(SYS_gettid) != atomic_load_explicit(&gPcSceneGlTid, memory_order_acquire)) {
+            if (atomic_exchange_explicit(&gPcSceneThreadMismatch, 1u, memory_order_relaxed) == 0u) {
+                __android_log_write(ANDROID_LOG_INFO, WITNESS_TAG,
+                    "original-native-pc-jni-scene-v1 thread-mismatch");
+            }
+            return; /* Still forward original draw; do not read context off the attested GL thread. */
+        }
+        if (atomic_exchange_explicit(&gPcSceneFirstDraw, 1u, memory_order_relaxed) == 0u) {
+            __android_log_write(ANDROID_LOG_INFO, WITNESS_TAG,
+                "original-native-pc-jni-scene-v1 original-returned-same-gl-thread");
+        }
+    }
+#endif
+
     uintptr_t base = gOriginalLoadBias;
     if (base == 0u) {
         return;
@@ -566,6 +597,66 @@ static void research_draw_proxy(void *jni_env, void *jni_class) {
         __android_log_write(ANDROID_LOG_INFO, WITNESS_TAG, message);
     }
 }
+
+#ifdef KNEEKURA_RESEARCH_PC_JNI_SCENE_OBSERVER
+/* Called via queueEvent ONLY after super.onCreate and original class/library
+ * initialization. Never register JNI from a loader constructor: the original
+ * process probe ANR showed concurrent nativeLoad/nativeProbe waits there.
+ * One exact JNI binding; original code pages/LEVEL/SAVE entries are untouched.
+ */
+JNIEXPORT jboolean JNICALL
+Java_jp_kn_local_battlecats_MyActivity_kneekuraAttachPcSceneObserver(
+        JNIEnv *env, jclass bridge_class, jclass original_class) {
+    (void)bridge_class;
+    if (!current_process_is_isolated_original_research() || original_class == NULL
+        || atomic_load_explicit(&gAllOriginalHooksInstalled, memory_order_acquire) != 0u
+        || gHookStub != NULL || gShadowHookLibrary != NULL) {
+        return JNI_FALSE; /* Never double-wrap an existing or partly rolled-back hook. */
+    }
+    uint32_t expected = 0u;
+    if (!atomic_compare_exchange_strong_explicit(&gPcSceneObserverState, &expected, 1u,
+            memory_order_acq_rel, memory_order_acquire)) {
+        return expected == 2u && (int)syscall(SYS_gettid) ==
+            atomic_load_explicit(&gPcSceneGlTid, memory_order_acquire) ? JNI_TRUE : JNI_FALSE;
+    }
+    struct NativeElfWitness witness = {0};
+    uintptr_t shift = 0u;
+    dl_iterate_phdr(inspect_original_library, &witness);
+    jclass pinned_class = (*env)->FindClass(env, "jp/co/ponos/battlecats/MyActivity");
+    int class_matches = pinned_class != NULL && (*env)->IsSameObject(env, pinned_class, original_class);
+    if (pinned_class != NULL) {
+        (*env)->DeleteLocalRef(env, pinned_class);
+    }
+    if (!class_matches || (*env)->ExceptionCheck(env)
+        || witness.original_library_count != 1u || witness.exact_build_id_count != 1u
+        || !select_unique_original_source_vma_shift(&witness, &shift)
+        || (*env)->GetStaticMethodID(env, original_class, "appUpdateDraw", "()V") == NULL
+        || (*env)->ExceptionCheck(env)) {
+        atomic_store_explicit(&gPcSceneObserverState, 3u, memory_order_release);
+        __android_log_write(ANDROID_LOG_INFO, WITNESS_TAG,
+            "original-native-pc-jni-scene-v1 source-unavailable");
+        return JNI_FALSE;
+    }
+    /* Publish original forwarding/context addresses before the binding can run.
+     * Installer itself runs on the original GL queue, so no draw overlaps it.
+     */
+    gOriginalDraw = (void *)(witness.base + ORIGINAL_JNI_DRAW + shift);
+    gOriginalLoadBias = witness.base;
+    gOriginalVmaShift = shift;
+    atomic_store_explicit(&gPcSceneGlTid, (int)syscall(SYS_gettid), memory_order_release);
+    JNINativeMethod method = {"appUpdateDraw", "()V", (void *)&research_draw_proxy};
+    if ((*env)->RegisterNatives(env, original_class, &method, 1) != JNI_OK) {
+        atomic_store_explicit(&gPcSceneObserverState, 3u, memory_order_release);
+        __android_log_write(ANDROID_LOG_INFO, WITNESS_TAG,
+            "original-native-pc-jni-scene-v1 registration-failed");
+        return JNI_FALSE;
+    }
+    atomic_store_explicit(&gPcSceneObserverState, 2u, memory_order_release);
+    __android_log_write(ANDROID_LOG_INFO, WITNESS_TAG,
+        "original-native-pc-jni-scene-v1 attached");
+    return JNI_TRUE;
+}
+#endif
 
 /*
  * Four extra EXACT-VMA research witnesses for original LEVEL #12.

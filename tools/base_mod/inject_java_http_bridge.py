@@ -160,6 +160,7 @@ def render_bridge_source(
     isolate_original_native_files_dir: bool = False,
     virgin_save_trial: bool = False,
     offline_393_import_enabled: bool = False,
+    pc_jni_scene_observer: bool = False,
 ) -> str:
     """Render the ORIGINAL MyActivity subclass, rejecting unsafe file modes.
 
@@ -170,6 +171,12 @@ def render_bridge_source(
     package_name = FLAVOR_PACKAGES.get(flavor)
     if package_name is None:
         raise ValueError(f"unknown flavor: {flavor!r}")
+    if pc_jni_scene_observer and (flavor != 'local-research' or virgin_save_trial):
+        raise ValueError('PC JNI scene observer requires passive local research')
+    if not pc_jni_scene_observer and '// PC_OBSERVER_BEGIN' in template:
+        start = template.index('    // PC_OBSERVER_BEGIN')
+        end = template.index('    // PC_OBSERVER_END', start) + len('    // PC_OBSERVER_END')
+        template = template[:start] + template[end:]
     if flavor == "local-research" and (
         enabled or use_external_files_dir or isolate_original_native_files_dir
     ):
@@ -185,6 +192,7 @@ def render_bridge_source(
         raise ValueError("bridge launcher must preserve original encoded length")
     rendered = (
         template.replace("__KNEEKURA_PACKAGE__", package_name)
+        .replace('__KNEEKURA_PC_JNI_SCENE_OBSERVER__', 'true' if pc_jni_scene_observer else 'false')
         .replace(
             "__KNEEKURA_ENABLE_BACKUP_REPLAY__",
             "true" if enabled else "false",
@@ -227,6 +235,7 @@ def build_bridge_dex(
     *,
     flavor: str,
     enabled: bool,
+    pc_jni_scene_observer: bool = False,
     output: Path,
     javac: str | None = None,
     d8: str | None = None,
@@ -251,6 +260,7 @@ def build_bridge_dex(
         isolate_original_native_files_dir=isolate_original_native_files_dir,
         virgin_save_trial=virgin_save_trial,
         offline_393_import_enabled=offline_import_installpack is not None,
+        pc_jni_scene_observer=pc_jni_scene_observer,
     )
     # Feature disabled by default in every existing build/profile. The index
     # is compiled only from the owner's exact original JP15.7.1 InstallPack.

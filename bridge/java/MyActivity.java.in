@@ -21,6 +21,44 @@ import java.util.Map;
  * build-time feature gate is enabled. Every other request calls super exactly.
  */
 public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
+    private static final boolean PC_JNI_SCENE_OBSERVER = __KNEEKURA_PC_JNI_SCENE_OBSERVER__;
+    private static native boolean kneekuraAttachPcSceneObserver(Class<?> originalClass);
+
+    // PC_OBSERVER_BEGIN
+    @Override
+    protected void onCreate(android.os.Bundle state) {
+        super.onCreate(state);
+        if (!PC_JNI_SCENE_OBSERVER) {
+            return;
+        }
+        try {
+            // Original class initialization/loading is complete before here.
+            // Explicit load binds this class loader to the already mapped shim.
+            System.loadLibrary("kneekura");
+            Field field = jp.co.ponos.battlecats.MyActivity.class.getDeclaredField("mGLView");
+            field.setAccessible(true);
+            GLSurfaceView view = (GLSurfaceView) field.get(this);
+            if (view == null) {
+                throw new IllegalStateException("original GL view unavailable");
+            }
+            view.queueEvent(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        if (!kneekuraAttachPcSceneObserver(jp.co.ponos.battlecats.MyActivity.class)) {
+                            debugResearch("original-native-pc-jni-scene-v1 unavailable");
+                        }
+                    } catch (LinkageError | RuntimeException failure) {
+                        debugResearch("original-native-pc-jni-scene-v1 unavailable");
+                    }
+                }
+            });
+        } catch (ReflectiveOperationException | LinkageError | RuntimeException failure) {
+            debugResearch("original-native-pc-jni-scene-v1 unavailable");
+        }
+    }
+
+    // PC_OBSERVER_END
     private static final boolean ENABLE_BACKUP_OFFLINE_REPLAY = __KNEEKURA_ENABLE_BACKUP_REPLAY__;
     private static final boolean DEBUG_RESEARCH_LOG = __KNEEKURA_DEBUG_LOG__;
     private static final boolean USE_EXTERNAL_FILES_DIR = __KNEEKURA_USE_EXTERNAL_FILES_DIR__;

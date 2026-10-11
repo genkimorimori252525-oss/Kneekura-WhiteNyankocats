@@ -386,3 +386,30 @@ publisher app, source archive, SAVE contents or existing key was changed.
 These repairs do not prove native scene97, original gameplay or zero egress.
 ShadowHook status12 and the original network-unavailable loading screen
 remain. See `2026-10-12-pc-resource-repair.md` for immutable capture IDs.
+
+
+## 2026-10-12 — PC original GL observer and independent receipt verification
+
+The original-process instrumentation v2 stalled with main in original
+MyActivity class initialization/nativeLoad and the probe in nativeProbe.
+The exit-info-linked ANR trace is private. Exact lock-cycle causality is
+unproven; v4 serializes original class initialization first and completes
+JNI registration echo41 plus all393 target-context MD5 checks. Do not
+register JNI inside original loader constructors or infer NativeBridge
+compatibility from a standalone process alone.
+
+A separate default-OFF PC JNI scene observer registers exact static
+appUpdateDraw()V from the original GL queue after super.onCreate. Keep exact
+BuildID/19-word/VMA/class/package gates and original-draw-first forwarding.
+Read scene/35 aggregate slots only on that GL TID; do not mark the failed
+five LEVEL/SAVE inline hooks installed. Actual PC observed102->101->97 and
+0/35/0/0 aggregate; ShadowHook12 remains, gameplay is unaccepted.
+
+Independent review reproduced false offline verification with edited Java
+crash count and incomplete artifact/barrier metadata. Add a failing synthetic
+regression, then independently rederive native/Java crashes, actual barrier,
+PNG set/count, log-loss and launch evidence. Require exact artifact set and
+mandatory files. Valid actual captures still pass. Include bounded Start proc
+PIDs when selecting current own-process ANR traces, not only polling PIDs.
+Final review found both P2 findings resolved; actual ARM64 execution remains
+the root agent's separate evidence, not the reviewer's claim.

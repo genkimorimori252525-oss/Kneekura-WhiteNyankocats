@@ -86,6 +86,9 @@ class FailedBuildEvidenceTests(unittest.TestCase):
                 return subprocess.CompletedProcess(argv, 1, 'synthetic compiler stdout',
                                                     'synthetic compiler stderr')
 
+            (root / 'tools').mkdir()
+            for name in ('pc_lab.py', 'pc_lab_diagnostics.py', 'PC-LAB.ps1'):
+                (root / 'tools' / name).write_text('synthetic source')
             with patch('tools.pc_lab.REPO', root), patch.object(lab, 'command', failed_command):
                 with self.assertRaises(RuntimeError):
                     lab.build(root / 'not-owner.zip', root / 'not-official.aar')

@@ -69,6 +69,9 @@ def _source_receipt(shim: Path, receipt: Path, *, allow_local_pc: bool = False) 
                 and isinstance(proof.get("source_tree_sha256"), str)
                 and len(proof["source_tree_sha256"]) == 64
                 and all(c in "0123456789abcdef" for c in proof["source_tree_sha256"]))
+    if b'original-native-pc-jni-scene-v1 attached' in native and (
+            not local_pc or proof.get('pc_jni_scene_observer_enabled') is not True):
+        raise UnsignedOriginalBuildBlocked('PC JNI observer cannot use a public/phone receipt')
     if not (
         isinstance(proof, dict)
         and (proof.get("schema") == "public-original-research-passive-shim-v1" or local_pc)
@@ -93,6 +96,7 @@ def prepare_unsigned_research(
     javac: str | None, d8: str | None, android_jar: str | None,
     offline_393_import: bool = False,
     allow_local_pc: bool = False,
+    pc_jni_scene_observer: bool = False,
 ) -> tuple[dict, Path]:
     repo = repo.resolve(strict=True)
     private = repo / "private"
@@ -107,6 +111,11 @@ def prepare_unsigned_research(
     passive_receipt = _inside_private(repo, passive_receipt)
     official_aar = _inside_private(repo, official_aar)
     native_proof = _source_receipt(passive_shim, passive_receipt, allow_local_pc=allow_local_pc)
+    pc_marker = b'original-native-pc-jni-scene-v1 attached' in passive_shim.read_bytes()
+    if pc_marker != pc_jni_scene_observer or (pc_jni_scene_observer and (
+            not allow_local_pc or native_proof.get('pc_jni_scene_observer_enabled') is not True
+            or native_proof['schema'] != 'local-pc-research-passive-shim-v1')):
+        raise UnsignedOriginalBuildBlocked('PC-only native/Java observer opt-ins differ')
 
     check_original_scene_witness_build_contract(
         flavor="local-research", no_internet=True, shim=passive_shim,
@@ -139,6 +148,7 @@ def prepare_unsigned_research(
             flavor="local-research", enabled=False,
             isolate_original_native_files_dir=False,
             virgin_save_trial=False, output=bridge,
+            pc_jni_scene_observer=pc_jni_scene_observer,
             javac=javac, d8=d8, android_jar=android_jar, root=repo,
             offline_import_installpack=(
                 original / "split_InstallPack.apk" if offline_393_import else None),

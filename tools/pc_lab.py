@@ -27,6 +27,7 @@ from tools.base_mod.prepare_original_research_presign import prepare_unsigned_re
 from tools.base_mod.audit_original_offline_boot_events import summarize_runtime_events
 from tools.base_mod.summarize_original_crash_capture import summarize as summarize_crash
 from tools.base_mod.offline_server_import_manifest import original_offline_asset_manifest
+from tools.pc_lab_diagnostics import observer_summary, anr_trace_paths, verify_artifacts
 
 AVD = 'kneekura-pc-api35'
 SERIAL = 'emulator-5580'
@@ -265,6 +266,17 @@ class Lab:
         build_id = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ') + '-' + uuid.uuid4().hex[:8]
         scratch = private / ('pc-native-' + build_id)
         scratch.mkdir()
+        # Archive the exact inputs, including uncommitted/new source, before
+        # compiling. Refuse publication if any source changes during the build.
+        source_files = [p for base in ('native/kneekura-shim', 'bridge/java', 'tools/base_mod')
+                        for p in (REPO / base).rglob('*')
+                        if p.is_file() and p.suffix in ('.c', '.h', '.txt', '.in', '.java', '.py', '.ps1')]
+        source_files += [REPO / p for p in ('tools/pc_lab.py', 'tools/pc_lab_diagnostics.py', 'tools/PC-LAB.ps1')]
+        source_hashes = {p.relative_to(REPO).as_posix(): sha256_file(p) for p in source_files}
+        source_archive = scratch / 'BUILD-SOURCE.zip'
+        with ZipFile(source_archive, 'w') as archive:
+            for path in sorted(source_files):
+                archive.write(path, path.relative_to(REPO).as_posix())
         native_build = scratch / 'cmake'
         cmake = self.sdk / 'cmake/3.22.1/bin/cmake.exe'
         native_root = REPO / 'native/kneekura-shim'
@@ -273,6 +285,7 @@ class Lab:
                      '-DCMAKE_TOOLCHAIN_FILE=' + str(self.sdk / f'ndk/{NDK}/build/cmake/android.toolchain.cmake'),
                      '-DANDROID_ABI=arm64-v8a', '-DANDROID_PLATFORM=android-29',
                      '-DKNEEKURA_RESEARCH_SCENE_WITNESS=ON',
+                     '-DKNEEKURA_RESEARCH_PC_JNI_SCENE_OBSERVER=ON',
                      '-DKNEEKURA_RESEARCH_VIRGIN_SAVE_TRIAL=OFF', '-DCMAKE_BUILD_TYPE=Release']
         config = self.command(arguments, check=False)
         compiler_log = scratch / 'compiler.log'
@@ -296,6 +309,7 @@ class Lab:
             tree.update(path.read_bytes())
         commit = self.command(['git', '-C', REPO, 'rev-parse', 'HEAD']).stdout.strip()
         proof = dict(schema='local-pc-research-passive-shim-v1', elf_abi='arm64-v8a',
+                     pc_jni_scene_observer_enabled=True,
                      original_save_writer_enabled=False, fixed_error_markers_compiled=True,
                      git_commit=commit, source_tree_sha256=tree.hexdigest(),
                      sha256=sha256_file(shim), ndk_version=NDK)
@@ -315,7 +329,7 @@ class Lab:
             repo=REPO, owner_export=owner_zip, passive_shim=shim,
             passive_receipt=receipt, official_aar=aar, javac=str(self.java / 'bin/javac.exe'),
             d8=str(tools / 'd8.bat'), android_jar=str(self.sdk / 'platforms/android-35/android.jar'),
-            offline_393_import=True, allow_local_pc=True)
+            offline_393_import=True, allow_local_pc=True, pc_jni_scene_observer=True)
         store, password = self.key()
         destination = self.state / 'builds' / build_id
         destination.mkdir(parents=True)
@@ -336,6 +350,11 @@ class Lab:
         metadata = dict(schema='kneekura-pc-research-build-v1', directory=str(destination),
                         package=PACKAGE, native=proof, presign=unsigned_proof, signing=signed,
                         source_commit=commit, created_utc=utc())
+        if any(sha256_file(REPO / name) != digest for name, digest in source_hashes.items()):
+            raise RuntimeError('PC_LAB_SOURCE_CHANGED_DURING_BUILD_NO_PUBLICATION')
+        shutil.copyfile(source_archive, destination / 'BUILD-SOURCE.zip')
+        metadata['source_archive_sha256'] = sha256_file(destination / 'BUILD-SOURCE.zip')
+        metadata['build_source_file_sha256'] = source_hashes
         shutil.copyfile(shim, destination / 'libkneekura.so')
         write_json(destination / 'PC-BUILD.json', metadata)
         write_json(self.state / 'latest-build.json', metadata)
@@ -350,6 +369,8 @@ class Lab:
         if set(expected) != set(JP_15_7_1_SPLITS) or any(
                 sha256_file(folder / name) != expected[name] for name in JP_15_7_1_SPLITS):
             raise ValueError('PC_LAB_SIGNED_SPLIT_HASH_MISMATCH')
+        if 'source_archive_sha256' in meta and sha256_file(folder / 'BUILD-SOURCE.zip') != meta['source_archive_sha256']:
+            raise ValueError('PC_LAB_BUILD_SOURCE_ARCHIVE_HASH_MISMATCH')
         return meta
 
     def stage_assets(self, build: dict) -> dict:
@@ -441,6 +462,7 @@ class Lab:
                         installed_splits_sha256=actual)
         for name, command in {
                 'device-clock-before': ['shell', 'date', '+%s.%N'],
+                'device-timezone': ['shell', 'date', '+%z'],
                 'properties': ['shell', 'getprop'],
                 'package': ['shell', 'dumpsys', 'package', PACKAGE],
                 'buffers-before': ['logcat', '-b', 'all', '-g'],
@@ -457,9 +479,11 @@ class Lab:
         evidence['source_untracked_sha256'] = {p: sha256_file(REPO / p) for p in untracked if (REPO / p).is_file()}
         # Keep the new runner's exact bytes as well as hashes; it may still be untracked.
         with ZipFile(folder / 'source-snapshot.zip', 'w') as archive:
-            for relative in ('tools/pc_lab.py', 'tools/PC-LAB.ps1',
+            for relative in ('tools/pc_lab.py', 'tools/pc_lab_diagnostics.py', 'tools/PC-LAB.ps1',
                              'tools/base_mod/prepare_original_research_presign.py'):
                 archive.write(REPO / relative, relative)
+        if 'source_archive_sha256' in build:
+            shutil.copyfile(Path(build['directory']) / 'BUILD-SOURCE.zip', folder / 'BUILD-SOURCE.zip')
         observed = set()
 
         def snapshot(label: str) -> None:
@@ -529,12 +553,17 @@ class Lab:
         source = log.read_text(encoding='utf-8', errors='replace')
         # Bound analysis to this run; old buffered logs must not supply a missing witness.
         source = bound_to_barriers(source, run_id)
+        # am start -W / screenshot may outlive a short-lived app process.
+        # Package-start events inside these barriers also identify its PID.
+        observed.update(int(pid) for pid in re.findall(
+            r'Start proc (\d+):jp\.kn\.local\.battlecats/', source))
         stderr = (folder / 'logcat-stderr.log').read_text(encoding='utf-8', errors='replace')
         evidence['log_loss'] = has_log_loss(source, stderr)
         if stderr.strip():
             evidence['errors'].append('collector-stderr-nonempty')
         scoped = scope_research_log(source, observed)
         evidence['runtime_summary'] = summarize_runtime_events(scoped)
+        evidence['observer_summary'] = observer_summary(scoped)
         evidence['crash_summary'] = summarize_crash(scoped)
         evidence['java_crash_summary'] = summarize_java_crash(scoped)
         for name, command in {
@@ -548,11 +577,76 @@ class Lab:
             if result.returncode:
                 evidence['errors'].append(name)
         evidence['finished_utc'] = utc()
+        evidence['anr_trace_collection'] = []
+        paths = []
+        try:
+            # Exit-info uses guest wall time; do not assume host/guest clocks agree.
+            device_bounds = [datetime.fromtimestamp(float((folder / f'device-clock-{label}.txt').read_text(
+                encoding='utf-8').strip()), timezone.utc).isoformat() for label in ('before', 'after')]
+            paths = anr_trace_paths((folder / 'exit-info.txt').read_text(encoding='utf-8'), observed,
+                                   *device_bounds,
+                                   (folder / 'device-timezone.txt').read_text(encoding='utf-8').strip())
+        except ValueError:
+            evidence['errors'].append('own-anr-time-window-unavailable')
+        for index, remote in enumerate(paths):
+            self.identity()
+            size = self.adb('shell', 'stat', '-c', '%s', remote, check=False)
+            result = None
+            if size.returncode == 0 and size.stdout.strip().isdigit() and 0 < int(size.stdout) <= 8 * 1024 * 1024:
+                result = self.adb('pull', remote, folder / f'anr-{index + 1}.gz', check=False)
+            available = result is not None and result.returncode == 0
+            evidence['anr_trace_collection'].append({'file': f'anr-{index + 1}.gz', 'available': available})
+            if not available:
+                evidence['errors'].append('own-current-anr-trace-unavailable')
         evidence['status'] = capture_quality(evidence)
         evidence['artifacts_sha256'] = {p.name: sha256_file(p) for p in folder.iterdir() if p.is_file()}
         write_json(folder / 'CAPTURE.json', evidence)
         write_json(self.state / 'latest-capture.json', {'directory': str(folder), 'status': evidence['status']})
         return evidence
+
+    def verify_capture(self, directory: Path | None = None) -> dict:
+        """Offline evidence verification. Never launch, install, or contact ADB."""
+        if directory is None:
+            directory = Path(json.loads((self.state / 'latest-capture.json').read_text(encoding='utf-8'))['directory'])
+        folder = directory.resolve(strict=True)
+        if not folder.is_relative_to((self.state / 'captures').resolve()) or directory.is_symlink():
+            raise ValueError('PC_CAPTURE_OUTSIDE_PRIVATE_STATE')
+        proof = json.loads((folder / 'CAPTURE.json').read_text(encoding='utf-8'))
+        if proof.get('schema') != 'kneekura-pc-capture-v1' or proof.get('run_id') != folder.name:
+            raise ValueError('PC_CAPTURE_IDENTITY_MISMATCH')
+        if (proof.get('package'), proof.get('avd'), proof.get('serial')) != (PACKAGE, AVD, SERIAL):
+            raise ValueError('PC_CAPTURE_TARGET_IDENTITY_DIFFERS')
+        count = verify_artifacts(folder, proof.get('artifacts_sha256'))
+        required = {'logcat-threadtime.log', 'logcat-stderr.log', 'launch.txt', 'final.png',
+                    'source.diff', 'source-snapshot.zip', 'device-clock-before.txt', 'device-clock-after.txt',
+                    'package.txt', 'properties.txt', 'buffers-before.txt', 'buffers-after.txt', 'exit-info.txt'}
+        if not required.issubset(proof['artifacts_sha256']):
+            raise ValueError('PC_CAPTURE_REQUIRED_ARTIFACT_MISSING')
+        pictures = {name for name in proof['artifacts_sha256'] if name.endswith('.png')}
+        if (pictures != {item['file'] for item in proof['screenshot_times']}
+                or len(pictures) != proof['screenshots']
+                or any(not (folder / name).read_bytes().startswith(b'\x89PNG\r\n\x1a\n') for name in pictures)):
+            raise ValueError('PC_CAPTURE_SCREENSHOT_EVIDENCE_DIFFERS')
+        raw = (folder / 'logcat-threadtime.log').read_text(encoding='utf-8')
+        source = bound_to_barriers(raw, proof['run_id'])
+        if not source:
+            raise ValueError('PC_CAPTURE_ACTUAL_BARRIERS_MISSING')
+        stderr = (folder / 'logcat-stderr.log').read_text(encoding='utf-8')
+        if (has_log_loss(source, stderr) != proof['log_loss']
+                or bool(stderr.strip()) != ('collector-stderr-nonempty' in proof['errors'])
+                or ('Status: ok' in (folder / 'launch.txt').read_text(encoding='utf-8')) != proof['launch_ok']):
+            raise ValueError('PC_CAPTURE_COLLECTION_EVIDENCE_DIFFERS')
+        observed = {p for sample in proof['pid_observations'] for p in sample['pids']}
+        scoped = scope_research_log(source, observed)
+        if summarize_runtime_events(scoped) != proof['runtime_summary'] or capture_quality(proof) != proof['status']:
+            raise ValueError('PC_CAPTURE_DERIVED_EVIDENCE_DIFFERS')
+        if (summarize_java_crash(scoped) != proof['java_crash_summary']
+                or summarize_crash(scoped) != proof['crash_summary']):
+            raise ValueError('PC_CAPTURE_CRASH_EVIDENCE_DIFFERS')
+        if 'observer_summary' in proof and observer_summary(scoped) != proof['observer_summary']:
+            raise ValueError('PC_CAPTURE_OBSERVER_EVIDENCE_DIFFERS')
+        return dict(status='PC_CAPTURE_ARTIFACTS_AND_SUMMARIES_VERIFIED', run_id=folder.name,
+                    artifacts=count, capture_status=proof['status'], observer=proof.get('observer_summary'))
 
 
 def main() -> int:
@@ -569,6 +663,8 @@ def main() -> int:
     run.add_argument('--seconds', type=int, default=30)
     run.add_argument('--install', action='store_true')
     sub.add_parser('check')
+    verify = sub.add_parser('verify-capture')
+    verify.add_argument('--directory', type=Path)
     args = parser.parse_args()
     if os.name != 'nt':
         parser.error('Windows PC lab only; pure evidence gates remain portable')
@@ -584,6 +680,9 @@ def main() -> int:
         result = lab.capture(args.seconds, install=args.install)
         print(result['status'] + ' ' + result['run_id'])
         return 0 if result['status'] == 'COMPLETE_BOUNDED_CAPTURE' else 1
+    elif args.command == 'verify-capture':
+        result = lab.verify_capture(args.directory)
+        print(result['status'] + ' ' + result['run_id'])
     else:
         lab.identity()
         lab.verify_build()

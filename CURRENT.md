@@ -1,3 +1,5 @@
+**2026-10-12 PC GL診断（最新）:** 原作初期化後のGL queueから、PC専用・default OFFのJNI scene観測を追加。実APKでscene102→101→97、35検索値missing0/zero35/one0/other0、同一PID/TIDで元描画帰還を確認。LEVEL/SAVEフックは未成功、ShadowHook12を維持。長期採取はビルド時ソースZIP/各SHA保存・保存ログ再集計Verify・当該区間/PIDのANR取得を備える。ゲーム受入・基地・ゼロ通信は未合格。詳細は[PC GL診断契約](docs/research/2026-10-12-pc-gl-diagnostics.md)。以前の「PCではscene不明/原作JNI未実装」は履歴として扱う。
+
 # CURRENT.md — にーくら大戦争 唯一の作業入口
 
 **ACTIVE / 初めてのセッションでもこのファイルから始める。** どの開発エージェントも設計書を片っ端から読んで「本当の原則」を探してはいけない。設計の下位文書は実装時の参照資料であり、プロダクトを変更する権限を持たない。
