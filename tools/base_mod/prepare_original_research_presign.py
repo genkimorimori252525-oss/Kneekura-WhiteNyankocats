@@ -53,7 +53,7 @@ def _inside_private(repo: Path, source: Path, *, folder: bool = False) -> Path:
     return resolved
 
 
-def _source_receipt(shim: Path, receipt: Path) -> dict:
+def _source_receipt(shim: Path, receipt: Path, *, allow_local_pc: bool = False) -> dict:
     native = shim.read_bytes()
     if not 128 <= len(native) <= 24 * 1024 * 1024:
         raise UnsignedOriginalBuildBlocked("native private source library size invalid")
@@ -63,9 +63,15 @@ def _source_receipt(shim: Path, receipt: Path) -> dict:
         proof = json.loads(receipt.read_text(encoding="utf-8-sig"))
     except (OSError, ValueError) as exc:
         raise UnsignedOriginalBuildBlocked("passive ARM64 receipt unreadable") from exc
+    local_pc = (allow_local_pc and isinstance(proof, dict)
+                and proof.get("schema") == "local-pc-research-passive-shim-v1"
+                and proof.get("ndk_version") == "27.2.12479018"
+                and isinstance(proof.get("source_tree_sha256"), str)
+                and len(proof["source_tree_sha256"]) == 64
+                and all(c in "0123456789abcdef" for c in proof["source_tree_sha256"]))
     if not (
         isinstance(proof, dict)
-        and proof.get("schema") == "public-original-research-passive-shim-v1"
+        and (proof.get("schema") == "public-original-research-passive-shim-v1" or local_pc)
         and proof.get("elf_abi") == "arm64-v8a"
         and proof.get("original_save_writer_enabled") is False
         and proof.get("fixed_error_markers_compiled") is True
@@ -86,6 +92,7 @@ def prepare_unsigned_research(
     passive_receipt: Path, official_aar: Path,
     javac: str | None, d8: str | None, android_jar: str | None,
     offline_393_import: bool = False,
+    allow_local_pc: bool = False,
 ) -> tuple[dict, Path]:
     repo = repo.resolve(strict=True)
     private = repo / "private"
@@ -99,7 +106,7 @@ def prepare_unsigned_research(
     passive_shim = _inside_private(repo, passive_shim)
     passive_receipt = _inside_private(repo, passive_receipt)
     official_aar = _inside_private(repo, official_aar)
-    native_proof = _source_receipt(passive_shim, passive_receipt)
+    native_proof = _source_receipt(passive_shim, passive_receipt, allow_local_pc=allow_local_pc)
 
     check_original_scene_witness_build_contract(
         flavor="local-research", no_internet=True, shim=passive_shim,
@@ -168,7 +175,10 @@ def prepare_unsigned_research(
         # mismatches instead of signing stale/mutated intermediate data.
         # Only the exact public compiler receipt and privacy-safe static
         # metadata are copied, no source encrypted APK/SAVE to GitHub.
-        shutil.copy2(passive_receipt, destination / "PUBLIC_PASSIVE_SHIM_RECEIPT.json")
+        local_pc = native_proof["schema"] == "local-pc-research-passive-shim-v1"
+        shutil.copy2(passive_receipt, destination / (
+            "LOCAL_PC_PASSIVE_SHIM_RECEIPT.json" if local_pc
+            else "PUBLIC_PASSIVE_SHIM_RECEIPT.json"))
         receipt = {
             "schema": RECEIPT_SCHEMA,
             "status": "PASS_PRIVATE_UNSIGNED_ORIGINAL_SIX_SPLITS_NOT_INSTALLABLE",
@@ -179,6 +189,7 @@ def prepare_unsigned_research(
             "original_research_no_INTERNET_manifest_static_checked": True,
             "private_passive_native_shim_sha256": native_proof["sha256"],
             "source_compiler_commit": native_proof["git_commit"],
+            "native_source_provenance": "local-pc" if local_pc else "public-ci",
             "unsigned_original_splits_sha256": signed_bytes,
             "exact_original_native_presign_status": native_gate["status"],
             "compiled_original_virgin_SAVE_writer_enabled": False,
