@@ -306,6 +306,11 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
             probeLocalGameSaveFiles(root);
             watchOriginalLocalSaveChanges(root);
             probeLocalDownloadBatchTsvFiles(root);
+            // Research-only, feature OFF by default. The importer works only
+            // from THIS isolated package's ADB-staged external files root,
+            // verifying all source-pinned game assets before any internal copy.
+            // Never block the native JNI/render thread on 668 MB of I/O.
+            KneekuraOfflineAssetImporter.schedule(this, root);
             debugResearch("original-local-fresh-package-root active");
             return root;
         }
