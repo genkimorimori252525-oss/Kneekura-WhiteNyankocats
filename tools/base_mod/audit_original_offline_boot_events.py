@@ -22,6 +22,10 @@ IMPORT_ALLOWED = frozenset({
 HTTP_KINDS = frozenset({
     "asset-cdn", "backup", "publisher-other", "external-other", "malformed",
 })
+FILE_ACCESS_KINDS = frozenset({
+    "watching", "unavailable", "download-tsv",
+    "server-list", "server-pack", "media",
+})
 SOURCE_MSG = re.compile(r"KNEEKURA_STATIC_HTTP:\s*([^\r\n]{1,220})")
 SCENE = re.compile(r"original-native-scene-v1 id=(4|97|101|102|104)\Z")
 BACKUP_SHAPE = re.compile(r"original-local-backup-shape-v1 mask=([0-7a-f]{1,3})\Z")
@@ -41,6 +45,7 @@ def summarize_runtime_events(source: str) -> dict:
     scenes = []
     kinds = Counter()
     backup_shapes = Counter()
+    file_events = Counter()
     last_loose = None
     for line in source.splitlines():
         found = SOURCE_MSG.search(line)
@@ -63,6 +68,12 @@ def summarize_runtime_events(source: str) -> dict:
             bits = int(match.group(1), 16)
             if 0 <= bits <= 0x7ff:
                 backup_shapes[format(bits, "03x")] += 1
+        elif msg.startswith("original-local-file-access-v1 "):
+            # Only bounded file TYPE names from this app's own read-only
+            # FileObserver. Never emit raw Android names, paths or SAVE.
+            kind = msg[len("original-local-file-access-v1 "):]
+            if kind in FILE_ACCESS_KINDS:
+                file_events[kind] += 1
         elif msg.startswith("original-local-import-v1 "):
             status = msg[len("original-local-import-v1 "):]
             if status in IMPORT_ALLOWED:
@@ -127,6 +138,9 @@ def summarize_runtime_events(source: str) -> dict:
         "safe_denied_http_category_counts": dict(sorted(kinds.items())),
         "blocked_backup_source_contract_bitmasks": dict(sorted(
             backup_shapes.items())),
+        "original_file_source_access_kind_counts": dict(sorted(
+            file_events.items())),
+        "real_native_source_consumed_original_TSV_proven": False,
         "source_contract_mask_flags": {
             "method_GET": 0x001,
             "timeout_10": 0x002,
