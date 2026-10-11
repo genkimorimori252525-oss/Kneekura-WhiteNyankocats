@@ -51,12 +51,12 @@ if (-not (Test-Path -LiteralPath $official -PathType Leaf) -or
 $nativeFolders = @(Get-ChildItem -LiteralPath $private -Directory -Filter 'passive-arm64-public-*')
 $nativeFolder = Require-One $nativeFolders 'PASSIVE ARM64 compiler artifact folder'
 $native = Join-Path $nativeFolder 'libkneekura.so'
-$receipt = Join-Path $nativeFolder 'PUBLIC_PASSIVE_SHIM_RECEIPT.json'
+$passiveShimReceipt = Join-Path $nativeFolder 'PUBLIC_PASSIVE_SHIM_RECEIPT.json'
 if (-not (Test-Path -LiteralPath $native -PathType Leaf) -or
-    -not (Test-Path -LiteralPath $receipt -PathType Leaf)) {
+    -not (Test-Path -LiteralPath $passiveShimReceipt -PathType Leaf)) {
     throw 'CI-built passive ARM64 native receipt and binary are incomplete'
 }
-$nativeProof = Get-Content -LiteralPath $receipt -Raw -Encoding UTF8 | ConvertFrom-Json
+$nativeProof = Get-Content -LiteralPath $passiveShimReceipt -Raw -Encoding UTF8 | ConvertFrom-Json
 if ($nativeProof.schema -ne 'public-original-research-passive-shim-v1' -or
     $nativeProof.original_save_writer_enabled -ne $false -or
     $nativeProof.fixed_error_markers_compiled -ne $true -or
@@ -113,13 +113,13 @@ foreach ($stage in $unsignedCandidates) {
     if (($stage.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
         continue
     }
-    $receipt = Join-Path $stage.FullName 'UNSIGNED-RESEARCH-RECEIPT.json'
-    if (-not (Test-Path -LiteralPath $receipt -PathType Leaf)) {
+    $unsignedStageReceipt = Join-Path $stage.FullName 'UNSIGNED-RESEARCH-RECEIPT.json'
+    if (-not (Test-Path -LiteralPath $unsignedStageReceipt -PathType Leaf)) {
         continue
     }
-    $candidateProof = Get-Content -LiteralPath $receipt -Raw -Encoding UTF8 | ConvertFrom-Json
+    $candidateProof = Get-Content -LiteralPath $unsignedStageReceipt -Raw -Encoding UTF8 | ConvertFrom-Json
     if ([bool]$candidateProof.owner_original_393_file_import_feature_opt_in -eq [bool]$EnableOfflineServerImport) {
-        $presignReport = $receipt
+        $presignReport = $unsignedStageReceipt
         $proof = $candidateProof
         break
     }
@@ -158,7 +158,7 @@ if (-not (Test-Path -LiteralPath $buildScript -PathType Leaf)) {
 # This call signs ONLY local derived original research APKs. It does NOT install
 # anything or access the phone. The target script asks for the private password.
 & $buildScript -RepositoryRoot $repo -OwnerExportZip $ownerExport `
-    -PassiveShimSo $native -PassiveShimReceipt $receipt `
+    -PassiveShimSo $native -PassiveShimReceipt $passiveShimReceipt `
     -ResearchKeystore $keystore -PreviouslySignedBaseApk $previousBase `
     -SigningAlias $SigningAlias -OfficialShadowHookAar $official `
     -EnableOfflineServerImport:$EnableOfflineServerImport
