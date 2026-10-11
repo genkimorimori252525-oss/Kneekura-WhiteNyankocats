@@ -40,6 +40,26 @@ class OriginalResearchSameSignerHandoffTests(unittest.TestCase):
         self.assertIn("if ($before -ne $after)", source)
         self.assertIn("Do NOT install this build", source)
 
+    def test_owner_signs_only_cert_matched_auto_resolved_private_alias(self):
+        source = SCRIPT.read_text(encoding="utf-8-sig")
+        self.assertIn("'--resolved-alias-file', $resolvedAliasPath", source)
+        self.assertIn("$SigningAlias = $verifiedAlias", source)
+        self.assertIn("Remove-Item -LiteralPath $resolvedAliasPath -Force -ErrorAction Stop",
+                      source)
+        self.assertIn("Remove-Item -LiteralPath $resolvedAliasPath -Force -ErrorAction SilentlyContinue",
+                      source)
+        self.assertIn(
+            "EXISTING_RESEARCH_SIGNER_IDENTITY_VERIFIED_WITHOUT_ALIAS_DISCLOSURE",
+            source,
+        )
+        self.assertLess(source.index("$SigningAlias = $verifiedAlias"),
+                        source.index("'-m', 'tools.base_mod.build_owned_static_http_bridge'"))
+        self.assertEqual(
+            source.count("'-m', 'tools.base_mod.build_owned_static_http_bridge'"), 1
+        )
+        self.assertEqual(source.count("$secure.Dispose()"), 1)
+        self.assertEqual(source.count("Write-Host 'No device actions were performed."), 1)
+
     def test_owner_jdk17_pair_resolved_before_secret_prompt(self):
         """Regression for owner's Oracle javapath javac.exe with no sibling keytool.
 
