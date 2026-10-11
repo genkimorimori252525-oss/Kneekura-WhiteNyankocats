@@ -556,7 +556,9 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
      * Each bit means the non-sensitive property of the already observed JP
      * offline backup GET matches. No URL, query, credential, body, header,
      * method value or response data is ever serialized to logcat.
-     * A mismatched shape is STILL blocked, not replayed or sent online.
+     * A mismatched shape is blocked unless the isolated research-only
+     * bounded timeout A/B is active and the strict URL envelope matches.
+     * The URI bitmask alone never establishes acceptance.
      */
     private static int originalBackupShapeMask(
             String method, String requestUrl, float timeout, HashMap headers,
@@ -583,6 +585,18 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
             // Treat malformed raw request as unmatched, never print it.
         }
         return bits;
+    }
+
+    // Safe bounded metadata only, recorded for blocked backup-shaped
+    // requests. No raw float/URL/query/token/header/body is ever written.
+    private static String originalBackupTimeoutClass(float timeout) {
+        if (!Float.isFinite(timeout)) return "nonfinite";
+        if (timeout <= 0.0f) return "nonpositive";
+        if (timeout < 10.0f) return "lt10";
+        if (Float.compare(timeout, 10.0f) == 0) return "eq10";
+        if (timeout <= 30.0f) return "gt10-le30";
+        if (timeout <= 120.0f) return "gt30-le120";
+        return "gt120";
     }
 
     @Override
@@ -629,6 +643,15 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
                             + Integer.toHexString(originalBackupShapeMask(
                             method, requestUrl, timeout, headers, body,
                             strings, flag1, flag2)));
+                    debugResearch("original-local-backup-timeout-class-v1 "
+                            + originalBackupTimeoutClass(timeout));
+                    // The existing shape mask uses URI/casefolded host;
+                    // the exact backup matcher uses URL/exact hostname.
+                    // A matching mask alone is not proof of safe envelope.
+                    debugResearch("original-local-backup-strict-envelope-v1 "
+                            + (isExactBackupRequest(method, requestUrl, 10.0f,
+                            headers, body, strings, flag1, flag2)
+                            ? "match" : "mismatch"));
                 }
             }
             throw new IllegalStateException("original local research HTTP disabled");
