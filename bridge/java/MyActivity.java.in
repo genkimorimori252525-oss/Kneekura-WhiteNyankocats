@@ -431,6 +431,38 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
         }
     }
 
+    // Only in the explicit 393-original-data OFFLINE research profile:
+    // classify a blocked request as a tiny fixed category, NOT a raw URL.
+    // No network I/O, credentials, hostnames, paths, method or headers in log.
+    private static String classifyDeniedOriginalHttp(String requestUrl) {
+        if (requestUrl == null || requestUrl.length() > 4096) {
+            return "malformed";
+        }
+        try {
+            java.net.URI uri = new java.net.URI(requestUrl);
+            String scheme = uri.getScheme();
+            String host = uri.getHost();
+            if (scheme == null || !"https".equalsIgnoreCase(scheme)
+                    || host == null || uri.getUserInfo() != null) {
+                return "malformed";
+            }
+            String lowered = host.toLowerCase(java.util.Locale.ROOT);
+            if ("nyanko-assets.ponosgames.com".equals(lowered)) {
+                return "asset-cdn";
+            }
+            if ("nyanko-backups.ponosgames.com".equals(lowered)) {
+                return "backup";
+            }
+            if ("ponosgames.com".equals(lowered)
+                    || lowered.endsWith(".ponosgames.com")) {
+                return "publisher-other";
+            }
+            return "external-other";
+        } catch (java.net.URISyntaxException invalid) {
+            return "malformed";
+        }
+    }
+
     @Override
     @SuppressWarnings({"rawtypes", "unchecked"})
     public int newHttpRequest(
@@ -449,6 +481,10 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
             // Diagnostic is metadata-only: never emit URL, method, headers,
             // body, response payload, credentials or player identifiers.
             debugResearch("original-local-denied-http-v1");
+            if (LOCAL_RESEARCH_IMPORT_OWNER_ASSETS) {
+                debugResearch("original-local-http-kind-v1 "
+                        + classifyDeniedOriginalHttp(requestUrl));
+            }
             throw new IllegalStateException("original local research HTTP disabled");
         }
 
