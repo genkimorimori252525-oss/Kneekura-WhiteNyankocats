@@ -16,6 +16,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 NATIVE = ROOT / "native" / "kneekura-shim"
 POLICY = NATIVE / "src" / "kneekura_scene_witness_policy.c"
+PROBE = NATIVE / "src" / "kneekura_scene97_resolver_probe.c"
 WITNESS = NATIVE / "src" / "kneekura_original_scene_witness.c"
 CMAKE = NATIVE / "CMakeLists.txt"
 
@@ -247,7 +248,7 @@ class OriginalNativeSceneResearchObserverTests(unittest.TestCase):
                  "-D__ANDROID__", "-D__aarch64__",
                  "-DKNEEKURA_RESEARCH_SCENE_WITNESS=1",
                  "-I", str(root), "-I", str(NATIVE / "include"),
-                 str(WITNESS), str(POLICY), str(root / "logger.c"), "-ldl",
+                 str(WITNESS), str(POLICY), str(PROBE), str(root / "logger.c"), "-ldl",
                  "-o", str(so)],
                 capture_output=True, text=True, timeout=50,
             )
@@ -464,7 +465,7 @@ int main(void) {
                  "-D__ANDROID__", "-D__aarch64__",
                  "-DKNEEKURA_RESEARCH_SCENE_WITNESS=1",
                  "-I", str(root), "-I", str(NATIVE / "include"),
-                 str(source), str(POLICY), "-ldl",
+                 str(source), str(POLICY), str(PROBE), "-ldl",
                  "-o", str(executable)],
                 capture_output=True, text=True, timeout=45,
             )
