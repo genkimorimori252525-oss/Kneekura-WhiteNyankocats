@@ -681,6 +681,10 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
                 // JSON {}, null body, flag true, queued on GLThread. It is
                 // NOT a successful backup server response or SAVE replay.
                 debugResearch("original-local-backup-failure-fallback-v1 completed");
+                if (Float.compare(timeout, 10.0f) != 0) {
+                    // One bounded telemetry marker, no timeout value or URL.
+                    debugResearch("original-local-backup-timeout-variant-v1 completed");
+                }
             } else {
                 debugResearch("backup-local-replay requestId=" + requestId);
             }
