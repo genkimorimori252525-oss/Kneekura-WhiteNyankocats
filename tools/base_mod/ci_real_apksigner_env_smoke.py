@@ -154,17 +154,39 @@ def _run_smoke(sdk: Path, *, output: Path | None = None) -> dict:
             )
             if signer_preflight != "PASS_EXISTING_RESEARCH_KEYSTORE_ALIAS_PASSWORD_AND_CERT_MATCH":
                 raise AssertionError("real JDK synthetic signer preflight failed")
+            # Wrong hint must discover the ONE real certificate-matching
+            # private key, without showing its alias or any password.
+            handoff = root / "synthetic-resolved-key-alias.txt"
+            recovered = verify_before_sign(
+                keystore=key, alias="missing_alias", storepass_env=env_name,
+                previously_signed_base=signed / "base.apk",
+                keytool=Path(keytool), apksigner=Path(apksigner),
+                resolved_alias_file=handoff,
+            )
+            if recovered != "PASS_EXISTING_RESEARCH_SIGNING_CERT_MATCH_ALIAS_AUTO_RESOLVED":
+                raise AssertionError("real JDK synthetic alias auto-discovery failed")
+            if handoff.read_text(encoding="utf-8").strip() != "synthetic":
+                raise AssertionError("resolved private alias did not match known synthetic key")
+            handoff.unlink()
+            # Even with a valid password, a certificate for a DIFFERENT
+            # existing signer may never be silently selected.
+            other_key = root / "separate-synthetic-key.p12"
+            _invoke([keytool, "-genkeypair", "-storetype", "PKCS12",
+                     "-keystore", str(other_key), "-alias", "other_key",
+                     "-storepass", SYNTHETIC_SECRET, "-keypass", SYNTHETIC_SECRET,
+                     "-keyalg", "RSA", "-keysize", "2048", "-validity", "1",
+                     "-dname", "CN=Other Synthetic Key,OU=CI,O=No Original Game,C=JP"])
             try:
                 verify_before_sign(
-                    keystore=key, alias="missing_alias", storepass_env=env_name,
+                    keystore=other_key, alias="other_key", storepass_env=env_name,
                     previously_signed_base=signed / "base.apk",
                     keytool=Path(keytool), apksigner=Path(apksigner),
                 )
             except PrivateSignerPreflightBlocked as exc:
-                if str(exc) != "EXISTING_RESEARCH_KEY_ALIAS_NOT_FOUND_OR_NO_CERTIFICATE":
-                    raise AssertionError("public negative alias preflight classification failed")
+                if str(exc) != "EXISTING_RESEARCH_SIGNING_CERTIFICATE_NO_UNIQUE_PRIVATE_KEY_MATCH":
+                    raise AssertionError("mismatched synthetic signer identity not blocked")
             else:
-                raise AssertionError("invalid existing synthetic key alias was accepted")
+                raise AssertionError("wrong synthetic certificate was accepted")
         if len(ledger["splits"]) != 6:
             raise AssertionError("not six synthetic APKs")
         if SYNTHETIC_SECRET in (signed / "patch-ledger.json").read_text():
@@ -182,7 +204,8 @@ def _run_smoke(sdk: Path, *, output: Path | None = None) -> dict:
             "real_keytool_ephemeral_synthetic_only": True,
             "real_synthetic_apk_signatures_verified": 6,
             "real_keytool_existing_alias_certificate_preflight_verified": True,
-            "wrong_alias_preflight_blocked": True,
+            "wrong_alias_auto_resolved_only_by_cert": True,
+            "different_signing_certificate_blocked": True,
             "signing_password_only_in_environment_not_argv": True,
             "all_six_signed_apk_payloads_preserved": True,
             "synthetic_keystore_removed_after_process": True,
