@@ -46,6 +46,8 @@ def summarize_runtime_events(source: str) -> dict:
         msg = found.group(1).strip()
         if msg == HOOK:
             counts["native_hook_installed"] += 1
+        elif msg == "original-local-network-availability-v1 offline":
+            counts["original_local_network_unavailable"] += 1
         elif msg == "original-local-denied-http-v1":
             counts["denied_http"] += 1
         elif msg == "original-local-backup-failure-fallback-v1 completed":
@@ -104,6 +106,10 @@ def summarize_runtime_events(source: str) -> dict:
         "original_native_scene_ids_observed": scenes[:20],
         "last_original_loose_tsv_presence": last_loose,
         "denied_http_requests_observed": counts["denied_http"],
+        "original_local_network_availability_false_observed": (
+            counts["original_local_network_unavailable"] > 0),
+        "original_local_network_unavailable_event_count": (
+            counts["original_local_network_unavailable"]),
         "exact_backup_original_network_failure_callbacks_completed": (
             counts["backup_original_failure_response_completed"]),
         "exact_backup_original_network_failure_callbacks_unavailable": (
