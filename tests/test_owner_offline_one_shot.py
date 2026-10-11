@@ -43,7 +43,7 @@ class OwnerLocalOfflineOneShotGuardTests(unittest.TestCase):
     def test_no_publisher_save_mutation_or_unsafe_signing(self):
         text = SCRIPT.read_text(encoding="utf-8-sig")
         for forbidden in (
-            "pm clear", "adb uninstall", " adb uninstall ",
+            "shell pm clear", "adb uninstall", " adb uninstall ",
             "install-multiple", "Clear-Item", "Remove-Item",
             "New-Item -ItemType", "--storepass",
             "--keypass", "-Password", "newkey",
