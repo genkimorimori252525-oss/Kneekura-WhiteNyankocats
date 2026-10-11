@@ -60,6 +60,32 @@ class OriginalResearchSameSignerHandoffTests(unittest.TestCase):
         self.assertEqual(source.count("$secure.Dispose()"), 1)
         self.assertEqual(source.count("Write-Host 'No device actions were performed."), 1)
 
+    def test_owner_public_passive_receipt_not_overwritten_by_unsigned_stage_scan(self):
+        """The owner hit a false 'public passive shim receipt/hash invalid'
+        because a later loop reused $receipt for the UNSIGNED build ledger.
+        This regression must ensure the exact native receipt passed on, even
+        when multiple unsigned presign candidates exist.
+        """
+        ready = (ROOT / "tools/base_mod/OWNER-READY-TO-SIGN.ps1").read_text(
+            encoding="utf-8-sig")
+        self.assertIn(
+            "$passiveShimReceipt = Join-Path $nativeFolder 'PUBLIC_PASSIVE_SHIM_RECEIPT.json'",
+            ready)
+        self.assertIn(
+            "$unsignedStageReceipt = Join-Path $stage.FullName 'UNSIGNED-RESEARCH-RECEIPT.json'",
+            ready)
+        self.assertIn("-PassiveShimReceipt $passiveShimReceipt", ready)
+        self.assertIn("$candidateProof = Get-Content -LiteralPath $unsignedStageReceipt",
+                      ready)
+        self.assertNotIn("-PassiveShimReceipt $receipt", ready)
+        self.assertNotIn("$receipt =", ready)
+        self.assertLess(
+            ready.index("$passiveShimReceipt = Join-Path"),
+            ready.index("$unsignedStageReceipt = Join-Path"))
+        self.assertLess(
+            ready.index("$unsignedStageReceipt = Join-Path"),
+            ready.index("-PassiveShimReceipt $passiveShimReceipt"))
+
     def test_owner_jdk17_pair_resolved_before_secret_prompt(self):
         """Regression for owner's Oracle javapath javac.exe with no sibling keytool.
 
