@@ -87,6 +87,14 @@
 - `tools/base_mod/BUILD-OWNER-RESEARCH-PAIR.ps1` でOracle javapath `Get-Command javac`からkeytoolの場所を推定していた誤契約を削除。`Resolve-JavaKeytool` を先に利用し、同じ完全JDK17内の `keytool.exe` と `javac.exe` をセットで、**秘密パスワード入力前に**チェック。失敗時は固定`EXISTING_JDK17_JAVAC_KEYTOOL_PAIR_REQUIRED_NO_SIGNING_ATTEMPT`、成功時 `EXISTING_JDK17_JAVAC_KEYTOOL_PAIR_VERIFIED_NO_KEY_USED`。本家原本ZIP/SAVE/署名鍵を開かない時点で実パス解決を検証。
 - **検証** 本人Windows PS5.1パースPASS、実JDK17ペア解決PASS、Python3.12全**650テスト中643 PASS・7 skip・0 fail**。現行GitHub [Test tooling #38110656002](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/actions/runs/38110656002) と [Windows/Ubuntu Agent #38110656042](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/actions/runs/38110656042) PASS。**実研究用キーストアによる署名は未再実行**。本人だけが同じコマンドでalias/パスワードを端末入力して継続する。証明書と旧研究版の整合が通っても黒画面修正や実機Lv60を意味しない。
 
+### 2026-10-11 署名鍵のエイリアス不一致 → 旧研究版証明書と一致する鍵を自動解決
+
+- 本人の `OWNER-READY-TO-SIGN.ps1 -DoBuild -SigningAlias "252525"` は `EXISTING_JDK17_JAVAC_KEYTOOL_PAIR_VERIFIED_NO_KEY_USED` までPASS。実鍵のローカルパスワード入力後、`verify_original_research_signer.py` の `keytool -list` は成功し、その後指定の `252525` の `keytool -exportcert` が失敗して `EXISTING_RESEARCH_KEY_ALIAS_NOT_FOUND_OR_NO_CERTIFICATE` で停止。**署名成功ではない。** P12を開く段階のパスワード/形式チェックは通ったが、エイリアス不在以外の証明書取得失敗の可能性は排除しきれない。
+- 新しい `verify_original_research_signer.py` は、パスワード1回を一時プロセス環境変数から読み、本物のJDK17 `keytool -list -v`（英語ロケールを固定）で **PrivateKeyEntry だけ**のaliasを列挙（件数/文字種を制限）。全候補の公開DER証明書SHA-256を、**以前から署名済みの本人の独立研究版 `base.apk`** の `apksigner verify --print-certs` 証明書SHA-256と比較し、一致が**厳密に1個のみ**の場合に限り採用する。どのalias/証明書/パスワードもコンソールやGitには出さない。0個または2個以上の一致は `EXISTING_RESEARCH_SIGNING_CERTIFICATE_NO_UNIQUE_PRIVATE_KEY_MATCH` でFAIL CLOSED。
+- `BUILD-OWNER-RESEARCH-PAIR.ps1` は秘密情報なしの固定成功マーカー `PASS_EXISTING_RESEARCH_SIGNING_CERT_MATCH_ALIAS_AUTO_RESOLVED` を受け、短命な `private/transient-research-alias-*.txt` で実際の一致エイリアスだけを受け渡し、**その一時ファイルをビルド前に削除**。異常終了時もfinallyで削除する。新規署名鍵は作らず、本人の既存鍵を再利用。旧研究版と一致しない証明書を使って上書き更新する経路は許可しない。
+- 前回の編集中にPowerShellスクリプト末尾が重複して構文エラーになったため、**既知の正常版 `6404db3` に戻して安全に組み直し**。本人PC Windows PowerShell 5.1の構文検証PASS。Python全**655件／648成功・7スキップ・失敗なし**、JDK/Android SDK実物＋一時合成鍵で間違ったaliasの自動解決と、異なる証明書の拒否を検証PASS。[Tooling CI](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/actions/runs/38111313012)、[Agent validation](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/actions/runs/38111312957) も現行ソースでPASS。
+- **本人のP12/パスワードによる実auto-alias照合と署名はまだ未実施。** 同じ `OWNER-READY-TO-SIGN.ps1 -DoBuild -SigningAlias "252525"` を本人の端末から一度実行し、固定判定だけ確認してもらう。署名後も研究版の実機インストールは別ゲート。原作起動/初回SAVE/Lv60/MAX/i運営/まどか/ゴジラ/完全外部通信ゼロは未合格。
+
 ## このファイルの後に読むもの（最大限絞る）
 
 **普段の新規AIセッション：** このファイル → PRODUCT_IDENTITY.md → 実装ロードマップの「実行順序と次の担当者向け開始地点」→ 今動かす1タスクのソース/証拠だけ。毎回すべてのdocs/を巡回する必要はない。
