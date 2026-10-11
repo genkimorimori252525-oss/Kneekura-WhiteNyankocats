@@ -123,10 +123,31 @@ if (-not $DoBuild) {
     return
 }
 if ([string]::IsNullOrWhiteSpace($SigningAlias)) {
-    $SigningAlias = Read-Host 'Alias of the EXISTING research keystore key (not its password)'
+    $SigningAlias = Read-Host 'EXISTING research key alias (required; not the password; Enter alone cancels)'
 }
-if ($SigningAlias -notmatch '^[A-Za-z0-9._-]{1,80}$') {
-    throw 'Invalid existing research signing alias'
+if ([string]::IsNullOrWhiteSpace($SigningAlias)) {
+    # A blank prompt means no user-supplied alias. It does NOT prove the
+    # keystore lacks an alias or that a password is incorrect.
+    # Do not open a keystore, prompt for a secret, rebuild or install.
+    throw 'RESEARCH_SIGNING_ALIAS_MISSING_NO_ACTION: rerun with -DoBuild -SigningAlias "<existing research key alias>"'
+}
+if ($SigningAlias -notmatch '^[A-Za-z0-9._-]{1,80}
+$buildScript = Join-Path $PSScriptRoot 'BUILD-OWNER-RESEARCH-PAIR.ps1'
+if (-not (Test-Path -LiteralPath $buildScript -PathType Leaf)) {
+    throw 'Existing private build-only owner script unavailable'
+}
+# This call signs ONLY local derived original research APKs. It does NOT install
+# anything or access the phone. The target script asks for the private password.
+& $buildScript -RepositoryRoot $repo -OwnerExportZip $ownerExport `
+    -PassiveShimSo $native -PassiveShimReceipt $receipt `
+    -ResearchKeystore $keystore -PreviouslySignedBaseApk $previousBase `
+    -SigningAlias $SigningAlias -OfficialShadowHookAar $official
+if (-not $?) {
+    throw 'Existing-signer original build was not successful; nothing installed'
+}
+Write-Host 'Private signing completed, but REAL DEVICE SIGNER PREFLIGHT is still required.' -ForegroundColor Yellow
+) {
+    throw 'RESEARCH_SIGNING_ALIAS_FORMAT_INVALID_NO_ACTION'
 }
 $buildScript = Join-Path $PSScriptRoot 'BUILD-OWNER-RESEARCH-PAIR.ps1'
 if (-not (Test-Path -LiteralPath $buildScript -PathType Leaf)) {
