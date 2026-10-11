@@ -28,6 +28,21 @@ class OriginalOfflineNativeBootMarkerTests(unittest.TestCase):
         self.assertFalse(report["original_cat_base_visible_proven"])
         self.assertFalse(report["original_615mb_gate_bypassed_proven"])
 
+    def test_exact_backup_failure_callback_is_not_publisher_success(self):
+        report=summarize_runtime_events(
+            "KNEEKURA_STATIC_HTTP: original-local-backup-failure-fallback-v1 completed\n"
+            "KNEEKURA_STATIC_HTTP: original-local-backup-failure-fallback-v1 unavailable\n"
+            "KNEEKURA_STATIC_HTTP: original-local-denied-http-v1\n"
+            "KNEEKURA_STATIC_HTTP: original-local-http-kind-v1 publisher-other\n"
+        )
+        self.assertEqual(
+            report["exact_backup_original_network_failure_callbacks_completed"],1)
+        self.assertEqual(
+            report["exact_backup_original_network_failure_callbacks_unavailable"],1)
+        self.assertEqual(report["denied_http_requests_observed"],1)
+        self.assertFalse(report["actual_publisher_backup_server_success_claimed"])
+        self.assertFalse(report["original_cat_base_visible_proven"])
+
     def test_cold_restart_marker_and_no_source_md5_repetition(self):
         text=("KNEEKURA_STATIC_HTTP: original-local-import-v1 already-complete\n"
               "KNEEKURA_STATIC_HTTP: original-native-scene-v1 id=97\n")
