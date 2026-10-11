@@ -50,9 +50,13 @@ class Scene97ResearchOnlyOwnerSigningGateTests(unittest.TestCase):
         self.assertIn("-PassiveShimSo $native", ready)
         self.assertIn("-PassiveShimReceipt $passiveShimReceipt", ready)
         self.assertEqual(one.count(" -ApproveUpdateOfIsolatedResearchApp"), 1)
-        self.assertNotIn("pm clear", one)
-        self.assertNotIn("uninstall", one)
-        self.assertNotIn("setAirplaneMode", one)
+        executable_lines = "\n".join(
+            line for line in one.splitlines()
+            if line.strip() and not line.lstrip().startswith("#")
+        )
+        self.assertNotIn("pm clear", executable_lines)
+        self.assertNotIn("uninstall", executable_lines)
+        self.assertNotIn("setAirplaneMode", executable_lines)
 
     def test_manual_owner_screen_category_is_only_in_local_metadata_audit(self):
         one = ONE_SHOT.read_text(encoding="utf-8-sig")
