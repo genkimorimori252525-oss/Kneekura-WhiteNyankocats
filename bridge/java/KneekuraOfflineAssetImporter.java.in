@@ -1,0 +1,226 @@
+package __KNEEKURA_PACKAGE__;
+
+import android.util.Log;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+
+/**
+ * Original-JP15.7.1-research-only, opt-in first-run offline asset importer.
+ *
+ * Only 393 original, source-hashed game files, no SAVE_DATA/accounts.
+ * Source: this isolated package's OWN external files directory, never the
+ * publisher package and never the older jp.kn.trace package. The owner PC
+ * may stage its already MD5-verified extracted game files there over ADB.
+ *
+ * Runs on a background thread so the native original game's getFilesDir()
+ * JNI call cannot block its render thread while ~668 MiB is being copied.
+ * A later cold restart may be needed for native scene97 to inspect the
+ * completed source files/index. Does NOT monkeypatch native downloads.
+ */
+final class KneekuraOfflineAssetImporter {
+    private static final boolean ENABLED = __KNEEKURA_OFFLINE_IMPORT_ENABLED__;
+    private static final String ORIGINAL_INDEX = __KNEEKURA_OFFLINE_IMPORT_INDEX__;
+    private static final String TAG = "KNEEKURA_STATIC_HTTP";
+    private static final String SOURCE_LEAF = "kneekura-original-jp1571-stage";
+    private static final String FINISHED = ".kneekura-original-jp1571-393-import-complete-v1";
+    private static boolean scheduled;
+
+    private KneekuraOfflineAssetImporter() {}
+
+    static void schedule(final MyActivity host, final File destination) {
+        if (!ENABLED) {
+            return;
+        }
+        synchronized (KneekuraOfflineAssetImporter.class) {
+            if (scheduled) {
+                return;
+            }
+            scheduled = true;
+        }
+        final Thread thread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    copyVerifiedOwnerFiles(host, destination);
+                } catch (Exception failure) {
+                    // Never emit original filenames, paths, SAVE, exceptions,
+                    // URLs, accounts or raw assets to logcat.
+                    Log.i(TAG, "original-local-import-v1 blocked");
+                }
+            }
+        }, "kneekura-offline-source-import");
+        thread.setDaemon(true);
+        thread.start();
+    }
+
+    private static final class OriginalFile {
+        final String name;
+        final long size;
+        final String md5;
+        OriginalFile(String name, long size, String md5) {
+            this.name = name; this.size = size; this.md5 = md5;
+        }
+    }
+
+    private static OriginalFile[] sourceFiles() throws IOException {
+        String[] rows = ORIGINAL_INDEX.split("\n");
+        if (rows.length != 393) {
+            throw new IOException("pinned original owner file count mismatch");
+        }
+        OriginalFile[] result = new OriginalFile[rows.length];
+        java.util.HashSet<String> names = new java.util.HashSet<String>();
+        for (int i = 0; i < rows.length; ++i) {
+            String[] fields = rows[i].split("\t", -1);
+            if (fields.length != 3 ||
+                !fields[0].matches("[A-Za-z0-9_-]+\\.(list|pack|ogg|caf|tsv)") ||
+                !fields[1].matches("[0-9]{1,9}") ||
+                !fields[2].matches("[0-9a-f]{32}") ||
+                !names.add(fields[0])) {
+                throw new IOException("pinned original owner metadata malformed");
+            }
+            long size = Long.parseLong(fields[1]);
+            if (size > 100_000_000L) {
+                throw new IOException("oversized original owner file");
+            }
+            result[i] = new OriginalFile(fields[0], size, fields[2]);
+        }
+        return result;
+    }
+
+    private static File checkedFile(File dir, String safeName) throws IOException {
+        File child = new File(dir, safeName);
+        String expected = dir.getCanonicalPath() + File.separator + safeName;
+        if (!child.getCanonicalPath().equals(expected)) {
+            throw new IOException("untrusted original stage entry");
+        }
+        return child;
+    }
+
+    private static String hexDigest(byte[] bytes) {
+        char[] alphabet = "0123456789abcdef".toCharArray();
+        char[] out = new char[bytes.length * 2];
+        for (int i = 0; i < bytes.length; ++i) {
+            out[i * 2] = alphabet[(bytes[i] >> 4) & 15];
+            out[i * 2 + 1] = alphabet[bytes[i] & 15];
+        }
+        return new String(out);
+    }
+
+    private static boolean verified(File file, OriginalFile record)
+            throws IOException, NoSuchAlgorithmException {
+        if (!file.isFile() || file.length() != record.size) {
+            return false;
+        }
+        MessageDigest md5 = MessageDigest.getInstance("MD5");
+        byte[] block = new byte[1024 * 256];
+        long readTotal = 0;
+        FileInputStream input = new FileInputStream(file);
+        try {
+            int got;
+            while ((got = input.read(block)) != -1) {
+                readTotal += got;
+                if (readTotal > record.size) {
+                    return false;
+                }
+                md5.update(block, 0, got);
+            }
+        } finally {
+            input.close();
+        }
+        return readTotal == record.size && record.md5.equals(hexDigest(md5.digest()));
+    }
+
+    private static void copyOne(File source, File target, File root, OriginalFile entry)
+            throws IOException, NoSuchAlgorithmException {
+        // Existing game files are never overwritten. A mismatched existing
+        // file is a hard stop because original H01/source integrity matters.
+        if (target.exists()) {
+            if (!verified(target, entry)) {
+                throw new IOException("existing original file differs");
+            }
+            return;
+        }
+        File temp = File.createTempFile(".kneekura-jp1571-import-", ".part", root);
+        try {
+            FileInputStream input = new FileInputStream(source);
+            FileOutputStream output = new FileOutputStream(temp);
+            try {
+                byte[] block = new byte[1024 * 256];
+                int size;
+                while ((size = input.read(block)) != -1) {
+                    output.write(block, 0, size);
+                }
+                output.getFD().sync();
+            } finally {
+                try { input.close(); } finally { output.close(); }
+            }
+            if (!verified(temp, entry)) {
+                throw new IOException("temporary original file integrity failure");
+            }
+            if (target.exists() || !temp.renameTo(target)) {
+                throw new IOException("original file appeared concurrently or rename failed");
+            }
+        } finally {
+            if (temp.exists()) {
+                temp.delete();
+            }
+        }
+    }
+
+    private static void copyVerifiedOwnerFiles(MyActivity host, File root)
+            throws Exception {
+        File finish = checkedFile(root, FINISHED);
+        if (finish.exists()) {
+            if (!finish.isFile() || finish.length() != 0) {
+                throw new IOException("invalid completed research marker");
+            }
+            Log.i(TAG, "original-local-import-v1 already-complete");
+            return;
+        }
+        File external = host.getExternalFilesDir(null);
+        if (external == null || !external.isDirectory()) {
+            throw new IOException("external owned stage root missing");
+        }
+        File sourceRoot = new File(external, SOURCE_LEAF);
+        if (!sourceRoot.isDirectory() ||
+                !sourceRoot.getCanonicalPath().equals(
+                        external.getCanonicalPath() + File.separator + SOURCE_LEAF)) {
+            Log.i(TAG, "original-local-import-v1 stage-not-ready");
+            return;
+        }
+        OriginalFile[] sources = sourceFiles();
+        // Fail BEFORE ANY internal write if even one original staged file
+        // does not exactly match source-pinned immutable TSV metadata.
+        for (OriginalFile entry : sources) {
+            File from = checkedFile(sourceRoot, entry.name);
+            if (!verified(from, entry)) {
+                Log.i(TAG, "original-local-import-v1 invalid-stage");
+                return;
+            }
+            File target = checkedFile(root, entry.name);
+            if (target.exists() && !verified(target, entry)) {
+                Log.i(TAG, "original-local-import-v1 conflicting-private-file");
+                return;
+            }
+        }
+        Log.i(TAG, "original-local-import-v1 393-source-md5-pass");
+        for (OriginalFile entry : sources) {
+            copyOne(checkedFile(sourceRoot, entry.name),
+                    checkedFile(root, entry.name), root, entry);
+        }
+        // Check ALL game files again before a one-time completion marker.
+        for (OriginalFile entry : sources) {
+            if (!verified(checkedFile(root, entry.name), entry)) {
+                throw new IOException("incomplete original file receipt");
+            }
+        }
+        if (!finish.createNewFile()) {
+            throw new IOException("original completion marker already exists");
+        }
+        Log.i(TAG, "original-local-import-v1 completed-393");
+    }
+}
