@@ -4,6 +4,11 @@
 
 ## 現在の作業位置
 
+**2026-10-12 本人の最終到達画面確認（旧情報を上書き・最優先）:** 本人端末では**615MBの要求ダイアログを通過した後のネコ＋横バーの原作ロード画面で「インターネットにアクセスできません」と表示され停止した**。これは本人によるUI観測であり、原作ネイティブコードの具体的な表示分岐や最新版チェックの同定ではない。最後に本人が実行した既存P12同一署名ワンショットは **SIX_SPLIT_UPDATE_CONFIRMED_BASE_ARM64_BYTES_NOT_GAMEPLAY**、393/393 stage MD5一致、内部 already-complete、35/35 loose TSV存在、研究用フック1、native scene 102→101→97、**GL-threadでの原作バックアップ失敗コールバック帰還2件（タイムアウト変種1）、HTTP拒否0件、プロセス死亡0件**。研究版はWi-FiがONでも isNetworkAvailable() = false を返し INTERNET 権限なし。よって**端末Wi-Fi故障と判定しない**。しかし原作のシーン97タスクが必要なローカル資産を受理したか、どの条件で当該UIを表示したかは**未証明**。公式元アプリ、SAVE、アカウントは無変更。**オーナー指示により今後Chat On Steroids（CoS）は使用しない。**
+
+**次の静的/観測作業（2026-10-12）:** 原作ARM64の DownloadBatchTask は35個の download_0..34.tsv に対する 0x320be0 検索結果を、ゲームcontext +0x2fb8 の35個の符号付き値に格納することを原本ソースで確認。研究用の既存描画監視（BuildID・命令語・隔離パッケージ一致が前提）に**4分類・最大4スナップショット**の固定イベント original-native-scene97-resolver-v1 missing=N zero=N one=N other=N を追加。集計は数だけで、ファイル名・生値・SAVE・通信情報を出さない。**検索戻り値はロード完了や成功フラグそのものではない。** 画面報告は実機ログとは独立して分析ツールの任意引数 --owner-observed-final-screen internet-unavailable --owner-reported-615mb-request-passed で指定可能。GitHubでソース/CIコンパイル検証後も、**新たな同一署名APKを本人端末に適用した実機受入は未実施**。実機での原因切り分けまで最終成功と扱わず、既存研究用署名とprivate原本/SAVE保護を維持する。
+
+
 **2026-10-11 scene97後段ロード: 実機観測とコードの境界（最優先）:** 本人の実機訂正どおり**615MB要求ダイアログは既に通過**、**後段のネコ＋バーの原作ロード画面が停止**。これは原作native `scene97`、原本JP15.7.1の`DownloadBatchTask` 35スロットresolverを起動する区間まで確認済み。**最新版チェック／バージョン確認そのものかどうかは未同定**。最新の所有原本ELF in-memory検査でtask実体のvtable address-point=`0xAFE100`とメソッドポインタ群を検証。次の実機原作ランタイムで35整数resolver結果が成功/不成功かを直接見る必要がある。
 
 **重要な旧診断解釈の訂正:** 以前の`original-local-backup-failure-fallback-v1 completed`はGLスレッドへの`queueEvent`予約**だけ**で、実際のJava `newResponse`コールバック実行やnativeの成功/失敗受理を証明していなかった。原本10/11条件一致のbackup形状`mask=7fd`は`timeout==10`ビットだけ相違だが、実タイムアウト数値や厳密URL大文字小文字照合を含む完全同一性は未証明。最新研究ソースでは**原作で観測済みのネットワーク失敗応答（成功200ではない）**を、隔離・no-INTERNET・393importのオプトイン研究版のみで**正の有限タイムアウト最大120秒かつ厳密に一致するbackup GET**へ限定的A/Bし、ログを**予約`enqueued` vs GL-thread `returned`**に分離。拒否理由も秘匿情報なしの固定timeout範囲/厳密URL一致種別だけを記録する。**この修正版はまだ端末へ署名/更新/起動していない。**
