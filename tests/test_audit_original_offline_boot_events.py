@@ -96,6 +96,23 @@ class OriginalOfflineNativeBootMarkerTests(unittest.TestCase):
         self.assertNotIn("PRIVATE",repr(report))
         self.assertFalse(report["original_cat_base_visible_proven"])
 
+    def test_backup_timeout_envelope_categories_are_privacy_bounded(self):
+        report=summarize_runtime_events("\n".join([
+            "KNEEKURA_STATIC_HTTP: original-local-backup-timeout-class-v1 nonfinite",
+            "KNEEKURA_STATIC_HTTP: original-local-backup-timeout-class-v1 gt120",
+            "KNEEKURA_STATIC_HTTP: original-local-backup-timeout-class-v1 PASSWORD:secret",
+            "KNEEKURA_STATIC_HTTP: original-local-backup-strict-envelope-v1 match",
+            "KNEEKURA_STATIC_HTTP: original-local-backup-strict-envelope-v1 mismatch",
+            "KNEEKURA_STATIC_HTTP: original-local-backup-strict-envelope-v1 URL/secret",
+        ]))
+        self.assertEqual(report["blocked_backup_timeout_class_counts"],
+                         {"gt120":1, "nonfinite":1})
+        self.assertEqual(report["blocked_backup_strict_url_envelope_counts"],
+                         {"match":1, "mismatch":1})
+        self.assertFalse(report["original_cat_base_visible_proven"])
+        self.assertNotIn("PASSWORD",repr(report))
+        self.assertNotIn("URL/secret",repr(report))
+
     def test_file_access_witness_is_bounded_and_does_not_name_files(self):
         report=summarize_runtime_events(chr(10).join([
             "KNEEKURA_STATIC_HTTP: original-local-file-access-v1 watching",
