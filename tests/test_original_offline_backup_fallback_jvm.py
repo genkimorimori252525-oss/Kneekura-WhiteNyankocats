@@ -131,10 +131,10 @@ class OriginalLocalBackupOfflineFallbackJvmTests(unittest.TestCase):
                       unknownBlocked=true;
                     }
                     System.out.println("UNKNOWN_BLOCKED="+unknownBlocked);
-                    int observedTimeoutVariant=app.newHttpRequest(
+                    int syntheticTimeoutVariant=app.newHttpRequest(
                         "GET","https://nyanko-backups.ponosgames.com/?synthetic=1",
                         11.0f,new HashMap(),null,new String[0],false,false);
-                    System.out.println("OBSERVED_TIMEOUT_VARIANT_ID="+observedTimeoutVariant);
+                    System.out.println("SYNTHETIC_TIMEOUT_11_ID="+syntheticTimeoutVariant);
                     System.out.println("FALLBACK_COUNT_AFTER_VARIANT="+
                       jp.co.ponos.battlecats.MyActivity.nativeResponseCount);
                     boolean nonfiniteTimeoutBlocked=false;
@@ -155,6 +155,33 @@ class OriginalLocalBackupOfflineFallbackJvmTests(unittest.TestCase):
                       wrongBackupPathBlocked=true;
                     }
                     System.out.println("WRONG_BACKUP_PATH_BLOCKED="+wrongBackupPathBlocked);
+                    boolean invalidNegativeTimeoutBlocked=false;
+                    try {
+                      app.newHttpRequest(
+                        "GET","https://nyanko-backups.ponosgames.com/?synthetic=1",
+                        -1.0f,new HashMap(),null,new String[0],false,false);
+                    } catch(IllegalStateException expected) {
+                      invalidNegativeTimeoutBlocked=true;
+                    }
+                    System.out.println("NEGATIVE_TIMEOUT_BLOCKED="+invalidNegativeTimeoutBlocked);
+                    boolean outOfRangeTimeoutBlocked=false;
+                    try {
+                      app.newHttpRequest(
+                        "GET","https://nyanko-backups.ponosgames.com/?synthetic=1",
+                        121.0f,new HashMap(),null,new String[0],false,false);
+                    } catch(IllegalStateException expected) {
+                      outOfRangeTimeoutBlocked=true;
+                    }
+                    System.out.println("OUT_OF_RANGE_TIMEOUT_BLOCKED="+outOfRangeTimeoutBlocked);
+                    boolean uppercaseHostBlocked=false;
+                    try {
+                      app.newHttpRequest(
+                        "GET","https://NYANKO-BACKUPS.PONOSGAMES.COM/?synthetic=1",
+                        11.0f,new HashMap(),null,new String[0],false,false);
+                    } catch(IllegalStateException expected) {
+                      uppercaseHostBlocked=true;
+                    }
+                    System.out.println("UPPERCASE_HOST_BLOCKED="+uppercaseHostBlocked);
                     System.out.println("ORIGINAL_SUPER_HTTP_CALLS="+
                       jp.co.ponos.battlecats.MyActivity.superCalled);
                     System.out.println("LOCAL_ONLY_NETWORK_AVAILABLE="+
@@ -191,18 +218,21 @@ class OriginalLocalBackupOfflineFallbackJvmTests(unittest.TestCase):
                 "ORIGINAL_FALLBACK_BODY={}",
                 "ORIGINAL_FALLBACK_FINAL=true",
                 "UNKNOWN_BLOCKED=true",
-                "OBSERVED_TIMEOUT_VARIANT_ID=2",
+                "SYNTHETIC_TIMEOUT_11_ID=2",
                 "FALLBACK_COUNT_AFTER_VARIANT=2",
                 "NONFINITE_TIMEOUT_BLOCKED=true",
                 "WRONG_BACKUP_PATH_BLOCKED=true",
-                "original-local-backup-timeout-variant-v1 completed",
+                "NEGATIVE_TIMEOUT_BLOCKED=true",
+                "OUT_OF_RANGE_TIMEOUT_BLOCKED=true",
+                "UPPERCASE_HOST_BLOCKED=true",
+                "original-local-backup-timeout-variant-v1 returned",
                 "original-local-http-kind-v1 backup",
                 "original-local-backup-shape-v1 mask=7fd",
                 "ORIGINAL_SUPER_HTTP_CALLS=0",
                 "LOCAL_ONLY_NETWORK_AVAILABLE=false",
                 "ORIGINAL_SUPER_NETWORK_CHECK_CALLS=0",
                 "original-local-network-availability-v1 offline",
-                "original-local-backup-failure-fallback-v1 completed",
+                "original-local-backup-failure-fallback-v1 enqueued",
                 "original-local-denied-http-v1",
                 "original-local-http-kind-v1 publisher-other",
             ):
