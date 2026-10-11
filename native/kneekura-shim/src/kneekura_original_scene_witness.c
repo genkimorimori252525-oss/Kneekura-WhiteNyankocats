@@ -48,6 +48,7 @@
 #endif
 
 #include "kneekura_scene_witness_policy.h"
+#include "kneekura_scene97_resolver_probe.h"
 
 #define WITNESS_TAG "KNEEKURA_STATIC_HTTP"
 #define ORIGINAL_LIB "libnative-lib.so"
@@ -81,6 +82,9 @@ enum {
     ORIGINAL_SCENE_DISPATCH = 0x71C408,
     ORIGINAL_SCENE_STORE = 0x71C458,
     ORIGINAL_SCENE_RECORD_OFFSET = 0x3480,
+    /* 0x73ca20/0x73ca34/0x73cab0: constructor source-return slots.
+     * Read-only diagnostic, NOT native task completion or stage download. */
+    ORIGINAL_SCENE97_RESOLVER_SLOT_OFFSET = 0x2FB8,
     /* Exact JP15.7.1 original-game functions, NOT local save implementations. */
     ORIGINAL_UNIT_CAP_GETTER = 0x53B2BC,
     ORIGINAL_UPGRADE_GATE = 0x53BE0C,
@@ -123,6 +127,8 @@ static void *gOriginalAppLaunchLoader = NULL;
 static uintptr_t gOriginalLoadBias = 0u;
 static uintptr_t gOriginalVmaShift = 0u;
 static _Atomic uint32_t gLastScene = UINT32_MAX;
+static _Atomic uint32_t gLastScene97ResolverSignature = UINT32_MAX;
+static _Atomic uint32_t gScene97ResolverEventCount = 0u;
 static _Atomic uint32_t gSawCapGetter = 0u;
 static _Atomic uint32_t gSawUpgradeGate = 0u;
 static _Atomic uint32_t gSawSaveReturned = 0u;
@@ -387,6 +393,10 @@ static const struct OriginalCodeWordAnchor kSourceWordAnchors[] = {
     {ORIGINAL_APP_CONTEXT_GETTER + 8u, 0xD65F03C0u},
     {ORIGINAL_SCENE_DISPATCH, 0xA9BB7BFDu},
     {ORIGINAL_SCENE_STORE, 0xB9348001u},
+    /* Source-only original DownloadBatchTask ctor: 35 fixed return slots. */
+    {0x73CA20u, 0x5285F70Au},
+    {0x73CA64u, 0xF1008EBFu},
+    {0x73CAB0u, 0xB8357B40u},
     {ORIGINAL_UNIT_CAP_GETTER, 0xA9BB7BFDu},
     {ORIGINAL_UPGRADE_GATE, 0xA9BA7BFDu},
     {ORIGINAL_SAVE_WRAPPER, 0xD10103FFu},
@@ -465,6 +475,52 @@ static int select_unique_original_source_vma_shift(
     return 1;
 }
 
+/*
+ * Observe only the ORIGINAL scene97 DownloadBatchTask constructor's
+ * 35 signed resolver return slots. Caller already proved exact JP BuildID,
+ * original source opcodes, same context root and isolated process.
+ * This is a bounded aggregate, NOT a progress bar, error screen detector,
+ * file-content audit, or successful original resource acceptance.
+ *
+ * Initial zeros may be uninitialized/early; emit change-only (max 4) to
+ * distinguish that from later stable observations without hot-path logging.
+ */
+static void observe_original_scene97_resolver_histogram(
+        const uint8_t *game_context, uint32_t scene) {
+    if (game_context == NULL || scene != 97u ||
+        atomic_load_explicit(
+            &gAllOriginalHooksInstalled, memory_order_acquire) != 1u) {
+        return;
+    }
+    struct KneekuraScene97ResolverHistogram counts = {0u, 0u, 0u, 0u};
+    if (!kneekura_scene97_resolver_histogram(
+            game_context + ORIGINAL_SCENE97_RESOLVER_SLOT_OFFSET,
+            KNEEKURA_SCENE97_RESOLVER_SLOT_COUNT * sizeof(int32_t),
+            &counts)) {
+        return;
+    }
+    uint32_t signature =
+        kneekura_scene97_resolver_histogram_signature(&counts);
+    if (signature == UINT32_MAX ||
+        atomic_exchange_explicit(
+            &gLastScene97ResolverSignature, signature,
+            memory_order_relaxed) == signature) {
+        return;
+    }
+    uint32_t nth = atomic_fetch_add_explicit(
+        &gScene97ResolverEventCount, 1u, memory_order_relaxed);
+    if (nth >= 4u) {
+        return;
+    }
+    char message[120];
+    int size = snprintf(message, sizeof(message),
+        "original-native-scene97-resolver-v1 missing=%u zero=%u one=%u other=%u",
+        counts.missing, counts.zero, counts.one, counts.other);
+    if (size > 0 && (size_t)size < sizeof(message)) {
+        __android_log_write(ANDROID_LOG_INFO, WITNESS_TAG, message);
+    }
+}
+
 static void research_draw_proxy(void *jni_env, void *jni_class) {
     /* ALWAYS forward the exact original JNI invocation before observing.
        The function has original DEX prototype static ()V (two JNI args).
@@ -494,6 +550,7 @@ static void research_draw_proxy(void *jni_env, void *jni_class) {
     }
     uint32_t scene = 0u;
     memcpy(&scene, context + ORIGINAL_SCENE_RECORD_OFFSET, sizeof(scene));
+    observe_original_scene97_resolver_histogram(context, scene);
 
     uint32_t previous = atomic_exchange_explicit(
         &gLastScene, scene, memory_order_relaxed);
