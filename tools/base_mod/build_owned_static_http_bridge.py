@@ -62,6 +62,7 @@ def build_owned_static_http_bridge(
     research_shadowhook_sha256: str | None = None,
     research_virgin_save_trial: bool = False,
     research_shadowhook_aar: Path | None = None,
+    research_offline_393_asset_import: bool = False,
     keypass: str | None = None,
     zipalign: str | None = None,
     apksigner: str | None = None,
@@ -88,6 +89,10 @@ def build_owned_static_http_bridge(
         if research_isolate_original_native_files_dir and flavor != "research":
             raise ValueError("original native files research isolation requires research flavor")
 
+    if research_offline_393_asset_import and (flavor != "local-research"
+                                           or not research_deny_internet
+                                           or research_virgin_save_trial):
+        raise ValueError("original 393-asset importer needs isolated no-INTERNET passive research, no writer")
     if research_virgin_save_trial and (flavor != "local-research"
                                         or not research_deny_internet):
         raise ValueError(
@@ -154,6 +159,10 @@ def build_owned_static_http_bridge(
         d8=d8,
         android_jar=android_jar,
         root=root,
+        offline_import_installpack=(
+            original / "split_InstallPack.apk"
+            if research_offline_393_asset_import else None
+        ),
     )
     bridge_ledger = inject_bridge_split_set(
         flavored,
@@ -286,6 +295,8 @@ Final device smoke should be performed only after repository parity is green.
         "original_native_file_root_is_super": flavor == "local-research",
         "local_origin_marker_is_gameplay_save": False,
         "original_zero_network_verified": False,
+        "original_owner_393_assets_import_opt_in": research_offline_393_asset_import,
+        "original_native_scene97_offline_loader_verified": False,
         "source_export_sha256": EXPECTED_EXPORT_SHA256,
         "signed_split_dir": str(signed),
         "signer_certificate_sha256": signing_ledger[
@@ -322,6 +333,8 @@ def main() -> int:
     parser.add_argument("--research-virgin-save-trial", action="store_true",
                         help="EXPERIMENTAL: only clean isolated local no-INTERNET original new player")
     parser.add_argument("--enable-backup-offline-replay", action="store_true")
+    parser.add_argument("--research-offline-393-asset-import", action="store_true",
+                        help="EXPLICIT owner-only app-private import from this research package's own staged external cache. Original MD5 per 358 + 35 TSV checked, no online or SAVE data.")
     parser.add_argument(
         "--research-isolate-original-native-files-dir",
         action="store_true",
@@ -371,6 +384,7 @@ def main() -> int:
         research_shadowhook_sha256=args.research_shadowhook_sha256,
         research_virgin_save_trial=args.research_virgin_save_trial,
         research_shadowhook_aar=args.research_shadowhook_aar,
+        research_offline_393_asset_import=args.research_offline_393_asset_import,
         zipalign=args.zipalign,
         apksigner=args.apksigner,
         javac=args.javac,
