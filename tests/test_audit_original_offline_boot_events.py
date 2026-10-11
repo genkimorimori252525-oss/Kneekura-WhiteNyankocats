@@ -87,7 +87,7 @@ class OriginalOfflineNativeBootMarkerTests(unittest.TestCase):
              "server-pack":1, "watching":1},
         )
         self.assertFalse(report["real_native_source_consumed_original_TSV_proven"])
-        self.assertFalse(report["original_game_cat_base_visible_proven"])
+        self.assertFalse(report["original_cat_base_visible_proven"])
         self.assertNotIn("SAVE_DATA",repr(report))
         self.assertNotIn("/private/account",repr(report))
 
