@@ -22,6 +22,11 @@ IMPORT_ALLOWED = frozenset({
 HTTP_KINDS = frozenset({
     "asset-cdn", "backup", "publisher-other", "external-other", "malformed",
 })
+BACKUP_TIMEOUT_CLASSES = frozenset({
+    "nonfinite", "nonpositive", "lt10", "eq10",
+    "gt10-le30", "gt30-le120", "gt120",
+})
+BACKUP_ENVELOPE_CLASSES = frozenset({"match", "mismatch"})
 FILE_ACCESS_KINDS = frozenset({
     "watching", "unavailable", "download-tsv",
     "server-list", "server-pack", "media",
@@ -45,6 +50,8 @@ def summarize_runtime_events(source: str) -> dict:
     scenes = []
     kinds = Counter()
     backup_shapes = Counter()
+    backup_timeout_classes = Counter()
+    backup_envelope_classes = Counter()
     file_events = Counter()
     last_loose = None
     for line in source.splitlines():
@@ -80,6 +87,14 @@ def summarize_runtime_events(source: str) -> dict:
             bits = int(match.group(1), 16)
             if 0 <= bits <= 0x7ff:
                 backup_shapes[format(bits, "03x")] += 1
+        elif msg.startswith("original-local-backup-timeout-class-v1 "):
+            kind=msg[len("original-local-backup-timeout-class-v1 "):]
+            if kind in BACKUP_TIMEOUT_CLASSES:
+                backup_timeout_classes[kind] += 1
+        elif msg.startswith("original-local-backup-strict-envelope-v1 "):
+            kind=msg[len("original-local-backup-strict-envelope-v1 "):]
+            if kind in BACKUP_ENVELOPE_CLASSES:
+                backup_envelope_classes[kind] += 1
         elif msg.startswith("original-local-file-access-v1 "):
             # Only bounded file TYPE names from this app's own read-only
             # FileObserver. Never emit raw Android names, paths or SAVE.
@@ -162,6 +177,10 @@ def summarize_runtime_events(source: str) -> dict:
         "safe_denied_http_category_counts": dict(sorted(kinds.items())),
         "blocked_backup_source_contract_bitmasks": dict(sorted(
             backup_shapes.items())),
+        "blocked_backup_timeout_class_counts": dict(sorted(
+            backup_timeout_classes.items())),
+        "blocked_backup_strict_url_envelope_counts": dict(sorted(
+            backup_envelope_classes.items())),
         "original_file_source_access_kind_counts": dict(sorted(
             file_events.items())),
         "real_native_source_consumed_original_TSV_proven": False,
