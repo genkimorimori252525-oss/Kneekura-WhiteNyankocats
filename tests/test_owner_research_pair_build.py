@@ -40,6 +40,23 @@ class OriginalResearchSameSignerHandoffTests(unittest.TestCase):
         self.assertIn("if ($before -ne $after)", source)
         self.assertIn("Do NOT install this build", source)
 
+    def test_preflight_excludes_failed_build_inputs_and_runs_before_staging(self):
+        ready = (ROOT / "tools/base_mod/OWNER-READY-TO-SIGN.ps1").read_text(
+            encoding="utf-8-sig")
+        builder = SCRIPT.read_text(encoding="utf-8-sig")
+        self.assertIn("official-shadowhook-pair-passive-", ready)
+        self.assertIn("-notmatch", ready)
+        self.assertIn("verify_original_research_signer", builder)
+        self.assertIn("EXISTING_RESEARCH_KEYSTORE_PREFLIGHT_BLOCKED_NO_SIGNING_ATTEMPT", builder)
+        self.assertLess(
+            builder.index("'-m', 'tools.base_mod.verify_original_research_signer'"),
+            builder.index("New-Item -ItemType Directory -Path $out"),
+        )
+        self.assertLess(
+            builder.index("New-Item -ItemType Directory -Path $out"),
+            builder.index("'-m', 'tools.base_mod.build_owned_static_http_bridge'"),
+        )
+
     def test_private_password_name_resolves_in_python_without_stdout_leak(self):
         import contextlib
         import io
