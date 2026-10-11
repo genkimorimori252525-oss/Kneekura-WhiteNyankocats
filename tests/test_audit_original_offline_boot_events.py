@@ -55,6 +55,22 @@ class OriginalOfflineNativeBootMarkerTests(unittest.TestCase):
         self.assertFalse(report["original_cat_base_visible_proven"])
         self.assertFalse(report["original_615mb_gate_bypassed_proven"])
 
+    def test_backup_request_shape_mask_is_bounded_and_has_no_request_data(self):
+        source="\\n".join([
+            "KNEEKURA_STATIC_HTTP: original-local-backup-shape-v1 mask=7fd",
+            "KNEEKURA_STATIC_HTTP: original-local-backup-shape-v1 mask=000",
+            "KNEEKURA_STATIC_HTTP: original-local-backup-shape-v1 mask=800",
+            "KNEEKURA_STATIC_HTTP: original-local-backup-shape-v1 mask=123456",
+            "KNEEKURA_STATIC_HTTP: original-local-backup-shape-v1 mask=https://PRIVATE",
+        ])
+        report=summarize_runtime_events(source)
+        self.assertEqual(report["blocked_backup_source_contract_bitmasks"],
+                         {"000":1,"7fd":1})
+        self.assertEqual(report["source_contract_mask_flags"]["timeout_10"],2)
+        self.assertFalse(report["raw_request_URL_or_account_logged"])
+        self.assertNotIn("PRIVATE",repr(report))
+        self.assertFalse(report["original_cat_base_visible_proven"])
+
     def test_cold_restart_marker_and_no_source_md5_repetition(self):
         text=("KNEEKURA_STATIC_HTTP: original-local-import-v1 already-complete\n"
               "KNEEKURA_STATIC_HTTP: original-native-scene-v1 id=97\n")
