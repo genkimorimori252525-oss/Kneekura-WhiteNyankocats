@@ -120,11 +120,11 @@ class OriginalResearchSameSignerHandoffTests(unittest.TestCase):
         self.assertIn("RESEARCH_SIGNING_ALIAS_FORMAT_INVALID_NO_ACTION", source)
         self.assertLess(
             source.index("RESEARCH_SIGNING_ALIAS_MISSING_NO_ACTION"),
-            source.index("BUILD-OWNER-RESEARCH-PAIR.ps1"),
+            source.index("& $buildScript -RepositoryRoot"),
         )
         self.assertLess(
             source.index("RESEARCH_SIGNING_ALIAS_FORMAT_INVALID_NO_ACTION"),
-            source.index("BUILD-OWNER-RESEARCH-PAIR.ps1"),
+            source.index("& $buildScript -RepositoryRoot"),
         )
 
     def test_owner_one_command_handoff_refuses_signing_by_default(self):
