@@ -131,7 +131,9 @@ if ([string]::IsNullOrWhiteSpace($SigningAlias)) {
     # Do not open a keystore, prompt for a secret, rebuild or install.
     throw 'RESEARCH_SIGNING_ALIAS_MISSING_NO_ACTION: rerun with -DoBuild -SigningAlias "<existing research key alias>"'
 }
-if ($SigningAlias -notmatch '^[A-Za-z0-9._-]{1,80}
+if ($SigningAlias -notmatch '^[A-Za-z0-9._-]{1,80}$') {
+    throw 'RESEARCH_SIGNING_ALIAS_FORMAT_INVALID_NO_ACTION'
+}
 $buildScript = Join-Path $PSScriptRoot 'BUILD-OWNER-RESEARCH-PAIR.ps1'
 if (-not (Test-Path -LiteralPath $buildScript -PathType Leaf)) {
     throw 'Existing private build-only owner script unavailable'
