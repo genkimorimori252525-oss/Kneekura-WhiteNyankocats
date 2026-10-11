@@ -24,6 +24,8 @@ HTTP_KINDS = frozenset({
 })
 SOURCE_MSG = re.compile(r"KNEEKURA_STATIC_HTTP:\s*([^\r\n]{1,220})")
 SCENE = re.compile(r"original-native-scene-v1 id=(4|97|101|102|104)\Z")
+BACKUP_SHAPE = re.compile(r"original-local-backup-shape-v1 mask=([0-7a-f]{1,3})\\Z")
+
 LOOSE = re.compile(
     r"original-download-tsv-loose-v1 present=(\d{1,2}) absent=(\d{1,2}) unsafe=(\d{1,2})\Z"
 )
@@ -38,6 +40,7 @@ def summarize_runtime_events(source: str) -> dict:
     counts = Counter()
     scenes = []
     kinds = Counter()
+    backup_shapes = Counter()
     last_loose = None
     for line in source.splitlines():
         found = SOURCE_MSG.search(line)
@@ -54,6 +57,12 @@ def summarize_runtime_events(source: str) -> dict:
             counts["backup_original_failure_response_completed"] += 1
         elif msg == "original-local-backup-failure-fallback-v1 unavailable":
             counts["backup_original_failure_response_unavailable"] += 1
+        elif BACKUP_SHAPE.fullmatch(msg):
+            # Exactly 11 bounded boolean contract bits, no URL or query.
+            match = BACKUP_SHAPE.fullmatch(msg)
+            bits = int(match.group(1), 16)
+            if 0 <= bits <= 0x7ff:
+                backup_shapes[format(bits, "03x")] += 1
         elif msg.startswith("original-local-import-v1 "):
             status = msg[len("original-local-import-v1 "):]
             if status in IMPORT_ALLOWED:
@@ -116,6 +125,21 @@ def summarize_runtime_events(source: str) -> dict:
             counts["backup_original_failure_response_unavailable"]),
         "actual_publisher_backup_server_success_claimed": False,
         "safe_denied_http_category_counts": dict(sorted(kinds.items())),
+        "blocked_backup_source_contract_bitmasks": dict(sorted(
+            backup_shapes.items())),
+        "source_contract_mask_flags": {
+            "method_GET": 0x001,
+            "timeout_10": 0x002,
+            "empty_headers": 0x004,
+            "body_null": 0x008,
+            "string_array_empty": 0x010,
+            "first_flag_false": 0x020,
+            "second_flag_false": 0x040,
+            "https": 0x080,
+            "root_path": 0x100,
+            "query_present": 0x200,
+            "default_port_no_userinfo_fragment": 0x400,
+        },
         "original_scene97_completed_successfully_proven": False,
         "original_615mb_gate_bypassed_proven": False,
         "original_cat_base_visible_proven": False,
