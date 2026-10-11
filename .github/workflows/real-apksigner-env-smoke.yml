@@ -6,6 +6,7 @@ on:
     paths:
       - "tools/base_mod/repack.py"
       - "tools/base_mod/ci_real_apksigner_env_smoke.py"
+      - "tools/base_mod/verify_original_research_signer.py"
       - ".github/workflows/real-apksigner-env-smoke.yml"
   workflow_dispatch:
 
