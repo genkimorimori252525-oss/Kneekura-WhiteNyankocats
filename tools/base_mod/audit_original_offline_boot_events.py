@@ -60,6 +60,8 @@ def summarize_runtime_events(source: str) -> dict:
             counts["denied_http"] += 1
         elif msg == "original-local-backup-failure-fallback-v1 completed":
             counts["backup_original_failure_response_completed"] += 1
+        elif msg == "original-local-backup-timeout-variant-v1 completed":
+            counts["backup_timeout_variant_original_failure_completed"] += 1
         elif msg == "original-local-backup-failure-fallback-v1 unavailable":
             counts["backup_original_failure_response_unavailable"] += 1
         elif BACKUP_SHAPE.fullmatch(msg):
@@ -132,6 +134,8 @@ def summarize_runtime_events(source: str) -> dict:
             counts["original_local_network_unavailable"]),
         "exact_backup_original_network_failure_callbacks_completed": (
             counts["backup_original_failure_response_completed"]),
+        "backup_timeout_variant_original_failure_callbacks_completed": (
+            counts["backup_timeout_variant_original_failure_completed"]),
         "exact_backup_original_network_failure_callbacks_unavailable": (
             counts["backup_original_failure_response_unavailable"]),
         "actual_publisher_backup_server_success_claimed": False,
