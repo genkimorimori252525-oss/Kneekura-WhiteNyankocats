@@ -39,13 +39,27 @@ LOOSE = re.compile(
     r"original-download-tsv-loose-v1 present=(\d{1,2}) absent=(\d{1,2}) unsafe=(\d{1,2})\Z"
 )
 
+SCENE97_RESOLVER = re.compile(
+    r"original-native-scene97-resolver-v1 "
+    r"missing=(\d{1,2}) zero=(\d{1,2}) "
+    r"one=(\d{1,2}) other=(\d{1,2})\Z"
+)
+OWNER_FINAL_SCREEN_KINDS = frozenset({"internet-unavailable"})
+
 class OriginalOfflineRuntimeProofBlocked(ValueError):
     pass
 
 
-def summarize_runtime_events(source: str) -> dict:
+def summarize_runtime_events(
+    source: str, *, owner_final_screen: str | None = None,
+    owner_reported_615mb_request_passed: bool = False,
+) -> dict:
     if not isinstance(source, str) or len(source) > 16_000_000:
         raise OriginalOfflineRuntimeProofBlocked("owner-local original log unavailable or oversized")
+    if owner_final_screen is not None and owner_final_screen not in OWNER_FINAL_SCREEN_KINDS:
+        raise OriginalOfflineRuntimeProofBlocked("unknown owner final screen category")
+    if not isinstance(owner_reported_615mb_request_passed, bool):
+        raise OriginalOfflineRuntimeProofBlocked("invalid owner 615MB observation")
     counts = Counter()
     scenes = []
     kinds = Counter()
@@ -54,6 +68,8 @@ def summarize_runtime_events(source: str) -> dict:
     backup_envelope_classes = Counter()
     file_events = Counter()
     last_loose = None
+    scene97_slot_snapshots = []
+    last_scene97_slot_summary = None
     for line in source.splitlines():
         found = SOURCE_MSG.search(line)
         if not found:
@@ -95,6 +111,15 @@ def summarize_runtime_events(source: str) -> dict:
             kind=msg[len("original-local-backup-strict-envelope-v1 "):]
             if kind in BACKUP_ENVELOPE_CLASSES:
                 backup_envelope_classes[kind] += 1
+        elif SCENE97_RESOLVER.fullmatch(msg):
+            # Four whole counts, no IDs, filenames, paths, or source bytes.
+            # Signed native resolver statuses are NOT download progress.
+            groups = tuple(map(int, SCENE97_RESOLVER.fullmatch(msg).groups()))
+            if all(x <= 35 for x in groups) and sum(groups) == 35:
+                last_scene97_slot_summary = dict(zip(
+                    ("missing", "zero", "one", "other"), groups))
+                if len(scene97_slot_snapshots) < 4:
+                    scene97_slot_snapshots.append(last_scene97_slot_summary)
         elif msg.startswith("original-local-file-access-v1 "):
             # Only bounded file TYPE names from this app's own read-only
             # FileObserver. Never emit raw Android names, paths or SAVE.
@@ -151,6 +176,15 @@ def summarize_runtime_events(source: str) -> dict:
                 "conflicting-private-file", "unavailable")),
         "import_completed_or_persisted_marker_observed": import_complete,
         "original_native_scene_ids_observed": scenes[:20],
+        "scene97_native_resolver_status_histograms": scene97_slot_snapshots,
+        "scene97_native_resolver_last_histogram": last_scene97_slot_summary,
+        "scene97_resolver_return_values_are_not_download_completion": True,
+        "owner_observed_final_screen": owner_final_screen,
+        "owner_reported_615mb_request_dialog_passed": owner_reported_615mb_request_passed,
+        "owner_observed_offline_error_during_scene97": (
+            owner_final_screen == "internet-unavailable"
+            and bool(scenes) and scenes[-1] == 97),
+        "screen_message_source_or_native_version_check_proven": False,
         "last_original_loose_tsv_presence": last_loose,
         "denied_http_requests_observed": counts["denied_http"],
         "original_local_network_availability_false_observed": (
@@ -210,6 +244,11 @@ def main() -> int:
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo", type=Path, required=True)
     parser.add_argument("--private-log", type=Path, required=True)
+    parser.add_argument(
+        "--owner-observed-final-screen", choices=sorted(OWNER_FINAL_SCREEN_KINDS),
+        default=None, help="Only the owner's final-screen category; no screenshot uploaded")
+    parser.add_argument("--owner-reported-615mb-request-passed",
+                        action="store_true", default=False)
     args=parser.parse_args()
     try:
         repo=args.repo.resolve(strict=True)
@@ -219,7 +258,10 @@ def main() -> int:
             raise OriginalOfflineRuntimeProofBlocked("filtered log must be in owner private root")
         if not file.is_file() or file.stat().st_size>16_000_000:
             raise OriginalOfflineRuntimeProofBlocked("owner log size/type invalid")
-        report=summarize_runtime_events(file.read_text(encoding="utf-8-sig",errors="replace"))
+        report=summarize_runtime_events(
+            file.read_text(encoding="utf-8-sig", errors="replace"),
+            owner_final_screen=args.owner_observed_final_screen,
+            owner_reported_615mb_request_passed=args.owner_reported_615mb_request_passed)
     except (OSError, OriginalOfflineRuntimeProofBlocked) as error:
         parser.error(str(error))
     print(json.dumps(report,sort_keys=True,ensure_ascii=True))
