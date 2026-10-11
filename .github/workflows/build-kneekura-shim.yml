@@ -379,6 +379,8 @@ jobs:
               b"original-native-scene-hook-v1 hook-init-status=%d",
           ]
           assert all(marker in data for marker in mandatory)
+          assert (b"original-native-scene97-resolver-v1 "
+                  b"missing=%u zero=%u one=%u other=%u") in data
           assert b"kneekura-original-virgin-save-trial-v1" not in data
           receipt = {
               "schema": "public-original-research-passive-shim-v1",
@@ -389,6 +391,7 @@ jobs:
               "actual_android_game_or_hook_boot_passed": False,
               "original_save_writer_enabled": False,
               "fixed_error_markers_compiled": True,
+              "scene97_resolver_histogram_compiled": True,
           }
           (directory / "PUBLIC_PASSIVE_SHIM_RECEIPT.json").write_text(
               json.dumps(receipt, sort_keys=True, indent=2) + "\n",
