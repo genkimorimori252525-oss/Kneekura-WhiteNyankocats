@@ -467,6 +467,40 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
         }
     }
 
+    /**
+     * Source-proof-only shape witness for a blocked BACKUP HOST request.
+     * Each bit means the non-sensitive property of the already observed JP
+     * offline backup GET matches. No URL, query, credential, body, header,
+     * method value or response data is ever serialized to logcat.
+     * A mismatched shape is STILL blocked, not replayed or sent online.
+     */
+    private static int originalBackupShapeMask(
+            String method, String requestUrl, float timeout, HashMap headers,
+            ByteBuffer body, String[] strings, boolean flag1, boolean flag2) {
+        int bits = 0;
+        if ("GET".equals(method)) bits |= 1;
+        if (Float.compare(timeout, 10.0f) == 0) bits |= 2;
+        if (headers != null && headers.isEmpty()) bits |= 4;
+        if (body == null) bits |= 8;
+        if (strings != null && strings.length == 0) bits |= 16;
+        if (!flag1) bits |= 32;
+        if (!flag2) bits |= 64;
+        if (requestUrl == null || requestUrl.length() > 4096) return bits;
+        try {
+            java.net.URI uri = new java.net.URI(requestUrl);
+            if (!"nyanko-backups.ponosgames.com".equalsIgnoreCase(
+                    uri.getHost())) return bits;
+            if ("https".equalsIgnoreCase(uri.getScheme())) bits |= 128;
+            if ("/".equals(uri.getRawPath())) bits |= 256;
+            if (uri.getRawQuery() != null) bits |= 512;
+            if (uri.getPort() == -1 && uri.getRawUserInfo() == null
+                    && uri.getRawFragment() == null) bits |= 1024;
+        } catch (java.net.URISyntaxException ignored) {
+            // Treat malformed raw request as unmatched, never print it.
+        }
+        return bits;
+    }
+
     @Override
     public boolean isNetworkAvailable() {
         if (LOCAL_RESEARCH_DENY_HTTP) {
@@ -504,8 +538,14 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
             // This remains a separate research package with zero INTERNET.
             debugResearch("original-local-denied-http-v1");
             if (LOCAL_RESEARCH_IMPORT_OWNER_ASSETS) {
-                debugResearch("original-local-http-kind-v1 "
-                        + classifyDeniedOriginalHttp(requestUrl));
+                final String kind = classifyDeniedOriginalHttp(requestUrl);
+                debugResearch("original-local-http-kind-v1 " + kind);
+                if ("backup".equals(kind)) {
+                    debugResearch("original-local-backup-shape-v1 mask="
+                            + Integer.toHexString(originalBackupShapeMask(
+                            method, requestUrl, timeout, headers, body,
+                            strings, flag1, flag2)));
+                }
             }
             throw new IllegalStateException("original local research HTTP disabled");
         }
