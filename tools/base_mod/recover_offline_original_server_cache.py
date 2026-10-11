@@ -59,7 +59,7 @@ def owner_manifest(apk: Path) -> dict[str, tuple[int, str]]:
                 for item in row["entries"]:
                     member = item["name"]
                     if (not ENTRY_NAME.fullmatch(member) or member in files
-                        or not 0 < item["size"] <= 100_000_000
+                        or not 0 <= item["size"] <= 100_000_000
                         or not re.fullmatch(r"[a-f0-9]{32}", item["md5"])):
                         raise OfflineOwnerCacheBlocked(
                             "invalid or duplicate owner original download member")
