@@ -243,6 +243,73 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
         }
     }
 
+    // Dedicated original-research-only OS file-event witness. It observes
+    // access events to the isolated research app's owned root, and emits ONLY
+    // bounded filename CLASSES once per process. It never opens or reads any
+    // asset, SAVE, URL, account data or shared publisher app folder.
+    private static volatile FileObserver originalAssetAccessObserver;
+    private static volatile String originalAssetAccessObserverRoot;
+    private static final java.util.concurrent.atomic.AtomicInteger
+            originalAssetAccessKindsSeen = new java.util.concurrent.atomic.AtomicInteger(0);
+
+    private static void observeOriginalAssetFileAccess(File root) {
+        if (!LOCAL_RESEARCH_FRESH_ROOT || !LOCAL_RESEARCH_IMPORT_OWNER_ASSETS
+                || !DEBUG_RESEARCH_LOG) {
+            return;
+        }
+        synchronized (MyActivity.class) {
+            try {
+                final String canonical = root.getCanonicalPath();
+                if (originalAssetAccessObserver != null
+                        && canonical.equals(originalAssetAccessObserverRoot)) {
+                    return;
+                }
+                FileObserver watcher = new FileObserver(
+                        canonical, FileObserver.OPEN | FileObserver.ACCESS) {
+                    @Override
+                    public void onEvent(int event, String filename) {
+                        if (filename == null || filename.contains("/")
+                                || filename.contains("\\")
+                                || (event & (FileObserver.OPEN | FileObserver.ACCESS)) == 0) {
+                            return;
+                        }
+                        int bit = 0;
+                        String kind = null;
+                        if (filename.matches(
+                                "download_(?:[0-9]|[12][0-9]|3[0-4])\\.tsv")) {
+                            bit = 1;
+                            kind = "download-tsv";
+                        } else if (filename.matches(
+                                "[A-Za-z][A-Za-z0-9_]*Server\\.list")) {
+                            bit = 2;
+                            kind = "server-list";
+                        } else if (filename.matches(
+                                "[A-Za-z][A-Za-z0-9_]*Server\\.pack")) {
+                            bit = 4;
+                            kind = "server-pack";
+                        } else if (filename.matches("[A-Za-z0-9_-]+\\.(ogg|caf)")) {
+                            bit = 8;
+                            kind = "media";
+                        }
+                        if (bit != 0) {
+                            int previous = originalAssetAccessKindsSeen.getAndUpdate(
+                                    value -> value | bit);
+                            if ((previous & bit) == 0) {
+                                debugResearch("original-local-file-access-v1 " + kind);
+                            }
+                        }
+                    }
+                };
+                watcher.startWatching();
+                originalAssetAccessObserver = watcher;
+                originalAssetAccessObserverRoot = canonical;
+                debugResearch("original-local-file-access-v1 watching");
+            } catch (IOException | SecurityException unavailable) {
+                debugResearch("original-local-file-access-v1 unavailable");
+            }
+        }
+    }
+
     private File newLocalOriginalGameRoot() {
         // The local-research PACKAGE ALREADY has its own Android app-data root.
         // Its first observed use must not silently reuse a previous experiment's
@@ -308,6 +375,7 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
             probeLocalGameSaveFiles(root);
             watchOriginalLocalSaveChanges(root);
             probeLocalDownloadBatchTsvFiles(root);
+            observeOriginalAssetFileAccess(root);
             // Research-only, feature OFF by default. The importer works only
             // from THIS isolated package's ADB-staged external files root,
             // verifying all source-pinned game assets before any internal copy.
