@@ -54,9 +54,14 @@ def inspect_artifact(source: Path, *, binary_sha256: str = ARTIFACT_BINARY_SHA25
                     info.file_size > 250_000 or info.compress_size > 350_000 or
                     info.file_size < 16 or info.flag_bits & 1):
                     raise Scene97PublicArtifactBlocked("unsafe research artifact ZIP member")
-                data = archive.read(info)
-                if len(data) != info.file_size:
-                    raise Scene97PublicArtifactBlocked("corrupt research artifact member")
+                with archive.open(info) as stream:
+                    # Never decompress beyond the stated, strictly capped
+                    # member length even if a malicious ZIP has inconsistent
+                    # length fields or excessive compression ratios.
+                    data = stream.read(info.file_size + 1)
+                    if len(data) != info.file_size or stream.read(1):
+                        raise Scene97PublicArtifactBlocked(
+                            "corrupt or expanded research artifact member")
                 payload[name] = data
     except (BadZipFile, OSError, RuntimeError) as exc:
         raise Scene97PublicArtifactBlocked("unable to read strict public CI archive") from exc
