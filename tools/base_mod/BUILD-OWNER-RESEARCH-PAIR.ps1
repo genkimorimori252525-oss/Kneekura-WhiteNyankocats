@@ -106,7 +106,7 @@ $javacPath = RequireFile (Join-Path (Split-Path -Parent $keytoolPath) 'javac.exe
 # JDK versions rather than silently relying on Oracle PATH forwarding.
 $javacOutput = @(& $javacPath -version 2>&1)
 $javacExit = $LASTEXITCODE
-if ($javacExit -ne 0 -or (($javacOutput -join ' ') -notmatch '^javac 17[.\\s]')) {
+if ($javacExit -ne 0 -or (($javacOutput -join ' ') -notmatch '^javac 17(\.|$)')) {
     throw 'EXISTING_JDK17_JAVAC_KEYTOOL_PAIR_REQUIRED_NO_SIGNING_ATTEMPT'
 }
 Write-Host 'EXISTING_JDK17_JAVAC_KEYTOOL_PAIR_VERIFIED_NO_KEY_USED'
