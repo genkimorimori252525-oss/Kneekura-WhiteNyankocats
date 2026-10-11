@@ -85,6 +85,7 @@ def prepare_unsigned_research(
     *, repo: Path, owner_export: Path, passive_shim: Path,
     passive_receipt: Path, official_aar: Path,
     javac: str | None, d8: str | None, android_jar: str | None,
+    offline_393_import: bool = False,
 ) -> tuple[dict, Path]:
     repo = repo.resolve(strict=True)
     private = repo / "private"
@@ -132,6 +133,8 @@ def prepare_unsigned_research(
             isolate_original_native_files_dir=False,
             virgin_save_trial=False, output=bridge,
             javac=javac, d8=d8, android_jar=android_jar, root=repo,
+            offline_import_installpack=(
+                original / "split_InstallPack.apk" if offline_393_import else None),
         )
         bridge_ledger = inject_bridge_split_set(
             flavored, final, flavor="local-research",
@@ -179,6 +182,8 @@ def prepare_unsigned_research(
             "unsigned_original_splits_sha256": signed_bytes,
             "exact_original_native_presign_status": native_gate["status"],
             "compiled_original_virgin_SAVE_writer_enabled": False,
+            "owner_original_393_file_import_feature_opt_in": offline_393_import,
+            "original_native_scene97_accepted": False,
             "original_user_SAVE_read_or_written": False,
             "original_user_APK_source_mutated": False,
             "Android_APK_signed": False,
@@ -213,6 +218,8 @@ def main() -> int:
     parser.add_argument("--javac")
     parser.add_argument("--d8")
     parser.add_argument("--android-jar")
+    parser.add_argument("--offline-393-import", action="store_true",
+                        help="Explicit research-only source import code (UNSIGNED proof only)")
     args = parser.parse_args()
     try:
         receipt, _ = prepare_unsigned_research(
@@ -221,6 +228,7 @@ def main() -> int:
             passive_receipt=args.passive_receipt,
             official_aar=args.official_aar,
             javac=args.javac, d8=args.d8, android_jar=args.android_jar,
+            offline_393_import=args.offline_393_import,
         )
     except (UnsignedOriginalBuildBlocked, OSError, ValueError) as exc:
         parser.error(str(exc))
