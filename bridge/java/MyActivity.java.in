@@ -292,9 +292,10 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
                             kind = "media";
                         }
                         if (bit != 0) {
+                            final int matchedBit = bit;
                             int previous = originalAssetAccessKindsSeen.getAndUpdate(
-                                    value -> value | bit);
-                            if ((previous & bit) == 0) {
+                                    value -> value | matchedBit);
+                            if ((previous & matchedBit) == 0) {
                                 debugResearch("original-local-file-access-v1 " + kind);
                             }
                         }
