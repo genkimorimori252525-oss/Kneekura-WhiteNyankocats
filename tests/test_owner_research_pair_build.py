@@ -111,6 +111,22 @@ class OriginalResearchSameSignerHandoffTests(unittest.TestCase):
         self.assertIn("required private password environment variable not set",
                       stderr.getvalue())
 
+    def test_missing_owner_alias_is_not_misclassified_as_bad_key(self):
+        source = (ROOT / "tools/base_mod/OWNER-READY-TO-SIGN.ps1").read_text(
+            encoding="utf-8-sig"
+        )
+        self.assertIn("RESEARCH_SIGNING_ALIAS_MISSING_NO_ACTION", source)
+        self.assertIn('rerun with -DoBuild -SigningAlias', source)
+        self.assertIn("RESEARCH_SIGNING_ALIAS_FORMAT_INVALID_NO_ACTION", source)
+        self.assertLess(
+            source.index("RESEARCH_SIGNING_ALIAS_MISSING_NO_ACTION"),
+            source.index("BUILD-OWNER-RESEARCH-PAIR.ps1"),
+        )
+        self.assertLess(
+            source.index("RESEARCH_SIGNING_ALIAS_FORMAT_INVALID_NO_ACTION"),
+            source.index("BUILD-OWNER-RESEARCH-PAIR.ps1"),
+        )
+
     def test_owner_one_command_handoff_refuses_signing_by_default(self):
         path = ROOT / "tools/base_mod/OWNER-READY-TO-SIGN.ps1"
         raw = path.read_bytes()
