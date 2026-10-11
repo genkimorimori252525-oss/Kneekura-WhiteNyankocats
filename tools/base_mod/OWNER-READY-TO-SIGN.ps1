@@ -6,6 +6,7 @@
 [CmdletBinding()]
 param(
     [switch]$DoBuild,
+    [switch]$EnableOfflineServerImport,
     [string]$SigningAlias,
     [string]$RepositoryRoot = (Join-Path $HOME 'Downloads\Kneekura-WhiteNyankocats')
 )
@@ -143,7 +144,8 @@ if (-not (Test-Path -LiteralPath $buildScript -PathType Leaf)) {
 & $buildScript -RepositoryRoot $repo -OwnerExportZip $ownerExport `
     -PassiveShimSo $native -PassiveShimReceipt $receipt `
     -ResearchKeystore $keystore -PreviouslySignedBaseApk $previousBase `
-    -SigningAlias $SigningAlias -OfficialShadowHookAar $official
+    -SigningAlias $SigningAlias -OfficialShadowHookAar $official `
+    -EnableOfflineServerImport:$EnableOfflineServerImport
 if (-not $?) {
     throw 'Existing-signer original build was not successful; nothing installed'
 }
