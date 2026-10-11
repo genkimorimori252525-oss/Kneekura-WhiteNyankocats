@@ -80,6 +80,13 @@
 - **検証**：本人のWindows Python3.12の全648テストは **641合格/7 skip/0 fail**。模擬Java/PKCS12失敗ケース（パスワード・alias・既存証明書不一致）をテスト済み。本人Windowsの実JDK17/SDK35を使う**一時合成鍵と6分割APKだけの実試験**で、keytoolの公開証明書一致／間違いaliasの拒否／Android署名を PASS。GitHub Actionsの [Windows/Linux 実Android署名＋JDK検証](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/actions/runs/38109809851) も両OS PASS（リンクのオーナーは常に `genkimorimori252525-oss`）。実鍵のパスワード自体はAIへ送らず、新しい鍵も発行しない。
 - **次の本人操作**：ローカルの更新済みリポで従来と同じ `OWNER-READY-TO-SIGN.ps1 -DoBuild` を一度実行し、本人だけが研究用署名鍵のaliasとパスワードを端末入力する。最初に固定ステータス `PASS_EXISTING_RESEARCH_KEYSTORE_ALIAS_PASSWORD_AND_CERT_MATCH` が出なければ処理は止まり、**その固定エラーコードだけ**をチャットへ送ってもらう。研究版の実機インストール・SAVE・公式アプリには触れない。署名PASS後も別のread-only 実機署名照合と本人明示の単発更新が必要。
 
+### 2026-10-11 署名事前検証のJDK実パス修正（本人Windows／keytool未発見）
+
+- 本人の再試行 `OWNER-READY-TO-SIGN.ps1 -DoBuild -SigningAlias "252525"` はPREPAREDまでPASS、パスワードはローカル入力されたが、**実鍵の署名・証明書検査より前に** `Required owner-private file is missing: existing local JDK keytool` で停止した。**パスワード、alias、研究用キーストアが不正だという証拠ではない。** 研究版インストール・SAVEは無変更。
+- Chat On Steroidsが実Windowsを検査：PATHの`javac.exe`はOracleの共通 `C:\\Program Files\\Common Files\\Oracle\\Java\\javapath` にあり、同ディレクトリに`keytool.exe`はない。既存の正本 `tools/base_mod/resolve_java_keytool.ps1::Resolve-JavaKeytool` は**既設 `C:\\Program Files\\Java\\jdk-17\\bin\\keytool.exe`**を解決でき、同階層 `javac.exe` は実測 `javac 17.0.12`。Android Studio JBRにも両ツールが存在するが、今回は既設JDK17を選ぶ。
+- `tools/base_mod/BUILD-OWNER-RESEARCH-PAIR.ps1` でOracle javapath `Get-Command javac`からkeytoolの場所を推定していた誤契約を削除。`Resolve-JavaKeytool` を先に利用し、同じ完全JDK17内の `keytool.exe` と `javac.exe` をセットで、**秘密パスワード入力前に**チェック。失敗時は固定`EXISTING_JDK17_JAVAC_KEYTOOL_PAIR_REQUIRED_NO_SIGNING_ATTEMPT`、成功時 `EXISTING_JDK17_JAVAC_KEYTOOL_PAIR_VERIFIED_NO_KEY_USED`。本家原本ZIP/SAVE/署名鍵を開かない時点で実パス解決を検証。
+- **検証** 本人Windows PS5.1パースPASS、実JDK17ペア解決PASS、Python3.12全**650テスト中643 PASS・7 skip・0 fail**。現行GitHub [Test tooling #38110656002](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/actions/runs/38110656002) と [Windows/Ubuntu Agent #38110656042](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/actions/runs/38110656042) PASS。**実研究用キーストアによる署名は未再実行**。本人だけが同じコマンドでalias/パスワードを端末入力して継続する。証明書と旧研究版の整合が通っても黒画面修正や実機Lv60を意味しない。
+
 ## このファイルの後に読むもの（最大限絞る）
 
 **普段の新規AIセッション：** このファイル → PRODUCT_IDENTITY.md → 実装ロードマップの「実行順序と次の担当者向け開始地点」→ 今動かす1タスクのソース/証拠だけ。毎回すべてのdocs/を巡回する必要はない。
