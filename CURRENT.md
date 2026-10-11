@@ -95,6 +95,14 @@
 - 前回の編集中にPowerShellスクリプト末尾が重複して構文エラーになったため、**既知の正常版 `6404db3` に戻して安全に組み直し**。本人PC Windows PowerShell 5.1の構文検証PASS。Python全**655件／648成功・7スキップ・失敗なし**、JDK/Android SDK実物＋一時合成鍵で間違ったaliasの自動解決と、異なる証明書の拒否を検証PASS。[Tooling CI](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/actions/runs/38111313012)、[Agent validation](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/actions/runs/38111312957) も現行ソースでPASS。
 - **本人のP12/パスワードによる実auto-alias照合と署名はまだ未実施。** 同じ `OWNER-READY-TO-SIGN.ps1 -DoBuild -SigningAlias "252525"` を本人の端末から一度実行し、固定判定だけ確認してもらう。署名後も研究版の実機インストールは別ゲート。原作起動/初回SAVE/Lv60/MAX/i運営/まどか/ゴジラ/完全外部通信ゼロは未合格。
 
+### 2026-10-11 本人実鍵で原作6分割署名ビルドPASS → 端末接続待ち
+
+- **本人からの実行ログが初めて `PASS_EXISTING_RESEARCH_SIGNING_CERT_MATCH_ALIAS_AUTO_RESOLVED` と `BUILD_ONLY_PASS; PROVIDED_PREVIOUS_SIGNED_BASE_CERT_MATCHED` を記録。** 既存の研究用PKCS12を本人PCで開き、旧研究版の署名証明書と一致するPrivateKeyEntryを特定し、別鍵を作らず**原作JP15.7.1の署名済み6分割APK候補**を構築する工程が成功した。秘密のalias/P12パスワードはGitHubやチャットには記録しない。
+- 本人PCの非公開成果物は `private/official-shadowhook-pair-passive-57f4daaee89e4affb0ca6cd3771cac01/local-research-static-http-signed-splits`（約166MiB・原作6本、Gitignore管理）。Chat On Steroids接続を使い、**実際の6本すべてに`apksigner verify --print-certs`をかけ、6/6 PASS、全員同一署名証明書PASS。** さらに `tools/base_mod/preflight_original_device_update.py::_candidate` の**原作コード・研究用Shim/ShadowHook2本・署名前後Parity・INTERNETなし**静的制約をPC上で再検証PASS。スマホ・SAVE・公式アプリへのADB読み書きはこの確認で未実行。
+- 続く**実機にインストール済みの `jp.kn.local.battlecats`** との署名照合は、現時点で `adb devices`の認可済みAndroid端末が**0台**で止めた。**前にPCへ残っている研究版 `base.apk` と同じ証明書だとしても、今実機に入っている研究版との一致はまだ未証明。** 実機の黒画面修正や最初のSAVE/Lv60/MAX/運営/まどか/シンゴジラ/通信ゼロは未検証。署名済みビルドは原作PLAYABLE PASSではない。
+- 次の本人操作はUSBデバッグ許可済みのスマホをPCへ接続するだけで十分。検査担当が `tools/base_mod/CHECK-OWNER-RESEARCH-DEVICE-SIGNER.ps1` の `-CandidateSignedSplitDirectory` に上記6分割成果物フォルダを渡し、**実際にインストール済みの独立研究版との署名**をread-onlyで確認する。異なる署名・構成不足・ADB切断はFail Closed。PASS後も別の本人承認なしに `INSTALL-OWNER-RESEARCH-PAIR.ps1` や原作ゲーム起動・Android状態変更を実行しない。今までの失敗作業フォルダや署名鍵を削除しない。
+- 技術証拠と受入未完了の境界は既存Issue #12へ追記。原作GAME BOOTブロッカーの解決を優先し、別アプリAlpha/新規ロードマップを作らない。
+
 ## このファイルの後に読むもの（最大限絞る）
 
 **普段の新規AIセッション：** このファイル → PRODUCT_IDENTITY.md → 実装ロードマップの「実行順序と次の担当者向け開始地点」→ 今動かす1タスクのソース/証拠だけ。毎回すべてのdocs/を巡回する必要はない。
