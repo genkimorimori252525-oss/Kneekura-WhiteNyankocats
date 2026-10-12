@@ -1,5 +1,13 @@
 # AGENTS.md — にーくら大戦争 AI作業入口
 
+## 恒久的な検証分担（所有者指定・2026-10-13）
+
+- AIはPC内でビルド、変更に関連するテスト、必要な原作UIの動作・保存を検証する。品質と進行速度を両立するため、変更の影響に応じて検証を選び、新しい変更・失敗・未解決の懸念がない限り、同じ検証や全試験を繰り返さない。
+- スマホへ渡した後のゲーム動作は、所有者が目視で検証する。AIによるスマホの起動・画面操作・育成／進化試験・再起動・画面／ログ取得・SAVE読取りを、標準の受渡し後検証として実行しない。追加の端末調査は、所有者がその作業を明示的に依頼した場合に限る。
+- 依頼された転送・導入に必要な対象package／署名／データ保持の確認と、スマホでのゲーム動作検証を区別する。導入処理の成功を動作確認済みと記載しない。
+- PCの必要な検証が通れば受渡しへ進む。所有者のスマホ目視確認が未報告の項目は「本人確認待ち」と記録し、AIによるスマホ検証を受渡しの追加条件にしない。PCで確認した範囲と、本人が確認した範囲を分けて報告する。
+- この分担は、以下や過去の文書にある「AIが実機UI／再起動を検証してから渡す」手順に優先する。既存の署名・秘匿・データ保護・品質基準は維持し、未確認項目を成功扱いにしない。
+
 **FIRST: READ [CURRENT.md](CURRENT.md).** That file is the ONLY design entry point and links to [PRODUCT_IDENTITY.md](PRODUCT_IDENTITY.md) and the [four-feature active implementation roadmap](docs/roadmap/2026-10-09-original-battle-cats-delivery.md). Do **not** search all older design docs, open a new foundational spec series, continue the standalone lookalike Alpha as product work, or hand over an APK whose only achievement is passing basic CI. **The next implementation task is the first real original-game UI level-cap vertical slice, with full offline engineering investigated in parallel.**
 
 **OWNER WINDOWS PATHS ARE NOT GUESSWORK:** Read the “オーナーWindows開発環境 — 実測固定パス” section of [CURRENT.md](CURRENT.md) before proposing any Android SDK, adb, PowerShell, ZIP, or signing instructions. The confirmed SDK root is `C:\Users\genki\AppData\Local\Android\Sdk`, ADB is `platform-tools\adb.exe` below that root, project checkout is `C:\Users\genki\Downloads\Kneekura-WhiteNyankocats`, original owned ZIP is under `Downloads\にーくらにゃんこ\`, and the research kit is under `Downloads\kneekura-original-owner-trial-kit`. Use dynamic `adb devices` for current connection state; NEVER hardcode a device serial, fake `C:\PATH\TO` path, or infer the currently opened PowerShell directory is the repo. Exact current paths and Build-tools evidence are centralized in CURRENT.md; update there, not in new parallel rules.
