@@ -10,6 +10,21 @@ from tools.base_mod.pc_native_balance import make_stub, SITES, DISPATCH_SYMBOL
 
 
 class EncodingTests(unittest.TestCase):
+    def test_runtime_witness_uses_the_same_adapter_abi(self):
+        import re
+        from tools.base_mod.pc_native_balance import RX_MARKER,STUB_STRIDE
+        root=Path(__file__).resolve().parents[1]
+        source=(root/'native/kneekura-shim/src/kneekura_original_scene_witness.c').read_text(encoding='utf-8')
+        self.assertIn(RX_MARKER.rstrip(b'\0').decode(),source)
+        match=re.search(r'static const uintptr_t sites\[([0-9]+)\] = \{(.*?)\};',source,re.S)
+        self.assertIsNotNone(match)
+        self.assertEqual(int(match[1]),len(SITES))
+        self.assertEqual([int(x,16) for x in re.findall(r'0x([0-9a-f]+)u',match[2])],[s[1] for s in SITES])
+        self.assertIn('i * '+str(STUB_STRIDE)+'u',source)
+    def test_xp_policy_is_connected_to_both_original_native_paths(self):
+        from tools.base_mod.pc_native_balance import branch
+        self.assertIn((9,0x53b3ac,branch(0x53b3ac,0x349c94),0x349c94),SITES)
+        self.assertIn((10,0x53c1d0,0xa9454ff4,0x53c1d4),SITES)
     def test_rejects_unaligned_or_out_of_range_branch(self):
         from tools.base_mod.pc_native_balance import branch
         for target in (3, 1 << 28):
@@ -110,6 +125,37 @@ class Arm64ExecutionTests(unittest.TestCase):
         for level,unit,form,value in ((31,702,0,20411),(30,702,1,1088),(30,288,2,11200)):
             self.assertEqual(self.dispatch(1,{24:level,21:unit,20:form,19:value})[19],value)
 
+    def test_xp_only_native_cap_gate_and_original_hard_limit_exceptions(self):
+        # Context binding is mandatory; an unbound or misaligned pointer must
+        # not unlock the original gate.
+        self.assertEqual(self.dispatch(9,{0:20,1:60})[0],20)
+        self.dispatch(11,{0:self.ctx+1})
+        self.assertEqual(self.dispatch(10,{0:0,20:177,21:20})[0],0)
+        self.dispatch(11,{0:self.ctx})
+        for unit,hard in ((177,60),(288,60),(702,60),(0,20),(1,1),(800,50),(881,60)):
+            # Exact source table stores each int XOR a per-row mask. Histories
+            # and current levels are deliberately absent: no fabricated rank.
+            row=self.ctx+0x4b060+unit*0x100
+            mask=0xa9b81c7d
+            self.uc.mem_write(row+0xc8,struct.pack('<I',hard^mask))
+            self.uc.mem_write(row+0xfc,struct.pack('<I',mask))
+            self.assertEqual(self.dispatch(9,{0:20,1:hard})[0],hard)
+            for level in (1,20,30,50,59,60):
+                original=int(level<20)
+                result=self.dispatch(10,{0:original,20:unit,21:level})
+                self.assertEqual(result[0],int(level<hard))
+                self.assertEqual(result[20],unit)
+                self.assertEqual(result[21],level)
+        # Unknown data, non-owned/invalid level and invalid index fail closed.
+        for hard in (0,19,61,0xffffffff):
+            self.assertEqual(self.dispatch(9,{0:7,1:hard})[0],7)
+            row=self.ctx+0x4b060+177*0x100
+            self.uc.mem_write(row+0xc8,struct.pack('<I',hard^mask))
+            for original in (0,1):
+                self.assertEqual(self.dispatch(10,{0:original,20:177,21:20})[0],original)
+        for unit,level in ((882,20),(0xffffffff,20),(177,0),(177,101)):
+            self.assertEqual(self.dispatch(10,{0:0,20:unit,21:level})[0],0)
+
     def test_cost_frequency_and_native_research_delta(self):
         self.assertEqual(self.dispatch(5,{20:702,19:0,22:240})[22],241)
         self.assertEqual(210+241-1,450)
@@ -192,6 +238,15 @@ class Arm64ExecutionTests(unittest.TestCase):
                     self.dispatch(8,{1:288,2:2,29:0x1111})
                     expected.update({8:90,20:4740})
                 elif op==8: initial.update({1:702,2:0,29:0x2222})
+                elif op==9:
+                    self.dispatch(11,{0:self.ctx})
+                    initial.update({0:20,1:60}); expected[0]=60
+                elif op==10:
+                    self.dispatch(11,{0:self.ctx})
+                    self.uc.mem_write(self.ctx+0x4b060+177*0x100+0xc8,struct.pack('<I',60))
+                    initial.update({0:0,20:177,21:20})
+                    self.uc.mem_write(0x3003050,struct.pack('<QQ',0x4567,0x5678))
+                    expected.update({0:1,20:0x4567,19:0x5678})
                 if op in (2,4,8): initial[30]=site[1]+0x1000+4
                 code=make_stub(0x1000000,0x1002000,0x1000,site)
                 self.uc.mem_write(0x1000000,code)

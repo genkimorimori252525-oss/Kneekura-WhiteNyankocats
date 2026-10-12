@@ -15,6 +15,47 @@ typedef struct PcActor {
 
 static PcActor actors[51];
 static atomic_uint_fast64_t counters[KNEEKURA_PC_BALANCE_COUNTERS];
+static atomic_uintptr_t level_context;
+static atomic_uint_fast64_t level_counters[3];
+
+void kneekura_pc_xp_level_counters(uint64_t *output) {
+    if (!output) return;
+    for (unsigned i = 0; i < 3u; ++i)
+        output[i] = atomic_load_explicit(&level_counters[i], memory_order_relaxed);
+}
+
+static uint32_t supported_level_cap(uint32_t hard) {
+    /* Fixed original JP15.7.1 hard maxima, including Legend Rare 50. */
+    return hard == 1u || hard == 20u || hard == 50u || hard == 60u ? hard : 0u;
+}
+
+static void xp_level_dispatch(uint64_t *r, uint32_t operation) {
+    if (operation == 11u) {
+        /* Only the attested original draw observer supplies this singleton. */
+        if (r[0] && !(r[0] & 7u)) {
+            atomic_store_explicit(&level_context, (uintptr_t)r[0], memory_order_release);
+            atomic_fetch_add_explicit(&level_counters[2], 1u, memory_order_relaxed);
+        }
+        return;
+    }
+    uintptr_t context = atomic_load_explicit(&level_context, memory_order_acquire);
+    if (!context) return;
+    if (operation == 9u) {
+        uint32_t cap = supported_level_cap((uint32_t)r[1]);
+        if (cap) r[0] = cap;
+        atomic_fetch_add_explicit(&level_counters[0], 1u, memory_order_relaxed);
+    } else if (operation == 10u) {
+        uint32_t unit = (uint32_t)r[20], level = (uint32_t)r[21];
+        if (unit >= 882u || !level || level > 100u) return;
+        const uint8_t *row = (const uint8_t *)(context + 0x4b060u + unit * 0x100u);
+        uint32_t hard = 0u;
+        for (unsigned i = 0; i < 4u; ++i)
+            hard |= (uint32_t)(row[0xc8u + i] ^ row[0xfcu + i]) << (i * 8u);
+        uint32_t cap = supported_level_cap(hard);
+        if (cap) r[0] = level < cap;
+        atomic_fetch_add_explicit(&level_counters[1], 1u, memory_order_relaxed);
+    }
+}
 
 void kneekura_pc_balance_counters(uint64_t *output, uint32_t capacity) {
     if (!output || capacity < KNEEKURA_PC_BALANCE_COUNTERS) return;
@@ -62,7 +103,8 @@ static void recharge_dispatch(uint64_t *r, uint32_t operation) {
 
 __attribute__((visibility("default")))
 void kneekura_pc_balance_dispatch(uint64_t *r, uint32_t operation) {
-    if (!r || operation < 1u || operation > 8u) return;
+    if (!r || operation < 1u || operation > 11u) return;
+    if (operation >= 9u) { xp_level_dispatch(r, operation); return; }
     atomic_fetch_add_explicit(&counters[operation - 1u], 1u, memory_order_relaxed);
     if (operation == 1u) {
         /* Original growth result BEFORE treasure/orbs/talents, never 50000 here. */

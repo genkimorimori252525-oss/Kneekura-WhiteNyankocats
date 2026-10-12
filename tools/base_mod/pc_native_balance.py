@@ -1,8 +1,8 @@
 """PC-only exact ARM64 adapter injection, with independently reproducible gate.
 
-No proprietary instruction bodies: only eight approved displaced instruction
+No proprietary instruction bodies: only approved displaced instruction
 words and tiny original-call adapters. Everything else in original .text must
-still hash to the pinned JP15.7.1 source after restoring these eight words.
+still hash to the pinned JP15.7.1 source after restoring these ten words.
 """
 from __future__ import annotations
 
@@ -29,11 +29,13 @@ SITES = (
     (6, 0x99ce18, 0x1b097d19, 0x99ce1c),
     (7, 0x488b78, 0x1b175aa8, 0x488b7c),
     (8, 0x488b30, 0x94145156, 0x99d088),
+    (9, 0x53b3ac, 0x17f83a3a, 0x349c94),
+    (10, 0x53c1d0, 0xa9454ff4, 0x53c1d4),
 )
-RX_MARKER = b'KNEEKURA_PC_BALANCE_RX_V1\0'
-RW_MARKER = b'KNEEKURA_PC_BALANCE_RW_V1\0'
+RX_MARKER = b'KNEEKURA_PC_BALANCE_RX_V2\0'
+RW_MARKER = b'KNEEKURA_PC_BALANCE_RW_V2\0'
 STUB_START = 64
-STUB_STRIDE = 448
+STUB_STRIDE = 320
 
 
 def branch(pc: int, target: int, *, link: bool = False) -> int:
@@ -72,6 +74,9 @@ def make_stub(pc: int, got: int, shift: int, site: tuple[int,int,int,int]) -> by
         words.append(branch(pc+len(words)*4,0x99c4f0+shift))
         words.append(branch(pc+len(words)*4,0x99c4e4+shift))
     else:
+        # Gate policy uses the original callee's live asset/level registers;
+        # restore its saved caller x20/x19 only AFTER dispatch, exactly once.
+        if op == 10: words.append(word)
         words.append(branch(pc+len(words)*4,target+shift))
     data=struct.pack('<'+'I'*len(words),*words)
     if len(data)>STUB_STRIDE: raise ValueError('PC_BALANCE_STUB_TOO_LARGE')
@@ -103,7 +108,7 @@ def _rx_content(rx,got,shift):
 
 
 def verify_and_restore(native: bytes):
-    """Validate every adapter byte/relocation, then restore ONLY the eight words."""
+    """Validate every adapter byte/relocation, then restore ONLY approved words."""
     lief=_import_lief()
     binary=lief.parse(list(native))
     if binary is None or gnu_build_id(native)!=TARGET_NATIVE_BUILD_ID:
@@ -143,9 +148,10 @@ def verify_and_restore(native: bytes):
         if struct.unpack_from('<I',native,offset)[0]!=expected:
             raise ValueError('PC_BALANCE_SITE_BRANCH_CHANGED')
         struct.pack_into('<I',restored,offset,word)
-    return bytes(restored),dict(schema='pc-native-balance-v1',source_build_id=TARGET_NATIVE_BUILD_ID,
+    return bytes(restored),dict(schema='pc-native-balance-v2',source_build_id=TARGET_NATIVE_BUILD_ID,
                               source_sites=[hex(s[1]) for s in SITES],uniform_vma_shift=shift,
                               adapter_sha256=hashlib.sha256(bytes(rx.content)).hexdigest(),
+                              xp_only_level_policy=True,
                               full_original_text_restore_gate_required=True)
 
 

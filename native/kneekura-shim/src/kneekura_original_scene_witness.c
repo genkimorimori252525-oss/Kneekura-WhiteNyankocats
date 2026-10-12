@@ -375,7 +375,7 @@ static int inspect_original_library(struct dl_phdr_info *info,
         const ElfW(Phdr) *phdr = &info->dlpi_phdr[index];
         if (phdr->p_type == PT_LOAD && (phdr->p_flags & PF_X)) {
 #ifdef KNEEKURA_RESEARCH_PC_BALANCE
-            static const char marker[] = "KNEEKURA_PC_BALANCE_RX_V1";
+            static const char marker[] = "KNEEKURA_PC_BALANCE_RX_V2";
             if (phdr->p_flags == (PF_R | PF_X) && phdr->p_memsz == 4096u
                 && phdr->p_filesz == 4096u && phdr->p_vaddr % 4096u == 0u
                 && phdr->p_vaddr <= UINTPTR_MAX - (uintptr_t)info->dlpi_addr
@@ -522,13 +522,14 @@ static int select_unique_original_source_vma_shift(
     }
 #ifdef KNEEKURA_RESEARCH_PC_BALANCE
     if (native->balance_executable_load_count != 1u) return 0;
-    static const uintptr_t sites[8] = {
+    static const uintptr_t sites[10] = {
         0x99c4e0u, 0x5e5178u, 0x990f54u, 0x8ee878u,
-        0x99cb94u, 0x99ce18u, 0x488b78u, 0x488b30u
+        0x99cb94u, 0x99ce18u, 0x488b78u, 0x488b30u,
+        0x53b3acu, 0x53c1d0u
     };
-    for (unsigned i = 0; i < 8u; ++i) {
+    for (unsigned i = 0; i < 10u; ++i) {
         uintptr_t pc = native->base + selected + sites[i];
-        uintptr_t target = native->balance_executable_begin + 64u + i * 448u;
+        uintptr_t target = native->balance_executable_begin + 64u + i * 320u;
         if (pc < native->executable_begin || pc + 4u > native->executable_end) return 0;
         intptr_t delta = (intptr_t)target - (intptr_t)pc;
         if (delta % 4 || delta < -(1 << 27) || delta >= (1 << 27)) return 0;
@@ -749,6 +750,9 @@ static void research_draw_proxy(void *jni_env, void *jni_class) {
         return;
     }
 #ifdef KNEEKURA_RESEARCH_PC_BALANCE
+    uint64_t context_registers[32] = {0};
+    context_registers[0] = (uintptr_t)context;
+    kneekura_pc_balance_dispatch(context_registers, 11u);
     static uint32_t balance_frames;
     if ((balance_frames++ % 120u) == 0u) {
         uint64_t count[KNEEKURA_PC_BALANCE_COUNTERS];
@@ -763,6 +767,14 @@ static void research_draw_proxy(void *jni_env, void *jni_class) {
             (unsigned long long)count[6], (unsigned long long)count[7],
             (unsigned long long)count[8], (unsigned long long)count[9],
             (unsigned long long)count[10], (unsigned long long)count[11]);
+        if (length > 0 && (size_t)length < sizeof(diagnostic))
+            __android_log_write(ANDROID_LOG_INFO, WITNESS_TAG, diagnostic);
+        uint64_t level_count[3];
+        kneekura_pc_xp_level_counters(level_count);
+        length = snprintf(diagnostic, sizeof(diagnostic),
+            "pc-native-xp-level-v1 cap=%llu gate=%llu binding=%llu",
+            (unsigned long long)level_count[0], (unsigned long long)level_count[1],
+            (unsigned long long)level_count[2]);
         if (length > 0 && (size_t)length < sizeof(diagnostic))
             __android_log_write(ANDROID_LOG_INFO, WITNESS_TAG, diagnostic);
     }

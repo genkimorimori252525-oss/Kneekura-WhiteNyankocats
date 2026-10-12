@@ -6,4 +6,5 @@ __attribute__((visibility("default")))
 void kneekura_pc_balance_dispatch(uint64_t *registers, uint32_t operation);
 __attribute__((visibility("default")))
 void kneekura_pc_balance_counters(uint64_t *output, uint32_t capacity);
+void kneekura_pc_xp_level_counters(uint64_t *output);
 #endif
