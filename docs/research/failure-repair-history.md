@@ -468,3 +468,19 @@ the root agent's separate evidence, not the reviewer's claim.
 | 初期化後の615MB処理失敗 | `pm clear`で外部393stageも消え、通常runはstageを再配置しない。`stage-not-ready`を観測 | 元393size/MD5とguestUIDを再照合して再配置、import完了後の冷起動でタイトル到達確認。旧SAVE注入やnative download条件変更で隠さない |
 
 V3全779テスト767成功/12skip、完成NDK/元ELFの関連21テスト、Agent terminal PASS。初期化PCの元起動・初期profile成功まで確認。原作UIの素材消費・育成・進化・冷起動保持とスマホ再導入は未完了として追跡する。[最新調査](2026-10-12-xp-only-level60-investigation.md)。
+
+## 2026-10-13 — 更新002のPC受入・完全再導入・受渡し検証
+
+前節のPC UI／スマホ未完了は当時の状態。更新002で実消費・境界拒否・まどかの単独フラグA/B・ほむら進化・冷起動保持を検証し、スマホへ承認済みのクリーン再導入を完了した。[検証範囲](../updates/2026-10-13-update-002-catseye-evolution.md)。
+
+| 失敗／観測 | 根拠と限界 | 修復／運営原則 |
+|---|---|---|
+| PC画面の古い座標で別メニューへ入った | introのSKIPとtitleのinboxが同じ位置。撮影後の遅延やchapter selector省略を盲目的な連続tapが扱えなかった | 私的PC自動操作は直前画像で画面を照合し、未知画面で停止。inboxは未受入として残し、育成修正にUI待機問題を混ぜない |
+| スマホprivateファイル名検証でSDK cacheを拒否 | 正当な名前に`+`と`#`がある | app-own範囲・path traversal拒否を維持したまま許容文字を修正。長いlogical名は平坦なhost objectに写し、元名はTARで保つ |
+| スマホbackupの大きいraw catがtimeout | その失敗時はデータ削除前。完全コピーと判定しなかった | app-own base64取得へfallbackし、456件個別SHA／完全TAR一致後にのみ承認済み初期化 |
+| APK receiptの読み取りがCP932で失敗 | 日本語labelを含むUTF-8 JSON。削除前guardで停止 | private helperも`encoding='utf-8'`を指定。検証未完了のまま削除しない |
+| shellのpm clearをOEMが権限拒否 | ordinary ADB UID2000はCLEAR_APP_USER_DATAを許可されない。root・security設定変更はしなかった | appの実UIDとown cwdを照合後、本人承認範囲で自身UIDからOSのpm clearを実行しSuccessを確認。公式appには適用しない |
+| PC recursive／個別pullが途中失敗 | 元エラー応答は汎用例外で失われ、直接原因は未確定。失敗位置付近の個別再取得はSHA一致 | `collect_pc_private_state`は個別pull・最大3retry・私的失敗JSONと全source SHA／TAR／phone SHAを使用。443件完了まで本番公開しない |
+| findが個別sha256sumエラーを成功終了として返す | 独立レビューの合成再現で、一部stdout＋stderrでも不完全manifestを合格にした | 初回manifestのreturncode／stderrをpull前に検証。SHAエラー、破損copy、unsafe path、retry上限を恒久テストに追加 |
+
+全785テスト773成功/12skip、関連21実ライブラリ／原本テスト、Agent terminal、独立再レビューを確認。スマホ起動と初回起動前の初期状態照合までの受入であり、全所有キャラ全UI／全戦闘やinbox機能を合格とした意味ではない。

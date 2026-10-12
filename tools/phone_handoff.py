@@ -94,6 +94,58 @@ def validated_tar_manifest(path):
     return result
 
 
+def collect_pc_private_state(lab, private):
+    """Caller holds the own-PC operation lock and has stopped the app.
+
+    Individual pulls avoid partial recursive adb copies. Flat private host
+    objects keep Android cache names away from Windows path-length limits.
+    Original logical names and every source digest remain in the verified TAR.
+    """
+    remote='/data/user/0/'+PACKAGE+'/'
+    result=lab.adb('shell',f'cd {remote} && find files shared_prefs -type f -exec sha256sum {{}} \\;',check=False)
+    # find can succeed even when an individual sha256sum fails. Any diagnostic
+    # makes the source list incomplete, so fail before copying or publishing.
+    if result.returncode or result.stderr.strip():
+        raise ValueError('PHONE_PC_STATE_MANIFEST_FAILED')
+    raw=result.stdout
+    expected={}
+    for line in raw.splitlines():
+        match=re.fullmatch(r'([0-9a-f]{64})  (.+)',line)
+        if not match: raise ValueError('PHONE_PC_STATE_UNSAFE_ENTRY')
+        digest,name=match.groups();path=PurePosixPath(name)
+        if (path.is_absolute() or '..' in path.parts or not path.parts
+                or path.parts[0] not in ('files','shared_prefs') or '\\' in name
+                or path.as_posix()!=name or name in expected or len(expected)>=10000):
+            raise ValueError('PHONE_PC_STATE_UNSAFE_ENTRY')
+        expected[name]=digest
+    objects=private/'objects';objects.mkdir()
+    files={}; failures=[]
+    for name,digest in sorted(expected.items()):
+        target=objects/(hashlib.sha256(name.encode('utf-8')).hexdigest()+'.bin')
+        for attempt in range(1,4):
+            try:
+                result=lab.adb('pull','-Z',remote+name,target,timeout=180,check=False)
+                if result.returncode==0:break
+                failure=dict(file_id=target.stem,attempt=attempt,returncode=result.returncode,
+                             stdout=result.stdout,stderr=result.stderr)
+            except subprocess.TimeoutExpired:
+                failure=dict(file_id=target.stem,attempt=attempt,timeout=True)
+            failures.append(failure)
+            write_json(private/'pc-export-failures.json',dict(failures=failures))
+        else:
+            raise ValueError('PHONE_PC_STATE_PULL_FAILED')
+        if sha256_file(target)!=digest:
+            raise ValueError('PHONE_PC_STATE_FILE_SHA_MISMATCH')
+        files[name]=target
+        if len(files)%100==0: print('PC_PRIVATE_FILES_SHA_VERIFIED '+str(len(files)),flush=True)
+    archive=private/'pc-app-state.tar'
+    with tarfile.open(archive,'w') as output:
+        for name,target in sorted(files.items()):output.add(target,arcname=name,recursive=False)
+    if validated_tar_manifest(archive)!=expected:
+        raise ValueError('PHONE_PC_STATE_ARCHIVE_MANIFEST_MISMATCH')
+    return archive,files,expected
+
+
 def deploy_new(lab,serial,*,resume_empty=False):
     if not re.fullmatch(r'[A-Za-z0-9_-]{4,80}',serial) or serial.startswith('emulator-'):
         raise ValueError('PHONE_PHYSICAL_USB_SERIAL_REQUIRED')
@@ -135,12 +187,7 @@ def deploy_new(lab,serial,*,resume_empty=False):
     with lab.app_operation_lock():
         lab.identity(); lab.adb('shell','am','force-stop',PACKAGE)
         if lab.adb('shell','pidof',PACKAGE,check=False).stdout.strip(): raise ValueError('PC_APP_NOT_STOPPED')
-        tree=private/'tree'; tree.mkdir()
-        for leaf in ('files','shared_prefs'):
-            lab.adb('pull','-Z','/data/user/0/'+PACKAGE+'/'+leaf,tree,timeout=600)
-        with tarfile.open(archive,'w') as output:
-            for leaf in ('files','shared_prefs'): output.add(tree/leaf,arcname=leaf)
-        manifest=validated_tar_manifest(archive)
+        archive,files,manifest=collect_pc_private_state(lab,private)
         checks=''.join(digest+'  '+name+'\n' for name,digest in sorted(manifest.items())).encode('utf-8')
         lab.adb('shell','-T',f"cd /data/user/0/{PACKAGE}; sha256sum -c - >/dev/null",binary=True,input=checks,timeout=120)
     stage='.kneekura-phone-stage-'+uuid4().hex
@@ -149,7 +196,7 @@ def deploy_new(lab,serial,*,resume_empty=False):
         target=stage+'/'+name
         command='umask 077; mkdir -p '+shlex.quote(str(PurePosixPath(target).parent))+'; base64 -d > '+shlex.quote(target)
         adb('shell','-T',f'run-as {PACKAGE} sh -c '+shlex.quote(command),
-            input=base64.b64encode((tree/name).read_bytes())+b'\n',timeout=180)
+            input=base64.b64encode(files[name].read_bytes())+b'\n',timeout=180)
         if (index+1)%100==0: print('PHONE_PRIVATE_FILES_TRANSFERRED '+str(index+1),flush=True)
     checks=''.join(digest+'  '+name+'\n' for name,digest in sorted(manifest.items())).encode('utf-8')
     adb('shell','-T',f"run-as {PACKAGE} sh -c 'cd {stage}; sha256sum -c - >/dev/null'",input=checks,timeout=120)
