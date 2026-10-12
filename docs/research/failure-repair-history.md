@@ -454,3 +454,17 @@ the root agent's separate evidence, not the reviewer's claim.
 | ADB短時間tapを原作が取りこぼす | 同一点150msのDOWN保持では原作画面が応答。フレーム間取りこぼし以外の因果は未証明 | 私的PC操作補助で同一点swipe150msと画面遷移待ち。入力成功を画面で確認し、未反映クリックを育成成功に数えない |
 
 全777テスト765成功/12skip、完成候補ARM64/私的原本ゲート14テスト、Agent terminal、独立レビューでP1/P2なし。同署名の初回スマホ更新は451保存ファイルの前後SHA保持を確認。所有者の追加指定で実購入/XP消費/育成後保持の受入は本人へ引継ぎ。詳細は[更新001](../updates/2026-10-12-update-001-xp-level-cap.md)。
+
+## 更新001の本人検証で判明した未達とV3再調査
+
+本人は正常プレイを確認した後、ランク1600のディオラムスLv30停止と、まどか第三進化非表示を報告。育成・進化受入は失敗として記録する。本人は元catseye消費を使う方法と、私的バックアップ後の研究状態初期化を承認。スマホ再導入はPC受入後に行う。
+
+| 観測 | 確認した原因・未証明の範囲 | 修正・予防 |
+|---|---|---|
+| Lv30の旧XP adapterが拒否を解除しない | catseye分岐後のx20はunitではなくunit×256。元getter末尾も実UI inline経路では未呼出し | 元XP経路へ復元。元catseye eligibility/追加可用数のrank/stage条件のみ適応。実分岐命令・レジスタ・原本.text復元の回帰を追加 |
+| まどか等32所有体の素材第三進化が未解放 | 元TF metadataは存在するが可用フラグ0。ディオラムス2との違いは進化済み状態。XP adapterがフラグを破壊した証拠はない | 元TF ID/Lv/XP/素材条件を満たす所有対象だけ初回0→1。選択形態・進化済み状態を付与せず、素材消費は元UIへ残す。実UI因果確認は別受入 |
+| 完成NDKライブラリだけUnicornでaddress0x28読取り失敗 | 最小試験ライブラリと異なり、実ビルドにはAndroid TLS stack canaryがある | harnessでTPIDR_EL0とTLS+0x28を供給。製品のstack保護は外さず、実完成ライブラリも検証 |
+| 大容量PCバックアップTARが途中切断 | `adb exec-out tar`の出力末尾がなく、archive検証で検出。recursive pullも途中終了した。後者の原因は未確定 | 削除前に個別file取得/SHA照合へ切替、完全TAR manifest一致後にのみ自己AVDをclear。部分取得をバックアップ成功にしない |
+| 初期化後の615MB処理失敗 | `pm clear`で外部393stageも消え、通常runはstageを再配置しない。`stage-not-ready`を観測 | 元393size/MD5とguestUIDを再照合して再配置、import完了後の冷起動でタイトル到達確認。旧SAVE注入やnative download条件変更で隠さない |
+
+V3全779テスト767成功/12skip、完成NDK/元ELFの関連21テスト、Agent terminal PASS。初期化PCの元起動・初期profile成功まで確認。原作UIの素材消費・育成・進化・冷起動保持とスマホ再導入は未完了として追跡する。[最新調査](2026-10-12-xp-only-level60-investigation.md)。

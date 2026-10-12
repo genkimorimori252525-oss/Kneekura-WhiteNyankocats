@@ -29,11 +29,53 @@ static uint32_t supported_level_cap(uint32_t hard) {
     return hard == 1u || hard == 20u || hard == 50u || hard == 60u ? hard : 0u;
 }
 
-static void xp_level_dispatch(uint64_t *r, uint32_t operation) {
+static uint32_t unit_field(const uint8_t *row, unsigned offset) {
+    uint32_t result = 0u;
+    for (unsigned i = 0; i < 4u; ++i)
+        result |= (uint32_t)(row[offset + i] ^ row[0xfcu + i]) << (i * 8u);
+    return result;
+}
+
+static int unit_caps(uintptr_t context, uint32_t unit, uint32_t *base,
+                     uint32_t *no_eye, uint32_t *hard) {
+    if (unit >= 882u) return 0;
+    const uint8_t *row = (const uint8_t *)(context + 0x4b060u + unit * 0x100u);
+    *base = unit_field(row, 0x48u);
+    *no_eye = unit_field(row, 0xc4u);
+    *hard = supported_level_cap(unit_field(row, 0xc8u));
+    return *base && *base <= *no_eye && *no_eye <= *hard;
+}
+
+static void apply_rank_cap_floor(uintptr_t context) {
+    /* Original SAVE load reconstructs this cache from real catseye-use counts
+     * plus claimed rank rewards. Supply only the missing rank base allowance.
+     * Original packed base/plus scalar XORs value byte i with key byte7-i.
+     * Keep key and plus allowance intact; never write use/reward/stage history. */
+    for (uint32_t unit = 0u; unit < 882u; ++unit) {
+        uint32_t base, no_eye, hard;
+        if (!unit_caps(context, unit, &base, &no_eye, &hard)) continue;
+        uint32_t used = *(const uint32_t *)(context + 0x3af3f4u + unit * 4u);
+        if (used > hard - no_eye) continue;
+        uint8_t *slot = (uint8_t *)(context + 0x3ad80cu + unit * 8u);
+        uint32_t packed = 0u;
+        for (unsigned i = 0; i < 4u; ++i)
+            packed |= (uint32_t)(slot[i] ^ slot[7u - i]) << (i * 8u);
+        uint32_t current = packed >> 16u;
+        uint32_t needed = no_eye - base + used;
+        if (current >= needed || current > hard - base) continue;
+        packed = (needed << 16u) | (packed & 0xffffu);
+        for (unsigned i = 0; i < 4u; ++i)
+            slot[i] = (uint8_t)(packed >> (i * 8u)) ^ slot[7u - i];
+        atomic_fetch_add_explicit(&level_counters[0], 1u, memory_order_relaxed);
+    }
+}
+
+static void catseye_level_dispatch(uint64_t *r, uint32_t operation) {
     if (operation == 11u) {
         /* Only the attested original draw observer supplies this singleton. */
         if (r[0] && !(r[0] & 7u)) {
             atomic_store_explicit(&level_context, (uintptr_t)r[0], memory_order_release);
+            apply_rank_cap_floor((uintptr_t)r[0]);
             atomic_fetch_add_explicit(&level_counters[2], 1u, memory_order_relaxed);
         }
         return;
@@ -41,18 +83,15 @@ static void xp_level_dispatch(uint64_t *r, uint32_t operation) {
     uintptr_t context = atomic_load_explicit(&level_context, memory_order_acquire);
     if (!context) return;
     if (operation == 9u) {
-        uint32_t cap = supported_level_cap((uint32_t)r[1]);
-        if (cap) r[0] = cap;
-        atomic_fetch_add_explicit(&level_counters[0], 1u, memory_order_relaxed);
+        /* Only the original rank1600 catseye availability predicate. */
+        r[0] = 1u;
+        atomic_fetch_add_explicit(&level_counters[1], 1u, memory_order_relaxed);
     } else if (operation == 10u) {
-        uint32_t unit = (uint32_t)r[20], level = (uint32_t)r[21];
-        if (unit >= 882u || !level || level > 100u) return;
-        const uint8_t *row = (const uint8_t *)(context + 0x4b060u + unit * 0x100u);
-        uint32_t hard = 0u;
-        for (unsigned i = 0; i < 4u; ++i)
-            hard |= (uint32_t)(row[0xc8u + i] ^ row[0xfcu + i]) << (i * 8u);
-        uint32_t cap = supported_level_cap(hard);
-        if (cap) r[0] = level < cap;
+        uint32_t base, no_eye, hard;
+        if (!unit_caps(context, (uint32_t)r[19], &base, &no_eye, &hard)) return;
+        /* Original comparison and all material/XP purchases stay intact.
+         * Replace only the rank/stage-based extra available catseye levels. */
+        r[9] = hard - no_eye;
         atomic_fetch_add_explicit(&level_counters[1], 1u, memory_order_relaxed);
     }
 }
@@ -104,7 +143,7 @@ static void recharge_dispatch(uint64_t *r, uint32_t operation) {
 __attribute__((visibility("default")))
 void kneekura_pc_balance_dispatch(uint64_t *r, uint32_t operation) {
     if (!r || operation < 1u || operation > 11u) return;
-    if (operation >= 9u) { xp_level_dispatch(r, operation); return; }
+    if (operation >= 9u) { catseye_level_dispatch(r, operation); return; }
     atomic_fetch_add_explicit(&counters[operation - 1u], 1u, memory_order_relaxed);
     if (operation == 1u) {
         /* Original growth result BEFORE treasure/orbs/talents, never 50000 here. */

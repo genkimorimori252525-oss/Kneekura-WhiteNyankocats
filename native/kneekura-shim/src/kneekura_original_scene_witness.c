@@ -375,7 +375,7 @@ static int inspect_original_library(struct dl_phdr_info *info,
         const ElfW(Phdr) *phdr = &info->dlpi_phdr[index];
         if (phdr->p_type == PT_LOAD && (phdr->p_flags & PF_X)) {
 #ifdef KNEEKURA_RESEARCH_PC_BALANCE
-            static const char marker[] = "KNEEKURA_PC_BALANCE_RX_V2";
+            static const char marker[] = "KNEEKURA_PC_BALANCE_RX_V3";
             if (phdr->p_flags == (PF_R | PF_X) && phdr->p_memsz == 4096u
                 && phdr->p_filesz == 4096u && phdr->p_vaddr % 4096u == 0u
                 && phdr->p_vaddr <= UINTPTR_MAX - (uintptr_t)info->dlpi_addr
@@ -525,7 +525,7 @@ static int select_unique_original_source_vma_shift(
     static const uintptr_t sites[10] = {
         0x99c4e0u, 0x5e5178u, 0x990f54u, 0x8ee878u,
         0x99cb94u, 0x99ce18u, 0x488b78u, 0x488b30u,
-        0x53b3acu, 0x53c1d0u
+        0x5fa514u, 0x53b980u
     };
     for (unsigned i = 0; i < 10u; ++i) {
         uintptr_t pc = native->base + selected + sites[i];
@@ -772,7 +772,7 @@ static void research_draw_proxy(void *jni_env, void *jni_class) {
         uint64_t level_count[3];
         kneekura_pc_xp_level_counters(level_count);
         length = snprintf(diagnostic, sizeof(diagnostic),
-            "pc-native-xp-level-v1 cap=%llu gate=%llu binding=%llu",
+            "pc-native-catseye-level-v1 base-floor=%llu unlock=%llu binding=%llu",
             (unsigned long long)level_count[0], (unsigned long long)level_count[1],
             (unsigned long long)level_count[2]);
         if (length > 0 && (size_t)length < sizeof(diagnostic))

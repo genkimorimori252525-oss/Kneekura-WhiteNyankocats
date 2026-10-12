@@ -8,8 +8,10 @@ from __future__ import annotations
 
 import argparse
 import copy
+import csv
 import hashlib
 import json
+import io
 from pathlib import Path
 import re
 import sys
@@ -72,6 +74,9 @@ def verify_unchanged(before, after, path=()):
         return
     if len(path) == 4 and path[:2] == ('cats','cats') and path[3] in ('unlocked','gatya_seen'):
         return
+    if (len(path) == 4 and path[:2] == ('cats','cats') and path[3] == 'unlocked_forms'
+            and before == 0 and after == 1):
+        return  # Availability only; original material/XP evolution remains required.
     if len(path) == 5 and path[:2] == ('cats','cats') and path[3:] == ('max_upgrade_level','base'):
         return
     if len(path) == 3 and path[0] == 'story' and path[1] in STORY_CHAPTERS and path[2] == 'progress':
@@ -83,7 +88,7 @@ def verify_unchanged(before, after, path=()):
     raise ValueError('PC_PROFILE_UNAPPROVED_FIELD_CHANGE')
 
 
-def apply_policy(save, owned, excluded, targets, orb_ids, orb_factory):
+def apply_policy(save, owned, excluded, targets, orb_ids, orb_factory, *, material_evolutions=()):
     if (len(save.cats.cats) != 882 or len(save.story.chapters) != 10
             or owned & excluded or not owned.issubset(range(882))
             or any(cat.unlocked for cat in save.cats.cats if cat.id in excluded)
@@ -107,6 +112,8 @@ def apply_policy(save, owned, excluded, targets, orb_ids, orb_factory):
     for cat in save.cats.cats:
         if cat.id in owned:
             cat.unlocked=cat.gatya_seen=1
+            if cat.id in material_evolutions and cat.unlocked_forms == 0:
+                cat.unlocked_forms=1
         if cat.id in targets:
             cat.max_upgrade_level.base=max(cat.max_upgrade_level.base, targets[cat.id]['required_increment'])
     for name in SCALARS:
@@ -125,6 +132,24 @@ def apply_policy(save, owned, excluded, targets, orb_ids, orb_factory):
     save.cleared_eoc_1=1
     save.menu_unlocks[0]=max(save.menu_unlocks[0],1)
     for i in (1,5): save.new_dialogs_2[i]=max(save.new_dialogs_2[i],2)
+
+
+def initial_progression_contract(unitbuy_payload):
+    """Derive the XP-only starting ceiling, never a catseye-use history."""
+    rows=list(csv.reader(io.StringIO(unitbuy_payload.decode('utf-8-sig'))))
+    if len(rows) != 882: raise ValueError('PC_PROFILE_UNITBUY_COUNT_CHANGED')
+    targets={}; material_evolutions=set()
+    for unit,row in enumerate(rows):
+        if len(row)<58: raise ValueError('PC_PROFILE_UNITBUY_LAYOUT_CHANGED')
+        base,no_eye,hard=(int(row[i]) for i in (18,49,50))
+        if hard in (1,20,50,60) and 0<base<=no_eye<=hard:
+            targets[unit]=dict(original_max=base,native_hard_max=hard,
+                               no_catseye_cap=no_eye,required_increment=no_eye-base)
+        tf,level,cost=(int(row[i]) for i in (23,25,27))
+        if (15000<=tf<17000 and level>0 and cost>0
+                and any(int(row[i])>0 and int(row[i+1])>0 for i in range(28,38,2))):
+            material_evolutions.add(unit)
+    return targets,material_evolutions
 
 
 def load_reference(parser_source: Path, dependencies: Path, private_state: Path):
@@ -159,9 +184,11 @@ def build_profile(source: bytes, owner_export: Path, core):
     if not pristine_events(save.event_stages.serialize()) or any_nonzero(save.unit_drops):
         raise ValueError('PC_PROFILE_NOT_PRISTINE_EVENT_HISTORY')
     owned,excluded,legends,ownership=_derive_ownership_contract(owner_export)
-    targets,caps=_derive_targets(owner_export)
+    hard_targets,caps=_derive_targets(owner_export)
     with BattleCatsExport(owner_export,region='jp',expected_sha256=EXPORT_SHA256) as export:
         orb_bytes,provenance=export.pack('DataLocal').read('equipmentlist.json')
+        unitbuy,_=export.pack('DataLocal').read('unitbuy.csv')
+    targets,material_evolutions=initial_progression_contract(unitbuy)
     equipment=json.loads(orb_bytes.decode('utf-8-sig'))['ID']
     # Native equipment ID is the table index, not gradeID (which is shared).
     if not isinstance(equipment,list) or len(equipment) != 310 or any(
@@ -171,7 +198,8 @@ def build_profile(source: bytes, owner_export: Path, core):
         raise ValueError('PC_PROFILE_EQUIPMENT_CONTRACT_CHANGED')
     orb_ids=list(range(len(equipment)))
     before=copy.deepcopy(save.to_dict())
-    apply_policy(save,set(owned),set(excluded),targets,orb_ids,core.TalentOrb)
+    apply_policy(save,set(owned),set(excluded),targets,orb_ids,core.TalentOrb,
+                 material_evolutions=material_evolutions)
     expected=copy.deepcopy(save.to_dict())
     verify_unchanged(before,expected)
     result=save.to_data().get_bytes()
@@ -180,8 +208,9 @@ def build_profile(source: bytes, owner_export: Path, core):
     reread.load()
     if reread.to_dict() != expected or reread.to_data().get_bytes() != result:
         raise ValueError('PC_PROFILE_OUTPUT_REREAD_CHANGED')
-    if any(min(targets[i]['original_max']+reread.cats.cats[i].max_upgrade_level.base,
-               targets[i]['native_hard_max']) != 50 for i in legends):
+    if any(hard_targets[i]['native_hard_max'] != 50 or
+           targets[i]['original_max']+reread.cats.cats[i].max_upgrade_level.base !=
+           targets[i]['no_catseye_cap'] for i in legends):
         raise ValueError('PC_PROFILE_LEGEND_RARE_CAP_CHANGED')
     report=dict(schema='kneekura-pc-initial-profile-v1',source_sha256=hashlib.sha256(source).hexdigest(),
                 output_sha256=hashlib.sha256(result).hexdigest(),source_size=len(source),output_size=len(result),
@@ -189,7 +218,10 @@ def build_profile(source: bytes, owner_export: Path, core):
                 account_preserved=True,unapproved_fields_unchanged=True,
                 story_chapter_indices=list(STORY_CHAPTERS),stages_per_chapter=48,treasure_grade=3,
                 unlisted_story_and_event_history_unchanged=True,ownership=ownership,level_caps=caps,
-                current_levels_plus_forms_unchanged=True,resource_policy=MAX_VALUES,
+                current_levels_plus_forms_unchanged=False,resource_policy=MAX_VALUES,
+                current_selected_forms_unchanged=True,
+                material_evolution_availability_count=len(set(owned)&material_evolutions),
+                original_catseye_consumption_required=True,xp_only_to_hard_cap=False,
                 resource_categories=len(MAX_VALUES),talent_orb_count=len(orb_ids),
                 equipmentlist_sha256=provenance.payload_sha256,automatic_refill=False)
     return result,report

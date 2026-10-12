@@ -21,10 +21,11 @@ class EncodingTests(unittest.TestCase):
         self.assertEqual(int(match[1]),len(SITES))
         self.assertEqual([int(x,16) for x in re.findall(r'0x([0-9a-f]+)u',match[2])],[s[1] for s in SITES])
         self.assertIn('i * '+str(STUB_STRIDE)+'u',source)
-    def test_xp_policy_is_connected_to_both_original_native_paths(self):
-        from tools.base_mod.pc_native_balance import branch
-        self.assertIn((9,0x53b3ac,branch(0x53b3ac,0x349c94),0x349c94),SITES)
-        self.assertIn((10,0x53c1d0,0xa9454ff4,0x53c1d4),SITES)
+    def test_original_xp_gate_is_preserved_and_only_catseye_unlocks_are_adapted(self):
+        self.assertIn((9,0x5fa514,0x1a9fd7e0,0x5fa518),SITES)
+        self.assertIn((10,0x53b980,0xb86a6929,0x53b984),SITES)
+        self.assertNotIn(0x53b3ac,[s[1] for s in SITES])
+        self.assertNotIn(0x53c1d0,[s[1] for s in SITES])
     def test_rejects_unaligned_or_out_of_range_branch(self):
         from tools.base_mod.pc_native_balance import branch
         for target in (3, 1 << 28):
@@ -81,6 +82,10 @@ class Arm64ExecutionTests(unittest.TestCase):
         for addr,size in ((0x1000000,0x4000),(0x3000000,0x4000),(0x4000000,0x400000)):
             self.uc.mem_map(addr,size)
         self.uc.reg_write(a.UC_ARM64_REG_SP,0x3003000)
+        # The real Android NDK build uses the thread-local stack canary.
+        # Supply Android's TLS+0x28 contract, not an unprotected substitute.
+        self.uc.reg_write(a.UC_ARM64_REG_TPIDR_EL0,0x1003c00)
+        self.uc.mem_write(0x1003c28,struct.pack('<Q',0x1234abcdeffedc00))
         self.ctx=0x4000000
 
     def dispatch(self,op,values):
@@ -90,7 +95,7 @@ class Arm64ExecutionTests(unittest.TestCase):
         self.uc.reg_write(self.a.UC_ARM64_REG_X0,0x1003000)
         self.uc.reg_write(self.a.UC_ARM64_REG_X1,op)
         self.uc.reg_write(self.a.UC_ARM64_REG_LR,0x1002000)
-        self.uc.emu_start(self.entry,0x1002000,count=10000)
+        self.uc.emu_start(self.entry,0x1002000,count=200000)
         return struct.unpack('<32Q',self.uc.mem_read(0x1003000,256))
 
     def spawn(self,slot=1,unit=702,form=0,side=1):
@@ -125,36 +130,57 @@ class Arm64ExecutionTests(unittest.TestCase):
         for level,unit,form,value in ((31,702,0,20411),(30,702,1,1088),(30,288,2,11200)):
             self.assertEqual(self.dispatch(1,{24:level,21:unit,20:form,19:value})[19],value)
 
-    def test_xp_only_native_cap_gate_and_original_hard_limit_exceptions(self):
-        # Context binding is mandatory; an unbound or misaligned pointer must
-        # not unlock the original gate.
-        self.assertEqual(self.dispatch(9,{0:20,1:60})[0],20)
+    def test_catseye_base_floor_tracks_real_use_and_preserves_original_exceptions(self):
+        self.assertEqual(self.dispatch(9,{0:0})[0],0)
         self.dispatch(11,{0:self.ctx+1})
-        self.assertEqual(self.dispatch(10,{0:0,20:177,21:20})[0],0)
-        self.dispatch(11,{0:self.ctx})
-        for unit,hard in ((177,60),(288,60),(702,60),(0,20),(1,1),(800,50),(881,60)):
-            # Exact source table stores each int XOR a per-row mask. Histories
-            # and current levels are deliberately absent: no fabricated rank.
+        self.assertEqual(self.dispatch(9,{0:0})[0],0)
+        mask=0xa9b81c7d
+        key=b'\x19\x73\xa5\xc4'
+        for unit,base,no_eye,hard in ((177,20,30,60),(288,20,30,60),(702,20,30,50),
+                                     (0,20,20,20),(1,1,1,1),(800,20,30,50),(881,20,30,60)):
             row=self.ctx+0x4b060+unit*0x100
-            mask=0xa9b81c7d
-            self.uc.mem_write(row+0xc8,struct.pack('<I',hard^mask))
+            for offset,value in ((0x48,base),(0xc4,no_eye),(0xc8,hard)):
+                self.uc.mem_write(row+offset,struct.pack('<I',value^mask))
             self.uc.mem_write(row+0xfc,struct.pack('<I',mask))
-            self.assertEqual(self.dispatch(9,{0:20,1:hard})[0],hard)
-            for level in (1,20,30,50,59,60):
-                original=int(level<20)
-                result=self.dispatch(10,{0:original,20:unit,21:level})
-                self.assertEqual(result[0],int(level<hard))
-                self.assertEqual(result[20],unit)
-                self.assertEqual(result[21],level)
-        # Unknown data, non-owned/invalid level and invalid index fail closed.
-        for hard in (0,19,61,0xffffffff):
-            self.assertEqual(self.dispatch(9,{0:7,1:hard})[0],7)
-            row=self.ctx+0x4b060+177*0x100
-            self.uc.mem_write(row+0xc8,struct.pack('<I',hard^mask))
-            for original in (0,1):
-                self.assertEqual(self.dispatch(10,{0:original,20:177,21:20})[0],original)
-        for unit,level in ((882,20),(0xffffffff,20),(177,0),(177,101)):
-            self.assertEqual(self.dispatch(10,{0:0,20:unit,21:level})[0],0)
+            cap_at=self.ctx+0x3ad80c+unit*8
+            history_at=self.ctx+0x3af3f4+unit*4
+            for used in sorted({0,1,hard-no_eye}):
+                if used>hard-no_eye: continue
+                packed=struct.pack('<I',9) # Preserve original plus cap; initial base increment0.
+                self.uc.mem_write(cap_at,bytes(v^key[3-i] for i,v in enumerate(packed))+key)
+                self.uc.mem_write(history_at,struct.pack('<I',used))
+                self.dispatch(11,{0:self.ctx})
+                result=bytes(self.uc.mem_read(cap_at,8))
+                decoded=struct.unpack('<I',bytes(result[i]^result[7-i] for i in range(4)))[0]
+                self.assertEqual((decoded>>16,decoded&0xffff),(no_eye-base+used,9))
+                self.assertEqual(result[4:],key)
+                self.assertEqual(bytes(self.uc.mem_read(history_at,4)),struct.pack('<I',used))
+                self.assertEqual(self.dispatch(10,{9:0,19:unit})[9],hard-no_eye)
+        self.assertEqual(self.dispatch(9,{0:0})[0],1)
+        for unit in (882,0xffffffff):
+            self.assertEqual(self.dispatch(10,{9:7,19:unit})[9],7)
+        row=self.ctx+0x4b060+177*0x100
+        self.uc.mem_write(row+0xc8,struct.pack('<I',61^mask))
+        self.assertEqual(self.dispatch(10,{9:7,19:177})[9],7)
+
+    def test_catseye_floor_preserves_invalid_history_and_existing_higher_caps(self):
+        unit=177
+        mask=0xa9b81c7d
+        key=b'\x19\x73\xa5\xc4'
+        row=self.ctx+0x4b060+unit*0x100
+        for offset,value in ((0x48,20),(0xc4,30),(0xc8,60)):
+            self.uc.mem_write(row+offset,struct.pack('<I',value^mask))
+        self.uc.mem_write(row+0xfc,struct.pack('<I',mask))
+        cap_at=self.ctx+0x3ad80c+unit*8
+        history_at=self.ctx+0x3af3f4+unit*4
+        for used,current in ((31,0),(0,20),(30,40),(0,41)):
+            packed=struct.pack('<I',(current<<16)|9)
+            before=bytes(v^key[3-i] for i,v in enumerate(packed))+key
+            self.uc.mem_write(cap_at,before)
+            self.uc.mem_write(history_at,struct.pack('<I',used))
+            self.dispatch(11,{0:self.ctx})
+            self.assertEqual(bytes(self.uc.mem_read(cap_at,8)),before)
+            self.assertEqual(bytes(self.uc.mem_read(history_at,4)),struct.pack('<I',used))
 
     def test_cost_frequency_and_native_research_delta(self):
         self.assertEqual(self.dispatch(5,{20:702,19:0,22:240})[22],241)
@@ -240,13 +266,14 @@ class Arm64ExecutionTests(unittest.TestCase):
                 elif op==8: initial.update({1:702,2:0,29:0x2222})
                 elif op==9:
                     self.dispatch(11,{0:self.ctx})
-                    initial.update({0:20,1:60}); expected[0]=60
+                    expected[0]=1
                 elif op==10:
                     self.dispatch(11,{0:self.ctx})
-                    self.uc.mem_write(self.ctx+0x4b060+177*0x100+0xc8,struct.pack('<I',60))
-                    initial.update({0:0,20:177,21:20})
-                    self.uc.mem_write(0x3003050,struct.pack('<QQ',0x4567,0x5678))
-                    expected.update({0:1,20:0x4567,19:0x5678})
+                    row=self.ctx+0x4b060+177*0x100
+                    for offset,value in ((0x48,20),(0xc4,30),(0xc8,60)):
+                        self.uc.mem_write(row+offset,struct.pack('<I',value))
+                    initial.update({19:177,9:self.ctx+177*4,10:0x3b01c0})
+                    expected[9]=30
                 if op in (2,4,8): initial[30]=site[1]+0x1000+4
                 code=make_stub(0x1000000,0x1002000,0x1000,site)
                 self.uc.mem_write(0x1000000,code)

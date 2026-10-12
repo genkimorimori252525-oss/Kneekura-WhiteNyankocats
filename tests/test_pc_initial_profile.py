@@ -1,14 +1,16 @@
 """Policy tests do not need an owner save or the private reference parser."""
 import copy
+import csv
+import io
 from types import SimpleNamespace as N
 import unittest
 
-from tools.base_mod.pc_initial_profile import apply_policy, verify_unchanged, pristine_events
+from tools.base_mod.pc_initial_profile import apply_policy, verify_unchanged, pristine_events, initial_progression_contract
 
 
 def profile():
     cats = [N(id=i, unlocked=0, gatya_seen=0, upgrade=N(base=0, plus=0),
-              max_upgrade_level=N(base=0, plus=0)) for i in range(882)]
+              max_upgrade_level=N(base=0, plus=0),unlocked_forms=0) for i in range(882)]
     chapters = [N(progress=0, stages=[N(clear_times=0, treasure=0, itf_timed_score=0)
                                      for _ in range(51)]) for _ in range(10)]
     save = N(cats=N(cats=cats), story=N(chapters=chapters),
@@ -24,6 +26,37 @@ def profile():
 
 
 class PcInitialProfileTests(unittest.TestCase):
+    def test_source_contract_distinguishes_material_evolution_from_stage_and_placeholders(self):
+        rows=[[0]*58 for _ in range(882)]
+        for unit,base,no_eye,hard in ((0,20,30,60),(1,20,30,50),(2,20,20,20),(3,1,1,1)):
+            for column,value in ((18,base),(49,no_eye),(50,hard)):
+                rows[unit][column]=value
+        for column,value in ((23,15289),(25,30),(27,1000000),(28,38),(29,6)):
+            rows[0][column]=value
+        rows[1][23]=500 # Stage reward is not a material evolution.
+        rows[2][23]=15290;rows[2][25]=30;rows[2][27]=1000000 # No declared materials.
+        output=io.StringIO();csv.writer(output).writerows(rows)
+        targets,available=initial_progression_contract(output.getvalue().encode())
+        self.assertEqual([targets[i]['required_increment'] for i in range(4)],[10,10,0,0])
+        self.assertEqual([targets[i]['native_hard_max'] for i in range(4)],[60,50,20,1])
+        self.assertEqual(available,{0})
+
+    def test_material_evolution_is_available_without_granting_the_evolved_form(self):
+        save=profile()
+        save.cats.cats[177].unlocked_forms=2
+        apply_policy(save,{177,288,289},{130},{},[],lambda i,n:N(id=i,value=n),
+                     material_evolutions={177,288,289,130})
+        self.assertEqual(save.cats.cats[177].unlocked_forms,2)
+        self.assertEqual(save.cats.cats[288].unlocked_forms,1)
+        self.assertEqual(save.cats.cats[289].unlocked_forms,1)
+        self.assertEqual(save.cats.cats[130].unlocked_forms,0)
+        self.assertEqual(save.cats.cats[288].upgrade.base,0)
+        before={'cats':{'cats':[{'unlocked_forms':0}]}}
+        verify_unchanged(before,{'cats':{'cats':[{'unlocked_forms':1}]}})
+        for value in (2,3):
+            with self.assertRaisesRegex(ValueError,'PC_PROFILE_UNAPPROVED_FIELD_CHANGE'):
+                verify_unchanged(before,{'cats':{'cats':[{'unlocked_forms':value}]}})
+
     def test_claim_or_completed_chapter_without_stage_progress_is_not_pristine(self):
         clean={'chapters':[], 'chapter_completion_count':[0], 'stages_reward_claimed':{}}
         self.assertTrue(pristine_events(clean))
