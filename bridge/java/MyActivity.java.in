@@ -824,9 +824,11 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
                 KneekuraPcBootAuthority.SignedResponse signedResponse = independentRegistration
                     ? ("register".equals(localOperation)
                         ? KneekuraPcBootAuthority.signedRegistration(body, super.getFilesDir())
-                        : ("tokens".equals(localOperation)
+                        : ("refresh-password".equals(localOperation)
+                            ? KneekuraPcBootAuthority.signedPasswordRefresh(body, super.getFilesDir())
+                            : ("tokens".equals(localOperation)
                             ? KneekuraPcBootAuthority.signedTokens(body, super.getFilesDir())
-                            : KneekuraPcBootAuthority.signedManagedBootstrap(body, super.getFilesDir(), headers))) : null;
+                            : KneekuraPcBootAuthority.signedManagedBootstrap(body, super.getFilesDir(), headers)))) : null;
                 String payload = independentRegistration ? signedResponse.body
                     : KneekuraPcBootAuthority.payload(localOperation, super.getFilesDir());
                 byte[] bytes = payload.getBytes(java.nio.charset.StandardCharsets.UTF_8);

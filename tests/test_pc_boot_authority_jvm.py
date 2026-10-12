@@ -56,6 +56,25 @@ public class SignedHarness {
   String credentials=KneekuraPcBootAuthority.registration(files);
   java.util.regex.Matcher password=java.util.regex.Pattern.compile("\"password\":\"([^\"]+)\"").matcher(credentials);
   if(!password.find())throw new AssertionError();
+  java.util.regex.Matcher refresh=java.util.regex.Pattern.compile("\"passwordRefreshToken\":\"([^\"]+)\"").matcher(credentials);
+  if(!refresh.find())throw new AssertionError();
+  String refreshRequest="{\"accountCode\":\""+id+"\",\"nonce\":\"refresh-nonce\",\"passwordRefreshToken\":\""+refresh.group(1)+"\"}";
+  java.net.URL refreshUrl=new java.net.URL("https://nyanko-auth.ponosgames.com/v1/user/password");
+  if(!"refresh-password".equals(KneekuraPcBootAuthority.authOperation("POST",refreshUrl,body(refreshRequest),files)))throw new AssertionError("local refresh unavailable");
+  KneekuraPcBootAuthority.SignedResponse renewed=KneekuraPcBootAuthority.signedPasswordRefresh(body(refreshRequest),files);
+  verifier.update(renewed.body.getBytes(StandardCharsets.UTF_8));
+  if(!verifier.verify(Base64.getDecoder().decode(renewed.signature)))throw new AssertionError("refresh signature invalid");
+  if(!renewed.body.contains("\"nonce\":\"refresh-nonce\"") || !renewed.body.contains(password.group(1)) || !renewed.body.contains(refresh.group(1)))throw new AssertionError("refresh contract invalid");
+  if(!credentials.equals(KneekuraPcBootAuthority.registration(files)))throw new AssertionError("refresh changed stable local credentials");
+  for(String invalid:new String[]{refreshRequest.replace(id,"foreign"),refreshRequest.replace(refresh.group(1),"foreign"),refreshRequest.replace("refresh-nonce",""),refreshRequest+"junk",refreshRequest.replace("\"nonce\":","\"extra\":0,\"nonce\":"),refreshRequest.replace("\"nonce\":","\"nonce\":\"duplicate\",\"nonce\":")}) {
+   if(!"other".equals(KneekuraPcBootAuthority.authOperation("POST",refreshUrl,body(invalid),files)))throw new AssertionError("invalid refresh accepted");
+   boolean refused=false;
+   try{KneekuraPcBootAuthority.signedPasswordRefresh(body(invalid),files);}catch(java.io.IOException expected){refused=true;}
+   if(!refused)throw new AssertionError("direct invalid refresh accepted");
+  }
+  for(String endpoint:new String[]{"http://nyanko-auth.ponosgames.com/v1/user/password","https://foreign.invalid/v1/user/password","https://nyanko-auth.ponosgames.com:444/v1/user/password","https://nyanko-auth.ponosgames.com/v1/user/password?x=1","https://nyanko-auth.ponosgames.com/v1/user/password#x","https://x@nyanko-auth.ponosgames.com/v1/user/password"})
+   if(!"other".equals(KneekuraPcBootAuthority.authOperation("POST",new java.net.URL(endpoint),body(refreshRequest),files)))throw new AssertionError("invalid refresh envelope accepted");
+  if(!"other".equals(KneekuraPcBootAuthority.authOperation("GET",refreshUrl,body(refreshRequest),files)))throw new AssertionError("invalid refresh method accepted");
   String tokenRequest=request.substring(0,request.length()-1)+",\"password\":\""+password.group(1)+"\"}";
   java.net.URL tokenUrl=new java.net.URL("https://nyanko-auth.ponosgames.com/v1/tokens");
   if(!"tokens".equals(KneekuraPcBootAuthority.authOperation("POST",tokenUrl,body(tokenRequest),files)))throw new AssertionError();
@@ -86,9 +105,16 @@ public class SignedHarness {
   if(!ledgerBefore.equals(Files.readString(ledger.toPath())))throw new AssertionError("same snapshot changed");
   for(String amount:new String[]{"-1","2147483648","1.5","true","[]","\"50\""})
     if(!"other".equals(KneekuraPcBootAuthority.authOperation("POST",managedUrl,body(managedRequest.replace("\"catfoodAmount\":50","\"catfoodAmount\":"+amount)),files,managedHeaders)))throw new AssertionError("invalid amount accepted");
-  boolean changedRejected=false;
-  try{KneekuraPcBootAuthority.signedManagedBootstrap(body(managedRequest.replace("\"catfoodAmount\":50","\"catfoodAmount\":51")),files,managedHeaders);}catch(java.io.IOException expected){changedRejected=true;}
-  if(!changedRejected||!ledgerBefore.equals(Files.readString(ledger.toPath())))throw new AssertionError("inventory delta silently acknowledged");
+  KneekuraPcBootAuthority.signedManagedBootstrap(body(managedRequest.replace("\"catfoodAmount\":50","\"catfoodAmount\":51")),files,managedHeaders);
+  String ledgerChanged=Files.readString(ledger.toPath());
+  if(!ledgerChanged.contains("catfoodAmount=51\n") || ledgerBefore.equals(ledgerChanged))throw new AssertionError("authenticated snapshot not persisted");
+  KneekuraPcBootAuthority.signedManagedBootstrap(body(managedRequest),files,managedHeaders);
+  if(!ledgerBefore.equals(Files.readString(ledger.toPath())))throw new AssertionError("decreased snapshot not persisted");
+  Files.writeString(ledger.toPath(),ledgerBefore.replace("catfoodAmount=50","catfoodAmount=60"));
+  boolean corruptedRejected=false;
+  try{KneekuraPcBootAuthority.signedManagedBootstrap(body(managedRequest),files,managedHeaders);}catch(java.io.IOException expected){corruptedRejected=true;}
+  if(!corruptedRejected || !Files.readString(ledger.toPath()).contains("catfoodAmount=60\n"))throw new AssertionError("corrupt ledger overwritten");
+  Files.writeString(ledger.toPath(),ledgerBefore);
   if(!"other".equals(KneekuraPcBootAuthority.authOperation("POST",managedUrl,body(managedRequest),files,new java.util.HashMap<>())))throw new AssertionError("missing authentication accepted");
   if(!"other".equals(KneekuraPcBootAuthority.authOperation("POST",managedUrl,body(managedRequest.replace("false","true")),files,managedHeaders)))throw new AssertionError("unsupported paid update accepted");
   for(String type:new String[]{"[]","{}","0","null"})

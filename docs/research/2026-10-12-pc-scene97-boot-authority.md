@@ -20,7 +20,8 @@ scene97は `DownloadBatchTask → CreateAccountTask → GetConfigPubVendorsTask`
 | create-account | HTTP200、error=false、success / accountId | 独自schemaのIDを原子的に保存・再利用 |
 | register | statusCode=1、payload accountCode/password/passwordRefreshToken | 自分のローカルIDにのみ資格情報を発行 |
 | tokens | statusCode=1、payload token | 自分のID・password照合、ローカルRS256 JWT。実APKで原作検証通過 |
-| managed-items | nonce、isPaid=false、原作4種のamount | 独自versioned ledgerへの初回登録。同じ値の繰返しだけを受理し未知差分を拒否 |
+| password refresh | POST、accountCode/passwordRefreshToken/nonce、statusCode=1 | 保存済みの独自ID/tokenを厳密照合し、既存資格情報を冪等に再発行 |
+| managed-items | nonce、isPaid=false、原作4種のamount | 認証済み現在量を独自versioned ledgerへ原子的に保存。破損台帳・不正量・未知有料要求を拒否 |
 | age assets | 原作年齢確認の6ファイル | 元サイズ・SHA固定の私的キャッシュから原作WebViewへ供給 |
 
 共通応答検証 `0x32c524` はstatusCode=1で要求nonceの完全一致が必須。`0x32c918` は `Nyanko-Signature` を取得し、`0x32c348` が公開RSA4096鍵と `EMSA-PKCS1-v1_5(SHA-256)` で本文を検証する。省略・常時成功化はしない。
@@ -41,6 +42,7 @@ APK `20261011T195459Z-0ec54bf1`、採取 `20261011T195557Z-87a204d3` は途中�
 - app identity/credentialsはapp-own versioned record、FileLock、checksum、atomic move。不正recordを上書きして成功へ変えない。
 - ログscope v2はpadded libc/DEBUG tagを解析。crash dump PIDは当該研究PIDのheaderで照合しforeign dumpを除外。旧captureのVerifyはscope v1で保存互換。
 - JWTの署名・issuer・subject・expiry、foreign password拒否、本文改ざん、不正JSON等を実Javaで検証。これらは基地到達の代用にはしない。
+- 本人スマホへの移行で初回起動だけでは検出できないpassword refreshと初期MAX後の台帳不一致を修正した。資格情報更新と所持品の増減を回帰対象とし、SAVE削除・再補充は行わない。[実機受渡し記録](2026-10-12-owner-phone-handoff.md)と[継続台帳](failure-repair-history.md)を参照。
 
 ## 継続条件
 

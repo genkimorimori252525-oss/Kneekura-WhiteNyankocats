@@ -413,3 +413,23 @@ mandatory files. Valid actual captures still pass. Include bounded Start proc
 PIDs when selecting current own-process ANR traces, not only polling PIDs.
 Final review found both P2 findings resolved; actual ARM64 execution remains
 the root agent's separate evidence, not the reviewer's claim.
+
+## 2026-10-12 — 本人スマホ移行と初回起動後のローカル契約不足
+
+詳細・候補ID・保証範囲は[本人スマホ受渡し記録](2026-10-12-owner-phone-handoff.md)。この節は今後の運営で再利用する失敗台帳であり、初期PC成功や途中の無例外をスマホ受入へ読み替えない。
+
+| 観測した失敗 | 確認した原因・限界 | 修正・回帰ルール |
+|---|---|---|
+| 現在ユーザーでは研究版が未インストールでも`INSTALL_FAILED_UPDATE_INCOMPATIBLE` | 別Androidユーザーに旧署名の同じpackageが残っていた | 全体dumpsysも検査する回帰テスト。所有者の明示承認後に旧研究packageのみ削除。自動uninstallは実装しない |
+| 大容量stdout TARが不完全、圧縮pullと長いWindowsパスで転送失敗 | 取得失敗をSHA不一致で検出。すべてのOS内部原因までは未同定 | owner-only ACLの短いprivate path、`pull -Z`、個別ASCII base64 stdin、全450ファイルの前後SHAで移行受入 |
+| 空のshared_prefsを公開できない可能性をレビューで検出 | stage内の空rootを作成していなかった | files/shared_prefsを必ず先に作成。TARのroot/link/重複/容量テスト。非空targetの消去はしない |
+| ShadowHook無効化の診断で`.so.off`がnative抽出エラー`res=-2` | 診断用エントリー名がAndroid native library形式から外れた | 有効な`.so`名で比較試験。A/Bだけで監視を原因と断定しない。最終候補は通常名と検証ゲートを復元 |
+| ADBがoffline、`debuggerd -b`はroot要求、TCP LLDBは権限拒否 | USB再接続で復帰。研究版はINTERNETを持たない。接続断の原因は未証明 | ユーザーの再接続後、自己packageのrun-as/JDWP/AF_UNIX LLDBで診断。phone rootや公式SAVEアクセスを前提にしない |
+| scene97/download完了後、CreateAccountTaskが未完了。時刻応答後`auth-password`拒否 | 初回register/tokensしか実装しておらず、既存ローカルアカウントのpassword refreshが未対応 | 原作の3要求フィールドと応答契約を確認。独自ID/token/nonceの厳密照合と署名付き冪等再発行。実Javaで正常/異なるtoken等を検証、実機でrefresh→tokens受理 |
+| refresh修正後のmanaged応答がlocal-io | MAX化したSAVEと旧所持品台帳が不一致。初回以外の差分を一律拒否する設計だった | 認証済みpaid=falseの現在量をFileLock/fsync/atomic replaceで保存。増加・消費による減少・checksum破損保持を回帰検証。SAVE再初期化・自動補充はしない |
+| 短時間採取で初期イベントが見えず、冷起動が止まったように見えた | 収集後に読むstdout PIPEには滞留・欠落の余地があり、実際の端末バッファには初期イベントがあった。全遅延の因果は未証明 | privateファイルへ継続出力。PIDで区間を限定して再確認。30秒の画面遷移中キャプチャと本人の後続操作画面確認を区別 |
+| インストール引数・検証引数の入力誤り | 存在しないsplit名、未対応CLI flagを指定し、変更実行前に拒否された | split名は`JP_15_7_1_SPLITS`を正本とし、CLIは`--help`とAgent terminal validationで確認。架空の成功を報告しない |
+
+**最終確認:** 775テスト、763成功/12skip。実Java3テスト、Agent terminal、2回の追加独立レビューにP1/P2なし。最終同署名更新で自己アプリ453ファイルのSHA保持、公式package path保持、root不使用。所有者がスマホ動作成功を報告し、読み取り専用の自己アプリ画面でも原作パワーアップ画面を確認した。画面・SAVE・秘密鍵・生ログ・端末IDは公開しない。
+
+**次の受入条件:** 初回登録に加えて既存状態の冷起動・password refresh・初期MAX後/消費後の台帳同期を確認する。破損レコードの上書き、署名/nonce検証の省略、起動フラグの強制完了で停止を隠さない。キャラクターの全育成上限・全戦闘補正・SDK/IPC全経路のゼロ通信は別の未完了受入項目として保持する。

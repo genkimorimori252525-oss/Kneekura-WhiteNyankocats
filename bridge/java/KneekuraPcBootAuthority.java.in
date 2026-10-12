@@ -150,6 +150,14 @@ final class KneekuraPcBootAuthority {
             java.util.Map<?, ?> headers) throws IOException {
         if (registrationMatches(method, url, body, files)) return "register";
         if ("POST".equals(method) && "https".equals(url.getProtocol())
+                && "nyanko-auth.ponosgames.com".equals(url.getHost())
+                && "/v1/user/password".equals(url.getPath()) && url.getQuery() == null
+                && url.getRef() == null && url.getUserInfo() == null
+                && (url.getPort() == -1 || url.getPort() == 443)) {
+            try { passwordRefreshRequest(body, files); return "refresh-password"; }
+            catch (IOException invalid) { return "other"; }
+        }
+        if ("POST".equals(method) && "https".equals(url.getProtocol())
                 && "nyanko-managed-item.ponosgames.com".equals(url.getHost())
                 && "/v1/managed-items".equals(url.getPath()) && url.getQuery() == null
                 && url.getRef() == null && url.getUserInfo() == null
@@ -179,6 +187,31 @@ final class KneekuraPcBootAuthority {
         String payload = registration(files);
         payload = "{\"nonce\":" + quote((String) request.get("nonce")) + "," + payload.substring(1);
         return new SignedResponse(payload, java.util.Base64.getEncoder().encodeToString(sign(payload, files)));
+    }
+
+    @SuppressWarnings("unchecked")
+    private static java.util.Map<String, Object> passwordRefreshRequest(java.nio.ByteBuffer body, File files) throws IOException {
+        java.util.Map<String, Object> request = requestObject(body);
+        if (!request.keySet().equals(new java.util.HashSet<String>(java.util.Arrays.asList(
+                "accountCode", "passwordRefreshToken", "nonce")))
+                || !validNonce(request.get("nonce"))
+                || !new File(files, "kneekura-local-auth-v1.record").isFile())
+            throw new IOException("LOCAL_AUTH_REQUEST_INVALID");
+        java.util.Map<String, Object> record = requestObject(java.nio.ByteBuffer.wrap(
+            registration(files).getBytes(StandardCharsets.UTF_8)));
+        java.util.Map<String, Object> credentials = (java.util.Map<String, Object>) record.get("payload");
+        if (!player(files).equals(request.get("accountCode"))
+                || !credentials.get("passwordRefreshToken").equals(request.get("passwordRefreshToken")))
+            throw new IOException("LOCAL_AUTH_REQUEST_INVALID");
+        return request;
+    }
+
+    static SignedResponse signedPasswordRefresh(java.nio.ByteBuffer body, File files) throws IOException {
+        passwordRefreshRequest(body, files);
+        // Reissue this authority's persisted credentials idempotently. Stable
+        // credentials prevent a lost response or PC/phone copy from desynchronizing
+        // the native SAVE; only its own valid refresh token authorizes renewal.
+        return signedRegistration(body, files);
     }
 
     @SuppressWarnings("unchecked")
@@ -300,19 +333,40 @@ final class KneekuraPcBootAuthority {
         if (!record.getCanonicalFile().equals(record) || !lock.getCanonicalFile().equals(lock))
             throw new IOException("LOCAL_BOOT_RECORD_UNSAFE");
         // JP15.7.1 CreateAccountTask supplies exactly these four owned amounts.
-        // Initialize a real local snapshot; unknown deltas/paid updates stay denied.
+        // Persist authenticated local snapshots, including the owner's initial
+        // profile edits and later consumption. No SAVE mutation or refill.
         String content = "KNEEKURA_LOCAL_MANAGED_V2\nplayer=" + id + "\n";
         for (String name : MANAGED_AMOUNTS)
             content += name + "=" + ((java.math.BigDecimal)request.get(name)).intValueExact() + "\n";
         byte[] expected = (content + "checksum=" + checksum(content) + "\n").getBytes(StandardCharsets.US_ASCII);
         try (FileOutputStream guard = new FileOutputStream(lock, true); FileLock held = guard.getChannel().lock()) {
-            if (!record.exists()) {
+            if (record.exists()) {
+                if (!record.isFile() || record.length() > 512L)
+                    throw new IOException("LOCAL_MANAGED_RECORD_INVALID");
+                String stored = new String(Files.readAllBytes(record.toPath()), StandardCharsets.US_ASCII);
+                String shape = "KNEEKURA_LOCAL_MANAGED_V2\\nplayer=" + id + "\\n";
+                for (String name : MANAGED_AMOUNTS) shape += name + "=[0-9]{1,10}\\n";
+                shape += "checksum=[0-9a-f]{64}\\n";
+                if (!stored.matches(shape)) throw new IOException("LOCAL_MANAGED_RECORD_INVALID");
+                int checksumStart = stored.indexOf("checksum=");
+                if (!checksum(stored.substring(0, checksumStart)).equals(
+                        stored.substring(checksumStart + 9, stored.length() - 1)))
+                    throw new IOException("LOCAL_MANAGED_RECORD_INVALID");
+                for (String line : stored.split("\\n")) {
+                    for (String name : MANAGED_AMOUNTS) if (line.startsWith(name + "=")) {
+                        try { Integer.parseInt(line.substring(name.length() + 1)); }
+                        catch (NumberFormatException invalid) { throw new IOException("LOCAL_MANAGED_RECORD_INVALID"); }
+                    }
+                }
+            }
+            if (!record.exists() || !java.util.Arrays.equals(expected, Files.readAllBytes(record.toPath()))) {
                 File temporary = File.createTempFile("kneekura-local-managed-", ".pending", directory);
                 try {
                     try (FileOutputStream output = new FileOutputStream(temporary)) {
                         output.write(expected); output.getFD().sync();
                     }
-                    Files.move(temporary.toPath(), record.toPath(), StandardCopyOption.ATOMIC_MOVE);
+                    Files.move(temporary.toPath(), record.toPath(), StandardCopyOption.ATOMIC_MOVE,
+                               StandardCopyOption.REPLACE_EXISTING);
                 } finally { if (temporary.exists()) temporary.delete(); }
             }
             if (!record.isFile() || record.length() != expected.length
