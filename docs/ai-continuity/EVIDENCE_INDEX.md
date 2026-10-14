@@ -39,3 +39,6 @@ Only record verification that was actually performed.
 | OPS-ROTATION-AUTHOR-001 | PASS | 既存calendar形式へ通常20+週4+月2を展開、所有原本53849 assets/1096 maps照合、94 bindingsで32日bundleを生成 | 私的 `ops-stage-rotation-v5-compile.log`、bundle SHA `7c704360f8bfd74481717ac653cb264e24591cd37761b7a47ced971497c496c1` |
 | OPS-ROTATION-BUILD-001 | PASS | Java/Dex/NDK/署名6split/static build成功。実ゲームの26枠表示／2時間切替を確認したという意味ではない | 私的 `ops-stage-rotation-v5-build.log`、build `20261014T145031Z-3bce4fd1` |
 | OPS-ROTATION-PLAY-001 | NOT_RUN | 所有者の「検証は不要」に従い、追加プレイ／戦闘／時計変更／スマホ検証を実施しない。新候補の端末導入も未実施 | `AMENDMENTS/2026-10-14-stage-rotation-20.md` |
+
+| OPS-PHONE-UPDATE-001 | PASS | 所有者の更新依頼により、実installed署名一致を確認して6splitを-r更新。installer Success、導入後全6SHA一致、同一UID/dataDir保持。SAVE bytes比較やプレイ合格は含まない | PC元候補 `20261014T145031Z-3bce4fd1`、私的phone候補 `phone-20261014T150621Z-01ec6fff` の `PHONE-OPS-UPDATE.json` |
+| OPS-PHONE-VISUAL-001 | NOT_RUN | 恒久分担に従いスマホの起動／画面操作／ログ／SAVE取得なし。本人目視確認待ち | 2026-10-15 JSTの所有者による更新依頼。追加検証停止の指定を維持 |

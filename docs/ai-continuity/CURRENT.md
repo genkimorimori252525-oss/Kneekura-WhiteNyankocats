@@ -2,16 +2,16 @@
 current_task: "OPS-BATCH-001"
 active_agent: "Codex"
 branch: "codex/pc-local-lab-2026-10-12"
-commit_head: "b2d9daeb56986e540553157879e55edad8b749d1"
+commit_head: "b73223595ea37ecfeb2415b40b0aac8675102213"
 status: "IN_PROGRESS"
 evidence_ref: "docs/research/2026-10-14-original-liveops-batch1.md"
-updated_at: "2026-10-14T14:57:44.838861+00:00"
+updated_at: "2026-10-14T15:08:56.349082+00:00"
 
 ---
 
 # Current Progress State
 
-## OPS-BATCH-001：開催枠変更を収録・候補未導入
+## OPS-BATCH-001：運営更新をスマホへ導入・本人目視確認待ち
 
 - 最新指示は2026-10-14の「検証は不要／通常20枠を2時間交代＋週3～5件＋月1～3件」。追加プレイ・戦闘・育成・時計変更・スマホ検証を止める。[変更原文](AMENDMENTS/2026-10-14-stage-rotation-20.md)を優先する。Hooks OFF、初期MAX再適用・自作ステージ・公式アプリ操作は禁止。
 - 現行は `ops/seasons/2026-autumn-ops-rotation.json` revision 5、選定原本 `2026-autumn-stage-selection.json`。60候補から通常20（素材等6／挑戦7／開眼7）、週4・月2を重複なしで開催。JST偶数時／月曜0時／1日0時で交代。期間10/14～11/15、期限前の運営更新が必要。
@@ -22,4 +22,5 @@ updated_at: "2026-10-14T14:57:44.838861+00:00"
 - 未解決：月次UIはrevision4でも残り29日。旧periodが原因との初期推測は未確定。原作の個人開始型期間かどうかを含め技術的原因はUNKNOWN。通常calendarの月替わりイベント選定と、この月次mission表示は別項目。
 - 直前の水曜battleは基本ネコのみの未準備編成で放置中に敗北。初級クリア／報酬検証はFAIL/未達で、製品不具合とは未確定。stamina40・Nekobon1を消費、未補充。敗北continue画面を残したまま追加PC操作を中止。
 - 翌日login・補充・時計後退/gap・イベント実クリア/報酬・月次期限・SDK/IPC全経路egressは未実施／未解決を保持。最新指定で追加受入を停止し、PASSへ変換しない。旧58件3FAIL、START barrier FAIL、cache literal名FAIL等の原証拠も保持。
+- 2026-10-15：所有者がスマホ更新を明示依頼。PC元候補 `20261014T145031Z-3bce4fd1` → phone候補 `phone-20261014T150621Z-01ec6fff` を既存署名・install-multiple -rで更新。実installed署名一致／導入後6SHA一致／同一UID・dataDirを確認。SAVE読取り・データ消去・初期MAX再適用・root・スマホ起動／画面／ログ取得なし。スマホのプレイ確認は本人待ち。前項の「端末未導入」はこの更新以前の記録。
 - 次の運営作業は所有者の指示に従う。候補と実導入を区別し、スマホ操作なし。公開Gitにはコード・予定・台帳のみ、private/work/assets/raw/AGENTS.md.bakは追加しない。旧handoffにある追加プレイ検証指示は最新変更で失効。

@@ -78,3 +78,12 @@ sidecarの前回観測countは、diskに保存された原作countより新し�
 - revision4のcanonical月期を収録しても、実月次UIは残り29日だった。「旧途中periodの保持が原因」という初期推測では解決を説明できず、原因はUNKNOWN。個人開始型の原作期間かどうかも未確定である。
 - 代表イベントクリアの試行は、基本ネコだけの未準備編成で調査中に敗北した。stamina40・Nekobon1の原作消費は行われたが、実クリア・報酬受取は未達。製品の戦闘不具合とは確定していない。継続用ネコカンは支出せず、追加操作を中止した。
 - 翌日5枠／補充、clock rollback/gap、実クリア／報酬、全SDK/IPC通信監査等は追加未実施のまま保持する。所有者の追加検証停止を、技術的PASSや未知原因の解消として記録しない。
+
+
+## 2026-10-15 JST：所有者依頼によるスマホ上書き更新
+
+所有者の「さっそく更新してほしい／ADB接続」を受け、PC元候補 `20261014T145031Z-3bce4fd1` からスマホ用manifestだけを調整し、既存の開発署名で6splitを作成した。元PC候補とのpayload照合、収録運営bundleのSHA一致、スマホへ実際にインストール済みの署名との一致を確認してから、Androidの `install-multiple --no-streaming -r` で更新した。installer最終行はSuccess。導入後6splitすべての実SHAが候補に一致し、同一のアプリUID／dataDirを保持した。
+
+データ消去・アンインストール・初期MAX再適用・PCデータ移入は行わない。Androidのデータ保持更新を使用し、元SAVEの内容やbytesは読取り／比較していない。スマホroot、ゲーム起動、画面操作、スクリーンショット、logcat、SAVE取得も行っていない。原作のプレイ・保存内容の受入は所有者の目視確認待ちとする。
+
+私的phone候補 `phone-20261014T150621Z-01ec6fff`、`PHONE-OPS-UPDATE.json` と `latest-phone-ops-update.json` に導入receiptを保持する。公開台帳には端末ID、署名鍵、SAVE、元APK、raw logを載せない。過去の「新候補は未導入」はこの更新より前の状態である。
