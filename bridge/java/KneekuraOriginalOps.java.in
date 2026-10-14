@@ -114,8 +114,11 @@ final class KneekuraOriginalOps {
         return start <= now && now < end && streams.size() == 3 && prepareCache(now);
     }
     private synchronized boolean prepareCache(long now) {
-        // JST 00:00, 02:00, ...: refresh availability without resetting clears.
-        long period = Math.floorDiv(now + 9 * 3600000L, 2 * 3600000L);
+        // Union of JST two-hour stage and three-hour gacha boundaries.
+        // Odd non-multiples of three (01,05,07,...) retain the prior marker.
+        long period = Math.floorDiv(now + 9 * 3600000L, 3600000L);
+        int hour = (int)Math.floorMod(period, 24L);
+        if (hour % 2 != 0 && hour % 3 != 0) period--;
         if (cachePeriod == period) return true;
         try {
             File marker = new File(cacheRoot, "kneekura-ops-cache-v1.record");
@@ -123,7 +126,7 @@ final class KneekuraOriginalOps {
                 if (!path.getCanonicalFile().equals(path.getAbsoluteFile()))
                     throw new IOException("OPS_CACHE_MARKER_LINK");
             AtomicFile state = new AtomicFile(marker);
-            String expected = "md5-event-cache-2h-v1\n" + bundleSha + "\n" + period + "\n";
+            String expected = "md5-event-cache-2h3h-v1\n" + bundleSha + "\n" + period + "\n";
             if (marker.exists() || new File(marker + ".bak").exists()) {
                 try (InputStream input = state.openRead()) {
                     ByteArrayOutputStream output = new ByteArrayOutputStream();

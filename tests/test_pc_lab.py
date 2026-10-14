@@ -17,6 +17,18 @@ from tools.base_mod.summarize_original_crash_capture import summarize as summari
 
 
 class FailedBuildEvidenceTests(unittest.TestCase):
+    def test_operations_capture_rejects_non_jst_before_install_or_launch(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder);lab=Lab(root/'private/pc-lab',root/'sdk',root/'jdk')
+            for zone in ('GMT','UTC',''):
+                with self.subTest(zone=zone), patch.object(lab,'identity'), \
+                        patch.object(lab,'verify_build',return_value={'native':{'pc_original_ops_bundle':{}}}), \
+                        patch.object(lab,'adb',return_value=subprocess.CompletedProcess([],0,zone+'\n','')) as adb:
+                    with self.assertRaisesRegex(ValueError,'PC_LAB_OPERATIONS_REQUIRE_ASIA_TOKYO'):
+                        lab._capture_locked(18,install=True)
+                    self.assertEqual([call.args for call in adb.call_args_list],
+                                     [('shell','getprop','persist.sys.timezone')])
+
     def test_stage_ownership_stops_before_root_on_wrong_avd_or_before_copy_on_bad_uid(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)

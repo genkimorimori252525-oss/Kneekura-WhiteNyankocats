@@ -49,3 +49,12 @@ Only record verification that was actually performed.
 | OPS-DUAL-GL-PC-REFETCH-001 | PASS | PC cache markerのみを退避して通常再取得。GL readyとsale/gatya/item/ad-control各1、Ops stream failure0 | 私的capture `20261014T155358Z-3d44ff1a` |
 | OPS-HGT00-FIX-PHONE-UPDATE-001 | PASS | 実署名一致・-r更新・導入後6SHA一致・UID/dataDir保持。SAVE内容比較／スマホ実表示の合格は含まない | 私的phone `phone-20261014T155048Z-0307ca04` の `PHONE-OPS-UPDATE.json` |
 | OPS-HGT00-FIX-PHONE-VISUAL-001 | NOT_RUN | AIはスマホを起動せず、修正版のHGT00解消／各運営表示は本人目視待ち | 恒久分担を維持。初回HGT00のFAILを消さない |
+
+| OPS-GACHA-CONTRACT-002 | PASS | レア3時間2＋週1／通常2、カテゴリ別group、通常0とN3のみのsource、空字幕・常設期間の関連27件とAgent terminal成功 | 私的 `gacha-permanent-terminal.json`／bundle `2f088c496d84ba15c537516faa4dd8987533ff6fca3f3bb3a4c77414fee86f02` |
+| OPS-GACHA-GMT-002 | FAIL | revision6の実PCで週特選のみ・通常無効。GMTの開催判定不一致を同一候補JST再起動で切分け | 私的 `gacha-v6-rare-three`／`gacha-v6-normal-fresh`、失敗証拠保持 |
+| OPS-GACHA-JST-002 | PASS | 専用AVDのみAsia/Tokyo。JST以外のops captureを端末変更前に拒否する追加回帰1件成功 | 私的 `pc-gacha-timezone-terminal-fixed.json`。初回fixture違反FAILは別途保持 |
+| OPS-GACHA-BUILD-002 | PASS | 最終候補のJava/Dex/NDK/署名6split/staticとPC bounded capture成功 | build `20261014T181055Z-4b304f94`、capture `20261014T181438Z-db518317` |
+| OPS-GACHA-UI-002 | PASS | 最終PCでレア3タブ、通常＋マタタビ入りの2タブ、通常字幕／期限なし。マタタビ入り1抽選XP5000、ticket1消費、元SAVE／貯蔵庫保持 | 私的 `gacha-v7-rare-final`／`gacha-v7-normal-permanent`／`gacha-v7-item-result`／`gacha-v7-final-save` |
+| OPS-GACHA-PHONE-002 | NOT_RUN | phone候補作成済みだがUSB offlineで導入前停止。旧スマホ内容を維持、接続復帰を依頼済み | 候補 `phone-20261014T181623Z-daa89a6f`、preflight FAIL receipt。スマホUI／ログ／SAVE取得なし |
+| OPS-GACHA-PHONE-CONNECTED-002 | PASS | 本人の接続復帰後、既存署名照合・Android -r更新・導入後全6SHA一致・UID/dataDir保持。ゲームの本人目視は未確認 | 実導入 `phone-20261014T181623Z-daa89a6f`。receipt `OPS-BATCH-001_0f43d377955a4e3e93f1208b98d4b0e4.json`、private PHONE-OPS-UPDATE.json |
+| OPS-BATCH-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_04bcd7315def4a679e91feb3a392eb1b.json |

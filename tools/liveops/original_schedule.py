@@ -57,8 +57,8 @@ def _row(window, fields):
     return '\t'.join(str(value) for value in window.header()+fields)
 
 
-def gacha_row(window, set_id, *, cost=150, chances, guaranteed=(0,0,0,0,0), message=''):
-    _integer(set_id,1,9999);_integer(cost,0,45000)
+def _gacha_section(set_id, *, cost=150, chances, guaranteed=(0,0,0,0,0), message=''):
+    _integer(set_id,0,9999);_integer(cost,0,45000)
     if not isinstance(chances,(list,tuple)) or len(chances)!=5:
         raise ProtocolError('ORIGINAL_OPS_CHANCES_INVALID')
     if not isinstance(guaranteed,(list,tuple)) or len(guaranteed)!=5:
@@ -70,8 +70,30 @@ def gacha_row(window, set_id, *, cost=150, chances, guaranteed=(0,0,0,0,0), mess
         _integer(guarantee,0,1)
         if guarantee and not chance:raise ProtocolError('ORIGINAL_OPS_GUARANTEE_INVALID')
         probability.extend((chance,guarantee))
-    # 1 = ordinary Rare Gacha. 2/3 are first-rare offers, not recurring events.
-    return _row(window,[1,1,set_id,cost,0,0,*probability,_text(message)])
+    return [set_id,cost,0,0,*probability,_text(message)]
+
+
+def gacha_group_row(window, entries, *, gacha_type=1):
+    # Original reader: type, section count, then 15 fields per section.
+    # 0 = normal, 1 = ordinary rare; 2/3 are first-rare offers.
+    _integer(gacha_type,0,1)
+    if not isinstance(entries,(list,tuple)) or not 1<=len(entries)<=3:
+        raise ProtocolError('ORIGINAL_OPS_GACHA_GROUP_SIZE')
+    fields=[];ids=set()
+    for entry in entries:
+        if not isinstance(entry,dict):raise ProtocolError('ORIGINAL_OPS_GACHA_SECTION')
+        section=_gacha_section(**entry)
+        if gacha_type==1 and section[0]==0:raise ProtocolError('ORIGINAL_OPS_GACHA_SET_ZERO')
+        if section[0] in ids:raise ProtocolError('ORIGINAL_OPS_GACHA_DUPLICATE')
+        if gacha_type==0 and (section[1]!=0 or any(section[5:14:2])):
+            raise ProtocolError('ORIGINAL_OPS_NORMAL_GACHA_PAYMENT')
+        ids.add(section[0]);fields.extend(section)
+    return _row(window,[gacha_type,len(entries),*fields])
+
+
+def gacha_row(window, set_id, *, cost=150, chances, guaranteed=(0,0,0,0,0), message='', gacha_type=1):
+    return gacha_group_row(window,[dict(set_id=set_id,cost=cost,chances=chances,
+        guaranteed=guaranteed,message=message)],gacha_type=gacha_type)
 
 
 def stage_row(window, map_ids):

@@ -68,6 +68,21 @@ def owned_catalogue(export_zip: Path, server_cache: Path):
                     rarities=sorted({rarities[unit] for unit in members if unit in rarities}),
                     ticket=int(row['ItemID_Ticket']))
             except (ValueError,KeyError):continue
+        normal_tables=[]
+        for index in (1,2,3):
+            payload,_=data.read('GatyaDataSetN%d.csv'%index)
+            normal_tables.append(parse_dataset_rows(payload))
+        payload,_=data.read('GatyaData_Option_SetN.tsv')
+        normal={}
+        for row in csv.DictReader(io.StringIO(payload.decode('utf-8-sig')),delimiter='\t'):
+            identifier=int(row['GatyaSetID'])
+            if int(row['ItemID_Ticket'])!=20:continue
+            members=normal_tables[0][identifier] if identifier<len(normal_tables[0]) else []
+            sizes=[len(table[identifier]) if identifier<len(table) else 0 for table in normal_tables]
+            if not any(sizes):continue
+            normal[identifier]=dict(members=members,ticket=20,
+                rarities=sorted({rarities[unit] for unit in members if unit in rarities}),
+                source_group_sizes=sizes)
         payload,proof=data.read('DailyLoginEventData.csv');login=[]
         for row in _integer_rows(payload):
             identifier=row[0];groups=parse_login_groups(row)[1]
@@ -95,7 +110,7 @@ def owned_catalogue(export_zip: Path, server_cache: Path):
         monthly,_=data.read('Mission_Monthly.csv')
         monthly_ids={int(row['id']) for row in csv.DictReader(io.StringIO(monthly.decode('utf-8-sig')))}
         return dict(source_export_sha256=EXACT_JP_15_7_1_EXPORT_SHA256,
-            asset_names=assets,gacha=banners,maps=maps,mission_ids=mission_ids,
+            asset_names=assets,gacha=banners,normal_gacha=normal,maps=maps,mission_ids=mission_ids,
             monthly_mission_ids=monthly_ids,login_pool=login,
             login_source_sha256=proof.payload_sha256,original_ui_accepted=False)
 
@@ -111,13 +126,19 @@ def bind_catalogue(pack, catalogue):
             if not isinstance(definition,dict):raise ProtocolError('ORIGINAL_OPS_NATIVE_BINDING')
             binding=dict(definition,kind=kind)
             if kind=='gacha':
-                source=catalogue['gacha'].get(binding.get('set_id'))
-                if source is None or source['ticket']!=21:raise ProtocolError('ORIGINAL_OPS_GACHA_SOURCE')
+                category=binding.get('gacha_type',1)
+                if type(category) is not int or category not in (0,1):
+                    raise ProtocolError('ORIGINAL_OPS_GACHA_TYPE')
+                source=(catalogue['gacha'] if category==1 else catalogue.get('normal_gacha',{})).get(binding.get('set_id'))
+                if source is None or source['ticket']!=(21 if category==1 else 20):
+                    raise ProtocolError('ORIGINAL_OPS_GACHA_SOURCE')
                 rarity_index=(0,2,3,4,5)
                 chances=binding.get('chances')
                 if not isinstance(chances,list) or len(chances)!=5:
                     raise ProtocolError('ORIGINAL_OPS_GACHA_PROBABILITIES')
-                if any(chance and rarity not in source['rarities'] for rarity,chance in zip(rarity_index,chances)):
+                if category==0 and not any(source.get('source_group_sizes',())):
+                    raise ProtocolError('ORIGINAL_OPS_NORMAL_GACHA_EMPTY')
+                if category==1 and any(chance and rarity not in source['rarities'] for rarity,chance in zip(rarity_index,chances)):
                     raise ProtocolError('ORIGINAL_OPS_GACHA_EMPTY_RARITY')
             else:
                 ids=binding.get('native_ids')

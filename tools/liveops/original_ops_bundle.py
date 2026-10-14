@@ -8,7 +8,7 @@ from zipfile import ZipFile
 
 from tools.liveops.original_schedule import (
     GAME_VERSION, ORIGINAL_OWNER_SAVE, EventWindow, ProtocolError, stream,
-    gacha_row, stage_row, item_row,
+    gacha_row, gacha_group_row, stage_row, item_row,
 )
 from tools.localcore.ops_calendar import JST
 
@@ -63,11 +63,18 @@ def _validate_stream(name, payload):
             if count != len(values)-1:raise ProtocolError('ORIGINAL_OPS_MAP_COUNT')
             expected = stage_row(window, [_number(v) for v in values[1:]])
         elif name == 'gatya.tsv':
-            if len(values) != 17 or values[:2] != ['1','1'] or values[4:6] != ['0','0']:
+            if len(values)<2 or values[0] not in ('0','1') or values[1] not in ('1','2','3'):
                 raise ProtocolError('ORIGINAL_OPS_GACHA_SHAPE')
-            expected = gacha_row(window, _number(values[2]), cost=_number(values[3]),
-                chances=[_number(v) for v in values[6:16:2]],
-                guaranteed=[_number(v) for v in values[7:16:2]], message=values[16])
+            count=_number(values[1])
+            if len(values)!=2+15*count:raise ProtocolError('ORIGINAL_OPS_GACHA_SHAPE')
+            entries=[]
+            for index in range(count):
+                section=values[2+15*index:17+15*index]
+                if section[2:4]!=['0','0']:raise ProtocolError('ORIGINAL_OPS_GACHA_SHAPE')
+                entries.append(dict(set_id=_number(section[0]),cost=_number(section[1]),
+                    chances=[_number(v) for v in section[4:14:2]],
+                    guaranteed=[_number(v) for v in section[5:14:2]],message=section[14]))
+            expected=gacha_group_row(window,entries,gacha_type=_number(values[0]))
         else:
             if len(values) != 8 or values[5:7] != ['0','0'] or values[7] not in ('0','1'):
                 raise ProtocolError('ORIGINAL_OPS_ITEM_SHAPE')
