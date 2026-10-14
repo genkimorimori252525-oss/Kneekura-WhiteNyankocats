@@ -21,6 +21,66 @@ import java.util.Map;
  * build-time feature gate is enabled. Every other request calls super exactly.
  */
 public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
+    // ORIGINAL_OPS_BEGIN
+    static native int[] kneekuraOriginalLoginProgress(int[] eventKeys);
+    static native int kneekuraOriginalGlState();
+    static native int kneekuraOriginalHttpRequestState(int requestId, boolean individual);
+    private static volatile MyActivity sOriginalOpsActivity;
+
+    static int[] kneekuraOriginalLoginProgressSafe(final int[] eventKeys) {
+        if (eventKeys == null || eventKeys.length == 0 || eventKeys.length > 4096) return null;
+        try {
+            int glState = kneekuraOriginalGlState();
+            if (glState < 0) return null; // No waiting on an uninitialized GL queue.
+            if (glState == 1) {
+                return kneekuraOriginalLoginProgress(eventKeys);
+            }
+        } catch (LinkageError notLoaded) {return null;}
+        final MyActivity activity = sOriginalOpsActivity;
+        if (activity == null) return null;
+        try {
+            final ReflectionCache cache = reflectionCache();
+            final GLSurfaceView view = (GLSurfaceView) cache.glView.get(activity);
+            if (view == null) return null;
+            final int[][] holder = new int[1][];
+            final java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
+            view.queueEvent(new Runnable() {
+                @Override public void run() {
+                    try {
+                        holder[0] = kneekuraOriginalLoginProgress(eventKeys);
+                    } catch (RuntimeException | LinkageError ignored) {
+                    } finally {
+                        latch.countDown();
+                    }
+                }
+            });
+            if (!latch.await(300, java.util.concurrent.TimeUnit.MILLISECONDS)) return null;
+            return holder[0];
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            return null;
+        } catch (Exception | LinkageError ignored) {
+            return null;
+        }
+    }
+
+    private KneekuraOriginalOps localOriginalOps;
+    private boolean originalOpsLoadAttempted;
+
+    private synchronized KneekuraOriginalOps originalOps() {
+        if (!originalOpsLoadAttempted) {
+            originalOpsLoadAttempted = true;
+            sOriginalOpsActivity = this;
+            try {
+                localOriginalOps = new KneekuraOriginalOps(this,
+                        "__KNEEKURA_ORIGINAL_OPS_SHA256__");
+            } catch (Exception failure) {
+                debugResearch("original-local-ops-bundle-v1 unavailable");
+            }
+        }
+        return localOriginalOps;
+    }
+    // ORIGINAL_OPS_END
     private static final boolean PC_JNI_SCENE_OBSERVER = __KNEEKURA_PC_JNI_SCENE_OBSERVER__;
     private static native boolean kneekuraAttachPcSceneObserver(Class<?> originalClass);
 
@@ -110,6 +170,22 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
 
     // PC_BOOT_BEGIN
     @Override public void setWebViewUrl(final int handle, final String url, final String[] cookies) {
+    // ORIGINAL_OPS_BEGIN
+        if (KneekuraOriginalNews.isPage(url) && originalOps() != null) {
+            runOnUiThread(new Runnable() {
+                @Override public void run() {
+                    try {
+                        KneekuraOriginalNews.install(MyActivity.this, handle, originalOps());
+                        MyActivity.super.setWebViewUrl(handle, url, cookies);
+                        debugResearch("original-local-ops-news-v1 ready");
+                    } catch (ReflectiveOperationException | RuntimeException failure) {
+                        debugResearch("original-local-ops-news-v1 unavailable");
+                    }
+                }
+            });
+            return;
+        }
+    // ORIGINAL_OPS_END
         if (!KneekuraPcAgeAssets.isPage(url)) {
             super.setWebViewUrl(handle, url, cookies);
             return;
@@ -523,6 +599,19 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
         }
     }
 
+    // PC_BOOT_BEGIN
+    private static boolean isExactLocalClockStreamRequest(String method, String requestUrl,
+            float timeout, HashMap<?, ?> headers, ByteBuffer body, String[] strings,
+            boolean flag1, boolean flag2) {
+        if (!LOCAL_RESEARCH_DENY_HTTP || !flag1
+                || !isExactBackupRequest(method,requestUrl,timeout,headers,body,strings,false,flag2))
+            return false;
+        try {
+            return "time".equals(KneekuraPcBootAuthority.operation(new URL(requestUrl).getQuery()));
+        } catch (IOException | RuntimeException invalid) {return false;}
+    }
+    // PC_BOOT_END
+
     private static boolean isExactBackupRequest(
             String method,
             String requestUrl,
@@ -661,6 +750,12 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
     @Override
     public boolean isNetworkAvailable() {
         if (LOCAL_RESEARCH_DENY_HTTP) {
+    // ORIGINAL_OPS_BEGIN
+            if (originalOps() != null && originalOps().available()
+                    && KneekuraPcBootAuthority.available(super.getFilesDir())) {
+                return true;
+            }
+    // ORIGINAL_OPS_END
     // PC_BOOT_BEGIN
             // Report readiness of the independent local authority. This does
             // not enable publisher transport or grant Android INTERNET.
@@ -683,6 +778,16 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
         return super.isNetworkAvailable();
     }
 
+    // ORIGINAL_OPS_BEGIN
+    @Override
+    public int newAlert(String message, String[] buttons) {
+        if (PC_JNI_SCENE_OBSERVER && LOCAL_RESEARCH_DENY_HTTP) {
+            debugResearch("original-local-alert-v1 shown");
+        }
+        return super.newAlert(message, buttons);
+    }
+    // ORIGINAL_OPS_END
+
     @Override
     @SuppressWarnings({"rawtypes", "unchecked"})
     public int newHttpRequest(
@@ -696,8 +801,20 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
             boolean flag2) {
         final boolean originalBackupFailureShape = isExactBackupRequest(
                 method, requestUrl, timeout, headers, body, strings,
-                flag1, flag2);
+                flag1, flag2)
+    // PC_BOOT_BEGIN
+                || isExactLocalClockStreamRequest(method,requestUrl,timeout,headers,body,strings,flag1,flag2)
+    // PC_BOOT_END
+                ;
         boolean independentRegistration = false;
+        boolean localDeniedRequest = false;
+    // ORIGINAL_OPS_BEGIN
+        final KneekuraOriginalOps.Response operationsResponse = LOCAL_RESEARCH_DENY_HTTP
+                && originalOps() != null
+                ? originalOps().response(method, requestUrl, timeout, headers, body,
+                        strings, flag1, flag2) : null;
+        final boolean localOperations = operationsResponse != null;
+    // ORIGINAL_OPS_END
     // PC_BOOT_BEGIN
         String independentAuthOperation = "other";
         if (LOCAL_RESEARCH_DENY_HTTP) {
@@ -729,6 +846,11 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
             debugResearch("original-local-pc-boot-operation-v1 " + operation);
         }
     // PC_OBSERVER_END
+    // ORIGINAL_OPS_BEGIN
+        if (LOCAL_RESEARCH_DENY_HTTP && localOperations) {
+            // Evaluated locally below.
+        } else
+    // ORIGINAL_OPS_END
         if (LOCAL_RESEARCH_DENY_HTTP && !originalBackupFailureShape && !independentRegistration) {
     // PC_OBSERVER_BEGIN
             String service = "other";
@@ -742,8 +864,10 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
                     else if ("/v1/tokens".equals(path)) service = "auth-tokens";
                     else service = "auth-other";
                 } else if ("nyanko-managed-item.ponosgames.com".equals(url.getHost())) service = "managed-items";
-                else if ("nyanko-events.ponosgames.com".equals(url.getHost())) service = "events";
-                else if ("nyanko-webview.ponosgames.com".equals(url.getHost())) service = "webview";
+                else if ("nyanko-events.ponosgames.com".equals(url.getHost())) {
+                    service = "events";
+                    debugResearch("original-local-pc-events-denied-v1 blocked");
+                } else if ("nyanko-webview.ponosgames.com".equals(url.getHost())) service = "webview";
                 else if ("nyanko-items.ponosgames.com".equals(url.getHost())) service = "items";
                 else if ("nyanko-purchase.ponosgames.com".equals(url.getHost())) service = "purchase";
                 else if ("nyanko-club.ponosgames.com".equals(url.getHost())) service = "club";
@@ -789,10 +913,21 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
                             ? "match" : "mismatch"));
                 }
             }
-            throw new IllegalStateException("original local research HTTP disabled");
+    // PC_BOOT_BEGIN
+            // Complete the original handle with a real local failure. Throwing
+            // before a handle exists leaves original loading dialogs pending.
+            localDeniedRequest = true;
+    // PC_BOOT_END
+            if (!localDeniedRequest)
+                throw new IllegalStateException("original local research HTTP disabled");
         }
 
-        if (!originalBackupFailureShape && !independentRegistration) {
+    // ORIGINAL_OPS_BEGIN
+        if (localOperations) {
+            // Handled locally below.
+        } else
+    // ORIGINAL_OPS_END
+        if (!originalBackupFailureShape && !independentRegistration && !localDeniedRequest) {
             return super.newHttpRequest(
                     method,
                     requestUrl,
@@ -815,9 +950,14 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
             ByteBuffer responseBody = null;
             boolean responseError = true;
     // PC_BOOT_BEGIN
+            if (localDeniedRequest) {
+                responseUrl = "file:///kneekura-local/denied";
+                responseStatus = 503;
+                responseHeaders = "{\"X-Kneekura-Authority\":\"local\"}";
+            }
             final String localOperation = independentRegistration ? independentAuthOperation
                 : KneekuraPcBootAuthority.operation(new URL(requestUrl).getQuery());
-            if (!"other".equals(localOperation)) {
+            if ((originalBackupFailureShape || independentRegistration) && !"other".equals(localOperation)) {
                 // Actual independent operation first, compatibility delivery
                 // second. URI and header explicitly identify local origin.
                 // No official account, socket, or remote success claim.
@@ -846,11 +986,24 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
                 debugResearch("original-local-pc-boot-authority-v1 " + localOperation);
             }
     // PC_BOOT_END
+    // ORIGINAL_OPS_BEGIN
+            if (localOperations) {
+                if (!operationsResponse.error) {
+                    responseBody = ByteBuffer.allocateDirect(operationsResponse.body.length);
+                    responseBody.put(operationsResponse.body);
+                    responseBody.flip();
+                }
+                responseStatus = operationsResponse.status;
+                responseError = operationsResponse.error;
+                responseHeaders = operationsResponse.headers;
+            }
+    // ORIGINAL_OPS_END
             final String callbackUrl = responseUrl;
             final int callbackStatus = responseStatus;
             final String callbackHeaders = responseHeaders;
             final ByteBuffer callbackBody = responseBody;
             final boolean callbackError = responseError;
+            final boolean deniedRequest = localDeniedRequest;
             final URL parsedUrl = new URL(callbackUrl);
             final Object request = cache.requestConstructor.newInstance(
                     requestId,
@@ -868,6 +1021,36 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
             view.queueEvent(new Runnable() {
                 @Override
                 public void run() {
+    // ORIGINAL_OPS_BEGIN
+                    if (localOperations) {
+                        try {
+                            int registered=kneekuraOriginalHttpRequestState(requestId,flag1);
+                            debugResearch(registered==1 ? "original-local-ops-native-request-v1 registered"
+                                : registered==0 ? "original-local-ops-native-request-v1 pending"
+                                : "original-local-ops-native-request-v1 unavailable");
+                        } catch (LinkageError unavailable) {
+                            debugResearch("original-local-ops-native-request-v1 unavailable");
+                        }
+                    }
+    // ORIGINAL_OPS_END
+    // PC_BOOT_BEGIN
+                    if (flag1) {
+                        // JP15.7.1 a32.run(view, individualCallbacks, direct)
+                        // also selects this protocol for the event updater's
+                        // final getTime. Preserve it for every local response.
+                        jp.co.ponos.battlecats.MyActivity.onResponseCodeHeaders(
+                                requestId,callbackStatus,callbackUrl,callbackHeaders);
+                        if (!callbackError && callbackBody != null)
+                            jp.co.ponos.battlecats.MyActivity.onResponseData(requestId,callbackBody);
+                        jp.co.ponos.battlecats.MyActivity.onResponseFinish(requestId,callbackError);
+                        debugResearch("original-local-pc-http-stream-v1 " + localOperation);
+    // ORIGINAL_OPS_BEGIN
+                        if (localOperations)
+                        debugResearch(callbackError ? "original-local-ops-stream-v1 failed"
+                                : "original-local-ops-stream-v1 finished");
+    // ORIGINAL_OPS_END
+                    } else
+    // PC_BOOT_END
                     jp.co.ponos.battlecats.MyActivity.newResponse(
                             requestId,
                             callbackStatus,
@@ -875,7 +1058,19 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
                             callbackHeaders,
                             callbackBody,
                             callbackError);
+    // ORIGINAL_OPS_BEGIN
+                    if (localOperations) {
+                        // Delivery is not proof of native parsing, grant or SAVE.
+                        debugResearch(callbackError ? "original-local-ops-response-v1 returned-error"
+                                : "original-local-ops-response-v1 returned");
+                        return;
+                    }
+    // ORIGINAL_OPS_END
     // PC_BOOT_BEGIN
+                    if (deniedRequest) {
+                        debugResearch("original-local-pc-denied-callback-v1 returned");
+                        return;
+                    }
                     if (!callbackError) {
                         debugResearch("original-local-pc-boot-authority-v1 returned");
                         return;
@@ -894,7 +1089,18 @@ public final class MyActivity extends jp.co.ponos.battlecats.MyActivity {
                 }
             });
             if (LOCAL_RESEARCH_DENY_HTTP) {
+    // ORIGINAL_OPS_BEGIN
+                if (localOperations) {
+                    debugResearch(callbackError ? "original-local-ops-enqueued-v1 error"
+                            : "original-local-ops-enqueued-v1 success");
+                    return requestId;
+                }
+    // ORIGINAL_OPS_END
     // PC_BOOT_BEGIN
+                if (deniedRequest) {
+                    debugResearch("original-local-pc-denied-callback-v1 enqueued");
+                    return requestId;
+                }
                 if (!callbackError) {
                     debugResearch("original-local-pc-boot-authority-v1 enqueued");
                     return requestId;

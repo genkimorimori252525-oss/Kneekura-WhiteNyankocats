@@ -15,6 +15,7 @@ import java.util.Collections;
 final class KneekuraPcAgeWebView extends WebViewClient {
     private final WebViewClient original;
     private final File files;
+    WebViewClient originalClient() { return original; }
     private KneekuraPcAgeWebView(WebViewClient original, File files) {
         this.original = original; this.files = files;
     }

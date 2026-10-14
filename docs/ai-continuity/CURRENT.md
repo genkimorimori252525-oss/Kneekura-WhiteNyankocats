@@ -2,26 +2,24 @@
 current_task: "OPS-BATCH-001"
 active_agent: "Codex"
 branch: "codex/pc-local-lab-2026-10-12"
-commit_head: "d93eaddaf005d092407167dcb12b1693c9601098"
-status: "PLANNED"
-evidence_ref: "docs/roadmap/2026-10-09-original-battle-cats-delivery.md: 運営バッチ1の一括方針は確認待ち。git diff --check exit=0。運営runtime・APK・PC UIは未実装／NOT_RUN。"
-updated_at: "2026-10-13T04:47:47.892916"
+commit_head: "b2d9daeb56986e540553157879e55edad8b749d1"
+status: "IN_PROGRESS"
+evidence_ref: "docs/research/2026-10-14-original-liveops-batch1.md"
+updated_at: "2026-10-14T14:57:44.838861+00:00"
+
 ---
 
 # Current Progress State
 
-Task: OPS-BATCH-001
-Agent: Codex
-Status: PLANNED
-Evidence: docs/roadmap/2026-10-09-original-battle-cats-delivery.md: 運営バッチ1の一括方針は確認待ち。git diff --check exit=0。運営runtime・APK・PC UIは未実装／NOT_RUN。
-Updated: 2026-10-13T04:47:47.892916
+## OPS-BATCH-001：開催枠変更を収録・候補未導入
 
-## 復元時に確認する文書
-
-設計入口は[ルートCURRENT.md](../../CURRENT.md)、唯一の実装計画は[既存ロードマップの運営バッチ1](../roadmap/2026-10-09-original-battle-cats-delivery.md)、検証証拠は[EVIDENCE_INDEX.md](EVIDENCE_INDEX.md)。旧XP-only方針は廃止され、置換後のキャッツアイ／進化修正goalは完了済み。旧方針を再開しない。
-
-- 明示指定：一括実装・一括検証・一括修正。自作ステージ除外。PC検証／スマホ本人目視。既存スマホデータ保持。
-- 現状：参考用calendar／login／providerと原作UIの接続は未完了。旧charterの別エンジンSAVE前提と現行原作SAVEの不整合を報告し、計画に補正を提案済み。
-- 確認待ち：共通運営データ・原作ガチャ／ステージ／イベント・ログイン5枠／関連表示・原作SAVE＋運営sidecarを一つの更新へ接続する技術方針。
-- 次の作業：所有者に一括方針を提示し、確認後に実接点／素材の照合とバッチ実装へ進む。未確認nativeアドレスやABIを推測で使わない。
-- スマホへの追加操作は行っていない。ゲーム接続・候補ビルド・運営runtime検証は未実行。
+- 最新指示は2026-10-14の「検証は不要／通常20枠を2時間交代＋週3～5件＋月1～3件」。追加プレイ・戦闘・育成・時計変更・スマホ検証を止める。[変更原文](AMENDMENTS/2026-10-14-stage-rotation-20.md)を優先する。Hooks OFF、初期MAX再適用・自作ステージ・公式アプリ操作は禁止。
+- 現行は `ops/seasons/2026-autumn-ops-rotation.json` revision 5、選定原本 `2026-autumn-stage-selection.json`。60候補から通常20（素材等6／挑戦7／開眼7）、週4・月2を重複なしで開催。JST偶数時／月曜0時／1日0時で交代。期間10/14～11/15、期限前の運営更新が必要。
+- Javaの元3hashed event cache退避をJST日単位から2時間単位へ変更。元のメニュー更新で再取得する。戦闘割込みやSAVE初期化、独自報酬リセットは追加しない。各イベントの原作進入条件・回数制限は原作へ委ねる。
+- private bundle `ops-stage-rotation-v5.json` SHA256 `7c704360f8bfd74481717ac653cb264e24591cd37761b7a47ced971497c496c1`。元export/cache照合・94 binding・生成PASS。候補 `20261014T145031Z-3bce4fd1` はJava/Dex/NDK/署名6split/static PASS、追加テスト／起動／端末導入なし。直前PC installedは `20261014T134126Z-3e6f0d95` のまま。
+- 既存機能：原作individual HTTP callbacks、getTime限定形状、ad_control空array、5枠login全key永続化とreadonly JNI、原作基地i、ガチャ／ミッション開催接続。callback throwによる未完了待機はlocal-bootで非同期503/errorへ変更。外部送信やnative完了flag直接操作はしない。
+- 実PCで5ログインcount各1・原作ガチャ「神徒スルズ」実抽選／貯蔵庫格納・チケット1消費・冷起動/APK更新後の保持・基地i・週次条件に合う7件を確認済み。履歴はEVIDENCE_INDEXを参照。全機能の実プレイ合格ではない。
+- 未解決：月次UIはrevision4でも残り29日。旧periodが原因との初期推測は未確定。原作の個人開始型期間かどうかを含め技術的原因はUNKNOWN。通常calendarの月替わりイベント選定と、この月次mission表示は別項目。
+- 直前の水曜battleは基本ネコのみの未準備編成で放置中に敗北。初級クリア／報酬検証はFAIL/未達で、製品不具合とは未確定。stamina40・Nekobon1を消費、未補充。敗北continue画面を残したまま追加PC操作を中止。
+- 翌日login・補充・時計後退/gap・イベント実クリア/報酬・月次期限・SDK/IPC全経路egressは未実施／未解決を保持。最新指定で追加受入を停止し、PASSへ変換しない。旧58件3FAIL、START barrier FAIL、cache literal名FAIL等の原証拠も保持。
+- 次の運営作業は所有者の指示に従う。候補と実導入を区別し、スマホ操作なし。公開Gitにはコード・予定・台帳のみ、private/work/assets/raw/AGENTS.md.bakは追加しない。旧handoffにある追加プレイ検証指示は最新変更で失効。

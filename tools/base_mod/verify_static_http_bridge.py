@@ -125,12 +125,17 @@ def verify_static_http_bridge(
     allow_downloadlocal_patch: bool = False,
     pc_boot_public_key_sha256: str | None = None,
     pc_balance_assets_enabled: bool = False,
+    pc_original_ops_sha256: str | None = None,
 ) -> dict:
     package_name = FLAVOR_PACKAGES.get(flavor)
     if package_name is None:
         raise ValueError(f"unknown flavor: {flavor!r}")
     if pc_balance_assets_enabled and pc_boot_public_key_sha256 is None:
         raise ValueError('PC_BALANCE_REQUIRES_INDEPENDENT_PC_TRUST')
+    if pc_original_ops_sha256 is not None and (pc_boot_public_key_sha256 is None
+            or len(pc_original_ops_sha256) != 64
+            or any(c not in '0123456789abcdef' for c in pc_original_ops_sha256)):
+        raise ValueError('ORIGINAL_OPS_REQUIRE_PINNED_LOCAL_BOOT_BUNDLE')
     if pc_boot_public_key_sha256 is not None and (
         not research_scene_witness or flavor != 'local-research' or not research_deny_internet
         or allow_datalocal_patch or allow_downloadlocal_patch
@@ -194,7 +199,16 @@ def verify_static_http_bridge(
                 raise ValueError(
                     f"bridge base changed surface drifted: {sorted(changed)}"
                 )
-            if diff["added"] != [BRIDGE_DEX_ENTRY]:
+            expected_added = [BRIDGE_DEX_ENTRY]
+            if pc_original_ops_sha256 is not None:
+                from tools.liveops.original_ops_bundle import ASSET_ENTRY, validate_bundle
+                expected_added.append(ASSET_ENTRY)
+                with zipfile.ZipFile(modified) as archive:
+                    ops_data = archive.read(ASSET_ENTRY)
+                validate_bundle(ops_data)
+                if hashlib.sha256(ops_data).hexdigest() != pc_original_ops_sha256:
+                    raise ValueError('ORIGINAL_OPS_ASSET_SHA_MISMATCH')
+            if diff["added"] != sorted(expected_added):
                 raise ValueError(
                     f"bridge base added surface drifted: {diff['added']}"
                 )

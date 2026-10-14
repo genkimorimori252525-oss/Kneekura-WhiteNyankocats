@@ -181,6 +181,26 @@ def dpapi(data: bytes, *, decrypt: bool = False) -> bytes:
         ctypes.windll.kernel32.LocalFree(ctypes.cast(target.data, ctypes.c_void_p))
 
 
+def confirm_log_barrier(path: Path, token: str, emit, alive, *,
+                        timeout: float = 10, retry_interval: float = 1,
+                        poll_interval: float = .1) -> bool:
+    """Confirm the collector saw a marker, including slow ADB subscription.
+
+    A marker emitted before logcat attaches may be excluded by its -T tail.
+    Retransmit within the bounded wait; absence remains an explicit failure.
+    """
+    deadline=time.monotonic()+timeout
+    next_emit=0.0
+    while alive() and time.monotonic()<deadline:
+        if token in path.read_text(encoding='utf-8',errors='replace'):
+            return True
+        now=time.monotonic()
+        if now>=next_emit:
+            emit();next_emit=now+retry_interval
+        time.sleep(poll_interval)
+    return False
+
+
 class Lab:
     def __init__(self, state: Path, sdk: Path, java: Path):
         self.state = state.resolve()
@@ -302,9 +322,14 @@ class Lab:
         return store, dpapi(secret.read_bytes(), decrypt=True).decode()
 
     def build(self, owner_zip: Path, official_aar: Path, *, local_boot: bool = False,
-              balance: bool = False) -> dict:
+              balance: bool = False, original_ops_bundle: bytes | None = None) -> dict:
         if balance and not local_boot:
             raise ValueError('PC_BALANCE_REQUIRES_LOCAL_BOOT')
+        if original_ops_bundle is not None:
+            if not local_boot:
+                raise ValueError('ORIGINAL_OPS_REQUIRE_LOCAL_BOOT')
+            from tools.liveops.original_ops_bundle import validate_bundle
+            validate_bundle(original_ops_bundle)
         write_json(self.state / 'inputs.json', {'owner_zip': str(owner_zip.resolve()),
                                                'official_aar': str(official_aar.resolve())})
         private = REPO / 'private'
@@ -323,11 +348,13 @@ class Lab:
                 (balance_inputs / name).write_bytes(payload)
         # Archive the exact inputs, including uncommitted/new source, before
         # compiling. Refuse publication if any source changes during the build.
-        source_files = [p for base in ('native/kneekura-shim', 'bridge/java', 'tools/base_mod')
+        source_files = [p for base in ('native/kneekura-shim', 'bridge/java', 'tools/base_mod',
+                                     'tools/liveops', 'tools/localcore')
                         for p in (REPO / base).rglob('*')
                         if p.is_file() and p.suffix in ('.c', '.h', '.txt', '.in', '.java', '.py', '.ps1')]
         source_files += [REPO / p for p in ('tools/pc_lab.py', 'tools/pc_lab_diagnostics.py',
                                            'tools/pc_profile_install.py', 'tools/pc_viewer.py', 'tools/PC-LAB.ps1')]
+        source_files += sorted((REPO / 'ops/seasons').glob('*.json'))
         source_hashes = {p.relative_to(REPO).as_posix(): sha256_file(p) for p in source_files}
         source_archive = scratch / 'BUILD-SOURCE.zip'
         with ZipFile(source_archive, 'w') as archive:
@@ -389,7 +416,7 @@ class Lab:
             offline_393_import=True, allow_local_pc=True, pc_jni_scene_observer=True,
             pc_boot_authority=local_boot,
             pc_boot_public_key=self.local_boot_key().public_key().export_key('PEM') if local_boot else None,
-            pc_balance_assets=balance_inputs)
+            pc_balance_assets=balance_inputs, pc_original_ops_bundle=original_ops_bundle)
         store, password = self.key()
         destination = self.state / 'builds' / build_id
         destination.mkdir(parents=True)
@@ -415,6 +442,8 @@ class Lab:
         shutil.copyfile(source_archive, destination / 'BUILD-SOURCE.zip')
         metadata['source_archive_sha256'] = sha256_file(destination / 'BUILD-SOURCE.zip')
         metadata['build_source_file_sha256'] = source_hashes
+        if original_ops_bundle is not None:
+            (destination / 'original-ops-bundle.json').write_bytes(original_ops_bundle)
         shutil.copyfile(shim, destination / 'libkneekura.so')
         write_json(destination / 'PC-BUILD.json', metadata)
         write_json(self.state / 'latest-build.json', metadata)
@@ -471,6 +500,10 @@ class Lab:
         key = self.local_boot_key()
         if hashlib.sha256(key.public_key().export_key('DER')).hexdigest() != trust['public_key_sha256']:
             raise ValueError('PC_LAB_LOCAL_BOOT_KEY_DIFFERS_NO_LAUNCH')
+        if self.adb('shell', 'id', '-u').stdout.strip() != '0':
+            self.adb('root')
+            self.adb('wait-for-device', timeout=30)
+            self.identity()
         if self.adb('shell', 'id', '-u').stdout.strip() != '0':
             raise ValueError('PC_LAB_LOCAL_BOOT_KEY_REQUIRES_DEDICATED_USERDEBUG_AVD')
         uid = re.fullmatch(r'package:' + re.escape(PACKAGE) + r' uid:(1[0-9]{4})',
@@ -704,13 +737,9 @@ class Lab:
 
         def barrier(label: str, process) -> bool:
             token = run_id + ':' + label
-            self.adb('shell', 'log', '-p', 'i', '-t', 'KNEEKURA_PC_CAPTURE', token)
-            end = time.monotonic() + 10
-            while time.monotonic() < end and process.poll() is None:
-                if token in log.read_text(encoding='utf-8', errors='replace'):
-                    return True
-                time.sleep(.1)
-            return False
+            return confirm_log_barrier(log,token,
+                lambda:self.adb('shell','log','-p','i','-t','KNEEKURA_PC_CAPTURE',token),
+                lambda:process.poll() is None)
 
         with log.open('wb') as output, (folder / 'logcat-stderr.log').open('wb') as errors:
             collector = subprocess.Popen([str(self.adb_bin), '-s', SERIAL, 'logcat',
@@ -877,6 +906,7 @@ def main() -> int:
     build.add_argument('--official-aar', type=Path, required=True)
     build.add_argument('--local-boot', action='store_true')
     build.add_argument('--balance', action='store_true')
+    build.add_argument('--original-ops-bundle', type=Path)
     run = sub.add_parser('run')
     run.add_argument('--seconds', type=int, default=30)
     run.add_argument('--install', action='store_true')
@@ -896,7 +926,9 @@ def main() -> int:
         lab.setup()
         print('PC_LAB_READY')
     elif args.command == 'build':
-        result = lab.build(args.owner_zip, args.official_aar, local_boot=args.local_boot, balance=args.balance)
+        bundle_bytes = args.original_ops_bundle.read_bytes() if args.original_ops_bundle else None
+        result = lab.build(args.owner_zip, args.official_aar, local_boot=args.local_boot,
+                           balance=args.balance, original_ops_bundle=bundle_bytes)
         print('PC_BUILD_VERIFIED_SIX_SPLITS ' + Path(result['directory']).name)
     elif args.command == 'run':
         lab.setup()

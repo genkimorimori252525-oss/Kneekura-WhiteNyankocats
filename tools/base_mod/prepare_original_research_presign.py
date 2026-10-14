@@ -100,6 +100,7 @@ def prepare_unsigned_research(
     pc_boot_authority: bool = False,
     pc_boot_public_key: bytes | None = None,
     pc_balance_assets: Path | None = None,
+    pc_original_ops_bundle: bytes | None = None,
 ) -> tuple[dict, Path]:
     if pc_boot_authority and not (allow_local_pc and pc_jni_scene_observer and offline_393_import):
         raise UnsignedOriginalBuildBlocked('Local boot authority is dedicated PC-only and opt-in')
@@ -107,6 +108,13 @@ def prepare_unsigned_research(
         raise UnsignedOriginalBuildBlocked('Local boot authority and independent trust key must agree')
     if pc_balance_assets is not None and not pc_boot_authority:
         raise UnsignedOriginalBuildBlocked('PC balance assets require independent PC boot authority')
+    ops_sha = None
+    if pc_original_ops_bundle is not None:
+        if not pc_boot_authority:
+            raise UnsignedOriginalBuildBlocked('ORIGINAL_OPS_REQUIRE_LOCAL_BOOT')
+        from tools.liveops.original_ops_bundle import validate_bundle
+        validate_bundle(pc_original_ops_bundle)
+        ops_sha = hashlib.sha256(pc_original_ops_bundle).hexdigest()
     from tools.base_mod.pc_boot_trust import validate_public_key, replace_local_boot_public_key
     local_key_hash = validate_public_key(pc_boot_public_key) if pc_boot_authority else None
     repo = repo.resolve(strict=True)
@@ -162,6 +170,7 @@ def prepare_unsigned_research(
             pc_jni_scene_observer=pc_jni_scene_observer,
             pc_boot_authority=pc_boot_authority,
             pc_boot_public_key_sha256=local_key_hash,
+            pc_original_ops_sha256=ops_sha,
             javac=javac, d8=d8, android_jar=android_jar, root=repo,
             offline_import_installpack=(
                 original / "split_InstallPack.apk" if offline_393_import else None),
@@ -170,6 +179,10 @@ def prepare_unsigned_research(
             flavored, final, flavor="local-research",
             bridge_dex_path=bridge, research_deny_internet=True,
         )
+        ops_proof = None
+        if pc_original_ops_bundle is not None:
+            from tools.liveops.original_ops_bundle import add_bundle_asset
+            ops_proof = add_bundle_asset(final / 'base.apk', pc_original_ops_bundle)
         balance_proof = None
         if pc_balance_assets is not None:
             from tools.base_mod.pc_balance_assets import load_pinned_assets, verify_overlay
@@ -203,6 +216,7 @@ def prepare_unsigned_research(
             research_shadowhook_nothing_sha256=APPROVED_OFFICIAL_SHADOWHOOK_V201_COMPANION_SHA256,
             pc_boot_public_key_sha256=local_key_hash,
             pc_balance_assets_enabled=pc_balance_assets is not None,
+            pc_original_ops_sha256=ops_sha,
         )
         unique = "unsigned-original-native-pair-" + uuid4().hex
         destination = private / unique
@@ -243,6 +257,7 @@ def prepare_unsigned_research(
             "pc_independent_boot_identity_authority_enabled": pc_boot_authority,
             "pc_independent_boot_trust": local_trust,
             "pc_pinned_balance_overlay": balance_proof,
+            "pc_original_ops_bundle": ops_proof,
             "original_native_scene97_accepted": False,
             "original_user_SAVE_read_or_written": False,
             "original_user_APK_source_mutated": False,

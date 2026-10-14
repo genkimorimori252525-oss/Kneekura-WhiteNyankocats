@@ -610,6 +610,75 @@ static int pc_read_observation(uintptr_t address, void *out, size_t length) {
             == (ssize_t)length;
 }
 
+#include "kneekura_original_ops_login.h"
+JNIEXPORT jint JNICALL
+Java_jp_kn_local_battlecats_MyActivity_kneekuraOriginalGlState(
+        JNIEnv *env, jclass bridge_class) {
+    (void)env; (void)bridge_class;
+    if (!current_process_is_isolated_original_research()
+            || atomic_load_explicit(&gPcSceneObserverState, memory_order_acquire) != 2u)
+        return -1;
+    return (int)syscall(SYS_gettid) == atomic_load_explicit(&gPcSceneGlTid, memory_order_acquire)
+        ? 1 : 0;
+}
+JNIEXPORT jint JNICALL
+Java_jp_kn_local_battlecats_MyActivity_kneekuraOriginalHttpRequestState(
+        JNIEnv *env, jclass bridge_class, jint request_id, jboolean individual) {
+    if (Java_jp_kn_local_battlecats_MyActivity_kneekuraOriginalGlState(env,bridge_class) != 1)
+        return -1;
+    uintptr_t base=gOriginalLoadBias+gOriginalVmaShift, root=0u;
+    uint64_t size=0u;
+    /* Original newResponse (runtime 0x46158c) looks up this map before
+     * invoking a callback. Observe registration, never mutate the registry. */
+    uintptr_t root_offset=individual ? 0xB229C0u : 0xB229A8u;
+    if (!pc_read_observation(base+root_offset,&root,sizeof(root))
+            || !pc_read_observation(base+root_offset+8u,&size,sizeof(size)) || size>4096u)
+        return -1;
+    for (uint64_t step=0u;root;++step) {
+        uint8_t node[88];int32_t key;uintptr_t callback;
+        if(step>=size || step>=64u || !pc_read_observation(root,node,sizeof(node)))return -1;
+        memcpy(&key,node+32u,sizeof(key));
+        if(key==request_id) {
+            /* Individual callbacks use a different mapped value layout.
+             * Presence is the diagnostic here; original callback code checks
+             * and invokes its own handler without our dereferencing it. */
+            if(individual)return 1;
+            memcpy(&callback,node+80u,sizeof(callback));return callback ? 1 : 0;
+        }
+        memcpy(&root,node+(request_id<key?0u:8u),sizeof(root));
+    }
+    return 0;
+}
+JNIEXPORT jintArray JNICALL
+Java_jp_kn_local_battlecats_MyActivity_kneekuraOriginalLoginProgress(
+        JNIEnv *env, jclass bridge_class, jintArray event_keys) {
+    (void)bridge_class;
+    if (!current_process_is_isolated_original_research() || event_keys == NULL
+            || atomic_load_explicit(&gPcSceneObserverState, memory_order_acquire) != 2u
+            || (int)syscall(SYS_gettid) != atomic_load_explicit(&gPcSceneGlTid, memory_order_acquire)
+            || gOriginalLoadBias == 0u) return NULL;
+    jsize length = (*env)->GetArrayLength(env, event_keys);
+    if (length < 1 || length > 4096) return NULL;
+    jint keys[4096], counts[4096];
+    (*env)->GetIntArrayRegion(env, event_keys, 0, length, keys);
+    if ((*env)->ExceptionCheck(env)) return NULL;
+    uintptr_t getter_address = gOriginalLoadBias + ORIGINAL_APP_CONTEXT_GETTER + gOriginalVmaShift;
+    typedef void *(*ContextGetter)(void);
+    ContextGetter getter;
+    memcpy(&getter, &getter_address, sizeof(getter));
+    uintptr_t context = (uintptr_t)getter();
+    uintptr_t root;
+    uint64_t size;
+    if (context == 0u
+            || !pc_read_observation(context + 0x333518u, &root, sizeof(root))
+            || !pc_read_observation(context + 0x333520u, &size, sizeof(size))) return NULL;
+    if (!kneekura_original_login_counts(root, size, keys, (size_t)length,
+            pc_read_observation, counts)) return NULL;
+    jintArray result = (*env)->NewIntArray(env, length);
+    if (result != NULL) (*env)->SetIntArrayRegion(env, result, 0, length, counts);
+    return result;
+}
+
 static void pc_task_unavailable(const char *fixed_reason) {
     static uint32_t reported = 0u;
     if (reported != 0u) return;

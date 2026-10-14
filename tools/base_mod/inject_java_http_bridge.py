@@ -162,6 +162,7 @@ def render_bridge_source(
     offline_393_import_enabled: bool = False,
     pc_jni_scene_observer: bool = False,
     pc_boot_authority: bool = False,
+    pc_original_ops_sha256: str | None = None,
 ) -> str:
     """Render the ORIGINAL MyActivity subclass, rejecting unsafe file modes.
 
@@ -177,6 +178,14 @@ def render_bridge_source(
     if pc_boot_authority and (flavor != 'local-research' or not pc_jni_scene_observer
                               or not offline_393_import_enabled or virgin_save_trial):
         raise ValueError('PC boot authority requires explicit isolated PC observer and owner import')
+    if pc_original_ops_sha256 is not None:
+        if (not pc_boot_authority or len(pc_original_ops_sha256)!=64
+                or any(c not in '0123456789abcdef' for c in pc_original_ops_sha256)):
+            raise ValueError('ORIGINAL_OPS_REQUIRE_PINNED_LOCAL_BOOT_BUNDLE')
+    while pc_original_ops_sha256 is None and '// ORIGINAL_OPS_BEGIN' in template:
+        start=template.index('    // ORIGINAL_OPS_BEGIN')
+        end=template.index('    // ORIGINAL_OPS_END',start)+len('    // ORIGINAL_OPS_END')
+        template=template[:start]+template[end:]
     while not pc_boot_authority and '// PC_BOOT_BEGIN' in template:
         start = template.index('    // PC_BOOT_BEGIN')
         end = template.index('    // PC_BOOT_END', start) + len('    // PC_BOOT_END')
@@ -200,6 +209,7 @@ def render_bridge_source(
         raise ValueError("bridge launcher must preserve original encoded length")
     rendered = (
         template.replace("__KNEEKURA_PACKAGE__", package_name)
+        .replace('__KNEEKURA_ORIGINAL_OPS_SHA256__', pc_original_ops_sha256 or '')
         .replace('__KNEEKURA_PC_JNI_SCENE_OBSERVER__', 'true' if pc_jni_scene_observer else 'false')
         .replace(
             "__KNEEKURA_ENABLE_BACKUP_REPLAY__",
@@ -246,6 +256,7 @@ def build_bridge_dex(
     pc_jni_scene_observer: bool = False,
     pc_boot_authority: bool = False,
     pc_boot_public_key_sha256: str | None = None,
+    pc_original_ops_sha256: str | None = None,
     output: Path,
     javac: str | None = None,
     d8: str | None = None,
@@ -277,6 +288,7 @@ def build_bridge_dex(
         virgin_save_trial=virgin_save_trial,
         offline_393_import_enabled=offline_import_installpack is not None,
         pc_jni_scene_observer=pc_jni_scene_observer,
+        pc_original_ops_sha256=pc_original_ops_sha256,
         pc_boot_authority=pc_boot_authority,
     )
     # Feature disabled by default in every existing build/profile. The index
@@ -313,6 +325,14 @@ def build_bridge_dex(
         source_path.parent.mkdir(parents=True)
         source_path.write_text(rendered, encoding="utf-8")
         boot_source = source_path.with_name('KneekuraPcBootAuthority.java')
+        ops_sources = []
+        if pc_original_ops_sha256 is not None:
+            for name in ('KneekuraOriginalOps', 'KneekuraOriginalLogin', 'KneekuraLoginRotation',
+                         'KneekuraOriginalNews'):
+                ops_source = source_path.with_name(name + '.java')
+                ops_source.write_text((root / ('bridge/java/' + name + '.java.in')).read_text(
+                    encoding='utf-8').replace('__KNEEKURA_PACKAGE__', package_name), encoding='utf-8')
+                ops_sources.append(str(ops_source))
         age_sources = []
         if pc_boot_authority:
             boot_source.write_text((root / 'bridge/java/KneekuraPcBootAuthority.java.in').read_text(
@@ -338,6 +358,7 @@ def build_bridge_dex(
 
         _run([
             javac_bin,
+            "-encoding", "UTF-8",
             "-source", "8",
             "-target", "8",
             "-classpath", str(android_jar_path),
@@ -348,6 +369,7 @@ def build_bridge_dex(
         classpath = os.pathsep.join([str(android_jar_path), str(stub_classes)])
         _run([
             javac_bin,
+            "-encoding", "UTF-8",
             "-source", "8",
             "-target", "8",
             "-classpath", classpath,
@@ -356,6 +378,7 @@ def build_bridge_dex(
             *([str(importer_path)] if include_importer else []),
             *([str(boot_source)] if pc_boot_authority else []),
             *age_sources,
+            *ops_sources,
         ])
 
         class_files = sorted(str(path) for path in bridge_classes.rglob("*.class"))
@@ -403,6 +426,7 @@ def build_bridge_dex(
         "offline_393_exact_owner_files_background_import_enabled": offline_import_installpack is not None,
         "offline_original_gameplay_accepted": False,
         "pc_independent_boot_identity_authority_enabled": pc_boot_authority,
+        "pc_original_ops_bundle_sha256": pc_original_ops_sha256,
         "original_virgin_save_trial_device_acceptance": False,
         "original_native_files_root": (
             "super.getFilesDir() in separate app UID" if flavor == "local-research"

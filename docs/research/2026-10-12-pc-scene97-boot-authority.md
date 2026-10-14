@@ -30,7 +30,7 @@ PC-only `-LocalBoot` では独自RSA4096鍵をWindowsユーザーDPAPIとowner-o
 
 応答originは `file:///kneekura-local/boot/...` と `X-Kneekura-Authority: local`。PONOSの成功や資格情報を主張しない。未知サービス、foreign ID/password、不正JSON、duplicate field、trailing bytes、不正UTF8、鍵不一致は拒否。ソケットを開かずAndroid INTERNET権限も付けない。ただしSDK/IPC全経路のゼロ通信受入は別の未完了条件。
 
-`newResponse` (`0x46158c`) 自体が終端コールバックを配送する。booleanはerrorで、別の `onResponseFinish` 呼出は不要。
+一括応答（`flag1=false`）の `newResponse` (`0x46158c`) 自体が終端コールバックを配送する。booleanはerrorで、この経路では別の `onResponseFinish` 呼出は不要。運営バッチ1で確認した `flag1=true` の要求は別契約であり、元の `onResponseCodeHeaders/onResponseData/onResponseFinish` を使う。運営更新の最終getTimeにもこの形式がある。詳細は[運営接続の修正記録](2026-10-14-original-liveops-batch1.md)を参照。
 
 APK `20261011T195459Z-0ec54bf1`、採取 `20261011T195557Z-87a204d3` は途中のregister検証記録である。その後token・managed-items・年齢確認を実装して原作戦闘まで進行した。最新の素材導入版 `20261011T220702Z-68f5af86` と採取 `20261011T220914Z-7327ae55` は限定15秒の起動・元描画帰還・Java fatal 0・研究SIGSEGV 0・保存バイト照合Verifyを確認。これを全ゲーム受入とは扱わない。
 
