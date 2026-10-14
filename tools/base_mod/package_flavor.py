@@ -12,6 +12,7 @@ import hashlib
 import json
 from pathlib import Path
 import shutil
+import struct
 import zipfile
 
 from tools.base_mod.binary_axml import (
@@ -51,6 +52,10 @@ LAUNCHER_CLASS = "jp.co.ponos.battlecats.MyActivity"
 NATIVE_ENTRY = "lib/arm64-v8a/libnative-lib.so"
 SHIM_ENTRY = "lib/arm64-v8a/libkneekura.so"
 DEX_PACKAGE_SUFFIXES = ("", ".NotificationChannel.")
+RESOURCE_SPLITS = frozenset({
+    "base.apk", "split_config.en.apk", "split_config.ja.apk",
+    "split_config.xxhdpi.apk",
+})
 
 
 def _is_signature_entry(name: str) -> bool:
@@ -218,6 +223,43 @@ def _patch_exact_bytes(
     return payload.replace(source, replacement)
 
 
+def patch_resource_package(data: bytes, package_name: str, *, base: bool) -> bytes:
+    """Rename the pinned ResTable_package UTF-16 name, preserving IDs and pools."""
+    source = ORIGINAL_PACKAGE.encode("utf-16le")
+    replacement = package_name.encode("utf-16le")
+    if package_name not in FLAVOR_PACKAGES.values() or len(source) != len(replacement):
+        raise ValueError("unapproved resource package")
+    if len(data) < 12 or struct.unpack_from("<HHII", data) != (2, 12, len(data), 1):
+        raise ValueError("unexpected JP resource table header")
+    mutable = bytearray(data)
+    offset, matches = 12, 0
+    while offset < len(data):
+        if offset + 8 > len(data):
+            raise ValueError("truncated resource chunk")
+        kind, header, size = struct.unpack_from("<HHI", data, offset)
+        if header < 8 or size < header or offset + size > len(data):
+            raise ValueError("malformed resource chunk")
+        if kind == 0x0200:
+            if header != 288 or struct.unpack_from("<I", data, offset + 8)[0] != 0x7f:
+                raise ValueError("unexpected JP resource package header")
+            field = offset + 12
+            expected = source + bytes(256 - len(source))
+            if data[field:field + 256] != expected:
+                raise ValueError("original resource package name drifted")
+            mutable[field:field + len(source)] = replacement
+            matches += 1
+        offset += size
+    if matches != 1:
+        raise ValueError("expected exactly one JP resource package")
+    patched = bytes(mutable)
+    if base:
+        patched = _patch_exact_bytes(
+            patched, ORIGINAL_PACKAGE.encode(), package_name.encode(),
+            expected_count=1, label="base resources.arsc UTF-8 package anchor",
+        )
+    return patched
+
+
 def patch_split_set(
     split_dir: Path,
     output_dir: Path,
@@ -276,13 +318,10 @@ def patch_split_set(
                     _patch_base_dex(dex_entries, package_name)
                 )
 
-                resources = archive.read("resources.arsc")
-                replacements["resources.arsc"] = _patch_exact_bytes(
-                    resources,
-                    ORIGINAL_PACKAGE.encode("utf-8"),
-                    package_name.encode("utf-8"),
-                    expected_count=1,
-                    label="base resources.arsc package",
+            if split_name in RESOURCE_SPLITS:
+                replacements["resources.arsc"] = patch_resource_package(
+                    archive.read("resources.arsc"), package_name,
+                    base=split_name == "base.apk",
                 )
 
             if split_name == "split_config.arm64_v8a.apk":

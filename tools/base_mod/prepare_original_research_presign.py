@@ -53,7 +53,7 @@ def _inside_private(repo: Path, source: Path, *, folder: bool = False) -> Path:
     return resolved
 
 
-def _source_receipt(shim: Path, receipt: Path) -> dict:
+def _source_receipt(shim: Path, receipt: Path, *, allow_local_pc: bool = False) -> dict:
     native = shim.read_bytes()
     if not 128 <= len(native) <= 24 * 1024 * 1024:
         raise UnsignedOriginalBuildBlocked("native private source library size invalid")
@@ -63,9 +63,18 @@ def _source_receipt(shim: Path, receipt: Path) -> dict:
         proof = json.loads(receipt.read_text(encoding="utf-8-sig"))
     except (OSError, ValueError) as exc:
         raise UnsignedOriginalBuildBlocked("passive ARM64 receipt unreadable") from exc
+    local_pc = (allow_local_pc and isinstance(proof, dict)
+                and proof.get("schema") == "local-pc-research-passive-shim-v1"
+                and proof.get("ndk_version") == "27.2.12479018"
+                and isinstance(proof.get("source_tree_sha256"), str)
+                and len(proof["source_tree_sha256"]) == 64
+                and all(c in "0123456789abcdef" for c in proof["source_tree_sha256"]))
+    if b'original-native-pc-jni-scene-v1 attached' in native and (
+            not local_pc or proof.get('pc_jni_scene_observer_enabled') is not True):
+        raise UnsignedOriginalBuildBlocked('PC JNI observer cannot use a public/phone receipt')
     if not (
         isinstance(proof, dict)
-        and proof.get("schema") == "public-original-research-passive-shim-v1"
+        and (proof.get("schema") == "public-original-research-passive-shim-v1" or local_pc)
         and proof.get("elf_abi") == "arm64-v8a"
         and proof.get("original_save_writer_enabled") is False
         and proof.get("fixed_error_markers_compiled") is True
@@ -86,7 +95,28 @@ def prepare_unsigned_research(
     passive_receipt: Path, official_aar: Path,
     javac: str | None, d8: str | None, android_jar: str | None,
     offline_393_import: bool = False,
+    allow_local_pc: bool = False,
+    pc_jni_scene_observer: bool = False,
+    pc_boot_authority: bool = False,
+    pc_boot_public_key: bytes | None = None,
+    pc_balance_assets: Path | None = None,
+    pc_original_ops_bundle: bytes | None = None,
 ) -> tuple[dict, Path]:
+    if pc_boot_authority and not (allow_local_pc and pc_jni_scene_observer and offline_393_import):
+        raise UnsignedOriginalBuildBlocked('Local boot authority is dedicated PC-only and opt-in')
+    if pc_boot_authority != (pc_boot_public_key is not None):
+        raise UnsignedOriginalBuildBlocked('Local boot authority and independent trust key must agree')
+    if pc_balance_assets is not None and not pc_boot_authority:
+        raise UnsignedOriginalBuildBlocked('PC balance assets require independent PC boot authority')
+    ops_sha = None
+    if pc_original_ops_bundle is not None:
+        if not pc_boot_authority:
+            raise UnsignedOriginalBuildBlocked('ORIGINAL_OPS_REQUIRE_LOCAL_BOOT')
+        from tools.liveops.original_ops_bundle import validate_bundle
+        validate_bundle(pc_original_ops_bundle)
+        ops_sha = hashlib.sha256(pc_original_ops_bundle).hexdigest()
+    from tools.base_mod.pc_boot_trust import validate_public_key, replace_local_boot_public_key
+    local_key_hash = validate_public_key(pc_boot_public_key) if pc_boot_authority else None
     repo = repo.resolve(strict=True)
     private = repo / "private"
     if not private.is_dir() or private.is_symlink():
@@ -99,7 +129,12 @@ def prepare_unsigned_research(
     passive_shim = _inside_private(repo, passive_shim)
     passive_receipt = _inside_private(repo, passive_receipt)
     official_aar = _inside_private(repo, official_aar)
-    native_proof = _source_receipt(passive_shim, passive_receipt)
+    native_proof = _source_receipt(passive_shim, passive_receipt, allow_local_pc=allow_local_pc)
+    pc_marker = b'original-native-pc-jni-scene-v1 attached' in passive_shim.read_bytes()
+    if pc_marker != pc_jni_scene_observer or (pc_jni_scene_observer and (
+            not allow_local_pc or native_proof.get('pc_jni_scene_observer_enabled') is not True
+            or native_proof['schema'] != 'local-pc-research-passive-shim-v1')):
+        raise UnsignedOriginalBuildBlocked('PC-only native/Java observer opt-ins differ')
 
     check_original_scene_witness_build_contract(
         flavor="local-research", no_internet=True, shim=passive_shim,
@@ -132,6 +167,10 @@ def prepare_unsigned_research(
             flavor="local-research", enabled=False,
             isolate_original_native_files_dir=False,
             virgin_save_trial=False, output=bridge,
+            pc_jni_scene_observer=pc_jni_scene_observer,
+            pc_boot_authority=pc_boot_authority,
+            pc_boot_public_key_sha256=local_key_hash,
+            pc_original_ops_sha256=ops_sha,
             javac=javac, d8=d8, android_jar=android_jar, root=repo,
             offline_import_installpack=(
                 original / "split_InstallPack.apk" if offline_393_import else None),
@@ -140,9 +179,34 @@ def prepare_unsigned_research(
             flavored, final, flavor="local-research",
             bridge_dex_path=bridge, research_deny_internet=True,
         )
+        ops_proof = None
+        if pc_original_ops_bundle is not None:
+            from tools.liveops.original_ops_bundle import add_bundle_asset
+            ops_proof = add_bundle_asset(final / 'base.apk', pc_original_ops_bundle)
+        balance_proof = None
+        if pc_balance_assets is not None:
+            from tools.base_mod.pc_balance_assets import load_pinned_assets, verify_overlay
+            from tools.base_mod.patch_installpack_downloadlocal import patch_installpack_apk
+            assets = _inside_private(repo, pc_balance_assets, folder=True)
+            staged_installpack = scratch / 'pc-balance-InstallPack.apk'
+            patch_installpack_apk(final / 'split_InstallPack.apk', staged_installpack,
+                                  load_pinned_assets(assets))
+            balance_proof = verify_overlay(original / 'split_InstallPack.apk', staged_installpack)
+            staged_installpack.replace(final / 'split_InstallPack.apk')
+            from tools.base_mod.pc_native_balance import patch_split, DISPATCH_SYMBOL
+            if DISPATCH_SYMBOL.encode('ascii') not in passive_shim.read_bytes():
+                raise UnsignedOriginalBuildBlocked('PC_BALANCE_COMPILED_DISPATCH_MISSING')
+            staged_arm64 = scratch / 'pc-balance-arm64.apk'
+            balance_proof['native_adapter'] = patch_split(
+                final / 'split_config.arm64_v8a.apk', staged_arm64)
+            staged_arm64.replace(final / 'split_config.arm64_v8a.apk')
+        local_trust = replace_local_boot_public_key(
+            final / 'split_InstallPack.apk', pc_boot_public_key, dedicated_pc=True
+        ) if pc_boot_authority else None
         native_gate = verify_staged_original_scene_before_signing(
             final, research_scene_witness=True,
             expected_research_native_package=ISOLATED_PACKAGE,
+            pc_balance_enabled=pc_balance_assets is not None,
         )
         static_parity = verify_static_http_bridge(
             original, final, flavor="local-research",
@@ -150,6 +214,9 @@ def prepare_unsigned_research(
             research_scene_witness=True,
             research_shadowhook_sha256=APPROVED_OFFICIAL_SHADOWHOOK_V201_ARM64_SHA256,
             research_shadowhook_nothing_sha256=APPROVED_OFFICIAL_SHADOWHOOK_V201_COMPANION_SHA256,
+            pc_boot_public_key_sha256=local_key_hash,
+            pc_balance_assets_enabled=pc_balance_assets is not None,
+            pc_original_ops_sha256=ops_sha,
         )
         unique = "unsigned-original-native-pair-" + uuid4().hex
         destination = private / unique
@@ -168,7 +235,10 @@ def prepare_unsigned_research(
         # mismatches instead of signing stale/mutated intermediate data.
         # Only the exact public compiler receipt and privacy-safe static
         # metadata are copied, no source encrypted APK/SAVE to GitHub.
-        shutil.copy2(passive_receipt, destination / "PUBLIC_PASSIVE_SHIM_RECEIPT.json")
+        local_pc = native_proof["schema"] == "local-pc-research-passive-shim-v1"
+        shutil.copy2(passive_receipt, destination / (
+            "LOCAL_PC_PASSIVE_SHIM_RECEIPT.json" if local_pc
+            else "PUBLIC_PASSIVE_SHIM_RECEIPT.json"))
         receipt = {
             "schema": RECEIPT_SCHEMA,
             "status": "PASS_PRIVATE_UNSIGNED_ORIGINAL_SIX_SPLITS_NOT_INSTALLABLE",
@@ -179,10 +249,15 @@ def prepare_unsigned_research(
             "original_research_no_INTERNET_manifest_static_checked": True,
             "private_passive_native_shim_sha256": native_proof["sha256"],
             "source_compiler_commit": native_proof["git_commit"],
+            "native_source_provenance": "local-pc" if local_pc else "public-ci",
             "unsigned_original_splits_sha256": signed_bytes,
             "exact_original_native_presign_status": native_gate["status"],
             "compiled_original_virgin_SAVE_writer_enabled": False,
             "owner_original_393_file_import_feature_opt_in": offline_393_import,
+            "pc_independent_boot_identity_authority_enabled": pc_boot_authority,
+            "pc_independent_boot_trust": local_trust,
+            "pc_pinned_balance_overlay": balance_proof,
+            "pc_original_ops_bundle": ops_proof,
             "original_native_scene97_accepted": False,
             "original_user_SAVE_read_or_written": False,
             "original_user_APK_source_mutated": False,

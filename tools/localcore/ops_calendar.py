@@ -15,6 +15,7 @@ from typing import Any
 JST = timezone(timedelta(hours=9))
 KINDS = ("gacha", "stage", "event", "login", "mission", "notice", "modifier")
 CHANNEL = "kneekura-main-offline"
+ORIGINAL_OWNER_SAVE = "ORIGINAL_JP1571_SAVE_DATA"
 ID = re.compile(r"^kneekura:[a-z0-9][a-z0-9_.:-]{0,95}$")
 HHMM = re.compile(r"^([01][0-9]|2[0-3]):([0-5][0-9])$")
 
@@ -157,7 +158,7 @@ def validate_pack(pack: Any) -> dict:
     policy = pack.get("policy")
     if not isinstance(policy, dict) or (
         policy.get("network") != "forbidden"
-        or policy.get("owner_save") != "KNEEKURA_SAVE_V1"
+        or policy.get("owner_save") not in ("KNEEKURA_SAVE_V1", ORIGINAL_OWNER_SAVE)
         or policy.get("stage_availability_is_clear") is not False
         or policy.get("login_active_slots") != 5
         or policy.get("real_money") is not False

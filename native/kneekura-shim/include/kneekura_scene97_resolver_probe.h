@@ -5,7 +5,8 @@
  * Privacy-bounded, PURE read-only histogram of the original JP15.7.1
  * DownloadBatchTask's 35 int32_t resolver return slots.
  *
- * These are constructor/source-lookup return values, NOT a proven
+ * The constructor can overwrite an ineligible source's return with zero.
+ * These are postprocessed constructor slots, NOT raw function returns or a proven
  * downloader completion state or proof that a game data file was consumed.
  * Caller must establish the exact original game context lifetime/scene.
  * There is deliberately no game symbol, SAVE access, network or JNI here.

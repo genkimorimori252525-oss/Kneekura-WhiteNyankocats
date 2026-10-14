@@ -1,0 +1,144 @@
+package __KNEEKURA_PACKAGE__;
+
+import android.content.Context;
+import android.util.AtomicFile;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.TimeZone;
+
+/** Five original template assignments; ORIGINAL SAVE owns counts and rewards. */
+final class KneekuraOriginalLogin {
+    private final AtomicFile ledger;
+    private final KneekuraLoginRotation rotation;
+    private final HashMap<Integer,Integer> days=new HashMap<Integer,Integer>();
+    private final String rotationId;
+    private KneekuraLoginRotation.State state;
+
+    KneekuraOriginalLogin(Context context, JSONObject configuration) throws Exception {
+        rotationId=configuration.getString("rotation_id");
+        if(!"kneekura-original-login-v1".equals(rotationId))
+            throw new IllegalArgumentException("LOGIN_ROTATION_ID");
+        JSONArray pool=configuration.getJSONArray("pool");
+        if(pool.length()<5 || pool.length()>159)throw new IllegalArgumentException("LOGIN_POOL_SIZE");
+        for(int i=0;i<pool.length();i++) {
+            JSONObject item=pool.getJSONObject(i);int id=item.getInt("template_id"),length=item.getInt("days");
+            if(id<900 || length<6 || length>365 || days.put(id,length)!=null)
+                throw new IllegalArgumentException("LOGIN_POOL_ENTRY");
+        }
+        JSONArray sourceBags=configuration.getJSONArray("shuffle_bags");
+        if(sourceBags.length()<1 || sourceBags.length()>64)throw new IllegalArgumentException("LOGIN_BAG_SIZE");
+        int[][] bags=new int[sourceBags.length()][];
+        for(int i=0;i<bags.length;i++) {
+            JSONArray bag=sourceBags.getJSONArray(i);bags[i]=new int[bag.length()];
+            for(int j=0;j<bags[i].length;j++)bags[i][j]=bag.getInt(j);
+        }
+        rotation=new KneekuraLoginRotation(days,bags);
+        // Isolated package files directory; never the official app or SAVE_DATA.
+        ledger=new AtomicFile(new File(context.getFilesDir(),"kneekura-login-assignments-v1.json"));
+        if(ledger.getBaseFile().exists() || new File(ledger.getBaseFile()+".bak").exists()) {
+            ByteArrayOutputStream output=new ByteArrayOutputStream();
+            try(InputStream input=ledger.openRead()) {
+                byte[] buffer=new byte[4096];int count;
+                while((count=input.read(buffer))!=-1) {
+                    if(output.size()+count>1024*1024)throw new IllegalArgumentException("LOGIN_STATE_SIZE");
+                    output.write(buffer,0,count);
+                }
+            }
+            state=decode(new JSONObject(new String(output.toByteArray(),StandardCharsets.UTF_8)));
+        }
+    }
+    private KneekuraLoginRotation.State decode(JSONObject root) throws Exception {
+        if(root.getInt("schema_version")!=1 || !rotationId.equals(root.getString("rotation_id")))
+            throw new IllegalArgumentException("LOGIN_STATE_SCHEMA");
+        KneekuraLoginRotation.State result=new KneekuraLoginRotation.State();
+        result.highDay=root.getLong("high_day");result.sequence=root.getInt("sequence");
+        result.cycle=root.getInt("cycle");result.cursor=root.getInt("cursor");
+        if(result.highDay< -1 || result.sequence<5 || result.sequence>4096
+                || result.cycle<0 || result.cursor<0)throw new IllegalArgumentException("LOGIN_STATE_RANGE");
+        JSONArray slots=root.getJSONArray("active");
+        if(slots.length()!=5)throw new IllegalArgumentException("LOGIN_STATE_SLOTS");
+        for(int i=0;i<5;i++) {
+            JSONObject slot=slots.getJSONObject(i);
+            KneekuraLoginRotation.Slot item=new KneekuraLoginRotation.Slot(slot.getInt("template"),
+                slot.getInt("event_key"),slot.getInt("days"),slot.getLong("eligible_day"));
+            item.observedCount=slot.getInt("observed_count");item.offeredDay=slot.getLong("offered_day");
+            if(item.observedCount<0 || item.eligibleDay<0 || item.offeredDay< -1)
+                throw new IllegalArgumentException("LOGIN_STATE_SLOT_RANGE");
+            result.active.add(item);
+        }
+        if(root.has("history")) {
+            JSONArray hist=root.getJSONArray("history");
+            if(hist.length()>4091)throw new IllegalArgumentException("LOGIN_HISTORY_SIZE");
+            for(int i=0;i<hist.length();i++) {
+                JSONObject slot=hist.getJSONObject(i);
+                KneekuraLoginRotation.Slot item=new KneekuraLoginRotation.Slot(slot.getInt("template"),
+                    slot.getInt("event_key"),slot.getInt("days"),slot.getLong("eligible_day"));
+                item.observedCount=slot.getInt("observed_count");item.offeredDay=slot.getLong("offered_day");
+                result.history.add(item);
+            }
+        }
+        rotation.queryKeys(result); // Validate every retained assignment before JNI.
+        return result;
+    }
+    private void save(KneekuraLoginRotation.State proposal) throws Exception {
+        JSONObject root=new JSONObject();root.put("schema_version",1);root.put("rotation_id",rotationId);
+        root.put("high_day",proposal.highDay);root.put("sequence",proposal.sequence);
+        root.put("cycle",proposal.cycle);root.put("cursor",proposal.cursor);
+        JSONArray slots=new JSONArray();
+        for(KneekuraLoginRotation.Slot slot:proposal.active) {
+            JSONObject item=new JSONObject();item.put("template",slot.template);item.put("event_key",slot.eventKey);
+            item.put("days",slot.days);item.put("eligible_day",slot.eligibleDay);
+            item.put("observed_count",slot.observedCount);item.put("offered_day",slot.offeredDay);slots.put(item);
+        }
+        root.put("active",slots);
+        JSONArray hist=new JSONArray();
+        for(KneekuraLoginRotation.Slot slot:proposal.history) {
+            JSONObject item=new JSONObject();item.put("template",slot.template);item.put("event_key",slot.eventKey);
+            item.put("days",slot.days);item.put("eligible_day",slot.eligibleDay);
+            item.put("observed_count",slot.observedCount);item.put("offered_day",slot.offeredDay);hist.put(item);
+        }
+        root.put("history",hist);
+        FileOutputStream output=null;
+        try {
+            output=ledger.startWrite();output.write(root.toString().getBytes(StandardCharsets.UTF_8));
+            ledger.finishWrite(output);state=proposal;
+        } catch(Exception failure) {
+            if(output!=null)ledger.failWrite(output);throw failure;
+        }
+    }
+    synchronized byte[] appendRows(byte[] base, long now) throws Exception {
+        long day=Math.floorDiv(now+9*3600000L,86400000L);
+        if(state==null)state=rotation.initial(day);
+        int[] keys=rotation.queryKeys(state);
+        int[] counts=MyActivity.kneekuraOriginalLoginProgressSafe(keys);
+        if(counts==null)throw new IllegalStateException("LOGIN_ORIGINAL_PROGRESS_UNAVAILABLE");
+        KneekuraLoginRotation.State proposal=rotation.prepare(state,day,counts);
+        String source=new String(base,StandardCharsets.UTF_8);
+        if(!source.endsWith("[end]\n"))throw new IllegalArgumentException("LOGIN_ITEM_STREAM");
+        StringBuilder rows=new StringBuilder(source.substring(0,source.length()-6));
+        SimpleDateFormat date=new SimpleDateFormat("yyyyMMdd",Locale.US);
+        date.setTimeZone(TimeZone.getTimeZone("Asia/Tokyo"));
+        long start=day*86400000L-9*3600000L;
+        for(KneekuraLoginRotation.Slot slot:proposal.active) {
+            if(!rotation.offered(proposal,slot,day))continue;
+            rows.append(date.format(new Date(start))).append("\t0\t")
+                .append(date.format(new Date(start+86400000L)))
+                .append("\t0\t150701\t150701\t0\t0\t")
+                .append(slot.eventKey).append('\t').append(slot.template)
+                .append("\t1\tにーくらログインスタンプ\t毎日ログインしてボーナスを受け取ろう！\t0\t0\t1\n");
+        }
+        rows.append("[end]\n");
+        // Record assignments/offers before exposing new event keys. Not a grant receipt.
+        save(proposal);
+        return rows.toString().getBytes(StandardCharsets.UTF_8);
+    }
+}

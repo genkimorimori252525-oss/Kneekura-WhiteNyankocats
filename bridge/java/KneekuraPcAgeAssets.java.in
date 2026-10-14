@@ -1,0 +1,70 @@
+package __KNEEKURA_PACKAGE__;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.URI;
+import java.nio.file.Files;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+
+/** PC-only pinned, privately cached ORIGINAL page. No age or SAVE writes. */
+final class KneekuraPcAgeAssets {
+    static final String ROOT = "/information/appli/battlecats/age/";
+    static final String[] PATHS = {"index.html", "css/reset.css", "css/age.css?01",
+            "js/age.js?01", "img/btn_ok_on.png", "img/btn_ok_off.png"};
+    static final String[] SHA256 = {
+        "22be09b64900cd9e754b6762f642c134ee7779883ed74064ac8733e075a334ff",
+        "56e846483fd61f29a0b4891019017001b347166326ff4128f61c6fe3a5f63c78",
+        "16abb009ec3e81fe355edc32614ce6118537c2a0030f7cc8f1937edf812bcaa9",
+        "6c5c89e7de151e436d96864b9f175178ab8130fa15bf1ed3b023fac2fcafeb1a",
+        "d738b205770c59a0bd026138d82df09605ebabde9fad598c45466a208dbcb661",
+        "f240ab8e14a983f905a962a07c648aff72d1f2dd7d10e7dfed52181ffafe00db"
+    };
+    static int asset(String value) {
+        try {
+            URI uri = new URI(value);
+            if (!"https".equals(uri.getScheme()) || !"ponosgames.com".equals(uri.getHost())
+                    || uri.getRawUserInfo() != null || uri.getRawFragment() != null
+                    || (uri.getPort() != -1 && uri.getPort() != 443)) return -1;
+            String path = uri.getRawPath() + (uri.getRawQuery() == null ? "" : "?" + uri.getRawQuery());
+            for (int i = 0; i < PATHS.length; i++) if ((ROOT + PATHS[i]).equals(path)) return i;
+        } catch (Exception ignored) { }
+        return -1;
+    }
+    static boolean isPage(String value) { return asset(value) == 0; }
+    static String mime(int index) {
+        if (index == 0) return "text/html";
+        if (index <= 2) return "text/css";
+        return index == 3 ? "application/javascript" : "image/png";
+    }
+    static byte[] read(File files, String url) {
+        return resource(files, url).body;
+    }
+    static final class Resource {
+        final byte[] body;
+        final String state;
+        Resource(byte[] body, String state) { this.body = body; this.state = state; }
+    }
+    static Resource resource(File files, String url) {
+        int index = asset(url);
+        if (index < 0) return new Resource(null, "unknown-uri");
+        try {
+            // Android's getFilesDir root may itself resolve through /data/user/0.
+            // Resolve the trusted root first, then reject links below that root.
+            File directory = new File(files.getCanonicalFile(), "kneekura-local-age-v1");
+            File target = new File(directory, PATHS[index].split("\\?", 2)[0]);
+            if (!directory.getAbsoluteFile().equals(directory.getCanonicalFile())
+                    || !target.getAbsoluteFile().equals(target.getCanonicalFile())
+                    ) return new Resource(null, "path-link");
+            if (!target.isFile() || target.length() > 32768) return new Resource(null, "missing-or-size");
+            byte[] bytes = Files.readAllBytes(target.toPath());
+            if (bytes.length > 32768) return new Resource(null, "size");
+            byte[] hash = MessageDigest.getInstance("SHA-256").digest(bytes);
+            StringBuilder hex = new StringBuilder();
+            for (byte b : hash) hex.append(String.format(java.util.Locale.ROOT, "%02x", b & 255));
+            return SHA256[index].equals(hex.toString())
+                    ? new Resource(bytes, "verified") : new Resource(null, "hash-mismatch");
+        } catch (IOException ignored) { return new Resource(null, "local-io"); }
+        catch (NoSuchAlgorithmException | RuntimeException ignored) { return new Resource(null, "unavailable"); }
+    }
+}

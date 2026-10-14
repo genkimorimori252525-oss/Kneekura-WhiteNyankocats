@@ -59,6 +59,30 @@ if(KNEEKURA_RESEARCH_SCENE_WITNESS)
     target_link_libraries(kneekura PRIVATE log dl)
 endif()
 
+# PC NativeBridge cannot initialize the full inline-hook backend. A separate
+# JNI binding observes only draw-return/scene on the ORIGINAL GL thread.
+# Never enable for phone CI, default shipping builds, or the SAVE experiment.
+option(KNEEKURA_RESEARCH_PC_JNI_SCENE_OBSERVER
+       "PC-only original GL-thread scene observer (never shipping)" OFF)
+if(KNEEKURA_RESEARCH_PC_JNI_SCENE_OBSERVER)
+    if(NOT KNEEKURA_RESEARCH_SCENE_WITNESS OR KNEEKURA_RESEARCH_VIRGIN_SAVE_TRIAL)
+        message(FATAL_ERROR "PC scene observer requires passive original research")
+    endif()
+    target_compile_definitions(kneekura PRIVATE KNEEKURA_RESEARCH_PC_JNI_SCENE_OBSERVER=1)
+endif()
+
+option(KNEEKURA_RESEARCH_PC_BALANCE
+       "Exact PC-only approved forms and native castle limit (never phone shipping)" OFF)
+if(KNEEKURA_RESEARCH_PC_BALANCE)
+    if(NOT KNEEKURA_RESEARCH_PC_JNI_SCENE_OBSERVER)
+        message(FATAL_ERROR "PC balance requires the isolated PC JNI research build")
+    endif()
+    target_sources(kneekura PRIVATE src/kneekura_pc_balance.c)
+    set_source_files_properties(src/kneekura_pc_balance.c PROPERTIES
+        COMPILE_OPTIONS "-mno-outline-atomics")
+    target_compile_definitions(kneekura PRIVATE KNEEKURA_RESEARCH_PC_BALANCE=1)
+endif()
+
 # Deliberately separate from the passive scene/LEVEL/SAVE observer.
 # ONLY an independently signed original-game local-research package may
 # enable this experiment; never a default release or an account-restoration
@@ -66,6 +90,9 @@ endif()
 option(KNEEKURA_RESEARCH_VIRGIN_SAVE_TRIAL
        "DANGEROUS explicit isolated first-run original SAVE experiment (never shipping)" OFF)
 if(KNEEKURA_RESEARCH_VIRGIN_SAVE_TRIAL)
+    if(KNEEKURA_RESEARCH_PC_JNI_SCENE_OBSERVER)
+        message(FATAL_ERROR "PC scene observer cannot enable the original SAVE trial")
+    endif()
     if(NOT KNEEKURA_RESEARCH_SCENE_WITNESS)
         message(FATAL_ERROR
             "Original first-SAVE research trial requires the exact original scene witness")

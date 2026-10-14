@@ -318,6 +318,7 @@ def _defined_function_symbol_vmas(native: bytes) -> set[int]:
 
 def verify_mapped_original_scene_image(
     native: bytes, *, expected_research_native_package: str | None = None,
+    pc_balance_enabled: bool = False,
 ) -> dict[str, Any]:
     """Reject incorrect post-LIEF original VMAs BEFORE optional hook signing."""
     if type(native) is not bytes:
@@ -326,6 +327,12 @@ def verify_mapped_original_scene_image(
         raise OriginalSceneNativeImageError(
             "only exact JP local-research package may alter original native rodata"
         )
+    balance_proof = None
+    if pc_balance_enabled:
+        if expected_research_native_package != "jp.kn.local.battlecats":
+            raise OriginalSceneNativeImageError("PC balance requires isolated research package")
+        from tools.base_mod.pc_native_balance import verify_and_restore
+        native, balance_proof = verify_and_restore(native)
     try:
         build_id = gnu_build_id(native)
     except (ValueError, IndexError, struct.error) as exc:
@@ -420,8 +427,9 @@ def verify_mapped_original_scene_image(
         "complete_original_text_bytes_verified":
             ORIGINAL_NATIVE_TEXT_END - ORIGINAL_NATIVE_TEXT_START,
         "complete_original_text_sha256": full_text_digest,
-        "all_original_executable_text_bytes_unchanged_static": True,
-        "original_JP_build_data_only_repacked_dynamic_sections_allowed": True,
+        "all_original_executable_text_bytes_unchanged_static": not pc_balance_enabled,
+        "pc_native_balance": balance_proof,
+        "original_JP_build_data_only_repacked_dynamic_sections_allowed": not pc_balance_enabled,
         "repacked_original_native_hook_layout_safe_static": True,
         "original_account_free_player_SAVE_generated": False,
         "actual_Android_inline_hook_attach_verified": False,
@@ -433,6 +441,7 @@ def verify_mapped_original_scene_image(
 def verify_staged_original_scene_before_signing(
     unsigned_splits: "Path", *, research_scene_witness: bool,
     expected_research_native_package: str | None = None,
+    pc_balance_enabled: bool = False,
 ) -> dict[str, Any] | None:
     """Read the FINAL unsigned arm64 research split BEFORE any APK signing.
 
@@ -479,6 +488,7 @@ def verify_staged_original_scene_before_signing(
     result = verify_mapped_original_scene_image(
         original_repackaged,
         expected_research_native_package=expected_research_native_package,
+        pc_balance_enabled=pc_balance_enabled,
     )
     result["research_pre_signature_gate_executed"] = True
     result["research_apk_signing_performed_by_this_gate"] = False
