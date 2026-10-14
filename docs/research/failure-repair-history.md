@@ -509,4 +509,6 @@ V3全779テスト767成功/12skip、完成NDK/元ELFの関連21テスト、Agent
 
 上記offline停止後、本人の接続復帰を受けて再実行し、同署名・全6SHA一致・UID/dataDir保持で更新成功。offline失敗と導入整合性の成功、本人のゲーム動作確認待ちを別々に保持する。
 
+GitHubの `1adc14a` ではTest tooling／Agent terminalがFAIL。既存の元backup合成試験が旧throw専用guardを文字列比較し、JVM原作stubには前工程で追加したindividual callback APIが欠けていた。現行のlocal-bootは未知要求へ元handleの503/errorを返すため、例外だけを拒否と認める旧期待値も更新した。503/error・原作super送信0の実行時検査は残し、getTimeのH→D→F順序・200・direct bodyを追加。ゲーム側は変更せず、関連10件をJDK17で実行してPASS。全CIの結果は当該commitのActionsで別管理し、以前のFAILを削除しない。
+
 関連27 tests＋PC timezone回帰1 test、buildとPC表示／元抽選の範囲は[運営履歴](2026-10-14-original-liveops-batch1.md)を参照。最初の試験モジュール名誤記、private fixture違反、evidence runnerの相対path誤記も私的FAILログを保持した。

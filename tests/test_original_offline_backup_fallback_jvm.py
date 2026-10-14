@@ -90,6 +90,19 @@ class OriginalLocalBackupOfflineFallbackJvmTests(unittest.TestCase):
                   public static boolean lastNativeDirect;
                   public static boolean lastNativeLocalBody;
                   public static boolean lastNativeFinal;
+                  public static String streamOrder="";
+                  public static int streamCode;
+                  public static boolean streamError;
+                  public static boolean streamDirect;
+                  public static void onResponseCodeHeaders(int id,int code,String url,String headers) {
+                    streamOrder="H"; streamCode=code; streamDirect=false;
+                  }
+                  public static void onResponseData(int id,ByteBuffer body) {
+                    streamOrder+="D"; streamDirect=body.isDirect() && body.remaining()>0;
+                  }
+                  public static void onResponseFinish(int id,boolean error) {
+                    streamOrder+="F"; streamError=error;
+                  }
                   public int newHttpRequest(String method,String url,
                     float timeout,HashMap headers,ByteBuffer body,
                     String[] strings,boolean a,boolean b) {
@@ -153,6 +166,8 @@ class OriginalLocalBackupOfflineFallbackJvmTests(unittest.TestCase):
                       app.newHttpRequest(
                         "GET","https://service.ponosgames.com/unknown",
                         10.0f,new HashMap(),null,new String[0],false,false);
+                      unknownBlocked=jp.co.ponos.battlecats.MyActivity.lastNativeCode==503
+                        && jp.co.ponos.battlecats.MyActivity.lastNativeFinal;
                     } catch(IllegalStateException expected){
                       unknownBlocked=true;
                     }
@@ -168,6 +183,8 @@ class OriginalLocalBackupOfflineFallbackJvmTests(unittest.TestCase):
                       app.newHttpRequest(
                         "GET","https://nyanko-backups.ponosgames.com/?synthetic=1",
                         Float.NaN,new HashMap(),null,new String[0],false,false);
+                      nonfiniteTimeoutBlocked=jp.co.ponos.battlecats.MyActivity.lastNativeCode==503
+                        && jp.co.ponos.battlecats.MyActivity.lastNativeFinal;
                     } catch(IllegalStateException expected) {
                       nonfiniteTimeoutBlocked=true;
                     }
@@ -177,6 +194,8 @@ class OriginalLocalBackupOfflineFallbackJvmTests(unittest.TestCase):
                       app.newHttpRequest(
                         "GET","https://nyanko-backups.ponosgames.com/unapproved?synthetic=1",
                         10.0f,new HashMap(),null,new String[0],false,false);
+                      wrongBackupPathBlocked=jp.co.ponos.battlecats.MyActivity.lastNativeCode==503
+                        && jp.co.ponos.battlecats.MyActivity.lastNativeFinal;
                     } catch(IllegalStateException expected) {
                       wrongBackupPathBlocked=true;
                     }
@@ -186,6 +205,8 @@ class OriginalLocalBackupOfflineFallbackJvmTests(unittest.TestCase):
                       app.newHttpRequest(
                         "GET","https://nyanko-backups.ponosgames.com/?synthetic=1",
                         -1.0f,new HashMap(),null,new String[0],false,false);
+                      invalidNegativeTimeoutBlocked=jp.co.ponos.battlecats.MyActivity.lastNativeCode==503
+                        && jp.co.ponos.battlecats.MyActivity.lastNativeFinal;
                     } catch(IllegalStateException expected) {
                       invalidNegativeTimeoutBlocked=true;
                     }
@@ -195,6 +216,8 @@ class OriginalLocalBackupOfflineFallbackJvmTests(unittest.TestCase):
                       app.newHttpRequest(
                         "GET","https://nyanko-backups.ponosgames.com/?synthetic=1",
                         121.0f,new HashMap(),null,new String[0],false,false);
+                      outOfRangeTimeoutBlocked=jp.co.ponos.battlecats.MyActivity.lastNativeCode==503
+                        && jp.co.ponos.battlecats.MyActivity.lastNativeFinal;
                     } catch(IllegalStateException expected) {
                       outOfRangeTimeoutBlocked=true;
                     }
@@ -204,6 +227,8 @@ class OriginalLocalBackupOfflineFallbackJvmTests(unittest.TestCase):
                       app.newHttpRequest(
                         "GET","https://NYANKO-BACKUPS.PONOSGAMES.COM/?synthetic=1",
                         11.0f,new HashMap(),null,new String[0],false,false);
+                      uppercaseHostBlocked=jp.co.ponos.battlecats.MyActivity.lastNativeCode==503
+                        && jp.co.ponos.battlecats.MyActivity.lastNativeFinal;
                     } catch(IllegalStateException expected) {
                       uppercaseHostBlocked=true;
                     }
@@ -220,6 +245,14 @@ class OriginalLocalBackupOfflineFallbackJvmTests(unittest.TestCase):
                     System.out.println("PC_LOCAL_ORIGIN="+jp.co.ponos.battlecats.MyActivity.lastNativeUrl.startsWith("file:///kneekura-local/boot/"));
                     System.out.println("PC_LOCAL_DIRECT="+jp.co.ponos.battlecats.MyActivity.lastNativeDirect);
                     System.out.println("PC_LOCAL_BODY="+jp.co.ponos.battlecats.MyActivity.lastNativeLocalBody);
+                    if (__PC_AUTHORITY__) {
+                      app.newHttpRequest("GET","https://nyanko-backups.ponosgames.com/?action=getTime",
+                        10.0f,new HashMap(),null,new String[0],true,false);
+                      System.out.println("CLOCK_STREAM_ORDER="+jp.co.ponos.battlecats.MyActivity.streamOrder);
+                      System.out.println("CLOCK_STREAM_CODE="+jp.co.ponos.battlecats.MyActivity.streamCode);
+                      System.out.println("CLOCK_STREAM_ERROR="+jp.co.ponos.battlecats.MyActivity.streamError);
+                      System.out.println("CLOCK_STREAM_DIRECT="+jp.co.ponos.battlecats.MyActivity.streamDirect);
+                    }
                     System.out.println("ORIGINAL_SUPER_HTTP_CALLS="+
                       jp.co.ponos.battlecats.MyActivity.superCalled);
                     System.out.println("LOCAL_ONLY_NETWORK_AVAILABLE="+
@@ -253,13 +286,15 @@ class OriginalLocalBackupOfflineFallbackJvmTests(unittest.TestCase):
                         app.newHttpRequest("POST","https://nyanko-auth.ponosgames.com/v1/users",
                           65.0f,new HashMap(),java.nio.ByteBuffer.wrap("{\\\"accountCode\\\":\\\"FOREIGN_ACCOUNT\\\"}".getBytes()),
                           new String[0],false,false);
+                        rejected=jp.co.ponos.battlecats.MyActivity.lastNativeCode==503
+                          && jp.co.ponos.battlecats.MyActivity.lastNativeFinal;
                       } catch(IllegalStateException expected) { rejected=true; }
                       System.out.println("PC_AUTH_FOREIGN_REJECTED="+rejected);
                     } catch(java.io.IOException failure) { throw new AssertionError(failure); }
             '''
         else:
             auth_test = ''
-        source['jp/kn/local/battlecats/Harness.java'] = source['jp/kn/local/battlecats/Harness.java'].replace('__PC_AUTH_EXERCISE__', auth_test)
+        source['jp/kn/local/battlecats/Harness.java'] = source['jp/kn/local/battlecats/Harness.java'].replace('__PC_AUTH_EXERCISE__', auth_test).replace('__PC_AUTHORITY__',str(authority).lower())
         with tempfile.TemporaryDirectory(prefix="kn-backup-fallback-synthetic-") as tmp:
             root=Path(tmp)
             if authority:
@@ -307,6 +342,9 @@ final class KneekuraPcAgeWebView {
                 self.assertIn('PC_AUTH_LOCAL=true', observed)
                 self.assertIn('PC_AUTH_HEADER_STRING=true', observed)
                 self.assertIn('PC_AUTH_FOREIGN_REJECTED=true', observed)
+                for value in ('CLOCK_STREAM_ORDER=HDF','CLOCK_STREAM_CODE=200',
+                              'CLOCK_STREAM_ERROR=false','CLOCK_STREAM_DIRECT=true'):
+                    self.assertIn(value,observed)
             for exact in ('PC_LOCAL_CODE=' + ('200' if authority else '0'),
                           'PC_LOCAL_ERROR=' + ('false' if authority else 'true'),
                           'PC_LOCAL_ORIGIN=' + str(authority).lower(),
@@ -323,8 +361,8 @@ final class KneekuraPcAgeWebView {
                 "ORIGINAL_FALLBACK_BODY={}",
                 "ORIGINAL_FALLBACK_FINAL=true",
                 "UNKNOWN_BLOCKED=true",
-                "SYNTHETIC_TIMEOUT_11_ID=2",
-                "FALLBACK_COUNT_AFTER_VARIANT=2",
+                "SYNTHETIC_TIMEOUT_11_ID="+('3' if authority else '2'),
+                "FALLBACK_COUNT_AFTER_VARIANT="+('3' if authority else '2'),
                 "NONFINITE_TIMEOUT_BLOCKED=true",
                 "WRONG_BACKUP_PATH_BLOCKED=true",
                 "NEGATIVE_TIMEOUT_BLOCKED=true",

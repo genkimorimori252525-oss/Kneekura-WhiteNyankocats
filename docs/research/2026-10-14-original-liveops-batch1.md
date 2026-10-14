@@ -137,3 +137,5 @@ phone候補 `phone-20261014T155048Z-0307ca04` を同じ署名の `install-multip
 phone候補 `phone-20261014T181623Z-daa89a6f` を同一元候補から作成・署名検証済み。USBはofflineで、更新preflightが停止した。今回のスマホ導入は未実行。接続復帰を依頼済みで、旧HGT00修正版のインストールを維持している。端末が戻れば既存署名・6SHAを照合して `install-multiple --no-streaming -r` で更新し、UID/dataDir保持を確認する。スマホの起動・UI・ログ・SAVE取得は行わず本人目視待ちとする。
 
 その後、本人が「接続した」と回答し、接続復帰後の既存署名・6本の候補SHAを照合してAndroid -r更新を実行した。installer Success、導入後6SHA一致、UID/dataDir保持を確認。候補 `phone-20261014T181623Z-daa89a6f` が現在の実導入版。machine receipt `OPS-BATCH-001_0f43d377955a4e3e93f1208b98d4b0e4.json` はPASS。前段のoffline停止は履歴として保持する。スマホの起動・画面操作・ログ・SAVE取得は実行しておらず、動作は本人確認待ち。
+
+公開後のCIでは既存backupテストの旧期待値／JVM stub不足による2 failuresを検出（`1adc14a`、816実行／6skip）。local-bootの503/error完了とindividual callbackにテストを追随させ、原作super呼出し0、外国account拒否、有限timeout／path制限を保持して関連10件をJDK17で再確認。getTimeのH→D→F／200／direct bodyも実行する。修正はテストだけで、導入済みAPKを再作成・再導入していない。CI最終結果はGitHub Actionsのcode commitと照合する。

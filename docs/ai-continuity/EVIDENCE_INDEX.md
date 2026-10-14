@@ -57,4 +57,6 @@ Only record verification that was actually performed.
 | OPS-GACHA-UI-002 | PASS | 最終PCでレア3タブ、通常＋マタタビ入りの2タブ、通常字幕／期限なし。マタタビ入り1抽選XP5000、ticket1消費、元SAVE／貯蔵庫保持 | 私的 `gacha-v7-rare-final`／`gacha-v7-normal-permanent`／`gacha-v7-item-result`／`gacha-v7-final-save` |
 | OPS-GACHA-PHONE-002 | NOT_RUN | phone候補作成済みだがUSB offlineで導入前停止。旧スマホ内容を維持、接続復帰を依頼済み | 候補 `phone-20261014T181623Z-daa89a6f`、preflight FAIL receipt。スマホUI／ログ／SAVE取得なし |
 | OPS-GACHA-PHONE-CONNECTED-002 | PASS | 本人の接続復帰後、既存署名照合・Android -r更新・導入後全6SHA一致・UID/dataDir保持。ゲームの本人目視は未確認 | 実導入 `phone-20261014T181623Z-daa89a6f`。receipt `OPS-BATCH-001_0f43d377955a4e3e93f1208b98d4b0e4.json`、private PHONE-OPS-UPDATE.json |
-| OPS-BATCH-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_04bcd7315def4a679e91feb3a392eb1b.json |
+| OPS-GACHA-CI-FIRST-002 | FAIL | Test tooling／Agent terminalの既存backup試験が旧guard・throw拒否のみを期待し、JVM stubに元individual APIがなかった。816実行／2fail／6skip | GitHub commit `1adc14a`、Actions `38620529684`／`38620529712` |
+| OPS-GACHA-CI-REGRESSION-002 | PASS | テストだけを現行の503/error完了とindividual callbackへ追随。JDK17で関連10件、元super送信0とgetTime HDF／200／direct body確認 | 私的 `gacha-ci-regressions-fixed.json`、Agent terminal PASS。ゲームAPK差分なし |
+| OPS-BATCH-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_e800831c76a2411c87a81d60d8966f44.json |

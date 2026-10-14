@@ -21,5 +21,6 @@ updated_at: "2026-10-14T18:53:21.624709+00:00"
 - 既存HGT00のFAILは保持：phone完全hookをPC JNI専用readinessが拒否→item503。共通GL readiness（full hook1／PC JNI2、元描画帰還・隔離・source・同一GL TID）へ最小修正済み。ARM64関連4件とPC通常refetch PASS。今回限定の既存スマホログ許可を一般化しない。
 - 未解決／未実施を保持：月次残り29日UNKNOWN、未準備基本ネコbattle敗北FAIL（stamina40／Nekobon1消費、未補充）、全SDK／IPC egress、全イベント報酬、時計後退／gapはNOT_RUN。旧58件3FAIL・START barrier FAIL・cache literal名FAILの原証拠も履歴に保持。追加の全面プレイ検証へ広げない。
 - 次手順：本人の目視結果・次の運営指示に従う。追加のスマホ調査を開始しない。公開Gitはコード・予定・台帳のみ。private/work/assets/raw/AGENTS.md.bakは追加しない。
+- 公開後の初回CIは旧backup試験のguard期待値／JVM原作stub不足で2fail。テストのみ追随し、503/error・元super送信0とgetTimeのHDFを含む関連10件をJDK17でPASS。導入済みAPK変更なし。CI全体はGitHub Actionsのcode commitで確認し、初回FAILを履歴に保持。
 
 詳細と原証拠：[運営履歴](../research/2026-10-14-original-liveops-batch1.md)、[EVIDENCE_INDEX](EVIDENCE_INDEX.md)、過去HANDOFFSを参照。Charter承認receipt不足を自己承認で埋めない。
