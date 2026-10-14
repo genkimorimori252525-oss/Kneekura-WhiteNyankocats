@@ -87,3 +87,20 @@ sidecarの前回観測countは、diskに保存された原作countより新し�
 データ消去・アンインストール・初期MAX再適用・PCデータ移入は行わない。Androidのデータ保持更新を使用し、元SAVEの内容やbytesは読取り／比較していない。スマホroot、ゲーム起動、画面操作、スクリーンショット、logcat、SAVE取得も行っていない。原作のプレイ・保存内容の受入は所有者の目視確認待ちとする。
 
 私的phone候補 `phone-20261014T150621Z-01ec6fff`、`PHONE-OPS-UPDATE.json` と `latest-phone-ops-update.json` に導入receiptを保持する。公開台帳には端末ID、署名鍵、SAVE、元APK、raw logを載せない。過去の「新候補は未導入」はこの更新より前の状態である。
+
+
+## 2026-10-15 JST：初回運営更新後のHGT00と描画監視経路の相違
+
+本人がHGT00・ログインボーナス／イベント／ガチャ非表示を報告した。APK導入の整合性確認は成功していたが、原作運営機能の受入成功ではなかった。PC canonicalとスマホ向けAPKはmanifest調整以外のgame payloadを保持し、同じローカル公開鍵hashも含んでいた。PCではガチャ表示まで進んだため、スマホ固有の状態・経路の調査へ進んだ。
+
+所有者が今回だけ既存診断ログの読取りを許可した。最初はプロセス終了・ring buffer上書きにより自アプリの起動停止記録しか残らず、原因の証拠にならなかった。本人にHGT00を再表示してもらい、その自アプリPIDだけの既存固定ログを取得した。スマホの起動・画面操作・再起動・SAVE取得はAIから行っていない。
+
+再現ログではsale/gatya各3回の応答に対しitem成功がなく、Ops stream failureが3回、native request readiness unavailableが10回だった。最初のgetTimeにはローカル成功応答が返っており、今回のHGT00を前回のgetTime envelope不一致と同一原因とは扱わない。
+
+直接の欠陥は、`kneekuraOriginalGlState`／`kneekuraOriginalLoginProgress` が `gPcSceneObserverState == 2` だけを準備済み条件にした点。既存の完全ShadowHook経路ではPC JNI observerの二重登録を防ぐためattacherが拒否する。従って、スマホで元の描画監視が動作していても、ログイン読取りは未準備となりitemを503で返す。運営updaterはsale→gatya→item→時刻→ad-controlを完了できず、個別の開催内容が反映されない。
+
+最小修正は共通の元描画proxyが原作へ転送・帰還した後にoperations用GL TIDを記録するもの。readinessは隔離process・元source準備・完全hook=1またはPC JNI observer=2・確認済みGL threadを要求する。原作mapのbounded read-only snapshotは維持し、二重の描画hook、SAVE書込み、ログインcount初期化、報酬の直接付与は追加しない。
+
+ARM64の関連4件（完全phone hook、PC JNI、未準備／部分状態、別threadのreadinessを含む）に合格。元heapが書き換わらない条件も維持した。候補 `20261014T154800Z-5ec0ba86` はJava/Dex/NDK/署名6split/static build PASS。PC cache markerだけを私的退避して通常の再取得を起こしたcapture `20261014T155358Z-3d44ff1a` で、native GL ready、sale/gatya/item/ad-control各1回、Ops stream failure0を確認した。PC用branchの取得確認であり、スマホの表示確認を代替しない。
+
+phone候補 `phone-20261014T155048Z-0307ca04` を同じ署名の `install-multiple -r` で再更新した。導入前実署名一致・導入後全6SHA一致・同一UID/dataDir保持を確認。スマホがHGT00表示中でもAndroidの通常更新に停止を委ね、別のforce-stop、データ消去、起動、初期MAX再適用、SAVE読取りは行わない。実表示の回復は本人確認待ち。私的ログ・APK・receipt・端末IDは公開しない。

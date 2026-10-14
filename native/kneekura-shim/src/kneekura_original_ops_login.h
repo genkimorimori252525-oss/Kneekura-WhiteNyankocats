@@ -10,6 +10,14 @@
  * Source: runtime 0x62e154 (Ghidra 0x72e154), pinned original SHA/BuildID.
  */
 typedef int (*KneekuraOpsReadFn)(uintptr_t, void *, size_t);
+/* Both exact-source draw routes are valid. An incomplete hook installation,
+ * missing source/thread witness, or foreign process never authorizes a read. */
+static inline int kneekura_original_ops_gl_state(int isolated, int source_ready,
+        uint32_t complete_hooks, uint32_t pc_observer, int owner_tid, int current_tid) {
+    if (!isolated || !source_ready || owner_tid <= 0
+            || (complete_hooks != 1u && pc_observer != 2u)) return -1;
+    return owner_tid == current_tid ? 1 : 0;
+}
 /* One bounded in-order snapshot, rather than one remote read path per key.
  * Requested keys are strictly increasing. Missing keys have original count 0.
  * Validate the complete tree before returning any values to Java. */

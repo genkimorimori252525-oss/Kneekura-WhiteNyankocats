@@ -137,6 +137,11 @@ __attribute__((visibility("default"))) int probe_many(uintptr_t root,uint64_t si
   if(mode==2)keys[4]=704097;
   return kneekura_original_login_counts(root,size,keys,5,reader,out);
 }
+__attribute__((visibility("default"))) int probe_gl(uintptr_t isolated,uint64_t hooks,int32_t mode,int32_t *out) {
+  *out=kneekura_original_ops_gl_state((int)isolated,(mode&4)==0,(uint32_t)hooks,
+      (mode&2)?2u:0u,(mode&8)?0:100,(mode&1)?101:100);
+  return 1;
+}
 ''',encoding='utf-8')
         subprocess.run([str(clang),'--target=aarch64-linux-android29','-shared','-nostdlib','-O2',
             '-ffreestanding','-fno-builtin','-fvisibility=hidden','-fno-stack-protector','-I',str(ROOT/'native/kneekura-shim/src'),
@@ -189,6 +194,13 @@ __attribute__((visibility("default"))) int probe_many(uintptr_t root,uint64_t si
                0x4000100:self.node(700001,6),0x4000200:self.node(700003,0)}
         for key,count in [(700001,6),(700002,2),(700003,0),(700004,0)]:
             with self.subTest(key=key):self.assertEqual(self.lookup(0x4000000,3,key,nodes),(1,count))
+
+    def test_gl_readiness_accepts_complete_phone_hooks_and_pc_jni_only_on_attested_thread(self):
+        cases=[(1,1,0,1),(1,1,1,0),(1,0,2,1),(1,0,3,0),
+               (1,0,0,-1),(1,2,0,-1),(0,1,0,-1),(1,1,4,-1),(1,1,8,-1)]
+        for isolated,hooks,mode,state in cases:
+            with self.subTest(isolated=isolated,hooks=hooks,mode=mode):
+                self.assertEqual(self.lookup(isolated,hooks,mode,{},'probe_gl'),(1,state))
 
     def test_corrupt_tree_count_pointer_cycle_and_foreign_key_fail_closed(self):
         cases=[(0x4000000,0,700001,{}),(0,1,700001,{}),(0,4097,700001,{}),

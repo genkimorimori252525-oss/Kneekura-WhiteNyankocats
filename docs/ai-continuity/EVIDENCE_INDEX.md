@@ -42,3 +42,10 @@ Only record verification that was actually performed.
 
 | OPS-PHONE-UPDATE-001 | PASS | 所有者の更新依頼により、実installed署名一致を確認して6splitを-r更新。installer Success、導入後全6SHA一致、同一UID/dataDir保持。SAVE bytes比較やプレイ合格は含まない | PC元候補 `20261014T145031Z-3bce4fd1`、私的phone候補 `phone-20261014T150621Z-01ec6fff` の `PHONE-OPS-UPDATE.json` |
 | OPS-PHONE-VISUAL-001 | NOT_RUN | 恒久分担に従いスマホの起動／画面操作／ログ／SAVE取得なし。本人目視確認待ち | 2026-10-15 JSTの所有者による更新依頼。追加検証停止の指定を維持 |
+
+| OPS-PHONE-HGT00-001 | FAIL | 初回運営更新後、本人がHGT00／ログイン・イベント・ガチャ非表示を報告。許可済み既存PID固定ログでsale/gatya後のitem失敗3回、native readiness unavailable10回を確認 | 私的 `hgt00-phone-reproduced-fixed.log`。初回導入整合性PASSとは別 |
+| OPS-DUAL-GL-ARM64-001 | PASS | 完全phone hook／PC JNI／未準備・部分状態／別threadのゲートとbounded map readの関連4件成功、元heap非変更 | `OriginalLoginArm64Tests`、私的 `hgt00-gl-gate-after.log` |
+| OPS-DUAL-GL-BUILD-001 | PASS | 新共通GL readinessのJava/Dex/NDK/署名6split/static build成功 | 私的候補 `20261014T154800Z-5ec0ba86`、`hgt00-dual-gl-build.log` |
+| OPS-DUAL-GL-PC-REFETCH-001 | PASS | PC cache markerのみを退避して通常再取得。GL readyとsale/gatya/item/ad-control各1、Ops stream failure0 | 私的capture `20261014T155358Z-3d44ff1a` |
+| OPS-HGT00-FIX-PHONE-UPDATE-001 | PASS | 実署名一致・-r更新・導入後6SHA一致・UID/dataDir保持。SAVE内容比較／スマホ実表示の合格は含まない | 私的phone `phone-20261014T155048Z-0307ca04` の `PHONE-OPS-UPDATE.json` |
+| OPS-HGT00-FIX-PHONE-VISUAL-001 | NOT_RUN | AIはスマホを起動せず、修正版のHGT00解消／各運営表示は本人目視待ち | 恒久分担を維持。初回HGT00のFAILを消さない |

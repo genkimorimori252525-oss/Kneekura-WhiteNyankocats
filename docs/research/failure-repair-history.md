@@ -484,3 +484,14 @@ V3全779テスト767成功/12skip、完成NDK/元ELFの関連21テスト、Agent
 | findが個別sha256sumエラーを成功終了として返す | 独立レビューの合成再現で、一部stdout＋stderrでも不完全manifestを合格にした | 初回manifestのreturncode／stderrをpull前に検証。SHAエラー、破損copy、unsafe path、retry上限を恒久テストに追加 |
 
 全785テスト773成功/12skip、関連21実ライブラリ／原本テスト、Agent terminal、独立再レビューを確認。スマホ起動と初回起動前の初期状態照合までの受入であり、全所有キャラ全UI／全戦闘やinbox機能を合格とした意味ではない。
+
+
+## 2026-10-15 — 運営更新でHGT00、ログイン・開催内容が非表示
+
+| 観測／原因 | 修正と確認範囲 |
+|---|---|
+| 本人のHGT00。既存診断ログでsale/gatya応答後にitemが503、native readinessはunavailable | 読取り専用JNIがPC JNI observer state=2だけに依存していた。スマホの既存完全native hook経路も、元描画帰還・source一致・同一GL TIDを確認して受け付ける。二重hook・SAVE書込みなし |
+| APK6本の署名・hash一致だけでは実運営の回復を証明できなかった | 初回の導入整合性PASSと本人の機能FAILを別々に保持。修正版のARM64関連4件／build／PC通常再取得を確認し、同署名・データ保持で再更新。スマホ表示は本人確認待ち |
+| 停止済みアプリの既存ログがring bufferから消えていた | 今回限定の読取り許可と本人による再現後、自アプリPID・固定イベントだけを取得。AIによるスマホ起動・画面操作・SAVE取得は追加しない |
+
+詳細と候補識別は[運営バッチ履歴](2026-10-14-original-liveops-batch1.md)を参照。今後のreadonly readinessは、一方の診断backendの有無をゲームサービス全体の準備条件にしない。

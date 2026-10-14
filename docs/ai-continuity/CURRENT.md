@@ -2,16 +2,22 @@
 current_task: "OPS-BATCH-001"
 active_agent: "Codex"
 branch: "codex/pc-local-lab-2026-10-12"
-commit_head: "b73223595ea37ecfeb2415b40b0aac8675102213"
+commit_head: "30ee33ec236196b46a1145950e6b2aaf806d45f2"
 status: "IN_PROGRESS"
 evidence_ref: "docs/research/2026-10-14-original-liveops-batch1.md"
-updated_at: "2026-10-14T15:08:56.349082+00:00"
+updated_at: "2026-10-14T15:59:32.095411+00:00"
 
 ---
 
 # Current Progress State
 
 ## OPS-BATCH-001：運営更新をスマホへ導入・本人目視確認待ち
+
+- 最新：初回運営更新の本人確認はHGT00でFAIL。本人再現＋今回限定の既存診断ログ許可で、sale/gatyaは返るがitem生成が3回失敗、readonly JNI準備状態がunavailableと判明。PCのみのstate=2ゲートがスマホの既存完全native hook経路を排除していた。
+- 修正：元描画の完了後にoperations用GL TIDを記録し、隔離process・source準備・完全hook=1またはPC JNI=2・同一GL threadを要求する共通readinessへ変更。二重hook・SAVE writer・付与処理・原作の進入条件は追加しない。
+- ARM64関連4 tests PASS。PC candidate `20261014T154800Z-5ec0ba86` のJava/Dex/NDK/署名6split/static PASS。PC専用cache markerだけを退避して通常再取得させたcapture `20261014T155358Z-3d44ff1a` はready＋sale/gatya/item/ad-control各1、Ops stream failure0。スマホ用の元候補の6SHA一致APKもPCへ入れて比較した。PC installedは現在修正版canonical。
+- 同候補由来のphone `phone-20261014T155048Z-0307ca04` を既存署名・Android -rで再更新済み。実6SHA一致、UID/dataDir保持。スマホは起動せず、修正版の本人表示確認待ち。初回HGT00のFAILを消さない。下の初回候補・未導入記録は履歴として扱う。
+
 
 - 最新指示は2026-10-14の「検証は不要／通常20枠を2時間交代＋週3～5件＋月1～3件」。追加プレイ・戦闘・育成・時計変更・スマホ検証を止める。[変更原文](AMENDMENTS/2026-10-14-stage-rotation-20.md)を優先する。Hooks OFF、初期MAX再適用・自作ステージ・公式アプリ操作は禁止。
 - 現行は `ops/seasons/2026-autumn-ops-rotation.json` revision 5、選定原本 `2026-autumn-stage-selection.json`。60候補から通常20（素材等6／挑戦7／開眼7）、週4・月2を重複なしで開催。JST偶数時／月曜0時／1日0時で交代。期間10/14～11/15、期限前の運営更新が必要。

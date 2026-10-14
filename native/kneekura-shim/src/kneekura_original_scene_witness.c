@@ -154,6 +154,9 @@ static _Atomic uint32_t gAllOriginalHooksInstalled = 0u;
 /* Independent of the coherent five-hook LEVEL/SAVE lifecycle. */
 static _Atomic uint32_t gPcSceneObserverState = 0u; /* 0 idle, 1 installing, 2 attached, 3 blocked */
 static _Atomic int gPcSceneGlTid = 0;
+/* Operations read through the attested original draw on phones as well as
+ * the PC JNI fallback. Never enable a second draw hook just to read counts. */
+static _Atomic int gOriginalOpsGlTid = 0;
 static _Atomic uint32_t gPcSceneFirstDraw = 0u;
 static _Atomic uint32_t gPcSceneThreadMismatch = 0u;
 #endif
@@ -615,11 +618,12 @@ JNIEXPORT jint JNICALL
 Java_jp_kn_local_battlecats_MyActivity_kneekuraOriginalGlState(
         JNIEnv *env, jclass bridge_class) {
     (void)env; (void)bridge_class;
-    if (!current_process_is_isolated_original_research()
-            || atomic_load_explicit(&gPcSceneObserverState, memory_order_acquire) != 2u)
-        return -1;
-    return (int)syscall(SYS_gettid) == atomic_load_explicit(&gPcSceneGlTid, memory_order_acquire)
-        ? 1 : 0;
+    return kneekura_original_ops_gl_state(current_process_is_isolated_original_research(),
+        gOriginalLoadBias != 0u,
+        atomic_load_explicit(&gAllOriginalHooksInstalled, memory_order_acquire),
+        atomic_load_explicit(&gPcSceneObserverState, memory_order_acquire),
+        atomic_load_explicit(&gOriginalOpsGlTid, memory_order_acquire),
+        (int)syscall(SYS_gettid));
 }
 JNIEXPORT jint JNICALL
 Java_jp_kn_local_battlecats_MyActivity_kneekuraOriginalHttpRequestState(
@@ -653,10 +657,9 @@ JNIEXPORT jintArray JNICALL
 Java_jp_kn_local_battlecats_MyActivity_kneekuraOriginalLoginProgress(
         JNIEnv *env, jclass bridge_class, jintArray event_keys) {
     (void)bridge_class;
-    if (!current_process_is_isolated_original_research() || event_keys == NULL
-            || atomic_load_explicit(&gPcSceneObserverState, memory_order_acquire) != 2u
-            || (int)syscall(SYS_gettid) != atomic_load_explicit(&gPcSceneGlTid, memory_order_acquire)
-            || gOriginalLoadBias == 0u) return NULL;
+    if (event_keys == NULL
+            || Java_jp_kn_local_battlecats_MyActivity_kneekuraOriginalGlState(env,bridge_class) != 1)
+        return NULL;
     jsize length = (*env)->GetArrayLength(env, event_keys);
     if (length < 1 || length > 4096) return NULL;
     jint keys[4096], counts[4096];
@@ -806,6 +809,17 @@ static void research_draw_proxy(void *jni_env, void *jni_class) {
     if (base == 0u) {
         return;
     }
+#ifdef KNEEKURA_RESEARCH_PC_JNI_SCENE_OBSERVER
+    if (atomic_load_explicit(&gAllOriginalHooksInstalled, memory_order_acquire) == 1u
+            || atomic_load_explicit(&gPcSceneObserverState, memory_order_acquire) == 2u) {
+        int unset = 0;
+        if (atomic_compare_exchange_strong_explicit(&gOriginalOpsGlTid, &unset,
+                (int)syscall(SYS_gettid), memory_order_acq_rel, memory_order_acquire)) {
+            __android_log_write(ANDROID_LOG_INFO, WITNESS_TAG,
+                "original-local-ops-native-gl-v1 ready");
+        }
+    }
+#endif
     typedef void *(*OriginalContextFn)(void);
     OriginalContextFn get_game_context = NULL;
     uintptr_t context_getter = base + ORIGINAL_APP_CONTEXT_GETTER
