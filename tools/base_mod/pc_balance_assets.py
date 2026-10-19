@@ -35,7 +35,7 @@ def validate_pc_form_delta(original, candidate, *, file_name, original_sha):
 
 PAYLOAD_SHA256 = {
     '702_f.imgcut':'6670e6c1104d420e7a519ed2aadfb58a559a113feb041ae1c22aeac3c617bf43',
-    '702_f.mamodel':'9b5458f18224ec469c081a7364915865519955c6490030f23d7e81f71c519dfb',
+    '702_f.mamodel':'0e667b966d7acfe4861ad337208944e153150aa6c68b0d976fcb47b9ed92523b',
     '702_f.png':'f168a34a23d8097f6a8b6cd5f2eb6daab8135fad3009205880155a94df15526d',
     '702_f00.maanim':'21e3e497e1c1c80ab976d253737da24267014839cb7dc4b332bd61f5b01d84de',
     '702_f01.maanim':'22e617f31066c17fd6d1e9cff8c741d30dbec93f74b27c597c0add1fe37a904c',
@@ -70,7 +70,7 @@ def prepare_assets(owner_export: Path, server_source: Path, parent: Path):
     from tools.base_mod.fetch_godzilla_server_assets import complete_owner_private_godzilla_pipeline
     parent.mkdir(parents=True,exist_ok=True)
     if parent.is_symlink(): raise ValueError('PC_BALANCE_PRIVATE_CACHE_LINK_REFUSED')
-    output=parent/'approved-v2'
+    output=parent/'approved-v3'
     if output.exists():
         load_pinned_assets(output)
         return output

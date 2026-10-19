@@ -60,3 +60,10 @@ Only record verification that was actually performed.
 | OPS-GACHA-CI-FIRST-002 | FAIL | Test tooling／Agent terminalの既存backup試験が旧guard・throw拒否のみを期待し、JVM stubに元individual APIがなかった。816実行／2fail／6skip | GitHub commit `1adc14a`、Actions `38620529684`／`38620529712` |
 | OPS-GACHA-CI-REGRESSION-002 | PASS | テストだけを現行の503/error完了とindividual callbackへ追随。JDK17で関連10件、元super送信0とgetTime HDF／200／direct body確認 | 私的 `gacha-ci-regressions-fixed.json`、Agent terminal PASS。ゲームAPK差分なし |
 | OPS-BATCH-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_e800831c76a2411c87a81d60d8966f44.json |
+
+## 2026-10-20 — OPS-BATCH-001 Godzilla facing
+
+- PASS: Agent terminal `godzilla-ally-facing`, 21 tests; report SHA-256 `1e9a00c09437de0162b3c959a24573831a6df0f917118f80363940e4f27fdbb1`.
+- PASS: private approved-v2/v3 comparison: only `702_f.mamodel` root X `1790 -> -1790`; other 8 payloads identical.
+- PASS: 6split build `20261019T184640Z-35b3aee8`, candidate `phone-20261019T184729Z-525a825b`; private proof `liveops-investigation/godzilla-facing-fix-proof.json`.
+- NOT_RUN: actual renderer visual check and phone installation; minimal verification requested. Existing FAIL/UNKNOWN evidence remains applicable.

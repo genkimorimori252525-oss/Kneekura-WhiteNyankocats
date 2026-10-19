@@ -13,8 +13,7 @@ Changes only:
   - filenames 550_e.* -> 702_f.* / 550_eNN.maanim -> 702_fNN.maanim;
   - .imgcut's PNG name (its third header line);
   - .mamodel's numeric atlas ID in model rows (550 -> 702);
-  - if the single base/root row has a negative horizontal scale, normalize
-    its sign to positive (original enemy vs allied facing example).
+  - make the single base/root horizontal scale negative for allied facing.
 All animation keyframes and every nonessential model/image field remain intact.
 The original source/receipt is never written, and second-form 702_c is untouched.
 """
@@ -192,9 +191,11 @@ def _rewrite_model(raw: bytes, *, sprite_part_count: int) -> tuple[bytes, dict[s
             replaced[1] = str(TARGET_IMAGE_ID)
             source_models += 1
         # The true root row is the only row whose scale is changed, and
-        # only if its horizontal scale is negative. Never modify attack
+        # only if its horizontal scale is positive. The transplanted enemy
+        # art faces backwards with a positive scale in the allied renderer.
+        # Never modify attack
         # keyframes, bone rotations, collision sections or offsets.
-        if index == 3 and numeric[8] < 0:
+        if index == 3 and numeric[8] > 0:
             replaced[8] = str(-numeric[8])
             mirrored_root = True
         if index == 3 and numeric[8] == 0:

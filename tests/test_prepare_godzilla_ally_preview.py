@@ -90,7 +90,7 @@ class GodzillaNo703FirstFormCandidateTests(unittest.TestCase):
         self.assertIn(b"702_f.png\r\n", outputs["702_f.imgcut"])
         self.assertNotIn(b"550_e.png", outputs["702_f.imgcut"])
         self.assertIn(
-            b"-1,-1,0,0,0,0,0,0,1000,1000,0,1000,0,Null",
+            b"-1,-1,0,0,0,0,0,0,-1000,1000,0,1000,0,Null",
             outputs["702_f.mamodel"],
         )
         self.assertIn(b"0,702,1,0,0,0,0,0,1000,1000", outputs["702_f.mamodel"])
@@ -102,7 +102,7 @@ class GodzillaNo703FirstFormCandidateTests(unittest.TestCase):
             self.assertEqual(
                 outputs[f"702_f0{i}.maanim"], original[f"550_e0{i}.maanim"]
             )
-        self.assertTrue(record["mamodel_conversion"]["root_was_reoriented"])
+        self.assertFalse(record["mamodel_conversion"]["root_was_reoriented"])
         self.assertEqual(record["mamodel_conversion"]["atlas_rows_rebased"], 2)
         self.assertEqual(record["imgcut_conversion"]["sprite_part_count"], 2)
         self.assertFalse(record["ready_to_install"])
@@ -110,14 +110,14 @@ class GodzillaNo703FirstFormCandidateTests(unittest.TestCase):
         self.assertFalse(record["second_form_bytes_changed"])
         self.assertFalse(record["animation_renderer_frame_sync_verified"])
 
-    def test_already_correct_root_orientation_remains_unchanged(self):
+    def test_positive_enemy_root_is_reflected_for_allied_facing(self):
         model = self.source["550_e.mamodel"].replace(
             b"-1000,1000,0,1000,0,Null", b"1000,1000,0,1000,0,Null"
         )
         self.source["550_e.mamodel"] = model
         targets, record = preview.preview_converted_ally_rig(self.source)
-        self.assertFalse(record["mamodel_conversion"]["root_was_reoriented"])
-        self.assertIn(b"1000,1000,0,1000,0,Null", targets["702_f.mamodel"])
+        self.assertTrue(record["mamodel_conversion"]["root_was_reoriented"])
+        self.assertIn(b"-1000,1000,0,1000,0,Null", targets["702_f.mamodel"])
 
     def test_utf8_bom_and_lf_variants_stay_parseable(self):
         inputs = rig(bom=False, eol=b"\n")

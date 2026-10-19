@@ -512,3 +512,10 @@ V3全779テスト767成功/12skip、完成NDK/元ELFの関連21テスト、Agent
 GitHubの `1adc14a` ではTest tooling／Agent terminalがFAIL。既存の元backup合成試験が旧throw専用guardを文字列比較し、JVM原作stubには前工程で追加したindividual callback APIが欠けていた。現行のlocal-bootは未知要求へ元handleの503/errorを返すため、例外だけを拒否と認める旧期待値も更新した。503/error・原作super送信0の実行時検査は残し、getTimeのH→D→F順序・200・direct bodyを追加。ゲーム側は変更せず、関連10件をJDK17で実行してPASS。全CIの結果は当該commitのActionsで別管理し、以前のFAILを削除しない。
 
 関連27 tests＋PC timezone回帰1 test、buildとPC表示／元抽選の範囲は[運営履歴](2026-10-14-original-liveops-batch1.md)を参照。最初の試験モジュール名誤記、private fixture違反、evidence runnerの相対path誤記も私的FAILログを保持した。
+
+## 2026-10-20 — 味方シンゴジラの表示方向
+
+- 本人から味方の向きが逆との報告。移植処理はroot横倍率を正に正規化しており、現行 `702_f.mamodel` は `1790`。4アニメーションにはrootを上書きするtrackがないため、モデル側で全動作を反転できる。
+- 第1形態のroot横倍率だけを負に正規化。実物差分は `1790 → -1790` の符号1か所、残る8 payloadは同一。元の敵・第2形態・能力値・SAVEは変更しない。旧private cacheは保存し、新版を `approved-v3` として生成する。
+- 本人指定に従い検証を限定。Agent terminal経由の関連21 tests PASS、6split build `20261019T184640Z-35b3aee8` と更新候補 `phone-20261019T184729Z-525a825b` の検証PASS。実レンダラー画面確認とスマホ更新は未実施。private証拠 `liveops-investigation/godzilla-facing-fix-proof.json`。build時刻はUTC、記録日はJST。
+- お知らせpackは変更せず、この小さな表示修正は本台帳に記録する。運営予定の再生成や追加プレイ検証へ広げない。

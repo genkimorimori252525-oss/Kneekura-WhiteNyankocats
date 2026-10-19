@@ -2,14 +2,19 @@
 current_task: "OPS-BATCH-001"
 active_agent: "Codex"
 branch: "codex/pc-local-lab-2026-10-12"
-commit_head: "7dc44032569a4affa1d6bf5f744368fd306833f5"
+commit_head: "b885642313e8be45f9b8b73d471813364ac8eea9"
 status: "IN_PROGRESS"
-evidence_ref: "docs/research/2026-10-14-original-liveops-batch1.md"
-updated_at: "2026-10-14T18:53:21.624709+00:00"
+evidence_ref: "docs/research/failure-repair-history.md"
+updated_at: "2026-10-19T18:48:03.143868+00:00"
 
 ---
 
 # Current Progress State
+
+## 2026-10-20：シンゴジラの味方向き修正候補
+
+- 本人の最小修正・最小検証指定。`702_f.mamodel` root Xだけ `1790 → -1790`、他8 payload同一。converter・pin・cache版・既存回帰を更新。関連21 tests／6split build PASS。
+- PC build `20261019T184640Z-35b3aee8`、phone候補 `phone-20261019T184729Z-525a825b` 作成済み。スマホ更新・実描画確認は未実施。詳細は[不具合台帳](../research/failure-repair-history.md#2026-10-20--味方シンゴジラの表示方向)。SAVE・運営予定に変更なし。
 
 ## OPS-BATCH-001：レア3枠・通常常設2枠、スマホ更新済み／本人確認待ち
 
