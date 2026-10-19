@@ -519,3 +519,5 @@ GitHubの `1adc14a` ではTest tooling／Agent terminalがFAIL。既存の元bac
 - 第1形態のroot横倍率だけを負に正規化。実物差分は `1790 → -1790` の符号1か所、残る8 payloadは同一。元の敵・第2形態・能力値・SAVEは変更しない。旧private cacheは保存し、新版を `approved-v3` として生成する。
 - 本人指定に従い検証を限定。Agent terminal経由の関連21 tests PASS、6split build `20261019T184640Z-35b3aee8` と更新候補 `phone-20261019T184729Z-525a825b` の検証PASS。実レンダラー画面確認とスマホ更新は未実施。private証拠 `liveops-investigation/godzilla-facing-fix-proof.json`。build時刻はUTC、記録日はJST。
 - お知らせpackは変更せず、この小さな表示修正は本台帳に記録する。運営予定の再生成や追加プレイ検証へ広げない。
+
+本人のUSB接続依頼後、初回は接続端末0台のため導入前に停止。再接続の明示連絡後、上記候補をAndroid `-r` で更新成功。既存署名・全6split SHA・UID/dataDir保持を確認。スマホ起動・画面・ログ・SAVE取得なし。private receiptは当該phone-buildの `PHONE-OPS-UPDATE.json`。本人の向き確認は待機。
