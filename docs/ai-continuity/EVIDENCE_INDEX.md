@@ -84,3 +84,11 @@ Only record verification that was actually performed.
 
 - [実装・証拠の所在](../research/2026-10-20-godzilla-portrait.md)：関連24 tests PASS（agent terminal `godzilla-portrait-related`）、12 payloadのうち元9件byte一致、3 PNG原作寸法・枠外画素一致。原作PC編成画面で新しい出撃アイコンを確認。育成用・入手用はPNG画像確認まで、実画面NOT_RUN。
 - PC `20261020T123613Z-556bd0a8` 6 split build／導入SHA一致。スマホ候補 `phone-20261020T124348Z-e45a2eb7` 作成、導入・本人確認NOT_RUN。PC試験用SAVE復元済み。以前のFAIL／UNKNOWNを変更しない。
+| OPS-BATCH-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_1428f4d5ffca4586b71f0e613c840cc6.json |
+| OPS-BATCH-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_0a84bbbc6ca14ba8bcdf74fc536583d9.json |
+# 2026-10-20 季節・曜日の運営修正
+
+- [日程・実装・検証記録](../research/2026-10-20-seasonal-liveops.md)：25 tests PASS、197 source bindings・revision9 compile、ログインrotation不変。初回fixture FAIL／特殊ticket候補拒否の原経緯を保持。
+- 最終authoring baseを含む25 testsのmachine receipt `OPS-BATCH-001_20bd317bf25c498498c914e476c56b11`。PC build `20261020T131246Z-cca69482` の6split／10秒capture PASS。machine receipt `OPS-BATCH-001_1428f4d5ffca4586b71f0e613c840cc6`。
+- スマホ `phone-20261020T131439Z-86d1bb23` 署名一致・6SHA一致・UID/dataDir保持更新PASS。machine receipt `OPS-BATCH-001_0a84bbbc6ca14ba8bcdf74fc536583d9`。本人ゲーム目視PENDING、AIスマホ操作／SAVE取得NOT_RUN。過去FAIL／UNKNOWNを変更しない。
+| OPS-BATCH-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_20bd317bf25c498498c914e476c56b11.json |

@@ -60,6 +60,14 @@ def stage_rotation_pack(pack, selection):
             if (week['start'] < month['end'] and month['start'] < week['end']
                     and set(week['native_ids']).intersection(month['native_ids'])):
                 raise ValueError('ORIGINAL_STAGE_ROTATION_SPECIAL_DUPLICATE')
+    timed=selection.get('timed',[])
+    reserved={n for kind in ('weekly','monthly') for p in selection[kind] for n in p['native_ids']}
+    for entry in timed:
+        ids=entry['native_ids']
+        if (not ids or len(set(ids))!=len(ids) or seen.intersection(ids) or reserved.intersection(ids)
+                or any(type(n) is not int or not 1000<=n<1000000 for n in ids)
+                or entry['mode'] not in ('weekly','monthly')):
+            raise ValueError('ORIGINAL_STAGE_TIMED_POOL_LEAK')
     result = deepcopy(pack)
     result['revision'] += 1
     result['catalog']['stage'] = []
@@ -97,6 +105,11 @@ def stage_rotation_pack(pack, selection):
             add('%s-picks-%02d' % (kind, index), 'event', period['title'],
                 period['native_ids'], kind + '-picks',
                 dict(mode='once', start=start.isoformat(), end=end.isoformat()))
+    for index,entry in enumerate(timed):
+        mode=entry['mode'];days='weekdays' if mode=='weekly' else 'monthdays'
+        add('timed-%03d'%index,'stage',entry['title'],entry['native_ids'],'timed-%03d'%index,
+            dict(mode=mode,valid_from=first.isoformat(),valid_until=stop.isoformat(),
+                 **{days:entry[days]},from_time=entry['from_time'],to_time=entry['to_time']))
     notice_id = 'kneekura:notice:stage-rotation-20'
     result['catalog']['notice'].append(dict(id=notice_id,
         title='イベント20枠が2時間ごとに交代！', category='イベント',
@@ -109,6 +122,8 @@ def stage_rotation_pack(pack, selection):
         kind='notice', slot='notice-rotation', priority=20, content_id=notice_id,
         rule=dict(mode='once', start=first.isoformat() + 'T00:00:00+09:00',
                   end=stop.isoformat() + 'T00:00:00+09:00')))
+    if timed:
+        result['catalog']['notice'][-1]['body']+='\n曜日ステージ・ゲリラは指定曜日／時間だけ、チケット逆襲は指定日だけ出現。10月は運動会・ハロウィン、11月は勤労感謝・文化祭を開催します。'
     return validate_pack(result)
 
 

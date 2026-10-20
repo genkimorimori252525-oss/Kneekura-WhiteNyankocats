@@ -5,6 +5,26 @@ from datetime import date, timedelta
 from tools.localcore.ops_calendar import validate_pack
 
 
+def validate_editorial_policy(selection):
+    """Keep collaborations out of the ordinary pool and seasons in date range."""
+    policy=selection.get('set_policy')
+    if policy is None:return  # Older authored packs remain readable.
+    for identifier in selection['rotating_set_ids']:
+        if policy.get(str(identifier),{}).get('category')!='standard':
+            raise ValueError('ORIGINAL_GACHA_ORDINARY_POOL_CATEGORY')
+    categories=[]
+    for period in selection['weekly']:
+        entry=policy.get(str(period['set_id']),{})
+        category=entry.get('category')
+        if category not in ('standard','festival','seasonal','collaboration'):
+            raise ValueError('ORIGINAL_GACHA_WEEK_CATEGORY')
+        if category=='seasonal' and not (entry['start']<=period['start']<period['end']<=entry['end']):
+            raise ValueError('ORIGINAL_GACHA_SEASON_MISMATCH')
+        categories.append(category)
+    if any(categories[i:i+4].count('collaboration')>1 for i in range(len(categories))):
+        raise ValueError('ORIGINAL_GACHA_COLLABORATION_FREQUENCY')
+
+
 def gacha_rotation_pack(pack, selection):
     validate_pack(pack)
     if selection.get('schema_version')!=1:raise ValueError('ORIGINAL_GACHA_ROTATION_SCHEMA')
@@ -26,6 +46,7 @@ def gacha_rotation_pack(pack, selection):
             raise ValueError('ORIGINAL_GACHA_ROTATION_WEEK')
         cursor=end
     if cursor<stop:raise ValueError('ORIGINAL_GACHA_ROTATION_GAP')
+    validate_editorial_policy(selection)
     normals=selection.get('normal')
     if (not isinstance(normals,list) or len(normals)!=2 or
             len({n.get('set_id') for n in normals if isinstance(n,dict)})!=2 or
@@ -40,7 +61,7 @@ def gacha_rotation_pack(pack, selection):
     result['schedule']=[entry for entry in result['schedule'] if entry['kind']!='gacha']
     for identifier in pool:
         result['catalog']['gacha'].append(dict(id='kneekura:gacha:rotation-r-'+str(identifier),
-            title='3時間セレクション',source='kneekura-local',ready=True,
+            title=selection.get('set_policy',{}).get(str(identifier),{}).get('title','3時間セレクション'),source='kneekura-local',ready=True,
             original=dict(set_id=identifier,gacha_type=1,cost=150,chances=selection['rare_chances'])))
     for weekday in range(7):
         for block in range(8):
@@ -77,6 +98,8 @@ def gacha_rotation_pack(pack, selection):
              '\n通常の「にゃんこガチャ」とマタタビ入りの「にゃんこガチャ」を常設します。'))
     result['schedule'].append(dict(id='kneekura:schedule:notice-gacha-three',kind='notice',
         slot='notice-gacha',priority=25,content_id=identifier,rule=rule))
+    if selection.get('set_policy'):
+        result['catalog']['notice'][-1]['body']+='\n通常シリーズを中心に開催し、コラボは特選の低頻度開催にします。季節ガチャは該当時期のみ開催します。'
     return validate_pack(result)
 
 

@@ -2,14 +2,21 @@
 current_task: "OPS-BATCH-001"
 active_agent: "Codex"
 branch: "codex/pc-local-lab-2026-10-12"
-commit_head: "26e60c875b8a130bcf143089cd11729e76e4527c"
+commit_head: "ada2e0497ef5617c43d016675a9f234022a1507d"
 status: "IN_PROGRESS"
-evidence_ref: "docs/research/2026-10-20-godzilla-portrait.md"
-updated_at: "2026-10-20T12:51:27.245302+00:00"
+evidence_ref: "docs/research/2026-10-20-seasonal-liveops.md"
+updated_at: "2026-10-20T13:19:19.488655+00:00"
 
 ---
 
 # Current Progress State
+
+## 2026-10-20：季節・曜日の運営修正とスマホ更新済み
+
+- 最新PC `20261020T131246Z-cca69482`、スマホ `phone-20261020T131439Z-86d1bb23`。署名・導入後6SHA・UID/dataDir保持で更新成功。完全反転＋指定キャラ写真も含む。スマホの起動・画面／ログ／SAVE取得なし、本人目視待ち。
+- revision9は通常シリーズ11種を3時間交代2枠、季節／オールスター／低頻度コラボを週間1枠。常設通常2枠は維持。20一般交代＋週間4＋月間2に、曜日・時刻／月日指定の82rulesを追加。Halloween／運動会→11月勤労感謝／文化祭。予定は11/30 00:00まで。Luna調査、公式2026予定の複製ではない。
+- 関連25 tests、197 bindings compile、6split build、PC10秒capture PASS。初回test fixture FAILと特別ticket候補拒否は修正前履歴として[記録](../research/2026-10-20-seasonal-liveops.md)。ログインrotationはv7と一致、初期MAX再適用なし。旧FAIL／UNKNOWN・Charter承認不足は維持。
+- 次手順は本人の目視結果／次の運営指示。追加スマホ調査を自動実行しない。原作素材・原画・鍵・SAVE・rawログはprivate。
 
 ## 2026-10-20：所有者指定のキャラ写真
 

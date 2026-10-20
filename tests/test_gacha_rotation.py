@@ -80,7 +80,7 @@ class GachaRotationTests(unittest.TestCase):
         self.assertEqual([normal[0][10],normal[0][25]],['0','3'])
         self.assertEqual([normal[0][24],normal[0][39]],['',''])
         self.assertEqual([row[1] for row in rare],['0','300','600','900','1200','1500','1800','2100'])
-        self.assertTrue(all(row[40]=='958' for row in rare))
+        self.assertTrue(all(row[40]=='1085' for row in rare))
 
     def test_normal_source_binding_uses_normal_table_and_standard_ticket(self):
         pack=self.pack();pack['catalog']['gacha']=[v for v in pack['catalog']['gacha']

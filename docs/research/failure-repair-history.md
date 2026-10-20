@@ -529,3 +529,6 @@ GitHubの `1adc14a` ではTest tooling／Agent terminalがFAIL。既存の元bac
 中間版のPC実戦ではさらにnative crashを検出。敵550のmodelはconfig1件、元の味方702_f／702_cは2件で、味方nativeの `flags & 1` による2件目取得が範囲外になっていた。主描画原点を残し、元の味方と同じneutral config1を追加する。角度だけ直した中間版の描画成功とnative crashは別証拠として保持する。
 
 最終候補と限定した再検証は[完全反転の原因・検証記録](2026-10-20-godzilla-complete-reflection.md)にまとめる。以後、敵rig移植ではsigned scale・回転・味方固有の座標設定を一緒に確認し、署名やbuildだけで見た目PASSにしない。
+# 2026-10-20 運営予定の選定・暦による不一致
+
+通常の交代プールへコラボ／季節ガチャと曜日・ゲリラステージを混ぜていたため、季節や曜日に合わない開催になった。分類・季節期間・コラボ頻度のguardと、曜日／時間・月日固定ruleへ分離。初回追加testのdatetime fixture不備、原本binderが拒否した特別チケット候補も修正し、導入前に25 tests・compile・PC起動を確認した。[技術記録と更新receipt](2026-10-20-seasonal-liveops.md)を参照。スマホはデータ保持更新成功、動作は本人目視待ち。

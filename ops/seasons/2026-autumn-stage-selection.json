@@ -1,33 +1,1151 @@
 {
   "schema_version": 1,
   "start_date": "2026-10-14",
-  "end_date": "2026-11-15",
+  "end_date": "2026-11-30",
   "regular_pools": [
     {
-      "title": "育成素材・経験値・チケット",
-      "slots": 6,
-      "native_ids": [1000, 1001, 1002, 1003, 1004, 1006, 1007, 1027, 1028, 1059, 1073, 1074, 1075, 1076, 1077, 1078, 1124, 1118]
-    },
-    {
-      "title": "サイクロン・狂乱・高難度挑戦",
-      "slots": 7,
-      "native_ids": [1014, 1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025, 1039, 1043, 1066, 1069, 1070, 1079, 1095, 1096, 1111]
-    },
-    {
-      "title": "開眼・キャラクター育成",
-      "slots": 7,
-      "native_ids": [1045, 1046, 1047, 1048, 1049, 1050, 1051, 1052, 1053, 1054, 1055, 1056, 1057, 1058, 1083, 1084, 1085, 1086, 1087, 1088, 1089]
+      "title": "開眼・降臨チャレンジ（ローカル選抜）",
+      "slots": 20,
+      "native_ids": [
+        1045,
+        1046,
+        1047,
+        1048,
+        1049,
+        1050,
+        1051,
+        1052,
+        1053,
+        1054,
+        1055,
+        1056,
+        1057,
+        1058,
+        1095,
+        1096,
+        1111,
+        1112,
+        1114,
+        1117,
+        1119,
+        1120,
+        1122,
+        1128,
+        1143,
+        1144,
+        1153,
+        1157,
+        1158,
+        1161,
+        1162,
+        1168,
+        1169,
+        1172,
+        1176,
+        1185,
+        1187,
+        1189,
+        1190,
+        1193,
+        1195,
+        1196,
+        1198,
+        1199
+      ]
     }
   ],
   "weekly": [
-    {"start": "2026-10-12", "end": "2026-10-19", "title": "まどか・ケリ姫・メルクストーリア特選", "native_ids": [2031, 2002, 2007, 2008]},
-    {"start": "2026-10-19", "end": "2026-10-26", "title": "ゴジラ・メルクストーリア特選", "native_ids": [2171, 2172, 2200, 2008]},
-    {"start": "2026-10-26", "end": "2026-11-02", "title": "まどか・プリンセス・メルクストーリア特選", "native_ids": [2031, 2001, 2002, 2007]},
-    {"start": "2026-11-02", "end": "2026-11-09", "title": "ゴジラ・ケリ姫特選", "native_ids": [2171, 2172, 2200, 2002]},
-    {"start": "2026-11-09", "end": "2026-11-16", "title": "まどか・メルクストーリア特選", "native_ids": [2031, 2007, 2008, 2018]}
+    {
+      "start": "2026-10-12",
+      "end": "2026-10-19",
+      "title": "週間チャレンジ特選",
+      "native_ids": [
+        1033,
+        1034,
+        1035,
+        1070
+      ]
+    },
+    {
+      "start": "2026-10-19",
+      "end": "2026-10-26",
+      "title": "ハロウィン特選",
+      "native_ids": [
+        1072,
+        1320,
+        1033,
+        1034
+      ]
+    },
+    {
+      "start": "2026-10-26",
+      "end": "2026-11-02",
+      "title": "ハロウィン特選",
+      "native_ids": [
+        1072,
+        1320,
+        1035,
+        1070
+      ]
+    },
+    {
+      "start": "2026-11-02",
+      "end": "2026-11-09",
+      "title": "週間チャレンジ特選",
+      "native_ids": [
+        1079,
+        1146,
+        1182,
+        1116
+      ]
+    },
+    {
+      "start": "2026-11-09",
+      "end": "2026-11-16",
+      "title": "週間チャレンジ特選",
+      "native_ids": [
+        1033,
+        1034,
+        1035,
+        1070
+      ]
+    },
+    {
+      "start": "2026-11-16",
+      "end": "2026-11-23",
+      "title": "週間チャレンジ特選",
+      "native_ids": [
+        1079,
+        1146,
+        1182,
+        1116
+      ]
+    },
+    {
+      "start": "2026-11-23",
+      "end": "2026-11-30",
+      "title": "週間チャレンジ特選",
+      "native_ids": [
+        1033,
+        1034,
+        1035,
+        1070
+      ]
+    }
   ],
   "monthly": [
-    {"start": "2026-10-01", "end": "2026-11-01", "title": "10月：秋だよ運動会！・文化祭グルメ戦争", "native_ids": [1038, 1174]},
-    {"start": "2026-11-01", "end": "2026-12-01", "title": "11月：勤労感謝スペシャル！・謎の宅配便", "native_ids": [1009, 1116]}
+    {
+      "start": "2026-10-01",
+      "end": "2026-11-01",
+      "title": "10月：秋だよ運動会！・夜だよ！大運動会",
+      "native_ids": [
+        1038,
+        1170
+      ]
+    },
+    {
+      "start": "2026-11-01",
+      "end": "2026-12-01",
+      "title": "11月：勤労感謝スペシャル！・文化祭グルメ戦争",
+      "native_ids": [
+        1009,
+        1174
+      ]
+    }
+  ],
+  "timed": [
+    {
+      "title": "月曜ステージ",
+      "native_ids": [
+        1000
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        0
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "ゲリラ月曜ステージ",
+      "native_ids": [
+        1073
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        0
+      ],
+      "from_time": "08:00",
+      "to_time": "09:00"
+    },
+    {
+      "title": "ゲリラ月曜ステージ",
+      "native_ids": [
+        1073
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        0
+      ],
+      "from_time": "12:00",
+      "to_time": "13:00"
+    },
+    {
+      "title": "ゲリラ月曜ステージ",
+      "native_ids": [
+        1073
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        0
+      ],
+      "from_time": "19:00",
+      "to_time": "20:00"
+    },
+    {
+      "title": "火曜ステージ",
+      "native_ids": [
+        1001
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        1
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "ゲリラ火曜ステージ",
+      "native_ids": [
+        1074
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        1
+      ],
+      "from_time": "08:00",
+      "to_time": "09:00"
+    },
+    {
+      "title": "ゲリラ火曜ステージ",
+      "native_ids": [
+        1074
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        1
+      ],
+      "from_time": "12:00",
+      "to_time": "13:00"
+    },
+    {
+      "title": "ゲリラ火曜ステージ",
+      "native_ids": [
+        1074
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        1
+      ],
+      "from_time": "19:00",
+      "to_time": "20:00"
+    },
+    {
+      "title": "水曜ステージ",
+      "native_ids": [
+        1002
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        2
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "ゲリラ水曜ステージ",
+      "native_ids": [
+        1075
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        2
+      ],
+      "from_time": "08:00",
+      "to_time": "09:00"
+    },
+    {
+      "title": "ゲリラ水曜ステージ",
+      "native_ids": [
+        1075
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        2
+      ],
+      "from_time": "12:00",
+      "to_time": "13:00"
+    },
+    {
+      "title": "ゲリラ水曜ステージ",
+      "native_ids": [
+        1075
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        2
+      ],
+      "from_time": "19:00",
+      "to_time": "20:00"
+    },
+    {
+      "title": "木曜ステージ",
+      "native_ids": [
+        1003
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        3
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "ゲリラ木曜ステージ",
+      "native_ids": [
+        1076
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        3
+      ],
+      "from_time": "08:00",
+      "to_time": "09:00"
+    },
+    {
+      "title": "ゲリラ木曜ステージ",
+      "native_ids": [
+        1076
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        3
+      ],
+      "from_time": "12:00",
+      "to_time": "13:00"
+    },
+    {
+      "title": "ゲリラ木曜ステージ",
+      "native_ids": [
+        1076
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        3
+      ],
+      "from_time": "19:00",
+      "to_time": "20:00"
+    },
+    {
+      "title": "金曜ステージ",
+      "native_ids": [
+        1004
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        4
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "ゲリラ金曜ステージ",
+      "native_ids": [
+        1077
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        4
+      ],
+      "from_time": "08:00",
+      "to_time": "09:00"
+    },
+    {
+      "title": "ゲリラ金曜ステージ",
+      "native_ids": [
+        1077
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        4
+      ],
+      "from_time": "12:00",
+      "to_time": "13:00"
+    },
+    {
+      "title": "ゲリラ金曜ステージ",
+      "native_ids": [
+        1077
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        4
+      ],
+      "from_time": "19:00",
+      "to_time": "20:00"
+    },
+    {
+      "title": "土日ステージ",
+      "native_ids": [
+        1027
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        5,
+        6
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "ゲリラ経験値にゃ！",
+      "native_ids": [
+        1028
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        0
+      ],
+      "from_time": "11:00",
+      "to_time": "12:00"
+    },
+    {
+      "title": "ゲリラ経験値にゃ！",
+      "native_ids": [
+        1028
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        0
+      ],
+      "from_time": "22:00",
+      "to_time": "23:00"
+    },
+    {
+      "title": "ゲリラ経験値にゃ！",
+      "native_ids": [
+        1028
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        1
+      ],
+      "from_time": "08:00",
+      "to_time": "09:00"
+    },
+    {
+      "title": "ゲリラ経験値にゃ！",
+      "native_ids": [
+        1028
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        1
+      ],
+      "from_time": "19:00",
+      "to_time": "20:00"
+    },
+    {
+      "title": "ゲリラ経験値にゃ！",
+      "native_ids": [
+        1028
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        2
+      ],
+      "from_time": "13:00",
+      "to_time": "14:00"
+    },
+    {
+      "title": "ゲリラ経験値にゃ！",
+      "native_ids": [
+        1028
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        2
+      ],
+      "from_time": "21:00",
+      "to_time": "22:00"
+    },
+    {
+      "title": "ゲリラ経験値にゃ！",
+      "native_ids": [
+        1028
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        3
+      ],
+      "from_time": "12:00",
+      "to_time": "13:00"
+    },
+    {
+      "title": "ゲリラ経験値にゃ！",
+      "native_ids": [
+        1028
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        3
+      ],
+      "from_time": "20:00",
+      "to_time": "21:00"
+    },
+    {
+      "title": "ゲリラ経験値にゃ！",
+      "native_ids": [
+        1028
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        4
+      ],
+      "from_time": "11:00",
+      "to_time": "12:00"
+    },
+    {
+      "title": "ゲリラ経験値にゃ！",
+      "native_ids": [
+        1028
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        4
+      ],
+      "from_time": "17:00",
+      "to_time": "18:00"
+    },
+    {
+      "title": "超ゲリラ経験値にゃ！",
+      "native_ids": [
+        1059
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        0
+      ],
+      "from_time": "12:00",
+      "to_time": "13:00"
+    },
+    {
+      "title": "超ゲリラ経験値にゃ！",
+      "native_ids": [
+        1059
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        1
+      ],
+      "from_time": "16:00",
+      "to_time": "17:00"
+    },
+    {
+      "title": "超ゲリラ経験値にゃ！",
+      "native_ids": [
+        1059
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        2
+      ],
+      "from_time": "19:00",
+      "to_time": "20:00"
+    },
+    {
+      "title": "超ゲリラ経験値にゃ！",
+      "native_ids": [
+        1059
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        3
+      ],
+      "from_time": "07:00",
+      "to_time": "08:00"
+    },
+    {
+      "title": "超ゲリラ経験値にゃ！",
+      "native_ids": [
+        1059
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        4
+      ],
+      "from_time": "13:00",
+      "to_time": "14:00"
+    },
+    {
+      "title": "超ゲリラ経験値にゃ！",
+      "native_ids": [
+        1059
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        5
+      ],
+      "from_time": "11:00",
+      "to_time": "12:00"
+    },
+    {
+      "title": "超ゲリラ経験値にゃ！",
+      "native_ids": [
+        1059
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        5
+      ],
+      "from_time": "23:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "超ゲリラ経験値にゃ！",
+      "native_ids": [
+        1059
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        6
+      ],
+      "from_time": "13:00",
+      "to_time": "14:00"
+    },
+    {
+      "title": "超ゲリラ経験値にゃ！",
+      "native_ids": [
+        1059
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        6
+      ],
+      "from_time": "20:00",
+      "to_time": "21:00"
+    },
+    {
+      "title": "極ゲリラ経験値にゃ！",
+      "native_ids": [
+        1124
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        0
+      ],
+      "from_time": "12:00",
+      "to_time": "13:00"
+    },
+    {
+      "title": "極ゲリラ経験値にゃ！",
+      "native_ids": [
+        1124
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        2
+      ],
+      "from_time": "15:00",
+      "to_time": "16:00"
+    },
+    {
+      "title": "極ゲリラ経験値にゃ！",
+      "native_ids": [
+        1124
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        4
+      ],
+      "from_time": "19:00",
+      "to_time": "20:00"
+    },
+    {
+      "title": "極ゲリラ経験値にゃ！",
+      "native_ids": [
+        1124
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        5
+      ],
+      "from_time": "12:00",
+      "to_time": "13:00"
+    },
+    {
+      "title": "極ゲリラ経験値にゃ！",
+      "native_ids": [
+        1124
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        5
+      ],
+      "from_time": "22:00",
+      "to_time": "23:00"
+    },
+    {
+      "title": "極ゲリラ経験値にゃ！",
+      "native_ids": [
+        1124
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        6
+      ],
+      "from_time": "10:00",
+      "to_time": "11:00"
+    },
+    {
+      "title": "極ゲリラ経験値にゃ！",
+      "native_ids": [
+        1124
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        6
+      ],
+      "from_time": "16:00",
+      "to_time": "17:00"
+    },
+    {
+      "title": "超極ゲリラ経験値にゃ！",
+      "native_ids": [
+        1155
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        1
+      ],
+      "from_time": "13:00",
+      "to_time": "14:00"
+    },
+    {
+      "title": "超極ゲリラ経験値にゃ！",
+      "native_ids": [
+        1155
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        3
+      ],
+      "from_time": "17:00",
+      "to_time": "18:00"
+    },
+    {
+      "title": "超極ゲリラ経験値にゃ！",
+      "native_ids": [
+        1155
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        5
+      ],
+      "from_time": "10:00",
+      "to_time": "11:00"
+    },
+    {
+      "title": "超極ゲリラ経験値にゃ！",
+      "native_ids": [
+        1155
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        6
+      ],
+      "from_time": "21:00",
+      "to_time": "22:00"
+    },
+    {
+      "title": "超極悪ゲリラ経験値にゃ！",
+      "native_ids": [
+        1319
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        0
+      ],
+      "from_time": "13:00",
+      "to_time": "14:00"
+    },
+    {
+      "title": "超極悪ゲリラ経験値にゃ！",
+      "native_ids": [
+        1319
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        2
+      ],
+      "from_time": "19:00",
+      "to_time": "20:00"
+    },
+    {
+      "title": "超極悪ゲリラ経験値にゃ！",
+      "native_ids": [
+        1319
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        5
+      ],
+      "from_time": "11:00",
+      "to_time": "12:00"
+    },
+    {
+      "title": "超極悪ゲリラ経験値にゃ！",
+      "native_ids": [
+        1319
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        6
+      ],
+      "from_time": "19:00",
+      "to_time": "20:00"
+    },
+    {
+      "title": "にゃんチケ★チャンス！",
+      "native_ids": [
+        1006
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        0
+      ],
+      "from_time": "07:00",
+      "to_time": "08:00"
+    },
+    {
+      "title": "にゃんチケ★チャンス！",
+      "native_ids": [
+        1006
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        0
+      ],
+      "from_time": "20:00",
+      "to_time": "21:00"
+    },
+    {
+      "title": "にゃんチケ★チャンス！",
+      "native_ids": [
+        1006
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        1
+      ],
+      "from_time": "11:00",
+      "to_time": "12:00"
+    },
+    {
+      "title": "にゃんチケ★チャンス！",
+      "native_ids": [
+        1006
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        1
+      ],
+      "from_time": "23:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "にゃんチケ★チャンス！",
+      "native_ids": [
+        1006
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        2
+      ],
+      "from_time": "08:00",
+      "to_time": "09:00"
+    },
+    {
+      "title": "にゃんチケ★チャンス！",
+      "native_ids": [
+        1006
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        2
+      ],
+      "from_time": "16:00",
+      "to_time": "17:00"
+    },
+    {
+      "title": "にゃんチケ★チャンス！",
+      "native_ids": [
+        1006
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        3
+      ],
+      "from_time": "13:00",
+      "to_time": "14:00"
+    },
+    {
+      "title": "にゃんチケ★チャンス！",
+      "native_ids": [
+        1006
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        3
+      ],
+      "from_time": "23:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "にゃんチケ★チャンス！",
+      "native_ids": [
+        1006
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        4
+      ],
+      "from_time": "08:00",
+      "to_time": "09:00"
+    },
+    {
+      "title": "にゃんチケ★チャンス！",
+      "native_ids": [
+        1006
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        4
+      ],
+      "from_time": "22:00",
+      "to_time": "23:00"
+    },
+    {
+      "title": "にゃんチケ★チャンス！",
+      "native_ids": [
+        1006
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        5
+      ],
+      "from_time": "13:00",
+      "to_time": "14:00"
+    },
+    {
+      "title": "にゃんチケ★チャンス！",
+      "native_ids": [
+        1006
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        5
+      ],
+      "from_time": "21:00",
+      "to_time": "22:00"
+    },
+    {
+      "title": "にゃんチケ★チャンス！",
+      "native_ids": [
+        1006
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        6
+      ],
+      "from_time": "11:00",
+      "to_time": "12:00"
+    },
+    {
+      "title": "にゃんチケ★チャンス！",
+      "native_ids": [
+        1006
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        6
+      ],
+      "from_time": "22:00",
+      "to_time": "23:00"
+    },
+    {
+      "title": "逆襲のカバちゃん",
+      "native_ids": [
+        1007
+      ],
+      "mode": "monthly",
+      "monthdays": [
+        1
+      ],
+      "from_time": "07:00",
+      "to_time": "08:00"
+    },
+    {
+      "title": "逆襲のカバちゃん",
+      "native_ids": [
+        1007
+      ],
+      "mode": "monthly",
+      "monthdays": [
+        4
+      ],
+      "from_time": "11:00",
+      "to_time": "12:00"
+    },
+    {
+      "title": "逆襲のカバちゃん",
+      "native_ids": [
+        1007
+      ],
+      "mode": "monthly",
+      "monthdays": [
+        7
+      ],
+      "from_time": "16:00",
+      "to_time": "17:00"
+    },
+    {
+      "title": "逆襲のカバちゃん",
+      "native_ids": [
+        1007
+      ],
+      "mode": "monthly",
+      "monthdays": [
+        10
+      ],
+      "from_time": "08:00",
+      "to_time": "09:00"
+    },
+    {
+      "title": "逆襲のカバちゃん",
+      "native_ids": [
+        1007
+      ],
+      "mode": "monthly",
+      "monthdays": [
+        13
+      ],
+      "from_time": "12:00",
+      "to_time": "13:00"
+    },
+    {
+      "title": "逆襲のカバちゃん",
+      "native_ids": [
+        1007
+      ],
+      "mode": "monthly",
+      "monthdays": [
+        16
+      ],
+      "from_time": "17:00",
+      "to_time": "18:00"
+    },
+    {
+      "title": "逆襲のカバちゃん",
+      "native_ids": [
+        1007
+      ],
+      "mode": "monthly",
+      "monthdays": [
+        19
+      ],
+      "from_time": "13:00",
+      "to_time": "14:00"
+    },
+    {
+      "title": "逆襲のカバちゃん",
+      "native_ids": [
+        1007
+      ],
+      "mode": "monthly",
+      "monthdays": [
+        22
+      ],
+      "from_time": "19:00",
+      "to_time": "20:00"
+    },
+    {
+      "title": "逆襲のカバちゃん",
+      "native_ids": [
+        1007
+      ],
+      "mode": "monthly",
+      "monthdays": [
+        25
+      ],
+      "from_time": "20:00",
+      "to_time": "21:00"
+    },
+    {
+      "title": "逆襲のカバちゃん",
+      "native_ids": [
+        1007
+      ],
+      "mode": "monthly",
+      "monthdays": [
+        28
+      ],
+      "from_time": "21:00",
+      "to_time": "22:00"
+    },
+    {
+      "title": "逆襲のカバちゃん",
+      "native_ids": [
+        1007
+      ],
+      "mode": "monthly",
+      "monthdays": [
+        31
+      ],
+      "from_time": "22:00",
+      "to_time": "23:00"
+    },
+    {
+      "title": "逆襲のカオル君",
+      "native_ids": [
+        1078
+      ],
+      "mode": "monthly",
+      "monthdays": [
+        2,
+        8,
+        14,
+        20,
+        26
+      ],
+      "from_time": "00:00",
+      "to_time": "12:00"
+    },
+    {
+      "title": "逆襲のカオル君",
+      "native_ids": [
+        1078
+      ],
+      "mode": "monthly",
+      "monthdays": [
+        5,
+        11,
+        17,
+        23,
+        29
+      ],
+      "from_time": "12:00",
+      "to_time": "00:00"
+    }
   ]
 }
