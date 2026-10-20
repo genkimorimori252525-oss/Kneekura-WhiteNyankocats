@@ -67,3 +67,16 @@ Only record verification that was actually performed.
 - PASS: private approved-v2/v3 comparison: only `702_f.mamodel` root X `1790 -> -1790`; other 8 payloads identical.
 - PASS: 6split build `20261019T184640Z-35b3aee8`, candidate `phone-20261019T184729Z-525a825b`; private proof `liveops-investigation/godzilla-facing-fix-proof.json`.
 - NOT_RUN: actual renderer visual check and phone installation; minimal verification requested. Existing FAIL/UNKNOWN evidence remains applicable.
+| OPS-BATCH-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_67b8f8434e704708a0351e2648530901.json |
+
+## 2026-10-20 — OPS-BATCH-001 完全反転の再検証
+
+- FAIL: 本人画像と旧版PCでroot Xだけの変換が姿勢を崩すことを再現。初回21 tests／build PASSは保持するが、描画受入PASSではない。
+- FAIL: 角度修正だけの中間版 `20261020T075455Z-3855fac1` は実戦後native crash。private `godzilla-facing/scoped-runtime.log`、`exit-info.txt`。敵config1件／味方は2件を要求する差を原本とnative呼出しで確認。
+- PASS: 修正前に落ちる回転／config添字の回帰を追加後、関連23 tests。Agent terminal report SHA `753761cfcdcf5e42772ad2914a0b72d362d8dae045fff39b1a3486d26813a1ea`。
+- PASS: 最終cache approved-v5、全609フレーム／375144頂点の左右対称誤差0。実command receipt [67b8f843](verification-receipts/OPS-BATCH-001_67b8f8434e704708a0351e2648530901.json)。独立描画計算であり、原作内確認とは別。
+- PASS: 最終6split build `20261020T082803Z-c0206218`、phone候補 `phone-20261020T083338Z-b8c65002`。スマホ再更新は未実施。
+| OPS-BATCH-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_c67606c43b984a3387cbefdbe2d74d20.json |
+- PASS: 最終原作PCで敵味方同時の左右反転描画、左向き歩行・攻撃・完全勝利。36観測／約158秒生存、追加native crashなし。[実command receipt c67606c4](verification-receipts/OPS-BATCH-001_c67606c43b984a3387cbefdbe2d74d20.json)。private `godzilla-facing/FINAL-PC-ACCEPTANCE.json` と実画面を確認。
+- PASS: 元PC SAVEをbyte単位で復元、SHA `2f65346e49e86492ce3044ada10bf6ad93707d49afae27ec4778e298443ad01c`。
+- NOT_RUN: スマホ再更新／本人の最終確認。接続端末は専用AVDのみ。旧版の今回観測は生存しており、毎回のcrash再現や全体安定性の証明にはしない。

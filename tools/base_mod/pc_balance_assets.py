@@ -35,16 +35,72 @@ def validate_pc_form_delta(original, candidate, *, file_name, original_sha):
 
 PAYLOAD_SHA256 = {
     '702_f.imgcut':'6670e6c1104d420e7a519ed2aadfb58a559a113feb041ae1c22aeac3c617bf43',
-    '702_f.mamodel':'0e667b966d7acfe4861ad337208944e153150aa6c68b0d976fcb47b9ed92523b',
+    '702_f.mamodel':'c05d62c27930517a306545b92b042399bf73ae8188aff01132c10da393455554',
     '702_f.png':'f168a34a23d8097f6a8b6cd5f2eb6daab8135fad3009205880155a94df15526d',
-    '702_f00.maanim':'21e3e497e1c1c80ab976d253737da24267014839cb7dc4b332bd61f5b01d84de',
-    '702_f01.maanim':'22e617f31066c17fd6d1e9cff8c741d30dbec93f74b27c597c0add1fe37a904c',
-    '702_f02.maanim':'4b26668480db0e53ac7aa0afaf431332d40e0456d7ccc7ed48acc689922a0bf8',
-    '702_f03.maanim':'c810a20851049257978a40e492beb8f14ddee41efbf7084342c2a765d909541c',
+    '702_f00.maanim':'d38726ad79a09a1baf5e64018b49bd9be6c47755f777fe9be8a607c4853a59ce',
+    '702_f01.maanim':'dd295f3f53d086352e57b1293e42651912598addd9e0d377a71cf7819454ffed',
+    '702_f02.maanim':'2bca2d1c9fd9dc88e64e39771514686dcc20141871201dfdb413e91c91e5e0d8',
+    '702_f03.maanim':'b5afe2797db1b1547f0e3fbc3bc00ec79faf1d20963f6de823ed887bafa411f6',
     'unit289.csv':'e26afee204527508a0f8e06faa04a4431cf508ea30d251d2c3da917b70c6185a',
     'unit703.csv':'9fc373f2177dfe0017dc3c20d98c50603325aa7a740aee9d271c7f772af36e56',
 }
 PAIR = ('assets/DownloadLocal.list','assets/DownloadLocal.pack')
+
+
+def reflect_godzilla_rotations(name: str, raw: bytes) -> bytes:
+    """Complete the validated 702_f root reflection, including animated joints.
+
+    The renderer inherits signed size separately from rotation. Negating root
+    X alone leaves R(angle) M(x); negating every joint angle gives M(x) R(angle).
+    Timing, easing, translations, texture, pivots and model footer stay intact.
+    Input is the seven-file rig already validated by the conversion pipeline.
+    """
+    from tools.base_mod.prepare_godzilla_ally_preview import _newline_of
+    if name not in ('702_f.mamodel', *(f'702_f0{i}.maanim' for i in range(4))):
+        return raw
+    lines=raw.splitlines(keepends=True)
+
+    def negate(at, column):
+        fields=lines[at].rstrip(b'\r\n').split(b',')
+        value=int(fields[column])
+        if value:
+            fields[column]=str(-value).encode('ascii')
+            lines[at]=b','.join(fields)+_newline_of(lines[at])
+
+    count=int(lines[2])
+    if name.endswith('.mamodel'):
+        for at in range(3,3+count): negate(at,10)
+    else:
+        at=3
+        for _ in range(count):
+            kind=int(lines[at].split(b',')[1])
+            keys=int(lines[at+1])
+            if kind==11:
+                for key in range(at+2,at+2+keys): negate(key,1)
+            at+=2+keys
+    return b''.join(lines)
+
+
+def ensure_godzilla_ally_anchors(raw: bytes) -> bytes:
+    """Keep the enemy's visual origin and add the original ally's neutral point.
+
+    JP15.7.1's ally path selects configuration flags & 1. Enemy550 supplies
+    only config0; original 702_f/702_c supply config1=(0,0,0,0,5,0).
+    Without it, a later battle update reads past the configuration array.
+    """
+    from tools.base_mod.prepare_godzilla_ally_preview import _newline_of
+    lines=raw.splitlines(keepends=True)
+    at=4+int(lines[2])
+    if len(lines)!=at+2 or int(lines[at])!=1:
+        raise ValueError('PC_GODZILLA_ENEMY_ANCHOR_LAYOUT_CHANGED')
+    anchor=lines[at+1].rstrip(b'\r\n').split(b',',6)
+    if len(anchor)!=7 or [int(v) for v in anchor[:2]]!=[0,0]:
+        raise ValueError('PC_GODZILLA_ROOT_ANCHOR_CHANGED')
+    ending=_newline_of(lines[at]) or b'\n'
+    lines[at]=b'2'+ending
+    if not _newline_of(lines[-1]): lines[-1]+=ending
+    lines.append(b'0,0,0,0,5,0,'+anchor[6]+ending)
+    return b''.join(lines)
 
 
 def load_pinned_assets(directory: Path):
@@ -70,7 +126,7 @@ def prepare_assets(owner_export: Path, server_source: Path, parent: Path):
     from tools.base_mod.fetch_godzilla_server_assets import complete_owner_private_godzilla_pipeline
     parent.mkdir(parents=True,exist_ok=True)
     if parent.is_symlink(): raise ValueError('PC_BALANCE_PRIVATE_CACHE_LINK_REFUSED')
-    output=parent/'approved-v3'
+    output=parent/'approved-v5'
     if output.exists():
         load_pinned_assets(output)
         return output
@@ -82,7 +138,9 @@ def prepare_assets(owner_export: Path, server_source: Path, parent: Path):
         staged=work/'approved'
         staged.mkdir()
         for name in PAYLOAD_SHA256.keys()-SOURCE_UNIT_SHA.keys():
-            (staged/name).write_bytes((work/'ally'/name).read_bytes())
+            payload=reflect_godzilla_rotations(name,(work/'ally'/name).read_bytes())
+            if name=='702_f.mamodel': payload=ensure_godzilla_ally_anchors(payload)
+            (staged/name).write_bytes(payload)
         with BattleCatsExport(owner_export,region='jp',expected_sha256=EXPORT_SHA256) as export:
             data=export.pack('DataLocal')
             for name,(form,values) in TARGET.items():

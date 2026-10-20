@@ -521,3 +521,11 @@ GitHubの `1adc14a` ではTest tooling／Agent terminalがFAIL。既存の元bac
 - お知らせpackは変更せず、この小さな表示修正は本台帳に記録する。運営予定の再生成や追加プレイ検証へ広げない。
 
 本人のUSB接続依頼後、初回は接続端末0台のため導入前に停止。再接続の明示連絡後、上記候補をAndroid `-r` で更新成功。既存署名・全6split SHA・UID/dataDir保持を確認。スマホ起動・画面・ログ・SAVE取得なし。private receiptは当該phone-buildの `PHONE-OPS-UPDATE.json`。本人の向き確認は待機。
+
+### 同日追記：初回候補は本人の描画確認でFAIL
+
+本人から姿勢が崩れ、ムーンウォークのように見えるとの報告。横倍率だけでは関節の回転が反転しないことを、PCの旧版でも再現した。初期角度と全回転trackを反転し、全609フレームの左右対称を確認する回帰へ変更。
+
+中間版のPC実戦ではさらにnative crashを検出。敵550のmodelはconfig1件、元の味方702_f／702_cは2件で、味方nativeの `flags & 1` による2件目取得が範囲外になっていた。主描画原点を残し、元の味方と同じneutral config1を追加する。角度だけ直した中間版の描画成功とnative crashは別証拠として保持する。
+
+最終候補と限定した再検証は[完全反転の原因・検証記録](2026-10-20-godzilla-complete-reflection.md)にまとめる。以後、敵rig移植ではsigned scale・回転・味方固有の座標設定を一緒に確認し、署名やbuildだけで見た目PASSにしない。

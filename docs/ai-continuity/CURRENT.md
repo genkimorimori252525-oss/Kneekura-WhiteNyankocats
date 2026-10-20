@@ -2,16 +2,22 @@
 current_task: "OPS-BATCH-001"
 active_agent: "Codex"
 branch: "codex/pc-local-lab-2026-10-12"
-commit_head: "672b5fbd760b843a54e1a07498906aa22b35e543"
+commit_head: "1cdf3b22aa554c2275788665234c5d84514af6c7"
 status: "IN_PROGRESS"
-evidence_ref: "docs/research/failure-repair-history.md"
-updated_at: "2026-10-19T18:57:16.108224+00:00"
+evidence_ref: "docs/research/2026-10-20-godzilla-complete-reflection.md"
+updated_at: "2026-10-20T08:50:21.816084+00:00"
 
 ---
 
 # Current Progress State
 
-## 2026-10-20：シンゴジラの味方向き修正候補
+## 2026-10-20：シンゴジラの完全反転・味方用座標設定
+
+- 最初の横倍率だけの修正は本人の画面でFAIL。旧版の姿勢をPCでも再現。最新要求は[実描画確認を含む受入条件](AMENDMENTS/2026-10-20-godzilla-visual-verification.md)。初回21 tests／build PASSを見た目の合格に読み替えない。
+- 初期角度と4動作の回転trackも反転。609フレーム・375,144頂点の左右対称誤差0。元画像・frame／easing・移動・能力値を保持。PC実戦で別途発見したconfig1件→味方が要求する2件への不足も修正。中間版native crashのFAILは保持。
+- 関連23 tests PASS、build `20261020T082803Z-c0206218`、phone候補 `phone-20261020T083338Z-b8c65002`。原作PCで敵と味方の同時描画、左向き歩行・対向する攻撃・完全勝利まで確認。36観測／約158秒で追加native crashなし。元のPC SAVEはSHA一致で復元。スマホは初回版のまま（USB端末なし）。詳細は[原因・検証記録](../research/2026-10-20-godzilla-complete-reflection.md)。
+
+## 初回の味方向き候補（本人のFAIL受領、上記で修正中）
 
 - 本人の最小修正・最小検証指定。`702_f.mamodel` root Xだけ `1790 → -1790`、他8 payload同一。converter・pin・cache版・既存回帰を更新。関連21 tests／6split build PASS。
 - PC build `20261019T184640Z-35b3aee8`、phone候補 `phone-20261019T184729Z-525a825b` 作成済み。本人のUSB再接続後、同署名・全6SHA一致・UID/dataDir保持でスマホ更新成功。起動・画面・ログ・SAVE取得は行わず、実描画は本人確認待ち。詳細は[不具合台帳](../research/failure-repair-history.md#2026-10-20--味方シンゴジラの表示方向)。SAVE・運営予定に変更なし。
