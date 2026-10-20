@@ -1,0 +1,3 @@
+# Preserve measured Windows command-output bytes for these evidence receipts.
+docs/ai-continuity/verification-receipts/OPS-BATCH-001_67b8f8434e704708a0351e2648530901.log -text
+docs/ai-continuity/verification-receipts/OPS-BATCH-001_c67606c43b984a3387cbefdbe2d74d20.log -text
