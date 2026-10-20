@@ -7,6 +7,16 @@ from tools.base_mod.verify_static_http_bridge import verify_static_http_bridge
 
 
 class PcBalanceAssetTests(unittest.TestCase):
+    def test_portrait_import_rejects_unapproved_source_before_pack_access(self):
+        from tools.base_mod.godzilla_portrait import prepare_portraits, PORTRAIT_SHA256
+        self.assertEqual(set(PORTRAIT_SHA256), {
+            'uni702_f00.png', 'udi702_f.png', 'gatyachara_702_f.png'})
+        with tempfile.TemporaryDirectory() as folder:
+            source=Path(folder)/'owner-source.png'
+            source.write_bytes(b'unapproved image')
+            with self.assertRaisesRegex(ValueError,'PORTRAIT_SOURCE_CHANGED'):
+                prepare_portraits(source,Path(folder)/'no-server-packs')
+
     def test_allied_hitpoint_selector_can_read_both_configurations(self):
         from tools.base_mod import pc_balance_assets as assets
         from tools.base_mod.prepare_godzilla_ally_preview import preview_converted_ally_rig

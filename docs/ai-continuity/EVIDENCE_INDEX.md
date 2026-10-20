@@ -80,3 +80,7 @@ Only record verification that was actually performed.
 - PASS: 最終原作PCで敵味方同時の左右反転描画、左向き歩行・攻撃・完全勝利。36観測／約158秒生存、追加native crashなし。[実command receipt c67606c4](verification-receipts/OPS-BATCH-001_c67606c43b984a3387cbefdbe2d74d20.json)。private `godzilla-facing/FINAL-PC-ACCEPTANCE.json` と実画面を確認。
 - PASS: 元PC SAVEをbyte単位で復元、SHA `2f65346e49e86492ce3044ada10bf6ad93707d49afae27ec4778e298443ad01c`。
 - NOT_RUN: スマホ再更新／本人の最終確認。接続端末は専用AVDのみ。旧版の今回観測は生存しており、毎回のcrash再現や全体安定性の証明にはしない。
+# 2026-10-20 指定キャラ写真
+
+- [実装・証拠の所在](../research/2026-10-20-godzilla-portrait.md)：関連24 tests PASS（agent terminal `godzilla-portrait-related`）、12 payloadのうち元9件byte一致、3 PNG原作寸法・枠外画素一致。原作PC編成画面で新しい出撃アイコンを確認。育成用・入手用はPNG画像確認まで、実画面NOT_RUN。
+- PC `20261020T123613Z-556bd0a8` 6 split build／導入SHA一致。スマホ候補 `phone-20261020T124348Z-e45a2eb7` 作成、導入・本人確認NOT_RUN。PC試験用SAVE復元済み。以前のFAIL／UNKNOWNを変更しない。

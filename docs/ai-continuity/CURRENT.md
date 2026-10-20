@@ -2,14 +2,20 @@
 current_task: "OPS-BATCH-001"
 active_agent: "Codex"
 branch: "codex/pc-local-lab-2026-10-12"
-commit_head: "1cdf3b22aa554c2275788665234c5d84514af6c7"
+commit_head: "26e60c875b8a130bcf143089cd11729e76e4527c"
 status: "IN_PROGRESS"
-evidence_ref: "docs/research/2026-10-20-godzilla-complete-reflection.md"
-updated_at: "2026-10-20T08:50:21.816084+00:00"
+evidence_ref: "docs/research/2026-10-20-godzilla-portrait.md"
+updated_at: "2026-10-20T12:51:27.245302+00:00"
 
 ---
 
 # Current Progress State
+
+## 2026-10-20：所有者指定のキャラ写真
+
+- No.703第1形態の出撃・育成・入手用PNG3点を、指定原画から原作寸法・枠を保持して変換。private原画＋公開ハッシュ／変換コード。元の戦闘rig・CSV9点はv5とbyte一致。詳細は[画像差し替え記録](../research/2026-10-20-godzilla-portrait.md)。
+- 関連24 tests、6 split build・導入SHA照合PASS。PC原作編成画面で出撃アイコン確認。育成・入手PNGは画像確認＋枠外画素一致、両実画面はNOT_RUN。PC一時SAVEは元bytesへ復元、停止済み。
+- 最新PC `20261020T123613Z-556bd0a8`、最新スマホ候補 `phone-20261020T124348Z-e45a2eb7`。スマホ導入・本人確認待ち。前回の完全反転＋味方config修正を含む。追加のスマホ操作・ログ・SAVE取得なし。過去FAIL／UNKNOWNとCharter外部承認不足は保持。
 
 ## 2026-10-20：シンゴジラの完全反転・味方用座標設定
 

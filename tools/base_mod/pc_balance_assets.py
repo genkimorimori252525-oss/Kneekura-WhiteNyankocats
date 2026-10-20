@@ -1,4 +1,4 @@
-"""Exact private PC data overlay: two approved forms and seven Godzilla assets.
+"""Exact private PC overlay: two approved forms, Godzilla rig and portraits.
 
 Pins were derived locally from the owned JP15.7.1 export and four verified
 Server files. No original bytes are stored in this source file.
@@ -10,6 +10,7 @@ from zipfile import ZipFile
 
 from tools.battlecats_pack import PackReader
 from tools.base_mod.build_update_101_unsigned import validate_form_delta, SOURCE_UNIT_SHA
+from tools.base_mod.godzilla_portrait import PORTRAIT_SHA256, prepare_portraits
 
 # Original enemy550's native timings, not guessed from animation key density.
 PC_RIG_FIELDS = {4:120, 13:130, 61:170, 62:210}
@@ -43,6 +44,7 @@ PAYLOAD_SHA256 = {
     '702_f03.maanim':'b5afe2797db1b1547f0e3fbc3bc00ec79faf1d20963f6de823ed887bafa411f6',
     'unit289.csv':'e26afee204527508a0f8e06faa04a4431cf508ea30d251d2c3da917b70c6185a',
     'unit703.csv':'9fc373f2177dfe0017dc3c20d98c50603325aa7a740aee9d271c7f772af36e56',
+    **PORTRAIT_SHA256,
 }
 PAIR = ('assets/DownloadLocal.list','assets/DownloadLocal.pack')
 
@@ -126,7 +128,7 @@ def prepare_assets(owner_export: Path, server_source: Path, parent: Path):
     from tools.base_mod.fetch_godzilla_server_assets import complete_owner_private_godzilla_pipeline
     parent.mkdir(parents=True,exist_ok=True)
     if parent.is_symlink(): raise ValueError('PC_BALANCE_PRIVATE_CACHE_LINK_REFUSED')
-    output=parent/'approved-v5'
+    output=parent/'approved-v6'
     if output.exists():
         load_pinned_assets(output)
         return output
@@ -137,9 +139,11 @@ def prepare_assets(owner_export: Path, server_source: Path, parent: Path):
             private_root=work)
         staged=work/'approved'
         staged.mkdir()
-        for name in PAYLOAD_SHA256.keys()-SOURCE_UNIT_SHA.keys():
+        for name in PAYLOAD_SHA256.keys()-SOURCE_UNIT_SHA.keys()-PORTRAIT_SHA256.keys():
             payload=reflect_godzilla_rotations(name,(work/'ally'/name).read_bytes())
             if name=='702_f.mamodel': payload=ensure_godzilla_ally_anchors(payload)
+            (staged/name).write_bytes(payload)
+        for name,payload in prepare_portraits(parent/'godzilla-portrait'/'owner-source.png',server_source).items():
             (staged/name).write_bytes(payload)
         with BattleCatsExport(owner_export,region='jp',expected_sha256=EXPORT_SHA256) as export:
             data=export.pack('DataLocal')
