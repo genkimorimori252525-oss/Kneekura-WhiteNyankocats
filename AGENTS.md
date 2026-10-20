@@ -9,6 +9,11 @@
 - PCの必要な検証が通れば受渡しへ進む。所有者のスマホ目視確認が未報告の項目は「本人確認待ち」と記録し、AIによるスマホ検証を受渡しの追加条件にしない。PCで確認した範囲と、本人が確認した範囲を分けて報告する。
 - この分担は、以下や過去の文書にある「AIが実機UI／再起動を検証してから渡す」手順に優先する。既存の署名・秘匿・データ保護・品質基準は維持し、未確認項目を成功扱いにしない。
 
+## 任意のAndroid逆解析スキル：REA（通常OFF）
+
+- APK/DEX/Smali/JNI/ネイティブコードの**具体的な逆解析が必要なときだけ**、[REAスキル](.agents/skills/rea-android-analysis/SKILL.md)を選択肢として検討する。既存ツールで十分なら使わない。
+- 普段の実装・テスト・運営作業ではREAのSkill詳細読込、インストール状況の確認、依存導入、MCP起動・登録を行わない。REAは必須ではなく、採用・不採用は根拠と負担で判断する。
+
 **FIRST: READ [CURRENT.md](CURRENT.md).** That file is the ONLY design entry point and links to [PRODUCT_IDENTITY.md](PRODUCT_IDENTITY.md) and the [four-feature active implementation roadmap](docs/roadmap/2026-10-09-original-battle-cats-delivery.md). Do **not** search all older design docs, open a new foundational spec series, continue the standalone lookalike Alpha as product work, or hand over an APK whose only achievement is passing basic CI. **The next implementation task is the first real original-game UI level-cap vertical slice, with full offline engineering investigated in parallel.**
 
 **OWNER WINDOWS PATHS ARE NOT GUESSWORK:** Read the “オーナーWindows開発環境 — 実測固定パス” section of [CURRENT.md](CURRENT.md) before proposing any Android SDK, adb, PowerShell, ZIP, or signing instructions. The confirmed SDK root is `C:\Users\genki\AppData\Local\Android\Sdk`, ADB is `platform-tools\adb.exe` below that root, project checkout is `C:\Users\genki\Downloads\Kneekura-WhiteNyankocats`, original owned ZIP is under `Downloads\にーくらにゃんこ\`, and the research kit is under `Downloads\kneekura-original-owner-trial-kit`. Use dynamic `adb devices` for current connection state; NEVER hardcode a device serial, fake `C:\PATH\TO` path, or infer the currently opened PowerShell directory is the repo. Exact current paths and Build-tools evidence are centralized in CURRENT.md; update there, not in new parallel rules.
