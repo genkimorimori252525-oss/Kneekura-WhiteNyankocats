@@ -11,6 +11,7 @@ from tools.localcore.opsctl import windows_in_range
 from tools.localcore.notice_feed import notice_feed
 from tools.liveops.original_schedule import EventWindow, ProtocolError, gacha_group_row, stage_row, stream
 from tools.liveops.original_ops_bundle import build_bundle
+from tools.liveops.operator_gifts import gift_rows
 
 
 def compile_calendar(pack, bindings, *, start_date, days, login_rotation=None):
@@ -121,7 +122,8 @@ def compile_calendar(pack, bindings, *, start_date, days, login_rotation=None):
         # rows keep their own original end dates; never extend their events.
         window=EventWindow(datetime(2000,1,1,tzinfo=JST),datetime(2037,1,1,tzinfo=JST))
     data=build_bundle(window,revision=pack['revision'],files={
-        'sale.tsv':stream(sale),'gatya.tsv':stream(gacha),'item.tsv':stream([])},
+        'sale.tsv':stream(sale),'gatya.tsv':stream(gacha),
+        'item.tsv':stream(gift_rows(pack.get('operator_gifts',[])))},
         login_rotation=login_rotation,notices=notices)
     return data,dict(calendar_sha256=canonical_hash(pack),windows=report,
         original_save_mutated=False,original_ui_accepted=False)

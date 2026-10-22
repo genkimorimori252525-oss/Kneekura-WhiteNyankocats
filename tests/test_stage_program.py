@@ -69,17 +69,17 @@ class StageProgramTests(unittest.TestCase):
         # Native Enigma ownership/identification remains a gameplay mechanism.
         self.assertFalse(any(n//1000==25 for n in self.ids('2026-10-23T22:00:00')))
 
-    def test_monthly_assault_handoff_at_eleven_and_weekly_deck_variety(self):
+    def test_monthly_assault_handoff_at_eleven_without_unrestricted_rotation(self):
         self.assertIn(24026,self.ids('2026-11-01T10:59:59'))
         self.assertNotIn(24026,self.ids('2026-11-01T11:00:00'))
         self.assertIn(24028,self.ids('2026-11-01T11:00:00'))
         self.assertNotIn(24028,self.ids('2026-11-16T11:00:00'))
         self.assertIn(24029,self.ids('2026-11-16T11:00:00'))
-        current=self.rotation('2026-10-23T12:00:00')
-        self.assertEqual(len(set(current)),20)
-        self.assertNotEqual(set(current),set(self.rotation('2026-10-23T14:00:00')))
-        self.assertNotEqual(set(current),set(self.rotation('2026-10-30T12:00:00')))
-        self.assertTrue(self.selection['rotation_weekly_shuffle'])
+        self.assertIn(1161,self.ids('2026-11-28T12:00:00'))
+        self.assertIn(1209,self.ids('2026-11-22T12:00:00'))
+        self.assertNotIn(1161,self.ids('2026-11-27T12:00:00'))
+        self.assertFalse(self.selection['rotation_enabled'])
+        self.assertFalse(any(r['slot']=='rotation-20' for r in self.pack['schedule']))
 
     def test_native_sale_projection_keeps_distinct_catamin_and_monthly_maps(self):
         bindings={r['id']:dict(r['original'],kind=k) for k in ('gacha','stage','event','mission')
@@ -103,9 +103,31 @@ class StageProgramTests(unittest.TestCase):
         from copy import deepcopy
         selection=deepcopy(self.selection)
         self.assertEqual(set(selection['excluded_native_ids']),{1144,1153,1310,1311})
-        selection['regular_pools'][0]['native_ids'][0]=1310
+        selection['timed'].append(dict(native_ids=[1310],title='bad',mode='monthly',
+            monthdays=[1],from_time='00:00',to_time='00:00'))
         with self.assertRaisesRegex(ValueError,'UNPUBLISHED_BANNER'):
             stage_rotation_pack(self.pack,selection)
+
+    def test_flower_exact_two_minute_window_and_no_off_season_awakening(self):
+        for at,present in [('2026-11-02T14:21:59',False),('2026-11-02T14:22:00',True),
+                ('2026-11-02T14:23:59',True),('2026-11-02T14:24:00',False),
+                ('2026-11-03T14:22:00',False),('2026-11-22T14:22:00',True)]:
+            self.assertEqual(1148 in self.ids(at),present)
+        self.assertIn(1092,self.ids('2026-10-23T12:00:00'))
+        self.assertNotIn(1092,self.ids('2026-11-01T11:00:00'))
+        self.assertNotIn(1093,self.ids('2026-11-16T10:59:59'))
+        self.assertIn(1093,self.ids('2026-11-16T11:00:00'))
+        for n in [1337,1384,1349,1252,1253,1307,1310,1311]:
+            self.assertNotIn(n,self.ids('2026-10-23T12:00:00'))
+
+    def test_ex_awakening_fixed_dates_and_daily_local_xp(self):
+        self.assertIn(1049,self.ids('2026-11-01T12:00:00'))
+        self.assertNotIn(1049,self.ids('2026-11-03T12:00:00'))
+        self.assertIn(1058,self.ids('2026-10-23T12:00:00'))
+        self.assertNotIn(1058,self.ids('2026-10-25T12:00:00'))
+        for d in range(23,30):
+            for h in [9,15,21]:
+                self.assertTrue({1028,1059,1124,1155,1319}<=self.ids(f'2026-10-{d}T{h:02}:00:00'))
 
 
 if __name__=='__main__':unittest.main()

@@ -2,56 +2,7 @@
   "schema_version": 1,
   "start_date": "2026-10-23",
   "end_date": "2026-11-30",
-  "regular_pools": [
-    {
-      "title": "開眼・連戦・特殊戦チャレンジ",
-      "slots": 20,
-      "native_ids": [
-        1045,
-        1046,
-        1047,
-        1048,
-        1049,
-        1050,
-        1051,
-        1052,
-        1053,
-        1054,
-        1055,
-        1056,
-        1057,
-        1058,
-        1143,
-        1337,
-        1384,
-        1069,
-        1120,
-        1190,
-        1251,
-        1252,
-        1253,
-        1305,
-        1306,
-        1307,
-        1377,
-        1378,
-        1379,
-        1339,
-        1394,
-        1395,
-        1336,
-        1349,
-        1398,
-        1399,
-        1400,
-        1401,
-        1033,
-        1034,
-        1035,
-        1070
-      ]
-    }
-  ],
+  "regular_pools": [],
   "weekly": [
     {
       "start": "2026-10-19",
@@ -2923,6 +2874,627 @@
       "mode": "once",
       "start": "2026-11-16T11:00:00+09:00",
       "end": "2026-12-01T11:00:00+09:00"
+    },
+    {
+      "title": "開眼のネコフラワー襲来！",
+      "native_ids": [
+        1148
+      ],
+      "mode": "monthly",
+      "monthdays": [
+        2,
+        22
+      ],
+      "from_time": "14:22",
+      "to_time": "14:24",
+      "category": "special-short"
+    },
+    {
+      "title": "神判の日",
+      "native_ids": [
+        1112
+      ],
+      "mode": "monthly",
+      "monthdays": [
+        20,
+        21
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00",
+      "category": "special-monthly"
+    },
+    {
+      "title": "大乱闘狂乱ファミリーズ",
+      "native_ids": [
+        1208
+      ],
+      "mode": "monthly",
+      "monthdays": [
+        1
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00",
+      "category": "special-monthly"
+    },
+    {
+      "title": "開眼の女王猫襲来！",
+      "native_ids": [
+        1049
+      ],
+      "mode": "monthly",
+      "monthdays": [
+        1,
+        2
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00",
+      "category": "awakening"
+    },
+    {
+      "title": "開眼のパンツ襲来！",
+      "native_ids": [
+        1051
+      ],
+      "mode": "monthly",
+      "monthdays": [
+        3,
+        4
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00",
+      "category": "awakening"
+    },
+    {
+      "title": "開眼のカンフー襲来！",
+      "native_ids": [
+        1046
+      ],
+      "mode": "monthly",
+      "monthdays": [
+        5,
+        6
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00",
+      "category": "awakening"
+    },
+    {
+      "title": "開眼の猫縛り襲来！",
+      "native_ids": [
+        1048
+      ],
+      "mode": "monthly",
+      "monthdays": [
+        7,
+        8
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00",
+      "category": "awakening"
+    },
+    {
+      "title": "開眼のゾンビ襲来！",
+      "native_ids": [
+        1054
+      ],
+      "mode": "monthly",
+      "monthdays": [
+        9,
+        10
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00",
+      "category": "awakening"
+    },
+    {
+      "title": "開眼のフィーバー襲来！",
+      "native_ids": [
+        1057
+      ],
+      "mode": "monthly",
+      "monthdays": [
+        11,
+        12
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00",
+      "category": "awakening"
+    },
+    {
+      "title": "開眼のさむらい襲来！",
+      "native_ids": [
+        1055
+      ],
+      "mode": "monthly",
+      "monthdays": [
+        13,
+        14
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00",
+      "category": "awakening"
+    },
+    {
+      "title": "開眼の箱詰め襲来！",
+      "native_ids": [
+        1050
+      ],
+      "mode": "monthly",
+      "monthdays": [
+        15,
+        16
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00",
+      "category": "awakening"
+    },
+    {
+      "title": "開眼の忍者襲来！",
+      "native_ids": [
+        1053
+      ],
+      "mode": "monthly",
+      "monthdays": [
+        17,
+        18
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00",
+      "category": "awakening"
+    },
+    {
+      "title": "開眼のMr.襲来！",
+      "native_ids": [
+        1047
+      ],
+      "mode": "monthly",
+      "monthdays": [
+        19,
+        20
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00",
+      "category": "awakening"
+    },
+    {
+      "title": "開眼のリンリン襲来！",
+      "native_ids": [
+        1052
+      ],
+      "mode": "monthly",
+      "monthdays": [
+        21,
+        22
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00",
+      "category": "awakening"
+    },
+    {
+      "title": "開眼のスカート襲来！",
+      "native_ids": [
+        1058
+      ],
+      "mode": "monthly",
+      "monthdays": [
+        23,
+        24
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00",
+      "category": "awakening"
+    },
+    {
+      "title": "開眼のスモウ襲来！",
+      "native_ids": [
+        1056
+      ],
+      "mode": "monthly",
+      "monthdays": [
+        25,
+        26
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00",
+      "category": "awakening"
+    },
+    {
+      "title": "開眼の女優襲来！",
+      "native_ids": [
+        1045
+      ],
+      "mode": "monthly",
+      "monthdays": [
+        27,
+        28
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00",
+      "category": "awakening"
+    },
+    {
+      "title": "ゲリラ経験値にゃ！（にーくら追加開催）",
+      "native_ids": [
+        1028
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "from_time": "09:00",
+      "to_time": "10:00",
+      "category": "guerrilla",
+      "local_extra": true
+    },
+    {
+      "title": "ゲリラ経験値にゃ！（にーくら追加開催）",
+      "native_ids": [
+        1028
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "from_time": "15:00",
+      "to_time": "16:00",
+      "category": "guerrilla",
+      "local_extra": true
+    },
+    {
+      "title": "ゲリラ経験値にゃ！（にーくら追加開催）",
+      "native_ids": [
+        1028
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "from_time": "21:00",
+      "to_time": "22:00",
+      "category": "guerrilla",
+      "local_extra": true
+    },
+    {
+      "title": "超ゲリラ経験値にゃ！（にーくら追加開催）",
+      "native_ids": [
+        1059
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "from_time": "09:00",
+      "to_time": "10:00",
+      "category": "guerrilla",
+      "local_extra": true
+    },
+    {
+      "title": "超ゲリラ経験値にゃ！（にーくら追加開催）",
+      "native_ids": [
+        1059
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "from_time": "15:00",
+      "to_time": "16:00",
+      "category": "guerrilla",
+      "local_extra": true
+    },
+    {
+      "title": "超ゲリラ経験値にゃ！（にーくら追加開催）",
+      "native_ids": [
+        1059
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "from_time": "21:00",
+      "to_time": "22:00",
+      "category": "guerrilla",
+      "local_extra": true
+    },
+    {
+      "title": "極ゲリラ経験値にゃ！（にーくら追加開催）",
+      "native_ids": [
+        1124
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "from_time": "09:00",
+      "to_time": "10:00",
+      "category": "guerrilla",
+      "local_extra": true
+    },
+    {
+      "title": "極ゲリラ経験値にゃ！（にーくら追加開催）",
+      "native_ids": [
+        1124
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "from_time": "15:00",
+      "to_time": "16:00",
+      "category": "guerrilla",
+      "local_extra": true
+    },
+    {
+      "title": "極ゲリラ経験値にゃ！（にーくら追加開催）",
+      "native_ids": [
+        1124
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "from_time": "21:00",
+      "to_time": "22:00",
+      "category": "guerrilla",
+      "local_extra": true
+    },
+    {
+      "title": "超極ゲリラ経験値にゃ！（にーくら追加開催）",
+      "native_ids": [
+        1155
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "from_time": "09:00",
+      "to_time": "10:00",
+      "category": "guerrilla",
+      "local_extra": true
+    },
+    {
+      "title": "超極ゲリラ経験値にゃ！（にーくら追加開催）",
+      "native_ids": [
+        1155
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "from_time": "15:00",
+      "to_time": "16:00",
+      "category": "guerrilla",
+      "local_extra": true
+    },
+    {
+      "title": "超極ゲリラ経験値にゃ！（にーくら追加開催）",
+      "native_ids": [
+        1155
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "from_time": "21:00",
+      "to_time": "22:00",
+      "category": "guerrilla",
+      "local_extra": true
+    },
+    {
+      "title": "超極悪ゲリラ経験値にゃ！（にーくら追加開催）",
+      "native_ids": [
+        1319
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "from_time": "09:00",
+      "to_time": "10:00",
+      "category": "guerrilla",
+      "local_extra": true
+    },
+    {
+      "title": "超極悪ゲリラ経験値にゃ！（にーくら追加開催）",
+      "native_ids": [
+        1319
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "from_time": "15:00",
+      "to_time": "16:00",
+      "category": "guerrilla",
+      "local_extra": true
+    },
+    {
+      "title": "超極悪ゲリラ経験値にゃ！（にーくら追加開催）",
+      "native_ids": [
+        1319
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "from_time": "21:00",
+      "to_time": "22:00",
+      "category": "guerrilla",
+      "local_extra": true
+    },
+    {
+      "title": "ネコヴァルキリー大試練",
+      "native_ids": [
+        1394
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00",
+      "category": "progression"
+    },
+    {
+      "title": "ネコムート大試練",
+      "native_ids": [
+        1395
+      ],
+      "mode": "weekly",
+      "weekdays": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00",
+      "category": "progression"
+    },
+    {
+      "title": "開眼のネコ運動会襲来！",
+      "native_ids": [
+        1092
+      ],
+      "mode": "once",
+      "start": "2026-10-23T00:00:00+09:00",
+      "end": "2026-11-01T11:00:00+09:00",
+      "category": "seasonal-awakening"
+    },
+    {
+      "title": "開眼のネコリーマン襲来！",
+      "native_ids": [
+        1093
+      ],
+      "mode": "once",
+      "start": "2026-11-16T11:00:00+09:00",
+      "end": "2026-12-01T11:00:00+09:00",
+      "category": "seasonal-awakening"
+    },
+    {
+      "title": "狂乱のもねこ降臨",
+      "native_ids": [
+        1161
+      ],
+      "mode": "monthly",
+      "monthdays": [
+        28
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00",
+      "category": "special-monthly"
+    },
+    {
+      "title": "にゃんにゃん記念日",
+      "native_ids": [
+        1209
+      ],
+      "mode": "monthly",
+      "monthdays": [
+        22
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00",
+      "category": "special-monthly"
     }
   ],
   "rotation_weekly_shuffle": true,
@@ -2941,5 +3513,7 @@
     1153,
     1310,
     1311
-  ]
+  ],
+  "rotation_enabled": false,
+  "preserve_native_stage_rules": true
 }

@@ -106,3 +106,27 @@ Only record verification that was actually performed.
 - 最終PC `20261022T195407Z-f01c9867`、10秒capture `20261022T195805Z-fc2c825e`。原PC SAVE SHA一致復元・PC時計復帰・アプリ停止・r9ガチャ不変・phone候補 `phone-20261022T201342Z-b7b42258` 作成の実コマンド `583adb4b` PASS。先行stdin復元FAIL `ab024ba6`を保持。画像・元SAVE・詳細proofはprivateのみ。
 - NOT_RUN: 今回のスマホ導入／AIスマホ操作／スマホSAVE取得。旧FAIL／UNKNOWN、Charter承認不足を変更しない。
 - CCG auditは既存の `CHARTER_UNAPPROVED` と旧handoff等により非正常。今回の作業への直接承認はAMENDMENTに原文を記録したが、Charter全体の承認は推定しない。コード検証のPASSと区別する。
+| OPS-BATCH-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_2bce9a48b84244c580b08bfc3f80603c.json |
+| OPS-BATCH-001 | FAIL | Executed command exit=1 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_dcb4ab1a2a44434f9ce32c4bf93ea568.json |
+| OPS-BATCH-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_261d5f9119fe4b66898c4639080d15b8.json |
+| OPS-BATCH-001 | FAIL | Executed command exit=1 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_356af215edd74d2f8235c614f2c151f9.json |
+| OPS-BATCH-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_f2ba4ff71006409080c61eb68b249c67.json |
+| OPS-BATCH-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_0bb48ff5dd514eb88b5158edc3f9b9bf.json |
+| OPS-BATCH-001 | FAIL | Executed command exit=1 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_d1bb779217f343fa939eea4149a17b52.json |
+| OPS-BATCH-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_550bab4a4fd0423c9a6f104eadf78777.json |
+| OPS-BATCH-001 | FAIL | Executed command exit=1 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_a8fcaed9f81a44d1b4d9cdeb94297d9c.json |
+| OPS-BATCH-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_77b3509cf345410db85595b2b0b150de.json |
+| OPS-BATCH-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_c69c6588bf444a71a64065300a7ea7e8.json |
+| OPS-BATCH-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_2f6ebef162e14cb5b1027da115f6e901.json |
+| OPS-BATCH-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_c5f29fdac1a245929a214287fadff0de.json |
+| OPS-BATCH-001 | FAIL | Executed command exit=1 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_8ee717464267422f82fa6d27b6cf3132.json |
+| OPS-BATCH-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_78dac9b85b2d4a42bebf47e0c1cde1d9.json |
+
+# 2026-10-23 原作開催区分・4000個のお詫び
+
+- [承認と技術履歴](../research/2026-10-23-native-stage-policy.md)。全1096候補／1278マップ定義の台帳、988公開索引一致／108未一致を区別。自由交代20件廃止を所有者が明示承認。最終48 tests `c69c6588`、r14 build `c5f29fda` PASS。極悪9現行日程・狂乱祭の各日割当はUNKNOWNを保持。
+- r13原作PC UI：ネコカン＋4000、10000→14000、原作MySale受取済み、再起動後14000／再配布なし `550bab4a` PASS。初回item22の配布失敗 `356af215`、誤ったfixture照会先 `d1bb7792`を保持。server drop200へ修正、SAVE直接加算なし。
+- フラワー：未来編3未クリアでは開催中も原作条件文で拒否。比較fixtureで白文字・難度星つき有効化。2分を過ぎた入場は終了文で拒否。開催中のステージ選択／戦闘はNOT_RUN。時計巻戻しによるPC HGT02の実画面はprivateに保持、native保護を変更しない。
+- 原本DataLocal pair／1278定義・条件とr11ゲーム本体保持 `77b3509c` PASS。元SAVE SHA復元・時計復帰・停止 `2f6ebef1` PASS。r14の実APK内bundle・r13との同一gift/gacha/login/flower/native/DataLocal、導入6SHA／元SAVE／時計／停止／phone候補作成 `78dac9b8` PASS。
+- その他のhelper／実行順序FAIL `dcb4ab1a`・`a8fcaed9`・`8ee71746`は原log/receiptを保持。Web抽出v1のナビ混入FAILもprivate原JSON＋履歴を保持。成功結果へ塗り替えない。既存Charter承認不足・旧FAIL／UNKNOWNを維持。
+- NOT_RUN: スマホ更新／AIスマホ起動・UI・ログ／SAVE読取り、全ステージ攻略・全報酬。候補 `phone-20261022T213509Z-794bc2d5`、本人の接続後に承認済みデータ保持更新する。

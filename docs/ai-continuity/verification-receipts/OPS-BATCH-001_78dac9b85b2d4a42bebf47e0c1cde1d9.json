@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "task_id": "OPS-BATCH-001",
+  "result": "PASS",
+  "exit_code": 0,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "C:/Users/genki/Downloads/Kneekura-WhiteNyankocats/private/pc-lab/liveops-investigation/stage-policy-audit/finalize_r14.py"
+  ],
+  "observed_at": "2026-10-22T21:35:18.592+00:00",
+  "elapsed_ms": 13266,
+  "git_head": "a27f55337f91a6e145afcecfc7df10ec81edbf51",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/OPS-BATCH-001_78dac9b85b2d4a42bebf47e0c1cde1d9.log",
+  "output_sha256": "b5668dcf8640e3af06d31b07a2da39d42dd0ba8d108350070f8504b6f483b9ac",
+  "receipt_id": "OPS-BATCH-001_78dac9b85b2d4a42bebf47e0c1cde1d9"
+}

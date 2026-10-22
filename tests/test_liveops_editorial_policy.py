@@ -39,13 +39,13 @@ class EditorialPolicyTests(unittest.TestCase):
             self.assertIn(1001,ids);self.assertNotIn(1000,ids);self.assertNotIn(1073,ids)
             self.assertNotIn(1027,ids)
             self.assertEqual(1074 in ids,hour in (8,12,19))
-            self.assertEqual(1028 in ids,hour in (8,19))
+            self.assertEqual(1028 in ids,hour in (8,9,15,19,21))
         self.assertNotIn(1074,self.ids(p,'2026-10-27T07:59:59'))
         self.assertNotIn(1074,self.ids(p,'2026-10-27T09:00:00'))
         self.assertIn(1027,self.ids(p,'2026-10-24T00:00:00'))
         self.assertNotIn(1001,self.ids(p,'2026-10-24T00:00:00'))
 
-    def test_month_dates_and_season_boundary_preserve_twenty_plus_specials(self):
+    def test_month_dates_and_season_boundary_preserve_native_programme(self):
         p=self.read('liveops')
         self.assertIn(1007,self.ids(p,'2026-11-22T19:00:00'))
         self.assertNotIn(1007,self.ids(p,'2026-11-22T20:00:00'))
@@ -61,15 +61,14 @@ class EditorialPolicyTests(unittest.TestCase):
         while t<datetime(2026,11,30):
             rows=active_at(p,datetime.fromisoformat(t.isoformat()+'+09:00'))['active']
             regular=[r for r in rows['stage'] if r['slot']=='rotation-20']
-            self.assertEqual(len(regular),1)
-            record=next(r for r in p['catalog']['stage'] if r['id']==regular[0]['content_id'])
-            self.assertEqual(len(set(record['original']['native_ids'])),20)
+            self.assertEqual(regular,[])
             self.assertEqual(len(rows['gacha']),5)
             t+=timedelta(hours=3)
 
     def test_timed_map_cannot_be_reintroduced_in_random_pool(self):
-        selection=self.read('stage-selection');selection['regular_pools'][0]['native_ids'][0]=1000
-        with self.assertRaisesRegex(ValueError,'TIMED_POOL_LEAK'):
+        selection=self.read('stage-selection');selection['rotation_enabled']=True
+        selection['regular_pools']=[dict(title='forbidden',slots=20,native_ids=list(range(1000,1042)))]
+        with self.assertRaisesRegex(ValueError,'UNRESTRICTED_ROTATION_FORBIDDEN'):
             stage_rotation_pack(self.read('liveops'),selection)
 
 

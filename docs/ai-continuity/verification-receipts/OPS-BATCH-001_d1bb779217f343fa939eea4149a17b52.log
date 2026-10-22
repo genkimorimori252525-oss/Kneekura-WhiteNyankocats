@@ -1,0 +1,9 @@
+CRAZED_CLEAR_COUNTS [0, 0, 0, 0, 0, 0, 0, 0, 0]
+CATAMINS [9999, 9999, 9999]
+CATFOOD 14000 ITF3_PROGRESS 0
+GIFT_RECEIPT None
+Traceback (most recent call last):
+  File "C:\Users\genki\Downloads\Kneekura-WhiteNyankocats\private\pc-lab\liveops-investigation\stage-policy-audit\verify_gift.py", line 73, in <module>
+    assert receipt==1, 'GIFT_EXPECTED_ORIGINAL_ONCE_RECEIPT'
+           ^^^^^^^^^^
+AssertionError: GIFT_EXPECTED_ORIGINAL_ONCE_RECEIPT

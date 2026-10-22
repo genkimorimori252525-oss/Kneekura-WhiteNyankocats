@@ -17,10 +17,14 @@ def stage_rotation_pack(pack, selection):
     validate_pack(pack)
     if selection.get('schema_version') != 1:
         raise ValueError('ORIGINAL_STAGE_ROTATION_SCHEMA')
+    enabled=selection.get('rotation_enabled',True)
     pools = selection.get('regular_pools', [])
-    if (not isinstance(pools, list) or not pools
+    if (type(enabled) is not bool or not isinstance(pools, list) or (enabled and not pools)
+            or (not enabled and pools)
             or any(not isinstance(pool, dict) for pool in pools)):
         raise ValueError('ORIGINAL_STAGE_ROTATION_POOLS')
+    if selection.get('preserve_native_stage_rules') and enabled:
+        raise ValueError('ORIGINAL_STAGE_UNRESTRICTED_ROTATION_FORBIDDEN')
     seen = set()
     for pool in pools:
         ids, count = pool.get('native_ids'), pool.get('slots')
@@ -30,7 +34,7 @@ def stage_rotation_pack(pack, selection):
                 or seen.intersection(ids)):
             raise ValueError('ORIGINAL_STAGE_ROTATION_POOL')
         seen.update(ids)
-    if sum(pool['slots'] for pool in pools) != 20:
+    if sum(pool['slots'] for pool in pools) != (20 if enabled else 0):
         raise ValueError('ORIGINAL_STAGE_ROTATION_REQUIRES_TWENTY')
     first, stop = (date.fromisoformat(selection[key]) for key in ('start_date', 'end_date'))
     if not first < stop:
@@ -102,7 +106,7 @@ def stage_rotation_pack(pack, selection):
     # A full seven-day grid avoids every day's lineup being identical. Each
     # two-hour group uses one original row containing 20 distinct native map IDs.
     # The extra step avoids reducing the pool to three repeated daily lineups.
-    for weekday in range(7) if not selection.get('rotation_weekly_shuffle') else []:
+    for weekday in range(7) if enabled and not selection.get('rotation_weekly_shuffle') else []:
         for block in range(12):
             index = weekday * 12 + block
             ids = []
@@ -115,7 +119,7 @@ def stage_rotation_pack(pack, selection):
                 dict(mode='weekly', valid_from=first.isoformat(), valid_until=stop.isoformat(),
                      weekdays=[weekday], from_time='%02d:00' % (block * 2),
                      to_time='%02d:00' % ((block * 2 + 2) % 24)))
-    if selection.get('rotation_weekly_shuffle'):
+    if enabled and selection.get('rotation_weekly_shuffle'):
         # Reproducible weekly deck, with an independent calendar-day offset.
         # Deduplicate catalogue records so a longer horizon stays within bounds.
         decks={};records={};cursor=first
@@ -176,6 +180,12 @@ def stage_rotation_pack(pack, selection):
                   end=stop.isoformat() + 'T00:00:00+09:00')))
     if timed:
         result['catalog']['notice'][-1]['body']+='\n曜日・ゲリラ・月例攻略は各開催日時に出現。カテゴリ別開催枠を20枠とは別に追加します。解放条件・消費・報酬は原作どおりです。'
+    if not enabled:
+        result['catalog']['notice'][-1].update(title='原作区分に沿ったステージ開催へ',
+            body='自由交代20枠を廃止し、月例・曜日・季節・進行解放の各区分に沿って開催します。'
+                 '\nネコフラワーは毎月2日・22日14:22〜14:24。未来編3章クリアが必要です。'
+                 '\n経験値シリーズは原作定期枠に、にーくら独自の毎日追加開催を用意します。'
+                 '\n解放条件・出撃制限・消費・報酬・一度きりのクリアは原作どおりです。')
     return validate_pack(result)
 
 

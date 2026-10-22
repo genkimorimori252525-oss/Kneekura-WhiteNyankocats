@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "task_id": "OPS-BATCH-001",
+  "result": "PASS",
+  "exit_code": 0,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "-m",
+    "tools.pc_lab",
+    "--state",
+    "C:/Users/genki/Downloads/Kneekura-WhiteNyankocats/private/pc-lab",
+    "build",
+    "--owner-zip",
+    "C:/Users/genki/Downloads/にーくらにゃんこ/nyanko_battlecats_2026-10-06.zip",
+    "--official-aar",
+    "C:/Users/genki/Downloads/Kneekura-WhiteNyankocats/private/official-shadowhook-2.0.1.aar",
+    "--local-boot",
+    "--balance",
+    "--original-ops-bundle",
+    "C:/Users/genki/Downloads/Kneekura-WhiteNyankocats/private/pc-lab/liveops-investigation/stage-policy-audit/ops-stage-policy-r13.json"
+  ],
+  "observed_at": "2026-10-22T20:58:26.612+00:00",
+  "elapsed_ms": 28969,
+  "git_head": "a27f55337f91a6e145afcecfc7df10ec81edbf51",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/OPS-BATCH-001_0bb48ff5dd514eb88b5158edc3f9b9bf.log",
+  "output_sha256": "cb7457bedc377e96f91e1a903abe2763553875a258fc72a545814b5e569c1fb6",
+  "receipt_id": "OPS-BATCH-001_0bb48ff5dd514eb88b5158edc3f9b9bf"
+}

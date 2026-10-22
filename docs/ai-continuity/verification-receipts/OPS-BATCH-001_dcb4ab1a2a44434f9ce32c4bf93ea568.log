@@ -1,0 +1,16 @@
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\genki\Documents\Codex\2026-10-12\615mb-393-2-http-0-97\work\kneekura-pc-lab\tools\pc_lab.py", line 964, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "C:\Users\genki\Documents\Codex\2026-10-12\615mb-393-2-http-0-97\work\kneekura-pc-lab\tools\pc_lab.py", line 932, in main
+    bundle_bytes = args.original_ops_bundle.read_bytes() if args.original_ops_bundle else None
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\actions-runner-durable-workflow\_work\_tool\Python\3.12.10\x64\Lib\pathlib.py", line 1019, in read_bytes
+    with self.open(mode='rb') as f:
+         ^^^^^^^^^^^^^^^^^^^^
+  File "C:\actions-runner-durable-workflow\_work\_tool\Python\3.12.10\x64\Lib\pathlib.py", line 1013, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'C:\\Users\\genki\\Downloads\\Kneekura-WhiteNyankocats\\private\\pc-lab\\liveops-investigation\\stage-policy-audit\\ops-stage-policy-r12.json'
