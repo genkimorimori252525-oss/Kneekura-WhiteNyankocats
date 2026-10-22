@@ -2,14 +2,21 @@
 current_task: "OPS-BATCH-001"
 active_agent: "Codex"
 branch: "codex/pc-local-lab-2026-10-12"
-commit_head: "ada2e0497ef5617c43d016675a9f234022a1507d"
+commit_head: "7ca4c764cffd1f0d425e89784e6cbf6031b266d6"
 status: "IN_PROGRESS"
-evidence_ref: "docs/research/2026-10-20-seasonal-liveops.md"
-updated_at: "2026-10-20T13:19:19.488655+00:00"
+evidence_ref: "docs/research/2026-10-23-stage-programme.md"
+updated_at: "2026-10-22T20:15:50.960524+00:00"
 
 ---
 
 # Current Progress State
+
+## 2026-10-23：ステージカテゴリ拡充、PC確認・更新候補作成済み
+
+- [本人指定](AMENDMENTS/2026-10-23-stage-programme.md)に基づくrevision11。20件／2hは42件を週ごとに組替え、週4・月2に、狂乱／大狂乱／ちび、暴風、降臨、超獣、Catamin等206専用ruleを追加。[開催概要](../operations/2026-10-23-stage-programme.md)と[全時間枠](../operations/2026-autumn-stage-timetable.md)。原作の解放・消費・地図取得／鑑定を維持。今季は11/30 00:00まで。
+- 関連33 tests PASS、354 source bindings、6split build。PC実UIでちびトカゲ、Catamin入口／A1消費／戦闘、大狂乱トカゲ一覧／ステージ選択を確認。全報酬・地図取得から鑑定・全条件分岐はNOT_RUN。仮バナー4件除去、過去日fixture FAIL、ADB stdin復元FAILと修正を[原因・証拠](../research/2026-10-23-stage-programme.md)へ保存。
+- 最終PC `20261022T195407Z-f01c9867`、スマホ候補 `phone-20261022T201342Z-b7b42258`。PCの元SAVEはSHA一致で復元、PC時刻もホストへ復帰、アプリ停止済み。ガチャ／既存nativeコード変更なし。最終復元・候補作成receipt `583adb4b` PASS。
+- スマホは前回r9のまま。次手順は本人への開催表説明と、本人の更新指示に応じたデータ保持更新。スマホ目視は本人、追加操作・ログ／SAVE取得なし。旧FAIL／UNKNOWN・Charter承認不足を維持。Hooks OFF、原本・SAVE・鍵はprivate。
 
 ## 2026-10-20：季節・曜日の運営修正とスマホ更新済み
 

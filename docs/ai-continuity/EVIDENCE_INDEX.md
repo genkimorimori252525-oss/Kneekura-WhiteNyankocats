@@ -92,3 +92,17 @@ Only record verification that was actually performed.
 - 最終authoring baseを含む25 testsのmachine receipt `OPS-BATCH-001_20bd317bf25c498498c914e476c56b11`。PC build `20261020T131246Z-cca69482` の6split／10秒capture PASS。machine receipt `OPS-BATCH-001_1428f4d5ffca4586b71f0e613c840cc6`。
 - スマホ `phone-20261020T131439Z-86d1bb23` 署名一致・6SHA一致・UID/dataDir保持更新PASS。machine receipt `OPS-BATCH-001_0a84bbbc6ca14ba8bcdf74fc536583d9`。本人ゲーム目視PENDING、AIスマホ操作／SAVE取得NOT_RUN。過去FAIL／UNKNOWNを変更しない。
 | OPS-BATCH-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_20bd317bf25c498498c914e476c56b11.json |
+| OPS-BATCH-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_07bdba14bc5b47e999162bb9188f8bd1.json |
+| OPS-BATCH-001 | FAIL | Executed command exit=1 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_67903f8bfcf3426da06ed8fa78839c3b.json |
+| OPS-BATCH-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_60b5d4ab981a450fb1b9f404667a9e94.json |
+| OPS-BATCH-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_fd764f8fd8b945a1be62eafe29343c6e.json |
+| OPS-BATCH-001 | FAIL | Executed command exit=1 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_ab024ba6d6af43c180dca56d9f3d8cce.json |
+| OPS-BATCH-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_583adb4b4b0e4f56954d12f36a44110d.json |
+
+# 2026-10-23 ステージ開催カテゴリ拡充
+
+- [原因・修正・実検証の範囲](../research/2026-10-23-stage-programme.md)。r9に狂乱／大狂乱／ちびの開催なし。r11で206の専用rule、週別20件デッキ、354原本bindings。最終33 tests PASS `60b5d4ab`。初回32 PASS `07bdba14`、過去日fixture FAIL `67903f8b`を保持。
+- PC draftでCatamin A9999→9998／B/C維持／story不変、入口→戦闘→撤退の実画面。receipt `fd764f8f` PASS。最終nativeコード・消費処理は同一。10/23ちびトカゲ、最終10/24狂乱9クリアfixtureで大狂乱トカゲ一覧→ステージ選択を確認。全報酬・発掘取得から鑑定・未クリア比較分岐はNOT_RUN。
+- 最終PC `20261022T195407Z-f01c9867`、10秒capture `20261022T195805Z-fc2c825e`。原PC SAVE SHA一致復元・PC時計復帰・アプリ停止・r9ガチャ不変・phone候補 `phone-20261022T201342Z-b7b42258` 作成の実コマンド `583adb4b` PASS。先行stdin復元FAIL `ab024ba6`を保持。画像・元SAVE・詳細proofはprivateのみ。
+- NOT_RUN: 今回のスマホ導入／AIスマホ操作／スマホSAVE取得。旧FAIL／UNKNOWN、Charter承認不足を変更しない。
+- CCG auditは既存の `CHARTER_UNAPPROVED` と旧handoff等により非正常。今回の作業への直接承認はAMENDMENTに原文を記録したが、Charter全体の承認は推定しない。コード検証のPASSと区別する。

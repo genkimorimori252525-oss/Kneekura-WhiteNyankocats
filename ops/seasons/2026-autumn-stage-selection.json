@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "start_date": "2026-10-14",
+  "start_date": "2026-10-23",
   "end_date": "2026-11-30",
   "regular_pools": [
     {
-      "title": "開眼・降臨チャレンジ（ローカル選抜）",
+      "title": "開眼・連戦・特殊戦チャレンジ",
       "slots": 20,
       "native_ids": [
         1045,
@@ -21,115 +21,102 @@
         1056,
         1057,
         1058,
-        1095,
-        1096,
-        1111,
-        1112,
-        1114,
-        1117,
-        1119,
-        1120,
-        1122,
-        1128,
         1143,
-        1144,
-        1153,
-        1157,
-        1158,
-        1161,
-        1162,
-        1168,
-        1169,
-        1172,
-        1176,
-        1185,
-        1187,
-        1189,
+        1337,
+        1384,
+        1069,
+        1120,
         1190,
-        1193,
-        1195,
-        1196,
-        1198,
-        1199
+        1251,
+        1252,
+        1253,
+        1305,
+        1306,
+        1307,
+        1377,
+        1378,
+        1379,
+        1339,
+        1394,
+        1395,
+        1336,
+        1349,
+        1398,
+        1399,
+        1400,
+        1401,
+        1033,
+        1034,
+        1035,
+        1070
       ]
     }
   ],
   "weekly": [
     {
-      "start": "2026-10-12",
-      "end": "2026-10-19",
-      "title": "週間チャレンジ特選",
-      "native_ids": [
-        1033,
-        1034,
-        1035,
-        1070
-      ]
-    },
-    {
       "start": "2026-10-19",
       "end": "2026-10-26",
-      "title": "ハロウィン特選",
+      "title": "ハロウィンと赤黒の塔",
       "native_ids": [
-        1072,
         1320,
-        1033,
-        1034
+        1321,
+        7001,
+        7002
       ]
     },
     {
       "start": "2026-10-26",
       "end": "2026-11-02",
-      "title": "ハロウィン特選",
+      "title": "ハロウィンと天蒼の塔",
       "native_ids": [
-        1072,
         1320,
-        1035,
-        1070
+        1321,
+        7003,
+        7004
       ]
     },
     {
       "start": "2026-11-02",
       "end": "2026-11-09",
-      "title": "週間チャレンジ特選",
+      "title": "風雲にゃんこ塔・女王の研究",
       "native_ids": [
-        1079,
-        1146,
-        1182,
-        1116
+        7000,
+        1269,
+        1270,
+        1271
       ]
     },
     {
       "start": "2026-11-09",
       "end": "2026-11-16",
-      "title": "週間チャレンジ特選",
+      "title": "赤黒の塔・研究の続編",
       "native_ids": [
-        1033,
-        1034,
-        1035,
-        1070
+        7001,
+        7002,
+        1275,
+        1276
       ]
     },
     {
       "start": "2026-11-16",
       "end": "2026-11-23",
-      "title": "週間チャレンジ特選",
+      "title": "属性攻略と女王の研究",
       "native_ids": [
-        1079,
-        1146,
-        1182,
-        1116
+        7003,
+        7004,
+        1269,
+        7005
       ]
     },
     {
       "start": "2026-11-23",
       "end": "2026-11-30",
-      "title": "週間チャレンジ特選",
+      "title": "風雲にゃんこ塔・無悪古の塔",
       "native_ids": [
-        1033,
-        1034,
-        1035,
-        1070
+        7000,
+        7007,
+        7008,
+        7009
       ]
     }
   ],
@@ -141,7 +128,8 @@
       "native_ids": [
         1038,
         1170
-      ]
+      ],
+      "time": "11:00"
     },
     {
       "start": "2026-11-01",
@@ -150,7 +138,8 @@
       "native_ids": [
         1009,
         1174
-      ]
+      ],
+      "time": "11:00"
     }
   ],
   "timed": [
@@ -164,7 +153,8 @@
         0
       ],
       "from_time": "00:00",
-      "to_time": "00:00"
+      "to_time": "00:00",
+      "category": "weekday"
     },
     {
       "title": "ゲリラ月曜ステージ",
@@ -176,7 +166,8 @@
         0
       ],
       "from_time": "08:00",
-      "to_time": "09:00"
+      "to_time": "09:00",
+      "category": "guerrilla"
     },
     {
       "title": "ゲリラ月曜ステージ",
@@ -188,7 +179,8 @@
         0
       ],
       "from_time": "12:00",
-      "to_time": "13:00"
+      "to_time": "13:00",
+      "category": "guerrilla"
     },
     {
       "title": "ゲリラ月曜ステージ",
@@ -200,7 +192,8 @@
         0
       ],
       "from_time": "19:00",
-      "to_time": "20:00"
+      "to_time": "20:00",
+      "category": "guerrilla"
     },
     {
       "title": "火曜ステージ",
@@ -212,7 +205,8 @@
         1
       ],
       "from_time": "00:00",
-      "to_time": "00:00"
+      "to_time": "00:00",
+      "category": "weekday"
     },
     {
       "title": "ゲリラ火曜ステージ",
@@ -224,7 +218,8 @@
         1
       ],
       "from_time": "08:00",
-      "to_time": "09:00"
+      "to_time": "09:00",
+      "category": "guerrilla"
     },
     {
       "title": "ゲリラ火曜ステージ",
@@ -236,7 +231,8 @@
         1
       ],
       "from_time": "12:00",
-      "to_time": "13:00"
+      "to_time": "13:00",
+      "category": "guerrilla"
     },
     {
       "title": "ゲリラ火曜ステージ",
@@ -248,7 +244,8 @@
         1
       ],
       "from_time": "19:00",
-      "to_time": "20:00"
+      "to_time": "20:00",
+      "category": "guerrilla"
     },
     {
       "title": "水曜ステージ",
@@ -260,7 +257,8 @@
         2
       ],
       "from_time": "00:00",
-      "to_time": "00:00"
+      "to_time": "00:00",
+      "category": "weekday"
     },
     {
       "title": "ゲリラ水曜ステージ",
@@ -272,7 +270,8 @@
         2
       ],
       "from_time": "08:00",
-      "to_time": "09:00"
+      "to_time": "09:00",
+      "category": "guerrilla"
     },
     {
       "title": "ゲリラ水曜ステージ",
@@ -284,7 +283,8 @@
         2
       ],
       "from_time": "12:00",
-      "to_time": "13:00"
+      "to_time": "13:00",
+      "category": "guerrilla"
     },
     {
       "title": "ゲリラ水曜ステージ",
@@ -296,7 +296,8 @@
         2
       ],
       "from_time": "19:00",
-      "to_time": "20:00"
+      "to_time": "20:00",
+      "category": "guerrilla"
     },
     {
       "title": "木曜ステージ",
@@ -308,7 +309,8 @@
         3
       ],
       "from_time": "00:00",
-      "to_time": "00:00"
+      "to_time": "00:00",
+      "category": "weekday"
     },
     {
       "title": "ゲリラ木曜ステージ",
@@ -320,7 +322,8 @@
         3
       ],
       "from_time": "08:00",
-      "to_time": "09:00"
+      "to_time": "09:00",
+      "category": "guerrilla"
     },
     {
       "title": "ゲリラ木曜ステージ",
@@ -332,7 +335,8 @@
         3
       ],
       "from_time": "12:00",
-      "to_time": "13:00"
+      "to_time": "13:00",
+      "category": "guerrilla"
     },
     {
       "title": "ゲリラ木曜ステージ",
@@ -344,7 +348,8 @@
         3
       ],
       "from_time": "19:00",
-      "to_time": "20:00"
+      "to_time": "20:00",
+      "category": "guerrilla"
     },
     {
       "title": "金曜ステージ",
@@ -356,7 +361,8 @@
         4
       ],
       "from_time": "00:00",
-      "to_time": "00:00"
+      "to_time": "00:00",
+      "category": "weekday"
     },
     {
       "title": "ゲリラ金曜ステージ",
@@ -368,7 +374,8 @@
         4
       ],
       "from_time": "08:00",
-      "to_time": "09:00"
+      "to_time": "09:00",
+      "category": "guerrilla"
     },
     {
       "title": "ゲリラ金曜ステージ",
@@ -380,7 +387,8 @@
         4
       ],
       "from_time": "12:00",
-      "to_time": "13:00"
+      "to_time": "13:00",
+      "category": "guerrilla"
     },
     {
       "title": "ゲリラ金曜ステージ",
@@ -392,7 +400,8 @@
         4
       ],
       "from_time": "19:00",
-      "to_time": "20:00"
+      "to_time": "20:00",
+      "category": "guerrilla"
     },
     {
       "title": "土日ステージ",
@@ -405,7 +414,8 @@
         6
       ],
       "from_time": "00:00",
-      "to_time": "00:00"
+      "to_time": "00:00",
+      "category": "weekday"
     },
     {
       "title": "ゲリラ経験値にゃ！",
@@ -417,7 +427,8 @@
         0
       ],
       "from_time": "11:00",
-      "to_time": "12:00"
+      "to_time": "12:00",
+      "category": "guerrilla"
     },
     {
       "title": "ゲリラ経験値にゃ！",
@@ -429,7 +440,8 @@
         0
       ],
       "from_time": "22:00",
-      "to_time": "23:00"
+      "to_time": "23:00",
+      "category": "guerrilla"
     },
     {
       "title": "ゲリラ経験値にゃ！",
@@ -441,7 +453,8 @@
         1
       ],
       "from_time": "08:00",
-      "to_time": "09:00"
+      "to_time": "09:00",
+      "category": "guerrilla"
     },
     {
       "title": "ゲリラ経験値にゃ！",
@@ -453,7 +466,8 @@
         1
       ],
       "from_time": "19:00",
-      "to_time": "20:00"
+      "to_time": "20:00",
+      "category": "guerrilla"
     },
     {
       "title": "ゲリラ経験値にゃ！",
@@ -465,7 +479,8 @@
         2
       ],
       "from_time": "13:00",
-      "to_time": "14:00"
+      "to_time": "14:00",
+      "category": "guerrilla"
     },
     {
       "title": "ゲリラ経験値にゃ！",
@@ -477,7 +492,8 @@
         2
       ],
       "from_time": "21:00",
-      "to_time": "22:00"
+      "to_time": "22:00",
+      "category": "guerrilla"
     },
     {
       "title": "ゲリラ経験値にゃ！",
@@ -489,7 +505,8 @@
         3
       ],
       "from_time": "12:00",
-      "to_time": "13:00"
+      "to_time": "13:00",
+      "category": "guerrilla"
     },
     {
       "title": "ゲリラ経験値にゃ！",
@@ -501,7 +518,8 @@
         3
       ],
       "from_time": "20:00",
-      "to_time": "21:00"
+      "to_time": "21:00",
+      "category": "guerrilla"
     },
     {
       "title": "ゲリラ経験値にゃ！",
@@ -513,7 +531,8 @@
         4
       ],
       "from_time": "11:00",
-      "to_time": "12:00"
+      "to_time": "12:00",
+      "category": "guerrilla"
     },
     {
       "title": "ゲリラ経験値にゃ！",
@@ -525,7 +544,8 @@
         4
       ],
       "from_time": "17:00",
-      "to_time": "18:00"
+      "to_time": "18:00",
+      "category": "guerrilla"
     },
     {
       "title": "超ゲリラ経験値にゃ！",
@@ -537,7 +557,8 @@
         0
       ],
       "from_time": "12:00",
-      "to_time": "13:00"
+      "to_time": "13:00",
+      "category": "guerrilla"
     },
     {
       "title": "超ゲリラ経験値にゃ！",
@@ -549,7 +570,8 @@
         1
       ],
       "from_time": "16:00",
-      "to_time": "17:00"
+      "to_time": "17:00",
+      "category": "guerrilla"
     },
     {
       "title": "超ゲリラ経験値にゃ！",
@@ -561,7 +583,8 @@
         2
       ],
       "from_time": "19:00",
-      "to_time": "20:00"
+      "to_time": "20:00",
+      "category": "guerrilla"
     },
     {
       "title": "超ゲリラ経験値にゃ！",
@@ -573,7 +596,8 @@
         3
       ],
       "from_time": "07:00",
-      "to_time": "08:00"
+      "to_time": "08:00",
+      "category": "guerrilla"
     },
     {
       "title": "超ゲリラ経験値にゃ！",
@@ -585,7 +609,8 @@
         4
       ],
       "from_time": "13:00",
-      "to_time": "14:00"
+      "to_time": "14:00",
+      "category": "guerrilla"
     },
     {
       "title": "超ゲリラ経験値にゃ！",
@@ -597,7 +622,8 @@
         5
       ],
       "from_time": "11:00",
-      "to_time": "12:00"
+      "to_time": "12:00",
+      "category": "guerrilla"
     },
     {
       "title": "超ゲリラ経験値にゃ！",
@@ -609,7 +635,8 @@
         5
       ],
       "from_time": "23:00",
-      "to_time": "00:00"
+      "to_time": "00:00",
+      "category": "guerrilla"
     },
     {
       "title": "超ゲリラ経験値にゃ！",
@@ -621,7 +648,8 @@
         6
       ],
       "from_time": "13:00",
-      "to_time": "14:00"
+      "to_time": "14:00",
+      "category": "guerrilla"
     },
     {
       "title": "超ゲリラ経験値にゃ！",
@@ -633,7 +661,8 @@
         6
       ],
       "from_time": "20:00",
-      "to_time": "21:00"
+      "to_time": "21:00",
+      "category": "guerrilla"
     },
     {
       "title": "極ゲリラ経験値にゃ！",
@@ -645,7 +674,8 @@
         0
       ],
       "from_time": "12:00",
-      "to_time": "13:00"
+      "to_time": "13:00",
+      "category": "guerrilla"
     },
     {
       "title": "極ゲリラ経験値にゃ！",
@@ -657,7 +687,8 @@
         2
       ],
       "from_time": "15:00",
-      "to_time": "16:00"
+      "to_time": "16:00",
+      "category": "guerrilla"
     },
     {
       "title": "極ゲリラ経験値にゃ！",
@@ -669,7 +700,8 @@
         4
       ],
       "from_time": "19:00",
-      "to_time": "20:00"
+      "to_time": "20:00",
+      "category": "guerrilla"
     },
     {
       "title": "極ゲリラ経験値にゃ！",
@@ -681,7 +713,8 @@
         5
       ],
       "from_time": "12:00",
-      "to_time": "13:00"
+      "to_time": "13:00",
+      "category": "guerrilla"
     },
     {
       "title": "極ゲリラ経験値にゃ！",
@@ -693,7 +726,8 @@
         5
       ],
       "from_time": "22:00",
-      "to_time": "23:00"
+      "to_time": "23:00",
+      "category": "guerrilla"
     },
     {
       "title": "極ゲリラ経験値にゃ！",
@@ -705,7 +739,8 @@
         6
       ],
       "from_time": "10:00",
-      "to_time": "11:00"
+      "to_time": "11:00",
+      "category": "guerrilla"
     },
     {
       "title": "極ゲリラ経験値にゃ！",
@@ -717,7 +752,8 @@
         6
       ],
       "from_time": "16:00",
-      "to_time": "17:00"
+      "to_time": "17:00",
+      "category": "guerrilla"
     },
     {
       "title": "超極ゲリラ経験値にゃ！",
@@ -729,7 +765,8 @@
         1
       ],
       "from_time": "13:00",
-      "to_time": "14:00"
+      "to_time": "14:00",
+      "category": "guerrilla"
     },
     {
       "title": "超極ゲリラ経験値にゃ！",
@@ -741,7 +778,8 @@
         3
       ],
       "from_time": "17:00",
-      "to_time": "18:00"
+      "to_time": "18:00",
+      "category": "guerrilla"
     },
     {
       "title": "超極ゲリラ経験値にゃ！",
@@ -753,7 +791,8 @@
         5
       ],
       "from_time": "10:00",
-      "to_time": "11:00"
+      "to_time": "11:00",
+      "category": "guerrilla"
     },
     {
       "title": "超極ゲリラ経験値にゃ！",
@@ -765,7 +804,8 @@
         6
       ],
       "from_time": "21:00",
-      "to_time": "22:00"
+      "to_time": "22:00",
+      "category": "guerrilla"
     },
     {
       "title": "超極悪ゲリラ経験値にゃ！",
@@ -777,7 +817,8 @@
         0
       ],
       "from_time": "13:00",
-      "to_time": "14:00"
+      "to_time": "14:00",
+      "category": "guerrilla"
     },
     {
       "title": "超極悪ゲリラ経験値にゃ！",
@@ -789,7 +830,8 @@
         2
       ],
       "from_time": "19:00",
-      "to_time": "20:00"
+      "to_time": "20:00",
+      "category": "guerrilla"
     },
     {
       "title": "超極悪ゲリラ経験値にゃ！",
@@ -801,7 +843,8 @@
         5
       ],
       "from_time": "11:00",
-      "to_time": "12:00"
+      "to_time": "12:00",
+      "category": "guerrilla"
     },
     {
       "title": "超極悪ゲリラ経験値にゃ！",
@@ -813,7 +856,8 @@
         6
       ],
       "from_time": "19:00",
-      "to_time": "20:00"
+      "to_time": "20:00",
+      "category": "guerrilla"
     },
     {
       "title": "にゃんチケ★チャンス！",
@@ -825,7 +869,8 @@
         0
       ],
       "from_time": "07:00",
-      "to_time": "08:00"
+      "to_time": "08:00",
+      "category": "guerrilla"
     },
     {
       "title": "にゃんチケ★チャンス！",
@@ -837,7 +882,8 @@
         0
       ],
       "from_time": "20:00",
-      "to_time": "21:00"
+      "to_time": "21:00",
+      "category": "guerrilla"
     },
     {
       "title": "にゃんチケ★チャンス！",
@@ -849,7 +895,8 @@
         1
       ],
       "from_time": "11:00",
-      "to_time": "12:00"
+      "to_time": "12:00",
+      "category": "guerrilla"
     },
     {
       "title": "にゃんチケ★チャンス！",
@@ -861,7 +908,8 @@
         1
       ],
       "from_time": "23:00",
-      "to_time": "00:00"
+      "to_time": "00:00",
+      "category": "guerrilla"
     },
     {
       "title": "にゃんチケ★チャンス！",
@@ -873,7 +921,8 @@
         2
       ],
       "from_time": "08:00",
-      "to_time": "09:00"
+      "to_time": "09:00",
+      "category": "guerrilla"
     },
     {
       "title": "にゃんチケ★チャンス！",
@@ -885,7 +934,8 @@
         2
       ],
       "from_time": "16:00",
-      "to_time": "17:00"
+      "to_time": "17:00",
+      "category": "guerrilla"
     },
     {
       "title": "にゃんチケ★チャンス！",
@@ -897,7 +947,8 @@
         3
       ],
       "from_time": "13:00",
-      "to_time": "14:00"
+      "to_time": "14:00",
+      "category": "guerrilla"
     },
     {
       "title": "にゃんチケ★チャンス！",
@@ -909,7 +960,8 @@
         3
       ],
       "from_time": "23:00",
-      "to_time": "00:00"
+      "to_time": "00:00",
+      "category": "guerrilla"
     },
     {
       "title": "にゃんチケ★チャンス！",
@@ -921,7 +973,8 @@
         4
       ],
       "from_time": "08:00",
-      "to_time": "09:00"
+      "to_time": "09:00",
+      "category": "guerrilla"
     },
     {
       "title": "にゃんチケ★チャンス！",
@@ -933,7 +986,8 @@
         4
       ],
       "from_time": "22:00",
-      "to_time": "23:00"
+      "to_time": "23:00",
+      "category": "guerrilla"
     },
     {
       "title": "にゃんチケ★チャンス！",
@@ -945,7 +999,8 @@
         5
       ],
       "from_time": "13:00",
-      "to_time": "14:00"
+      "to_time": "14:00",
+      "category": "guerrilla"
     },
     {
       "title": "にゃんチケ★チャンス！",
@@ -957,7 +1012,8 @@
         5
       ],
       "from_time": "21:00",
-      "to_time": "22:00"
+      "to_time": "22:00",
+      "category": "guerrilla"
     },
     {
       "title": "にゃんチケ★チャンス！",
@@ -969,7 +1025,8 @@
         6
       ],
       "from_time": "11:00",
-      "to_time": "12:00"
+      "to_time": "12:00",
+      "category": "guerrilla"
     },
     {
       "title": "にゃんチケ★チャンス！",
@@ -981,7 +1038,8 @@
         6
       ],
       "from_time": "22:00",
-      "to_time": "23:00"
+      "to_time": "23:00",
+      "category": "guerrilla"
     },
     {
       "title": "逆襲のカバちゃん",
@@ -993,7 +1051,8 @@
         1
       ],
       "from_time": "07:00",
-      "to_time": "08:00"
+      "to_time": "08:00",
+      "category": "guerrilla"
     },
     {
       "title": "逆襲のカバちゃん",
@@ -1005,7 +1064,8 @@
         4
       ],
       "from_time": "11:00",
-      "to_time": "12:00"
+      "to_time": "12:00",
+      "category": "guerrilla"
     },
     {
       "title": "逆襲のカバちゃん",
@@ -1017,7 +1077,8 @@
         7
       ],
       "from_time": "16:00",
-      "to_time": "17:00"
+      "to_time": "17:00",
+      "category": "guerrilla"
     },
     {
       "title": "逆襲のカバちゃん",
@@ -1029,7 +1090,8 @@
         10
       ],
       "from_time": "08:00",
-      "to_time": "09:00"
+      "to_time": "09:00",
+      "category": "guerrilla"
     },
     {
       "title": "逆襲のカバちゃん",
@@ -1041,7 +1103,8 @@
         13
       ],
       "from_time": "12:00",
-      "to_time": "13:00"
+      "to_time": "13:00",
+      "category": "guerrilla"
     },
     {
       "title": "逆襲のカバちゃん",
@@ -1053,7 +1116,8 @@
         16
       ],
       "from_time": "17:00",
-      "to_time": "18:00"
+      "to_time": "18:00",
+      "category": "guerrilla"
     },
     {
       "title": "逆襲のカバちゃん",
@@ -1065,7 +1129,8 @@
         19
       ],
       "from_time": "13:00",
-      "to_time": "14:00"
+      "to_time": "14:00",
+      "category": "guerrilla"
     },
     {
       "title": "逆襲のカバちゃん",
@@ -1077,7 +1142,8 @@
         22
       ],
       "from_time": "19:00",
-      "to_time": "20:00"
+      "to_time": "20:00",
+      "category": "guerrilla"
     },
     {
       "title": "逆襲のカバちゃん",
@@ -1089,7 +1155,8 @@
         25
       ],
       "from_time": "20:00",
-      "to_time": "21:00"
+      "to_time": "21:00",
+      "category": "guerrilla"
     },
     {
       "title": "逆襲のカバちゃん",
@@ -1101,7 +1168,8 @@
         28
       ],
       "from_time": "21:00",
-      "to_time": "22:00"
+      "to_time": "22:00",
+      "category": "guerrilla"
     },
     {
       "title": "逆襲のカバちゃん",
@@ -1113,7 +1181,8 @@
         31
       ],
       "from_time": "22:00",
-      "to_time": "23:00"
+      "to_time": "23:00",
+      "category": "guerrilla"
     },
     {
       "title": "逆襲のカオル君",
@@ -1129,7 +1198,8 @@
         26
       ],
       "from_time": "00:00",
-      "to_time": "12:00"
+      "to_time": "12:00",
+      "category": "guerrilla"
     },
     {
       "title": "逆襲のカオル君",
@@ -1145,7 +1215,1731 @@
         29
       ],
       "from_time": "12:00",
+      "to_time": "00:00",
+      "category": "guerrilla"
+    },
+    {
+      "title": "狂乱のネコ降臨",
+      "native_ids": [
+        1017
+      ],
+      "category": "crazed",
+      "mode": "monthly",
+      "monthdays": [
+        1
+      ],
+      "from_time": "00:00",
       "to_time": "00:00"
+    },
+    {
+      "title": "大狂乱のネコ降臨",
+      "native_ids": [
+        1102
+      ],
+      "category": "manic",
+      "mode": "monthly",
+      "monthdays": [
+        3
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "開眼のちびネコ襲来！",
+      "native_ids": [
+        1130
+      ],
+      "category": "awakening",
+      "mode": "monthly",
+      "monthdays": [
+        2
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "狂乱のタンク降臨",
+      "native_ids": [
+        1018
+      ],
+      "category": "crazed",
+      "mode": "monthly",
+      "monthdays": [
+        4
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "大狂乱のタンク降臨",
+      "native_ids": [
+        1103
+      ],
+      "category": "manic",
+      "mode": "monthly",
+      "monthdays": [
+        6
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "開眼のちびタンクネコ襲来！",
+      "native_ids": [
+        1131
+      ],
+      "category": "awakening",
+      "mode": "monthly",
+      "monthdays": [
+        5
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "狂乱のバトル降臨",
+      "native_ids": [
+        1019
+      ],
+      "category": "crazed",
+      "mode": "monthly",
+      "monthdays": [
+        7
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "大狂乱のバトル降臨",
+      "native_ids": [
+        1104
+      ],
+      "category": "manic",
+      "mode": "monthly",
+      "monthdays": [
+        9
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "開眼のちびバトルネコ襲来！",
+      "native_ids": [
+        1132
+      ],
+      "category": "awakening",
+      "mode": "monthly",
+      "monthdays": [
+        8
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "狂乱のキモネコ降臨",
+      "native_ids": [
+        1020
+      ],
+      "category": "crazed",
+      "mode": "monthly",
+      "monthdays": [
+        10
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "大狂乱のキモネコ降臨",
+      "native_ids": [
+        1105
+      ],
+      "category": "manic",
+      "mode": "monthly",
+      "monthdays": [
+        12
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "開眼のちびキモネコ襲来！",
+      "native_ids": [
+        1133
+      ],
+      "category": "awakening",
+      "mode": "monthly",
+      "monthdays": [
+        11
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "狂乱のウシ降臨",
+      "native_ids": [
+        1021
+      ],
+      "category": "crazed",
+      "mode": "monthly",
+      "monthdays": [
+        13
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "大狂乱のウシ降臨",
+      "native_ids": [
+        1106
+      ],
+      "category": "manic",
+      "mode": "monthly",
+      "monthdays": [
+        15
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "開眼のちびウシネコ襲来！",
+      "native_ids": [
+        1134
+      ],
+      "category": "awakening",
+      "mode": "monthly",
+      "monthdays": [
+        14
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "狂乱のトリ降臨",
+      "native_ids": [
+        1022
+      ],
+      "category": "crazed",
+      "mode": "monthly",
+      "monthdays": [
+        16
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "大狂乱のトリ降臨",
+      "native_ids": [
+        1107
+      ],
+      "category": "manic",
+      "mode": "monthly",
+      "monthdays": [
+        18
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "開眼のちびネコノトリ襲来！",
+      "native_ids": [
+        1135
+      ],
+      "category": "awakening",
+      "mode": "monthly",
+      "monthdays": [
+        17
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "狂乱のフィッシュ降臨",
+      "native_ids": [
+        1023
+      ],
+      "category": "crazed",
+      "mode": "monthly",
+      "monthdays": [
+        19
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "大狂乱のフィッシュ降臨",
+      "native_ids": [
+        1108
+      ],
+      "category": "manic",
+      "mode": "monthly",
+      "monthdays": [
+        21
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "開眼のちびネコフィッシュ襲来！",
+      "native_ids": [
+        1136
+      ],
+      "category": "awakening",
+      "mode": "monthly",
+      "monthdays": [
+        20
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "狂乱のトカゲ降臨",
+      "native_ids": [
+        1024
+      ],
+      "category": "crazed",
+      "mode": "monthly",
+      "monthdays": [
+        22
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "大狂乱のトカゲ降臨",
+      "native_ids": [
+        1109
+      ],
+      "category": "manic",
+      "mode": "monthly",
+      "monthdays": [
+        24
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "開眼のちびネコトカゲ襲来！",
+      "native_ids": [
+        1137
+      ],
+      "category": "awakening",
+      "mode": "monthly",
+      "monthdays": [
+        23
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "狂乱の巨神降臨",
+      "native_ids": [
+        1025
+      ],
+      "category": "crazed",
+      "mode": "monthly",
+      "monthdays": [
+        25
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "大狂乱の巨神降臨",
+      "native_ids": [
+        1110
+      ],
+      "category": "manic",
+      "mode": "monthly",
+      "monthdays": [
+        27
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "開眼のちびネコ巨神襲来！",
+      "native_ids": [
+        1138
+      ],
+      "category": "awakening",
+      "mode": "monthly",
+      "monthdays": [
+        26
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "紅のカタストロフ・絶・紅のカタストロフ",
+      "native_ids": [
+        1014,
+        1169
+      ],
+      "category": "cyclone",
+      "mode": "weekly",
+      "weekdays": [
+        0
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "緊急爆風警報・絶・緊急爆風警報・ローリングデッド・絶・ローリングデッド",
+      "native_ids": [
+        1096,
+        1195,
+        1122,
+        1198
+      ],
+      "category": "cyclone",
+      "mode": "weekly",
+      "weekdays": [
+        1
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "ダークネスヘブン・絶・ダークネスヘブン",
+      "native_ids": [
+        1015,
+        1172
+      ],
+      "category": "cyclone",
+      "mode": "weekly",
+      "weekdays": [
+        2
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "絶望異次元・絶・絶望異次元",
+      "native_ids": [
+        1066,
+        1193
+      ],
+      "category": "cyclone",
+      "mode": "weekly",
+      "weekdays": [
+        3
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "国士無双・絶・国士無双・メガサターン・絶・メガサターン",
+      "native_ids": [
+        1016,
+        1176,
+        1259,
+        1342
+      ],
+      "category": "cyclone",
+      "mode": "weekly",
+      "weekdays": [
+        4
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "天罰・絶・天罰・台風零号・絶・台風零号",
+      "native_ids": [
+        1039,
+        1185,
+        1189,
+        1247
+      ],
+      "category": "cyclone",
+      "mode": "weekly",
+      "weekdays": [
+        5
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "鉄子の部屋・絶・鉄子の部屋・絶望新次元・絶・絶望新次元",
+      "native_ids": [
+        1043,
+        1187,
+        1157,
+        1203
+      ],
+      "category": "cyclone",
+      "mode": "weekly",
+      "weekdays": [
+        6
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "女帝飛来・古王妃飛来",
+      "native_ids": [
+        1119,
+        1220
+      ],
+      "category": "advent",
+      "mode": "monthly",
+      "monthdays": [
+        1,
+        2,
+        15,
+        16
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "亡者デブウ降臨・聖者ポプウ降臨",
+      "native_ids": [
+        1128,
+        1219
+      ],
+      "category": "advent",
+      "mode": "monthly",
+      "monthdays": [
+        3,
+        4,
+        17,
+        18
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "チワワン伯爵降臨・綺羅星ペロ降臨",
+      "native_ids": [
+        1158,
+        1229
+      ],
+      "category": "advent",
+      "mode": "monthly",
+      "monthdays": [
+        5,
+        6,
+        19,
+        20
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "断罪天使クオリネル降臨・死霊妖精クオリネム降臨",
+      "native_ids": [
+        1095,
+        1231
+      ],
+      "category": "advent",
+      "mode": "monthly",
+      "monthdays": [
+        7,
+        8,
+        21,
+        22
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "夜は短し夢みよ乙女・はじめてのお遣い",
+      "native_ids": [
+        1177,
+        1232
+      ],
+      "category": "advent",
+      "mode": "monthly",
+      "monthdays": [
+        9,
+        10,
+        23,
+        24
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "地獄門・奈落門・羅生門・破滅への序曲",
+      "native_ids": [
+        1117,
+        1217,
+        1273,
+        1246
+      ],
+      "category": "advent",
+      "mode": "monthly",
+      "monthdays": [
+        11,
+        12,
+        25,
+        26
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "ブルーインパクト・ほの暗い沼の底から",
+      "native_ids": [
+        1215,
+        1226
+      ],
+      "category": "advent",
+      "mode": "monthly",
+      "monthdays": [
+        13,
+        14,
+        27,
+        28
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "進化のマタタビ",
+      "native_ids": [
+        1422
+      ],
+      "category": "catfruit",
+      "mode": "weekly",
+      "weekdays": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "進化の虹マタタビ",
+      "native_ids": [
+        1222
+      ],
+      "category": "catfruit",
+      "mode": "weekly",
+      "weekdays": [
+        5,
+        6
+      ],
+      "from_time": "11:00",
+      "to_time": "14:00"
+    },
+    {
+      "title": "進化の虹マタタビ",
+      "native_ids": [
+        1222
+      ],
+      "category": "catfruit",
+      "mode": "weekly",
+      "weekdays": [
+        5,
+        6
+      ],
+      "from_time": "18:00",
+      "to_time": "21:00"
+    },
+    {
+      "title": "進化の古代マタタビ",
+      "native_ids": [
+        1162
+      ],
+      "category": "catfruit",
+      "mode": "weekly",
+      "weekdays": [
+        0
+      ],
+      "from_time": "07:00",
+      "to_time": "09:00"
+    },
+    {
+      "title": "進化の古代マタタビ",
+      "native_ids": [
+        1162
+      ],
+      "category": "catfruit",
+      "mode": "weekly",
+      "weekdays": [
+        1
+      ],
+      "from_time": "12:00",
+      "to_time": "14:00"
+    },
+    {
+      "title": "進化の古代マタタビ",
+      "native_ids": [
+        1162
+      ],
+      "category": "catfruit",
+      "mode": "weekly",
+      "weekdays": [
+        2
+      ],
+      "from_time": "19:00",
+      "to_time": "21:00"
+    },
+    {
+      "title": "進化の古代マタタビ",
+      "native_ids": [
+        1162
+      ],
+      "category": "catfruit",
+      "mode": "weekly",
+      "weekdays": [
+        3
+      ],
+      "from_time": "07:00",
+      "to_time": "09:00"
+    },
+    {
+      "title": "進化の古代マタタビ",
+      "native_ids": [
+        1162
+      ],
+      "category": "catfruit",
+      "mode": "weekly",
+      "weekdays": [
+        4
+      ],
+      "from_time": "12:00",
+      "to_time": "14:00"
+    },
+    {
+      "title": "進化の古代マタタビ",
+      "native_ids": [
+        1162
+      ],
+      "category": "catfruit",
+      "mode": "weekly",
+      "weekdays": [
+        5
+      ],
+      "from_time": "15:00",
+      "to_time": "17:00"
+    },
+    {
+      "title": "進化の古代マタタビ",
+      "native_ids": [
+        1162
+      ],
+      "category": "catfruit",
+      "mode": "weekly",
+      "weekdays": [
+        5
+      ],
+      "from_time": "21:00",
+      "to_time": "23:00"
+    },
+    {
+      "title": "進化の古代マタタビ",
+      "native_ids": [
+        1162
+      ],
+      "category": "catfruit",
+      "mode": "weekly",
+      "weekdays": [
+        6
+      ],
+      "from_time": "10:00",
+      "to_time": "12:00"
+    },
+    {
+      "title": "進化の古代マタタビ",
+      "native_ids": [
+        1162
+      ],
+      "category": "catfruit",
+      "mode": "weekly",
+      "weekdays": [
+        6
+      ],
+      "from_time": "19:00",
+      "to_time": "21:00"
+    },
+    {
+      "title": "進化の悪マタタビ",
+      "native_ids": [
+        1274
+      ],
+      "category": "catfruit",
+      "mode": "weekly",
+      "weekdays": [
+        0
+      ],
+      "from_time": "12:00",
+      "to_time": "14:00"
+    },
+    {
+      "title": "進化の悪マタタビ",
+      "native_ids": [
+        1274
+      ],
+      "category": "catfruit",
+      "mode": "weekly",
+      "weekdays": [
+        1
+      ],
+      "from_time": "19:00",
+      "to_time": "21:00"
+    },
+    {
+      "title": "進化の悪マタタビ",
+      "native_ids": [
+        1274
+      ],
+      "category": "catfruit",
+      "mode": "weekly",
+      "weekdays": [
+        2
+      ],
+      "from_time": "07:00",
+      "to_time": "09:00"
+    },
+    {
+      "title": "進化の悪マタタビ",
+      "native_ids": [
+        1274
+      ],
+      "category": "catfruit",
+      "mode": "weekly",
+      "weekdays": [
+        3
+      ],
+      "from_time": "12:00",
+      "to_time": "14:00"
+    },
+    {
+      "title": "進化の悪マタタビ",
+      "native_ids": [
+        1274
+      ],
+      "category": "catfruit",
+      "mode": "weekly",
+      "weekdays": [
+        4
+      ],
+      "from_time": "19:00",
+      "to_time": "21:00"
+    },
+    {
+      "title": "進化の悪マタタビ",
+      "native_ids": [
+        1274
+      ],
+      "category": "catfruit",
+      "mode": "weekly",
+      "weekdays": [
+        5
+      ],
+      "from_time": "10:00",
+      "to_time": "12:00"
+    },
+    {
+      "title": "進化の悪マタタビ",
+      "native_ids": [
+        1274
+      ],
+      "category": "catfruit",
+      "mode": "weekly",
+      "weekdays": [
+        5
+      ],
+      "from_time": "19:00",
+      "to_time": "21:00"
+    },
+    {
+      "title": "進化の悪マタタビ",
+      "native_ids": [
+        1274
+      ],
+      "category": "catfruit",
+      "mode": "weekly",
+      "weekdays": [
+        6
+      ],
+      "from_time": "15:00",
+      "to_time": "17:00"
+    },
+    {
+      "title": "進化の悪マタタビ",
+      "native_ids": [
+        1274
+      ],
+      "category": "catfruit",
+      "mode": "weekly",
+      "weekdays": [
+        6
+      ],
+      "from_time": "21:00",
+      "to_time": "23:00"
+    },
+    {
+      "title": "ガープラ密林",
+      "native_ids": [
+        31000
+      ],
+      "category": "behemoth",
+      "mode": "weekly",
+      "weekdays": [
+        0
+      ],
+      "from_time": "07:00",
+      "to_time": "11:00"
+    },
+    {
+      "title": "ガープラ密林",
+      "native_ids": [
+        31000
+      ],
+      "category": "behemoth",
+      "mode": "weekly",
+      "weekdays": [
+        1
+      ],
+      "from_time": "12:00",
+      "to_time": "16:00"
+    },
+    {
+      "title": "ガープラ密林",
+      "native_ids": [
+        31000
+      ],
+      "category": "behemoth",
+      "mode": "weekly",
+      "weekdays": [
+        2
+      ],
+      "from_time": "19:00",
+      "to_time": "23:00"
+    },
+    {
+      "title": "ガープラ密林",
+      "native_ids": [
+        31000
+      ],
+      "category": "behemoth",
+      "mode": "weekly",
+      "weekdays": [
+        3
+      ],
+      "from_time": "07:00",
+      "to_time": "11:00"
+    },
+    {
+      "title": "ガープラ密林",
+      "native_ids": [
+        31000
+      ],
+      "category": "behemoth",
+      "mode": "weekly",
+      "weekdays": [
+        4
+      ],
+      "from_time": "12:00",
+      "to_time": "16:00"
+    },
+    {
+      "title": "ガープラ密林",
+      "native_ids": [
+        31000
+      ],
+      "category": "behemoth",
+      "mode": "weekly",
+      "weekdays": [
+        5
+      ],
+      "from_time": "19:00",
+      "to_time": "23:00"
+    },
+    {
+      "title": "ガープラ密林",
+      "native_ids": [
+        31000
+      ],
+      "category": "behemoth",
+      "mode": "weekly",
+      "weekdays": [
+        6
+      ],
+      "from_time": "12:00",
+      "to_time": "16:00"
+    },
+    {
+      "title": "アシビニ砂漠",
+      "native_ids": [
+        31001
+      ],
+      "category": "behemoth",
+      "mode": "weekly",
+      "weekdays": [
+        0
+      ],
+      "from_time": "12:00",
+      "to_time": "16:00"
+    },
+    {
+      "title": "アシビニ砂漠",
+      "native_ids": [
+        31001
+      ],
+      "category": "behemoth",
+      "mode": "weekly",
+      "weekdays": [
+        1
+      ],
+      "from_time": "19:00",
+      "to_time": "23:00"
+    },
+    {
+      "title": "アシビニ砂漠",
+      "native_ids": [
+        31001
+      ],
+      "category": "behemoth",
+      "mode": "weekly",
+      "weekdays": [
+        2
+      ],
+      "from_time": "07:00",
+      "to_time": "11:00"
+    },
+    {
+      "title": "アシビニ砂漠",
+      "native_ids": [
+        31001
+      ],
+      "category": "behemoth",
+      "mode": "weekly",
+      "weekdays": [
+        3
+      ],
+      "from_time": "12:00",
+      "to_time": "16:00"
+    },
+    {
+      "title": "アシビニ砂漠",
+      "native_ids": [
+        31001
+      ],
+      "category": "behemoth",
+      "mode": "weekly",
+      "weekdays": [
+        4
+      ],
+      "from_time": "19:00",
+      "to_time": "23:00"
+    },
+    {
+      "title": "アシビニ砂漠",
+      "native_ids": [
+        31001
+      ],
+      "category": "behemoth",
+      "mode": "weekly",
+      "weekdays": [
+        5
+      ],
+      "from_time": "07:00",
+      "to_time": "11:00"
+    },
+    {
+      "title": "アシビニ砂漠",
+      "native_ids": [
+        31001
+      ],
+      "category": "behemoth",
+      "mode": "weekly",
+      "weekdays": [
+        6
+      ],
+      "from_time": "19:00",
+      "to_time": "23:00"
+    },
+    {
+      "title": "ジャンフォレ火山",
+      "native_ids": [
+        31002
+      ],
+      "category": "behemoth",
+      "mode": "weekly",
+      "weekdays": [
+        0
+      ],
+      "from_time": "19:00",
+      "to_time": "23:00"
+    },
+    {
+      "title": "ジャンフォレ火山",
+      "native_ids": [
+        31002
+      ],
+      "category": "behemoth",
+      "mode": "weekly",
+      "weekdays": [
+        1
+      ],
+      "from_time": "07:00",
+      "to_time": "11:00"
+    },
+    {
+      "title": "ジャンフォレ火山",
+      "native_ids": [
+        31002
+      ],
+      "category": "behemoth",
+      "mode": "weekly",
+      "weekdays": [
+        2
+      ],
+      "from_time": "12:00",
+      "to_time": "16:00"
+    },
+    {
+      "title": "ジャンフォレ火山",
+      "native_ids": [
+        31002
+      ],
+      "category": "behemoth",
+      "mode": "weekly",
+      "weekdays": [
+        3
+      ],
+      "from_time": "19:00",
+      "to_time": "23:00"
+    },
+    {
+      "title": "ジャンフォレ火山",
+      "native_ids": [
+        31002
+      ],
+      "category": "behemoth",
+      "mode": "weekly",
+      "weekdays": [
+        4
+      ],
+      "from_time": "07:00",
+      "to_time": "11:00"
+    },
+    {
+      "title": "ジャンフォレ火山",
+      "native_ids": [
+        31002
+      ],
+      "category": "behemoth",
+      "mode": "weekly",
+      "weekdays": [
+        5
+      ],
+      "from_time": "12:00",
+      "to_time": "16:00"
+    },
+    {
+      "title": "ジャンフォレ火山",
+      "native_ids": [
+        31002
+      ],
+      "category": "behemoth",
+      "mode": "weekly",
+      "weekdays": [
+        6
+      ],
+      "from_time": "07:00",
+      "to_time": "11:00"
+    },
+    {
+      "title": "終末ノ連戦場",
+      "native_ids": [
+        1250
+      ],
+      "category": "weekend",
+      "mode": "weekly",
+      "weekdays": [
+        5,
+        6
+      ],
+      "from_time": "00:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "ネコビタンステージ",
+      "native_ids": [
+        14005,
+        14006,
+        14007,
+        14008,
+        14009,
+        14010,
+        14011,
+        14012,
+        14013,
+        14014,
+        14015,
+        14016,
+        14017,
+        14018,
+        14019,
+        14020,
+        14021,
+        14022,
+        14023,
+        14024,
+        14025,
+        14026,
+        14027,
+        14028,
+        14029,
+        14030,
+        14031,
+        14032,
+        14033,
+        14034,
+        14035,
+        14036,
+        14037,
+        14038,
+        14039,
+        14040,
+        14041,
+        14042,
+        14043,
+        14044,
+        14045,
+        14046,
+        14047,
+        14048,
+        14049,
+        14050,
+        14051
+      ],
+      "category": "catamin",
+      "mode": "weekly",
+      "weekdays": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "from_time": "00:00",
+      "to_time": "08:00"
+    },
+    {
+      "title": "女王の発掘調査１",
+      "native_ids": [
+        1277
+      ],
+      "category": "enigma",
+      "mode": "weekly",
+      "weekdays": [
+        0
+      ],
+      "from_time": "22:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "女王の発掘調査１",
+      "native_ids": [
+        1277
+      ],
+      "category": "enigma",
+      "mode": "weekly",
+      "weekdays": [
+        1
+      ],
+      "from_time": "08:00",
+      "to_time": "10:00"
+    },
+    {
+      "title": "女王の発掘調査１",
+      "native_ids": [
+        1277
+      ],
+      "category": "enigma",
+      "mode": "weekly",
+      "weekdays": [
+        2
+      ],
+      "from_time": "12:00",
+      "to_time": "14:00"
+    },
+    {
+      "title": "女王の発掘調査１",
+      "native_ids": [
+        1277
+      ],
+      "category": "enigma",
+      "mode": "weekly",
+      "weekdays": [
+        3
+      ],
+      "from_time": "19:00",
+      "to_time": "21:00"
+    },
+    {
+      "title": "女王の発掘調査１",
+      "native_ids": [
+        1277
+      ],
+      "category": "enigma",
+      "mode": "weekly",
+      "weekdays": [
+        4
+      ],
+      "from_time": "22:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "女王の発掘調査１",
+      "native_ids": [
+        1277
+      ],
+      "category": "enigma",
+      "mode": "weekly",
+      "weekdays": [
+        5
+      ],
+      "from_time": "08:00",
+      "to_time": "10:00"
+    },
+    {
+      "title": "女王の発掘調査１",
+      "native_ids": [
+        1277
+      ],
+      "category": "enigma",
+      "mode": "weekly",
+      "weekdays": [
+        6
+      ],
+      "from_time": "12:00",
+      "to_time": "14:00"
+    },
+    {
+      "title": "女王の発掘調査２",
+      "native_ids": [
+        1278
+      ],
+      "category": "enigma",
+      "mode": "weekly",
+      "weekdays": [
+        0
+      ],
+      "from_time": "08:00",
+      "to_time": "10:00"
+    },
+    {
+      "title": "女王の発掘調査２",
+      "native_ids": [
+        1278
+      ],
+      "category": "enigma",
+      "mode": "weekly",
+      "weekdays": [
+        1
+      ],
+      "from_time": "12:00",
+      "to_time": "14:00"
+    },
+    {
+      "title": "女王の発掘調査２",
+      "native_ids": [
+        1278
+      ],
+      "category": "enigma",
+      "mode": "weekly",
+      "weekdays": [
+        2
+      ],
+      "from_time": "19:00",
+      "to_time": "21:00"
+    },
+    {
+      "title": "女王の発掘調査２",
+      "native_ids": [
+        1278
+      ],
+      "category": "enigma",
+      "mode": "weekly",
+      "weekdays": [
+        3
+      ],
+      "from_time": "22:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "女王の発掘調査２",
+      "native_ids": [
+        1278
+      ],
+      "category": "enigma",
+      "mode": "weekly",
+      "weekdays": [
+        4
+      ],
+      "from_time": "08:00",
+      "to_time": "10:00"
+    },
+    {
+      "title": "女王の発掘調査２",
+      "native_ids": [
+        1278
+      ],
+      "category": "enigma",
+      "mode": "weekly",
+      "weekdays": [
+        5
+      ],
+      "from_time": "12:00",
+      "to_time": "14:00"
+    },
+    {
+      "title": "女王の発掘調査２",
+      "native_ids": [
+        1278
+      ],
+      "category": "enigma",
+      "mode": "weekly",
+      "weekdays": [
+        6
+      ],
+      "from_time": "19:00",
+      "to_time": "21:00"
+    },
+    {
+      "title": "女王の発掘調査３",
+      "native_ids": [
+        1279
+      ],
+      "category": "enigma",
+      "mode": "weekly",
+      "weekdays": [
+        0
+      ],
+      "from_time": "12:00",
+      "to_time": "14:00"
+    },
+    {
+      "title": "女王の発掘調査３",
+      "native_ids": [
+        1279
+      ],
+      "category": "enigma",
+      "mode": "weekly",
+      "weekdays": [
+        1
+      ],
+      "from_time": "19:00",
+      "to_time": "21:00"
+    },
+    {
+      "title": "女王の発掘調査３",
+      "native_ids": [
+        1279
+      ],
+      "category": "enigma",
+      "mode": "weekly",
+      "weekdays": [
+        2
+      ],
+      "from_time": "22:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "女王の発掘調査３",
+      "native_ids": [
+        1279
+      ],
+      "category": "enigma",
+      "mode": "weekly",
+      "weekdays": [
+        3
+      ],
+      "from_time": "08:00",
+      "to_time": "10:00"
+    },
+    {
+      "title": "女王の発掘調査３",
+      "native_ids": [
+        1279
+      ],
+      "category": "enigma",
+      "mode": "weekly",
+      "weekdays": [
+        4
+      ],
+      "from_time": "12:00",
+      "to_time": "14:00"
+    },
+    {
+      "title": "女王の発掘調査３",
+      "native_ids": [
+        1279
+      ],
+      "category": "enigma",
+      "mode": "weekly",
+      "weekdays": [
+        5
+      ],
+      "from_time": "19:00",
+      "to_time": "21:00"
+    },
+    {
+      "title": "女王の発掘調査３",
+      "native_ids": [
+        1279
+      ],
+      "category": "enigma",
+      "mode": "weekly",
+      "weekdays": [
+        6
+      ],
+      "from_time": "12:00",
+      "to_time": "14:00"
+    },
+    {
+      "title": "女王の発掘調査４",
+      "native_ids": [
+        1280
+      ],
+      "category": "enigma",
+      "mode": "weekly",
+      "weekdays": [
+        0
+      ],
+      "from_time": "19:00",
+      "to_time": "21:00"
+    },
+    {
+      "title": "女王の発掘調査４",
+      "native_ids": [
+        1280
+      ],
+      "category": "enigma",
+      "mode": "weekly",
+      "weekdays": [
+        1
+      ],
+      "from_time": "22:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "女王の発掘調査４",
+      "native_ids": [
+        1280
+      ],
+      "category": "enigma",
+      "mode": "weekly",
+      "weekdays": [
+        2
+      ],
+      "from_time": "08:00",
+      "to_time": "10:00"
+    },
+    {
+      "title": "女王の発掘調査４",
+      "native_ids": [
+        1280
+      ],
+      "category": "enigma",
+      "mode": "weekly",
+      "weekdays": [
+        3
+      ],
+      "from_time": "12:00",
+      "to_time": "14:00"
+    },
+    {
+      "title": "女王の発掘調査４",
+      "native_ids": [
+        1280
+      ],
+      "category": "enigma",
+      "mode": "weekly",
+      "weekdays": [
+        4
+      ],
+      "from_time": "19:00",
+      "to_time": "21:00"
+    },
+    {
+      "title": "女王の発掘調査４",
+      "native_ids": [
+        1280
+      ],
+      "category": "enigma",
+      "mode": "weekly",
+      "weekdays": [
+        5
+      ],
+      "from_time": "22:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "女王の発掘調査４",
+      "native_ids": [
+        1280
+      ],
+      "category": "enigma",
+      "mode": "weekly",
+      "weekdays": [
+        6
+      ],
+      "from_time": "08:00",
+      "to_time": "10:00"
+    },
+    {
+      "title": "女王の発掘調査５",
+      "native_ids": [
+        1281
+      ],
+      "category": "enigma",
+      "mode": "weekly",
+      "weekdays": [
+        0
+      ],
+      "from_time": "22:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "女王の発掘調査５",
+      "native_ids": [
+        1281
+      ],
+      "category": "enigma",
+      "mode": "weekly",
+      "weekdays": [
+        1
+      ],
+      "from_time": "08:00",
+      "to_time": "10:00"
+    },
+    {
+      "title": "女王の発掘調査５",
+      "native_ids": [
+        1281
+      ],
+      "category": "enigma",
+      "mode": "weekly",
+      "weekdays": [
+        2
+      ],
+      "from_time": "12:00",
+      "to_time": "14:00"
+    },
+    {
+      "title": "女王の発掘調査５",
+      "native_ids": [
+        1281
+      ],
+      "category": "enigma",
+      "mode": "weekly",
+      "weekdays": [
+        3
+      ],
+      "from_time": "20:00",
+      "to_time": "22:00"
+    },
+    {
+      "title": "女王の発掘調査５",
+      "native_ids": [
+        1281
+      ],
+      "category": "enigma",
+      "mode": "weekly",
+      "weekdays": [
+        4
+      ],
+      "from_time": "22:00",
+      "to_time": "00:00"
+    },
+    {
+      "title": "女王の発掘調査５",
+      "native_ids": [
+        1281
+      ],
+      "category": "enigma",
+      "mode": "weekly",
+      "weekdays": [
+        5
+      ],
+      "from_time": "08:00",
+      "to_time": "10:00"
+    },
+    {
+      "title": "女王の発掘調査５",
+      "native_ids": [
+        1281
+      ],
+      "category": "enigma",
+      "mode": "weekly",
+      "weekdays": [
+        6
+      ],
+      "from_time": "12:00",
+      "to_time": "14:00"
+    },
+    {
+      "title": "10月強襲！",
+      "native_ids": [
+        24025
+      ],
+      "category": "assault",
+      "mode": "once",
+      "start": "2026-10-01T11:00:00+09:00",
+      "end": "2026-10-16T11:00:00+09:00"
+    },
+    {
+      "title": "続・10月強襲！",
+      "native_ids": [
+        24026
+      ],
+      "category": "assault",
+      "mode": "once",
+      "start": "2026-10-16T11:00:00+09:00",
+      "end": "2026-11-01T11:00:00+09:00"
+    },
+    {
+      "title": "11月強襲！",
+      "native_ids": [
+        24028
+      ],
+      "category": "assault",
+      "mode": "once",
+      "start": "2026-11-01T11:00:00+09:00",
+      "end": "2026-11-16T11:00:00+09:00"
+    },
+    {
+      "title": "続・11月強襲！",
+      "native_ids": [
+        24029
+      ],
+      "category": "assault",
+      "mode": "once",
+      "start": "2026-11-16T11:00:00+09:00",
+      "end": "2026-12-01T11:00:00+09:00"
     }
+  ],
+  "rotation_weekly_shuffle": true,
+  "sources": [
+    "https://battlecats-db.com/schedule/regular.html",
+    "https://battlecats-db.com/stage/s01422.html",
+    "https://game8.jp/battlecats/763111",
+    "https://game8.jp/battlecats/208020",
+    "https://game8.jp/battlecats/224520",
+    "https://game8.jp/battlecats/392193",
+    "https://game8.jp/battlecats/519156",
+    "https://game8.jp/battlecats/542576"
+  ],
+  "excluded_native_ids": [
+    1144,
+    1153,
+    1310,
+    1311
   ]
 }

@@ -5,6 +5,9 @@ The output uses the existing pack schema and original sale.tsv reader.
 """
 from copy import deepcopy
 from datetime import date, datetime, timedelta
+import hashlib
+import math
+import random
 
 from tools.localcore.ops_calendar import JST, validate_pack
 
@@ -66,26 +69,40 @@ def stage_rotation_pack(pack, selection):
         ids=entry['native_ids']
         if (not ids or len(set(ids))!=len(ids) or seen.intersection(ids) or reserved.intersection(ids)
                 or any(type(n) is not int or not 1000<=n<1000000 for n in ids)
-                or entry['mode'] not in ('weekly','monthly')):
+                or entry['mode'] not in ('weekly','monthly','once')):
             raise ValueError('ORIGINAL_STAGE_TIMED_POOL_LEAK')
+    excluded=set(selection.get('excluded_native_ids',[]))
+    if excluded.intersection(seen|reserved|{n for entry in timed for n in entry['native_ids']}):
+        raise ValueError('ORIGINAL_STAGE_UNPUBLISHED_BANNER')
     result = deepcopy(pack)
     result['revision'] += 1
     result['catalog']['stage'] = []
     result['catalog']['event'] = []
     result['schedule'] = [entry for entry in result['schedule']
                           if entry['kind'] not in ('stage', 'event')]
+    notice_id = 'kneekura:notice:stage-rotation-20'
+    result['catalog']['notice']=[v for v in result['catalog']['notice'] if v['id']!=notice_id]
+    result['schedule']=[v for v in result['schedule'] if v['content_id']!=notice_id]
 
-    def add(suffix, kind, title, ids, slot, rule):
+    catalogue_records={}
+
+    def add(suffix, kind, title, ids, slot, rule, category=None):
         identifier = 'kneekura:' + kind + ':' + suffix
-        result['catalog'][kind].append(dict(id=identifier, title=title,
-            source='kneekura-local', ready=True, original=dict(native_ids=ids)))
+        key=(kind,title,tuple(ids),category)
+        if key in catalogue_records:
+            identifier=catalogue_records[key]
+        else:
+            record=dict(id=identifier,title=title,source='kneekura-local',ready=True,original=dict(native_ids=ids))
+            if category:record['program_category']=category
+            result['catalog'][kind].append(record)
+            catalogue_records[key]=identifier
         result['schedule'].append(dict(id='kneekura:schedule:' + suffix,
             kind=kind, slot=slot, priority=1, content_id=identifier, rule=rule))
 
     # A full seven-day grid avoids every day's lineup being identical. Each
     # two-hour group uses one original row containing 20 distinct native map IDs.
     # The extra step avoids reducing the pool to three repeated daily lineups.
-    for weekday in range(7):
+    for weekday in range(7) if not selection.get('rotation_weekly_shuffle') else []:
         for block in range(12):
             index = weekday * 12 + block
             ids = []
@@ -98,18 +115,53 @@ def stage_rotation_pack(pack, selection):
                 dict(mode='weekly', valid_from=first.isoformat(), valid_until=stop.isoformat(),
                      weekdays=[weekday], from_time='%02d:00' % (block * 2),
                      to_time='%02d:00' % ((block * 2 + 2) % 24)))
+    if selection.get('rotation_weekly_shuffle'):
+        # Reproducible weekly deck, with an independent calendar-day offset.
+        # Deduplicate catalogue records so a longer horizon stays within bounds.
+        decks={};records={};cursor=first
+        while cursor<stop:
+            monday=cursor-timedelta(days=cursor.weekday())
+            if monday not in decks:
+                decks[monday]=[]
+                for pool in pools:
+                    members=list(pool['native_ids'])
+                    seed=hashlib.sha256((str(monday)+':'+pool['title']).encode()).digest()
+                    random.Random(int.from_bytes(seed,'big')).shuffle(members)
+                    stride=pool['slots']+1
+                    while math.gcd(stride,len(members))!=1:stride+=1
+                    decks[monday].append((members,pool['slots'],stride))
+            for block in range(12):
+                ids=[]
+                for members,count,stride in decks[monday]:
+                    offset=((cursor-first).days*12+block)*stride%len(members)
+                    ids.extend(members[(offset+i)%len(members)] for i in range(count))
+                key=tuple(ids)
+                begin=datetime.combine(cursor,datetime.min.time(),JST)+timedelta(hours=block*2)
+                rule=dict(mode='once',start=begin.isoformat(),end=(begin+timedelta(hours=2)).isoformat())
+                suffix='rotation-'+cursor.isoformat()+'-%02d'%block
+                if key not in records:
+                    add(suffix,'stage','2時間交代チャレンジ20枠',ids,'rotation-20',rule,'rotation')
+                    records[key]=result['catalog']['stage'][-1]['id']
+                else:
+                    result['schedule'].append(dict(id='kneekura:schedule:'+suffix,kind='stage',
+                        slot='rotation-20',priority=1,content_id=records[key],rule=rule))
+            cursor+=timedelta(days=1)
     for kind in ('weekly', 'monthly'):
         for index, period in enumerate(selection[kind]):
-            start = datetime.combine(date.fromisoformat(period['start']), datetime.min.time(), JST)
-            end = datetime.combine(date.fromisoformat(period['end']), datetime.min.time(), JST)
+            clock=datetime.strptime(period.get('time','00:00'),'%H:%M').time()
+            start = datetime.combine(date.fromisoformat(period['start']), clock, JST)
+            end = datetime.combine(date.fromisoformat(period['end']), clock, JST)
             add('%s-picks-%02d' % (kind, index), 'event', period['title'],
                 period['native_ids'], kind + '-picks',
-                dict(mode='once', start=start.isoformat(), end=end.isoformat()))
+                dict(mode='once', start=start.isoformat(), end=end.isoformat()),
+                'monthly' if kind=='monthly' else 'event')
     for index,entry in enumerate(timed):
         mode=entry['mode'];days='weekdays' if mode=='weekly' else 'monthdays'
+        rule=(dict(mode='once',start=entry['start'],end=entry['end']) if mode=='once' else
+              dict(mode=mode,valid_from=first.isoformat(),valid_until=stop.isoformat(),
+                   **{days:entry[days]},from_time=entry['from_time'],to_time=entry['to_time']))
         add('timed-%03d'%index,'stage',entry['title'],entry['native_ids'],'timed-%03d'%index,
-            dict(mode=mode,valid_from=first.isoformat(),valid_until=stop.isoformat(),
-                 **{days:entry[days]},from_time=entry['from_time'],to_time=entry['to_time']))
+            rule,entry.get('category'))
     notice_id = 'kneekura:notice:stage-rotation-20'
     result['catalog']['notice'].append(dict(id=notice_id,
         title='イベント20枠が2時間ごとに交代！', category='イベント',
@@ -123,7 +175,7 @@ def stage_rotation_pack(pack, selection):
         rule=dict(mode='once', start=first.isoformat() + 'T00:00:00+09:00',
                   end=stop.isoformat() + 'T00:00:00+09:00')))
     if timed:
-        result['catalog']['notice'][-1]['body']+='\n曜日ステージ・ゲリラは指定曜日／時間だけ、チケット逆襲は指定日だけ出現。10月は運動会・ハロウィン、11月は勤労感謝・文化祭を開催します。'
+        result['catalog']['notice'][-1]['body']+='\n曜日・ゲリラ・月例攻略は各開催日時に出現。カテゴリ別開催枠を20枠とは別に追加します。解放条件・消費・報酬は原作どおりです。'
     return validate_pack(result)
 
 

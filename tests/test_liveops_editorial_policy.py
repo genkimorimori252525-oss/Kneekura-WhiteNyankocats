@@ -35,27 +35,29 @@ class EditorialPolicyTests(unittest.TestCase):
         p=self.read('liveops')
         # Tuesday: Monday maps never appear, even at a rotation boundary.
         for hour in range(24):
-            ids=self.ids(p,f'2026-10-20T{hour:02}:00:00')
+            ids=self.ids(p,f'2026-10-27T{hour:02}:00:00')
             self.assertIn(1001,ids);self.assertNotIn(1000,ids);self.assertNotIn(1073,ids)
             self.assertNotIn(1027,ids)
             self.assertEqual(1074 in ids,hour in (8,12,19))
             self.assertEqual(1028 in ids,hour in (8,19))
-        self.assertNotIn(1074,self.ids(p,'2026-10-20T07:59:59'))
-        self.assertNotIn(1074,self.ids(p,'2026-10-20T09:00:00'))
+        self.assertNotIn(1074,self.ids(p,'2026-10-27T07:59:59'))
+        self.assertNotIn(1074,self.ids(p,'2026-10-27T09:00:00'))
         self.assertIn(1027,self.ids(p,'2026-10-24T00:00:00'))
         self.assertNotIn(1001,self.ids(p,'2026-10-24T00:00:00'))
 
     def test_month_dates_and_season_boundary_preserve_twenty_plus_specials(self):
         p=self.read('liveops')
-        self.assertIn(1007,self.ids(p,'2026-10-22T19:00:00'))
-        self.assertNotIn(1007,self.ids(p,'2026-10-22T20:00:00'))
-        self.assertNotIn(1007,self.ids(p,'2026-10-23T19:00:00'))
-        self.assertIn(1078,self.ids(p,'2026-10-20T11:59:59'))
-        self.assertNotIn(1078,self.ids(p,'2026-10-20T12:00:00'))
+        self.assertIn(1007,self.ids(p,'2026-11-22T19:00:00'))
+        self.assertNotIn(1007,self.ids(p,'2026-11-22T20:00:00'))
+        self.assertNotIn(1007,self.ids(p,'2026-11-23T19:00:00'))
+        self.assertIn(1078,self.ids(p,'2026-11-20T11:59:59'))
+        self.assertNotIn(1078,self.ids(p,'2026-11-20T12:00:00'))
         self.assertIn(1038,self.ids(p,'2026-10-31T23:59:59'))
-        self.assertNotIn(1038,self.ids(p,'2026-11-01T00:00:00'))
-        self.assertIn(1174,self.ids(p,'2026-11-01T00:00:00'))
-        t=datetime.fromisoformat('2026-10-15T00:00:00')
+        self.assertIn(1038,self.ids(p,'2026-11-01T10:59:59'))
+        self.assertNotIn(1038,self.ids(p,'2026-11-01T11:00:00'))
+        self.assertIn(1174,self.ids(p,'2026-11-01T11:00:00'))
+        first=self.read('stage-selection')['start_date']
+        t=datetime.fromisoformat(first+'T00:00:00')
         while t<datetime(2026,11,30):
             rows=active_at(p,datetime.fromisoformat(t.isoformat()+'+09:00'))['active']
             regular=[r for r in rows['stage'] if r['slot']=='rotation-20']
