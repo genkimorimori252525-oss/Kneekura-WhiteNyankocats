@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "task_id": "OPS-BATCH-001",
+  "result": "PASS",
+  "exit_code": 0,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "-m",
+    "unittest",
+    "tests.test_operator_gifts",
+    "tests.test_stage_program",
+    "tests.test_liveops_editorial_policy",
+    "tests.test_original_ops_calendar",
+    "tests.test_original_ops_protocol",
+    "tests.test_gacha_rotation",
+    "tests.test_offline_ops_calendar"
+  ],
+  "observed_at": "2026-10-22T21:29:59.990+00:00",
+  "elapsed_ms": 20844,
+  "git_head": "a27f55337f91a6e145afcecfc7df10ec81edbf51",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/OPS-BATCH-001_c69c6588bf444a71a64065300a7ea7e8.log",
+  "output_sha256": "3da04e1a5c9ff6d604040e5c008be0602f5845a11e4d53a7c97afb66af75815f",
+  "receipt_id": "OPS-BATCH-001_c69c6588bf444a71a64065300a7ea7e8"
+}

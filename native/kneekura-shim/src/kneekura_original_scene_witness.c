@@ -34,9 +34,17 @@
 #include <link.h>
 #include <stdatomic.h>
 #include <stdint.h>
+#ifdef KNEEKURA_RESEARCH_PC_BALANCE
+#include "kneekura_pc_balance.h"
+#endif
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#ifdef KNEEKURA_RESEARCH_PC_JNI_SCENE_OBSERVER
+#include <jni.h>
+#include <sys/syscall.h>
+#include <sys/uio.h>
+#endif
 /* These extra APIs are compiled ONLY for an explicitly enabled, research-only
  * new-player transaction experiment, never in the default/passive observer. */
 #ifdef KNEEKURA_RESEARCH_VIRGIN_SAVE_TRIAL
@@ -142,6 +150,16 @@ static void *gAppLaunchReadHookStub = NULL;
 static void *gShadowHookLibrary = NULL;
 /* A partially installed/reverted hook chain MUST NEVER activate the writer. */
 static _Atomic uint32_t gAllOriginalHooksInstalled = 0u;
+#ifdef KNEEKURA_RESEARCH_PC_JNI_SCENE_OBSERVER
+/* Independent of the coherent five-hook LEVEL/SAVE lifecycle. */
+static _Atomic uint32_t gPcSceneObserverState = 0u; /* 0 idle, 1 installing, 2 attached, 3 blocked */
+static _Atomic int gPcSceneGlTid = 0;
+/* Operations read through the attested original draw on phones as well as
+ * the PC JNI fallback. Never enable a second draw hook just to read counts. */
+static _Atomic int gOriginalOpsGlTid = 0;
+static _Atomic uint32_t gPcSceneFirstDraw = 0u;
+static _Atomic uint32_t gPcSceneThreadMismatch = 0u;
+#endif
 
 /*
  * NEVER a default behavior. The whole experiment requires a special native
@@ -330,6 +348,10 @@ struct NativeElfWitness {
     unsigned exact_build_id_count;
     unsigned original_library_count;
     unsigned executable_load_count;
+#ifdef KNEEKURA_RESEARCH_PC_BALANCE
+    unsigned balance_executable_load_count;
+    uintptr_t balance_executable_begin;
+#endif
 };
 
 static int inspect_original_library(struct dl_phdr_info *info,
@@ -355,6 +377,18 @@ static int inspect_original_library(struct dl_phdr_info *info,
     for (ElfW(Half) index = 0; index < info->dlpi_phnum; ++index) {
         const ElfW(Phdr) *phdr = &info->dlpi_phdr[index];
         if (phdr->p_type == PT_LOAD && (phdr->p_flags & PF_X)) {
+#ifdef KNEEKURA_RESEARCH_PC_BALANCE
+            static const char marker[] = "KNEEKURA_PC_BALANCE_RX_V3";
+            if (phdr->p_flags == (PF_R | PF_X) && phdr->p_memsz == 4096u
+                && phdr->p_filesz == 4096u && phdr->p_vaddr % 4096u == 0u
+                && phdr->p_vaddr <= UINTPTR_MAX - (uintptr_t)info->dlpi_addr
+                && memcmp((const void *)(uintptr_t)(info->dlpi_addr + phdr->p_vaddr),
+                          marker, sizeof(marker)) == 0) {
+                witness->balance_executable_load_count++;
+                witness->balance_executable_begin = info->dlpi_addr + phdr->p_vaddr;
+                continue; /* Only this bounded, signer-verified PC adapter LOAD. */
+            }
+#endif
             witness->executable_load_count++;
             if (witness->executable_load_count == 1u
                 && phdr->p_memsz >= 4u
@@ -397,6 +431,24 @@ static const struct OriginalCodeWordAnchor kSourceWordAnchors[] = {
     {0x73CA20u, 0x5285F70Au},
     {0x73CA64u, 0xF1008EBFu},
     {0x73CAB0u, 0xB8357B40u},
+#ifdef KNEEKURA_RESEARCH_PC_JNI_SCENE_OBSERVER
+    /* Post-lookup masking, task ownership and immutable constructor flags. */
+    {0x73CA5Cu, 0xB8357B5Fu},
+    {0x73CAC0u, 0xB8757AE8u},
+    {0x73CAC4u, 0x36F80148u},
+    {0x73CB3Cu, 0x3900A268u},
+    {0x725F28u, 0xF9432F08u},
+    {0x73D65Cu, 0xF9400408u},
+    {0x73D668u, 0x38696900u},
+    {0x73CA44u, 0x90001F37u},
+    {0x73CA48u, 0x912F72F7u},
+    {0x371678u, 0x90003D89u},
+    {0x37168Cu, 0xF9400D2Au},
+    {0x371690u, 0xF9400129u},
+    {0x3716A0u, 0xF86B6929u},
+    {0x3716A4u, 0x3CEA7920u},
+    {0x73E0D0u, 0x39404000u},
+#endif
     {ORIGINAL_UNIT_CAP_GETTER, 0xA9BB7BFDu},
     {ORIGINAL_UPGRADE_GATE, 0xA9BA7BFDu},
     {ORIGINAL_SAVE_WRAPPER, 0xD10103FFu},
@@ -471,13 +523,34 @@ static int select_unique_original_source_vma_shift(
     if (matches != 1u) {
         return 0;
     }
+#ifdef KNEEKURA_RESEARCH_PC_BALANCE
+    if (native->balance_executable_load_count != 1u) return 0;
+    static const uintptr_t sites[10] = {
+        0x99c4e0u, 0x5e5178u, 0x990f54u, 0x8ee878u,
+        0x99cb94u, 0x99ce18u, 0x488b78u, 0x488b30u,
+        0x5fa514u, 0x53b980u
+    };
+    for (unsigned i = 0; i < 10u; ++i) {
+        uintptr_t pc = native->base + selected + sites[i];
+        uintptr_t target = native->balance_executable_begin + 64u + i * 320u;
+        if (pc < native->executable_begin || pc + 4u > native->executable_end) return 0;
+        intptr_t delta = (intptr_t)target - (intptr_t)pc;
+        if (delta % 4 || delta < -(1 << 27) || delta >= (1 << 27)) return 0;
+        uint32_t actual;
+        memcpy(&actual, (const void *)pc, sizeof(actual));
+        uint32_t expected = (i == 1u || i == 3u || i == 7u) ? 0x94000000u : 0x14000000u;
+        expected |= (uint32_t)(delta / 4) & 0x03ffffffu;
+        if (actual != expected) return 0;
+    }
+#endif
     *out_shift = selected;
     return 1;
 }
 
 /*
  * Observe only the ORIGINAL scene97 DownloadBatchTask constructor's
- * 35 signed resolver return slots. Caller already proved exact JP BuildID,
+ * 35 signed postprocessed resolver slots (negative eligibility masks to zero).
+ * Caller already proved exact JP BuildID,
  * original source opcodes, same context root and isolated process.
  * This is a bounded aggregate, NOT a progress bar, error screen detector,
  * file-content audit, or successful original resource acceptance.
@@ -488,8 +561,12 @@ static int select_unique_original_source_vma_shift(
 static void observe_original_scene97_resolver_histogram(
         const uint8_t *game_context, uint32_t scene) {
     if (game_context == NULL || scene != 97u ||
-        atomic_load_explicit(
-            &gAllOriginalHooksInstalled, memory_order_acquire) != 1u) {
+        (atomic_load_explicit(
+            &gAllOriginalHooksInstalled, memory_order_acquire) != 1u
+#ifdef KNEEKURA_RESEARCH_PC_JNI_SCENE_OBSERVER
+         && atomic_load_explicit(&gPcSceneObserverState, memory_order_acquire) != 2u
+#endif
+        )) {
         return;
     }
     struct KneekuraScene97ResolverHistogram counts = {0u, 0u, 0u, 0u};
@@ -521,6 +598,186 @@ static void observe_original_scene97_resolver_histogram(
     }
 }
 
+#ifdef KNEEKURA_RESEARCH_PC_JNI_SCENE_OBSERVER
+/* Kernel copies avoid dereferencing a stale or corrupt heap task pointer.
+ * No addresses, bytes, filenames, SAVE or account data enter the log. */
+static int pc_read_observation(uintptr_t address, void *out, size_t length) {
+    /* ARM64 Android heap pointers can carry a top-byte allocator tag. */
+    address &= UINT64_C(0x00FFFFFFFFFFFFFF);
+    if (address == 0u || address > INT64_MAX - length) return 0;
+    /* Android can deny /proc/self/mem. The same-process kernel copy retains
+     * the fail-closed unmapped-address behavior without ptrace/root/SELinux changes. */
+    struct iovec local = {out, length};
+    struct iovec remote = {(void *)address, length};
+    return syscall(SYS_process_vm_readv, getpid(), &local, 1ul, &remote, 1ul, 0ul)
+            == (ssize_t)length;
+}
+
+#include "kneekura_original_ops_login.h"
+JNIEXPORT jint JNICALL
+Java_jp_kn_local_battlecats_MyActivity_kneekuraOriginalGlState(
+        JNIEnv *env, jclass bridge_class) {
+    (void)env; (void)bridge_class;
+    return kneekura_original_ops_gl_state(current_process_is_isolated_original_research(),
+        gOriginalLoadBias != 0u,
+        atomic_load_explicit(&gAllOriginalHooksInstalled, memory_order_acquire),
+        atomic_load_explicit(&gPcSceneObserverState, memory_order_acquire),
+        atomic_load_explicit(&gOriginalOpsGlTid, memory_order_acquire),
+        (int)syscall(SYS_gettid));
+}
+JNIEXPORT jint JNICALL
+Java_jp_kn_local_battlecats_MyActivity_kneekuraOriginalHttpRequestState(
+        JNIEnv *env, jclass bridge_class, jint request_id, jboolean individual) {
+    if (Java_jp_kn_local_battlecats_MyActivity_kneekuraOriginalGlState(env,bridge_class) != 1)
+        return -1;
+    uintptr_t base=gOriginalLoadBias+gOriginalVmaShift, root=0u;
+    uint64_t size=0u;
+    /* Original newResponse (runtime 0x46158c) looks up this map before
+     * invoking a callback. Observe registration, never mutate the registry. */
+    uintptr_t root_offset=individual ? 0xB229C0u : 0xB229A8u;
+    if (!pc_read_observation(base+root_offset,&root,sizeof(root))
+            || !pc_read_observation(base+root_offset+8u,&size,sizeof(size)) || size>4096u)
+        return -1;
+    for (uint64_t step=0u;root;++step) {
+        uint8_t node[88];int32_t key;uintptr_t callback;
+        if(step>=size || step>=64u || !pc_read_observation(root,node,sizeof(node)))return -1;
+        memcpy(&key,node+32u,sizeof(key));
+        if(key==request_id) {
+            /* Individual callbacks use a different mapped value layout.
+             * Presence is the diagnostic here; original callback code checks
+             * and invokes its own handler without our dereferencing it. */
+            if(individual)return 1;
+            memcpy(&callback,node+80u,sizeof(callback));return callback ? 1 : 0;
+        }
+        memcpy(&root,node+(request_id<key?0u:8u),sizeof(root));
+    }
+    return 0;
+}
+JNIEXPORT jintArray JNICALL
+Java_jp_kn_local_battlecats_MyActivity_kneekuraOriginalLoginProgress(
+        JNIEnv *env, jclass bridge_class, jintArray event_keys) {
+    (void)bridge_class;
+    if (event_keys == NULL
+            || Java_jp_kn_local_battlecats_MyActivity_kneekuraOriginalGlState(env,bridge_class) != 1)
+        return NULL;
+    jsize length = (*env)->GetArrayLength(env, event_keys);
+    if (length < 1 || length > 4096) return NULL;
+    jint keys[4096], counts[4096];
+    (*env)->GetIntArrayRegion(env, event_keys, 0, length, keys);
+    if ((*env)->ExceptionCheck(env)) return NULL;
+    uintptr_t getter_address = gOriginalLoadBias + ORIGINAL_APP_CONTEXT_GETTER + gOriginalVmaShift;
+    typedef void *(*ContextGetter)(void);
+    ContextGetter getter;
+    memcpy(&getter, &getter_address, sizeof(getter));
+    uintptr_t context = (uintptr_t)getter();
+    uintptr_t root;
+    uint64_t size;
+    if (context == 0u
+            || !pc_read_observation(context + 0x333518u, &root, sizeof(root))
+            || !pc_read_observation(context + 0x333520u, &size, sizeof(size))) return NULL;
+    if (!kneekura_original_login_counts(root, size, keys, (size_t)length,
+            pc_read_observation, counts)) return NULL;
+    jintArray result = (*env)->NewIntArray(env, length);
+    if (result != NULL) (*env)->SetIntArrayRegion(env, result, 0, length, counts);
+    return result;
+}
+
+static void pc_task_unavailable(const char *fixed_reason) {
+    static uint32_t reported = 0u;
+    if (reported != 0u) return;
+    reported = 1u;
+    __android_log_write(ANDROID_LOG_INFO, WITNESS_TAG, fixed_reason);
+}
+
+static void observe_pc_scene97_task(const uint8_t *context, uint32_t scene) {
+    static uint32_t emitted = 0u;
+    static char previous[160] = {0};
+    if (scene != 97u || emitted >= 4u
+            || atomic_load_explicit(&gPcSceneObserverState, memory_order_acquire) != 2u) return;
+    int32_t eligibility[35];
+    uintptr_t task = 0u;
+    uint8_t done = 0u;
+    uintptr_t data_base = gOriginalLoadBias + gOriginalVmaShift;
+    if (!pc_read_observation(data_base + 0xB20BDCu, eligibility, sizeof(eligibility))
+            || !pc_read_observation((uintptr_t)context + 0x334658u, &task, sizeof(task))
+            || !pc_read_observation((uintptr_t)context + 0x334668u, &done, sizeof(done))) {
+        pc_task_unavailable("original-native-scene97-task-unavailable-v1 context-read"); return;
+    }
+    unsigned active = 0u, failed = 0u, needed = 0u, pending = 0u;
+    for (unsigned i = 0; i < 35u; ++i) active += eligibility[i] >= 0;
+    if (task != 0u) {
+        uint8_t bytes[0x38];
+        uintptr_t vtable = 0u, owner = 0u;
+        if (!pc_read_observation(task, bytes, sizeof(bytes))) {
+            pc_task_unavailable("original-native-scene97-task-unavailable-v1 task-read"); return;
+        }
+        memcpy(&vtable, bytes, sizeof(vtable));
+        memcpy(&owner, bytes + 8u, sizeof(owner));
+        if (vtable != data_base + 0xAFE100u || owner != (uintptr_t)context) {
+            pc_task_unavailable("original-native-scene97-task-unavailable-v1 task-identity"); return;
+        }
+        failed = bytes[0x28]; needed = bytes[0x29];
+        memcpy(&pending, bytes + 0x2Cu, sizeof(pending));
+    }
+    if (failed > 1u || needed > 1u || pending > 35u || done > 1u) {
+        pc_task_unavailable("original-native-scene97-task-unavailable-v1 task-flags"); return;
+    }
+    char message[160];
+    int size = snprintf(message, sizeof(message),
+        "original-native-scene97-task-v1 active=%u disabled=%u present=%u failed=%u needed=%u pending=%u completed=%u",
+        active, 35u - active, task != 0u, failed, needed, pending, done);
+    if (size > 0 && (size_t)size < sizeof(message) && strcmp(previous, message) != 0) {
+        memcpy(previous, message, (size_t)size + 1u);
+        ++emitted;
+        __android_log_write(ANDROID_LOG_INFO, WITNESS_TAG, message);
+    }
+}
+
+static void observe_pc_scene97_queue(const uint8_t *context, uint32_t scene) {
+    static unsigned emitted = 0u;
+    static char previous[128] = {0};
+    if (scene != 97u || emitted >= 4u
+            || atomic_load_explicit(&gPcSceneObserverState, memory_order_acquire) != 2u) return;
+    uintptr_t data_base = gOriginalLoadBias + gOriginalVmaShift;
+    uint64_t queue[5], block = 0u, task = 0u, vtable = 0u;
+    uint32_t phase = 0u, waiting = 0u;
+    unsigned head = 0u, complete = 0u;
+    if (!pc_read_observation(data_base + 0xB21870u, queue, sizeof(queue))
+            || !pc_read_observation((uintptr_t)context + 0x3388u, &phase, sizeof(phase))
+            || !pc_read_observation((uintptr_t)context + 0x338Cu, &waiting, sizeof(waiting))) {
+        pc_task_unavailable("original-native-scene97-queue-unavailable-v1 header-read"); return;
+    }
+    if (queue[4] > 128u || queue[3] > 65535u) {
+        pc_task_unavailable("original-native-scene97-queue-unavailable-v1 header-range"); return;
+    }
+    if (phase > 64u) phase = 65u;
+    if (waiting > 8u) waiting = 9u;
+    if (queue[4] != 0u) {
+        if (!pc_read_observation(queue[0] + (queue[3] / 256u) * 8u, &block, sizeof(block))
+                || !pc_read_observation(block + (queue[3] % 256u) * 16u, &task, sizeof(task))
+                || !pc_read_observation(task, &vtable, sizeof(vtable))) {
+            pc_task_unavailable("original-native-scene97-queue-unavailable-v1 task-read"); return;
+        }
+        head = vtable == data_base + 0xAFE100u ? 1u
+             : vtable == data_base + 0xAFE198u ? 2u
+             : vtable == data_base + 0xAFE5C8u ? 3u : 4u;
+        if (head == 2u || head == 3u) {
+            uint8_t flag = 0u;
+            if (!pc_read_observation(task + 0x10u, &flag, sizeof(flag)) || flag > 1u) return;
+            complete = flag;
+        }
+    }
+    char message[128];
+    int size = snprintf(message, sizeof(message),
+        "original-native-scene97-queue-v1 head=%u completed=%u phase=%u waiting=%u",
+        head, complete, phase, waiting);
+    if (size > 0 && (size_t)size < sizeof(message) && strcmp(previous, message) != 0) {
+        memcpy(previous, message, (size_t)size + 1u); ++emitted;
+        __android_log_write(ANDROID_LOG_INFO, WITNESS_TAG, message);
+    }
+}
+#endif
+
 static void research_draw_proxy(void *jni_env, void *jni_class) {
     /* ALWAYS forward the exact original JNI invocation before observing.
        The function has original DEX prototype static ()V (two JNI args).
@@ -532,10 +789,37 @@ static void research_draw_proxy(void *jni_env, void *jni_class) {
     }
     original_draw(jni_env, jni_class);
 
+#ifdef KNEEKURA_RESEARCH_PC_JNI_SCENE_OBSERVER
+    if (atomic_load_explicit(&gPcSceneObserverState, memory_order_acquire) == 2u) {
+        if ((int)syscall(SYS_gettid) != atomic_load_explicit(&gPcSceneGlTid, memory_order_acquire)) {
+            if (atomic_exchange_explicit(&gPcSceneThreadMismatch, 1u, memory_order_relaxed) == 0u) {
+                __android_log_write(ANDROID_LOG_INFO, WITNESS_TAG,
+                    "original-native-pc-jni-scene-v1 thread-mismatch");
+            }
+            return; /* Still forward original draw; do not read context off the attested GL thread. */
+        }
+        if (atomic_exchange_explicit(&gPcSceneFirstDraw, 1u, memory_order_relaxed) == 0u) {
+            __android_log_write(ANDROID_LOG_INFO, WITNESS_TAG,
+                "original-native-pc-jni-scene-v1 original-returned-same-gl-thread");
+        }
+    }
+#endif
+
     uintptr_t base = gOriginalLoadBias;
     if (base == 0u) {
         return;
     }
+#ifdef KNEEKURA_RESEARCH_PC_JNI_SCENE_OBSERVER
+    if (atomic_load_explicit(&gAllOriginalHooksInstalled, memory_order_acquire) == 1u
+            || atomic_load_explicit(&gPcSceneObserverState, memory_order_acquire) == 2u) {
+        int unset = 0;
+        if (atomic_compare_exchange_strong_explicit(&gOriginalOpsGlTid, &unset,
+                (int)syscall(SYS_gettid), memory_order_acq_rel, memory_order_acquire)) {
+            __android_log_write(ANDROID_LOG_INFO, WITNESS_TAG,
+                "original-local-ops-native-gl-v1 ready");
+        }
+    }
+#endif
     typedef void *(*OriginalContextFn)(void);
     OriginalContextFn get_game_context = NULL;
     uintptr_t context_getter = base + ORIGINAL_APP_CONTEXT_GETTER
@@ -548,9 +832,43 @@ static void research_draw_proxy(void *jni_env, void *jni_class) {
     if (context == NULL) {
         return;
     }
+#ifdef KNEEKURA_RESEARCH_PC_BALANCE
+    uint64_t context_registers[32] = {0};
+    context_registers[0] = (uintptr_t)context;
+    kneekura_pc_balance_dispatch(context_registers, 11u);
+    static uint32_t balance_frames;
+    if ((balance_frames++ % 120u) == 0u) {
+        uint64_t count[KNEEKURA_PC_BALANCE_COUNTERS];
+        kneekura_pc_balance_counters(count, KNEEKURA_PC_BALANCE_COUNTERS);
+        char diagnostic[384];
+        int length = snprintf(diagnostic, sizeof(diagnostic),
+            "pc-native-balance-v1 calls=%llu,%llu,%llu,%llu,%llu,%llu,%llu,%llu "
+            "castle_credit=%llu castle_zero=%llu delayed_rejected=%llu query_capacity=%llu",
+            (unsigned long long)count[0], (unsigned long long)count[1],
+            (unsigned long long)count[2], (unsigned long long)count[3],
+            (unsigned long long)count[4], (unsigned long long)count[5],
+            (unsigned long long)count[6], (unsigned long long)count[7],
+            (unsigned long long)count[8], (unsigned long long)count[9],
+            (unsigned long long)count[10], (unsigned long long)count[11]);
+        if (length > 0 && (size_t)length < sizeof(diagnostic))
+            __android_log_write(ANDROID_LOG_INFO, WITNESS_TAG, diagnostic);
+        uint64_t level_count[3];
+        kneekura_pc_xp_level_counters(level_count);
+        length = snprintf(diagnostic, sizeof(diagnostic),
+            "pc-native-catseye-level-v1 base-floor=%llu unlock=%llu binding=%llu",
+            (unsigned long long)level_count[0], (unsigned long long)level_count[1],
+            (unsigned long long)level_count[2]);
+        if (length > 0 && (size_t)length < sizeof(diagnostic))
+            __android_log_write(ANDROID_LOG_INFO, WITNESS_TAG, diagnostic);
+    }
+#endif
     uint32_t scene = 0u;
     memcpy(&scene, context + ORIGINAL_SCENE_RECORD_OFFSET, sizeof(scene));
     observe_original_scene97_resolver_histogram(context, scene);
+#ifdef KNEEKURA_RESEARCH_PC_JNI_SCENE_OBSERVER
+    observe_pc_scene97_task(context, scene);
+    observe_pc_scene97_queue(context, scene);
+#endif
 
     uint32_t previous = atomic_exchange_explicit(
         &gLastScene, scene, memory_order_relaxed);
@@ -566,6 +884,66 @@ static void research_draw_proxy(void *jni_env, void *jni_class) {
         __android_log_write(ANDROID_LOG_INFO, WITNESS_TAG, message);
     }
 }
+
+#ifdef KNEEKURA_RESEARCH_PC_JNI_SCENE_OBSERVER
+/* Called via queueEvent ONLY after super.onCreate and original class/library
+ * initialization. Never register JNI from a loader constructor: the original
+ * process probe ANR showed concurrent nativeLoad/nativeProbe waits there.
+ * One exact JNI binding; original code pages/LEVEL/SAVE entries are untouched.
+ */
+JNIEXPORT jboolean JNICALL
+Java_jp_kn_local_battlecats_MyActivity_kneekuraAttachPcSceneObserver(
+        JNIEnv *env, jclass bridge_class, jclass original_class) {
+    (void)bridge_class;
+    if (!current_process_is_isolated_original_research() || original_class == NULL
+        || atomic_load_explicit(&gAllOriginalHooksInstalled, memory_order_acquire) != 0u
+        || gHookStub != NULL || gShadowHookLibrary != NULL) {
+        return JNI_FALSE; /* Never double-wrap an existing or partly rolled-back hook. */
+    }
+    uint32_t expected = 0u;
+    if (!atomic_compare_exchange_strong_explicit(&gPcSceneObserverState, &expected, 1u,
+            memory_order_acq_rel, memory_order_acquire)) {
+        return expected == 2u && (int)syscall(SYS_gettid) ==
+            atomic_load_explicit(&gPcSceneGlTid, memory_order_acquire) ? JNI_TRUE : JNI_FALSE;
+    }
+    struct NativeElfWitness witness = {0};
+    uintptr_t shift = 0u;
+    dl_iterate_phdr(inspect_original_library, &witness);
+    jclass pinned_class = (*env)->FindClass(env, "jp/co/ponos/battlecats/MyActivity");
+    int class_matches = pinned_class != NULL && (*env)->IsSameObject(env, pinned_class, original_class);
+    if (pinned_class != NULL) {
+        (*env)->DeleteLocalRef(env, pinned_class);
+    }
+    if (!class_matches || (*env)->ExceptionCheck(env)
+        || witness.original_library_count != 1u || witness.exact_build_id_count != 1u
+        || !select_unique_original_source_vma_shift(&witness, &shift)
+        || (*env)->GetStaticMethodID(env, original_class, "appUpdateDraw", "()V") == NULL
+        || (*env)->ExceptionCheck(env)) {
+        atomic_store_explicit(&gPcSceneObserverState, 3u, memory_order_release);
+        __android_log_write(ANDROID_LOG_INFO, WITNESS_TAG,
+            "original-native-pc-jni-scene-v1 source-unavailable");
+        return JNI_FALSE;
+    }
+    /* Publish original forwarding/context addresses before the binding can run.
+     * Installer itself runs on the original GL queue, so no draw overlaps it.
+     */
+    gOriginalDraw = (void *)(witness.base + ORIGINAL_JNI_DRAW + shift);
+    gOriginalLoadBias = witness.base;
+    gOriginalVmaShift = shift;
+    atomic_store_explicit(&gPcSceneGlTid, (int)syscall(SYS_gettid), memory_order_release);
+    JNINativeMethod method = {"appUpdateDraw", "()V", (void *)&research_draw_proxy};
+    if ((*env)->RegisterNatives(env, original_class, &method, 1) != JNI_OK) {
+        atomic_store_explicit(&gPcSceneObserverState, 3u, memory_order_release);
+        __android_log_write(ANDROID_LOG_INFO, WITNESS_TAG,
+            "original-native-pc-jni-scene-v1 registration-failed");
+        return JNI_FALSE;
+    }
+    atomic_store_explicit(&gPcSceneObserverState, 2u, memory_order_release);
+    __android_log_write(ANDROID_LOG_INFO, WITNESS_TAG,
+        "original-native-pc-jni-scene-v1 attached");
+    return JNI_TRUE;
+}
+#endif
 
 /*
  * Four extra EXACT-VMA research witnesses for original LEVEL #12.

@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "task_id": "OPS-BATCH-001",
+  "result": "PASS",
+  "exit_code": 0,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "C:/Users/genki/Downloads/Kneekura-WhiteNyankocats/private/pc-lab/liveops-investigation/seasonal-v9-pc-smoke.py"
+  ],
+  "observed_at": "2026-10-20T13:14:25.178+00:00",
+  "elapsed_ms": 20500,
+  "git_head": "ada2e0497ef5617c43d016675a9f234022a1507d",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/OPS-BATCH-001_1428f4d5ffca4586b71f0e613c840cc6.log",
+  "output_sha256": "f1a524bec86085088fc065d847d956a3050f4a2acbd1adf9ec7535849da682b9",
+  "receipt_id": "OPS-BATCH-001_1428f4d5ffca4586b71f0e613c840cc6"
+}

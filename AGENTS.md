@@ -1,5 +1,19 @@
 # AGENTS.md — にーくら大戦争 AI作業入口
 
+## 恒久的な検証分担（所有者指定・2026-10-13）
+
+- 運営開発は所有者指定の「一括実装・一括検証・一括修正」を採用する。関連する機能を一つのバッチとして設計・実装し、PCでまとめて検証して、見つかった不具合をまとめて修正する。機能ごとにAPK作成・実機確認を反復しない。修正後は失敗箇所と影響範囲を確認し、追加の変更・失敗・未解決の懸念がある場合だけ検証を広げる。
+- AIはPC内でビルド、変更に関連するテスト、必要な原作UIの動作・保存を検証する。品質と進行速度を両立するため、変更の影響に応じて検証を選び、新しい変更・失敗・未解決の懸念がない限り、同じ検証や全試験を繰り返さない。
+- スマホへ渡した後のゲーム動作は、所有者が目視で検証する。AIによるスマホの起動・画面操作・育成／進化試験・再起動・画面／ログ取得・SAVE読取りを、標準の受渡し後検証として実行しない。追加の端末調査は、所有者がその作業を明示的に依頼した場合に限る。
+- 依頼された転送・導入に必要な対象package／署名／データ保持の確認と、スマホでのゲーム動作検証を区別する。導入処理の成功を動作確認済みと記載しない。
+- PCの必要な検証が通れば受渡しへ進む。所有者のスマホ目視確認が未報告の項目は「本人確認待ち」と記録し、AIによるスマホ検証を受渡しの追加条件にしない。PCで確認した範囲と、本人が確認した範囲を分けて報告する。
+- この分担は、以下や過去の文書にある「AIが実機UI／再起動を検証してから渡す」手順に優先する。既存の署名・秘匿・データ保護・品質基準は維持し、未確認項目を成功扱いにしない。
+
+## 任意のAndroid逆解析スキル：REA（通常OFF）
+
+- APK/DEX/Smali/JNI/ネイティブコードの**具体的な逆解析が必要なときだけ**、[REAスキル](.agents/skills/rea-android-analysis/SKILL.md)を選択肢として検討する。既存ツールで十分なら使わない。
+- 普段の実装・テスト・運営作業ではREAのSkill詳細読込、インストール状況の確認、依存導入、MCP起動・登録を行わない。REAは必須ではなく、採用・不採用は根拠と負担で判断する。
+
 **FIRST: READ [CURRENT.md](CURRENT.md).** That file is the ONLY design entry point and links to [PRODUCT_IDENTITY.md](PRODUCT_IDENTITY.md) and the [four-feature active implementation roadmap](docs/roadmap/2026-10-09-original-battle-cats-delivery.md). Do **not** search all older design docs, open a new foundational spec series, continue the standalone lookalike Alpha as product work, or hand over an APK whose only achievement is passing basic CI. **The next implementation task is the first real original-game UI level-cap vertical slice, with full offline engineering investigated in parallel.**
 
 **OWNER WINDOWS PATHS ARE NOT GUESSWORK:** Read the “オーナーWindows開発環境 — 実測固定パス” section of [CURRENT.md](CURRENT.md) before proposing any Android SDK, adb, PowerShell, ZIP, or signing instructions. The confirmed SDK root is `C:\Users\genki\AppData\Local\Android\Sdk`, ADB is `platform-tools\adb.exe` below that root, project checkout is `C:\Users\genki\Downloads\Kneekura-WhiteNyankocats`, original owned ZIP is under `Downloads\にーくらにゃんこ\`, and the research kit is under `Downloads\kneekura-original-owner-trial-kit`. Use dynamic `adb devices` for current connection state; NEVER hardcode a device serial, fake `C:\PATH\TO` path, or infer the currently opened PowerShell directory is the repo. Exact current paths and Build-tools evidence are centralized in CURRENT.md; update there, not in new parallel rules.
@@ -160,3 +174,12 @@ python -m tools.agent_terminal.verify run --name example -- python -m tools.base
 
 If a command cannot be executed because it needs a device or private material,
 report it as `USER_GATE` rather than `PASS` or an invented successful result.
+
+<!-- CCG_CONTINUITY_START -->
+## Codex Continuity Guard (行動指針)
+
+1. **原初目標と制約の維持**: `docs/ai-continuity/PROJECT_CHARTER.md` に記載された原初目標と禁止事項を遵守する。AIの判断で勝手に変更してはならない。
+2. **要件変更の承認管理**: ユーザーからの明示的な変更指示があった場合は、`docs/ai-continuity/AMENDMENTS/` に記録し、承認された変更として管理する。
+3. **検証証拠の重視**: テストを実行せずに「成功」と報告してはならない。検証結果は `docs/ai-continuity/EVIDENCE_INDEX.md` に客観的な証拠とともに記録する。
+4. **コンテキスト圧縮・再開時**: 作業状態が不足する場合は `continuity-guard` Skill の restore 操作で状態を確認し、現在タスクと整合性をとって作業を再開する。
+<!-- CCG_CONTINUITY_END -->

@@ -1873,6 +1873,11 @@ ORIGINAL_SCENE97_DOWNLOAD_BATCH_ANCHORS = {
     0x73CA9C: 0x97EF9E6E,  # formatted name helper
     0x73CAA8: 0x97EF904E,  # source/asset resolution helper
     0x73CAB0: 0xB8357B40,  # per-index result [game_context+0x2fb8]
+    0x73CA44: 0x90001F37,  # eligibility table page
+    0x73CA48: 0x912F72F7,  # table at 0xb20bdc
+    0x73CA5C: 0xB8357B5F,  # overwrite ineligible slot with zero
+    0x73CAC0: 0xB8757AE8,  # table[index]
+    0x73CAC4: 0x36F80148,  # nonnegative -> ordinary result handling
 }
 ORIGINAL_DOWNLOAD_BATCH_RTTI = (
     b"NSt6__ndk120__shared_ptr_emplaceI17DownloadBatchTaskNS_9allocatorIS1_EEEE\x00"
@@ -1951,6 +1956,10 @@ def _original_scene97_download_batch_task(elf: bytes) -> dict[str, Any]:
         "native_index_loop": "0x73ca24 idx0; 0x73ca60 increment; 0x73ca64 cmp #35; 0x73ca68 BEQ -> 0x73cb40",
         "per_index_source_lookup": "0x73ca9c -> 0x324454; 0x73caa8 -> 0x320be0",
         "per_index_native_storage": "0x73cab0 writes result into context+0x2fb8+idx*4",
+        "negative_eligibility_overwrites_slot_with_zero": True,
+        "eligibility_table": "0xb20bdc; 0x73cac0 signed entry; 0x73cac4 sign-bit branch",
+        "masked_zero_store": "0x73ca5c context+0x2fb8+idx*4 = 0",
+        "all_zero_slots_alone_prove_download_completion": False,
         "network_transport_call_proven": False,
         "remote_data_required_proven": False,
         "615mb_additional_assets_locally_available_proven": False,

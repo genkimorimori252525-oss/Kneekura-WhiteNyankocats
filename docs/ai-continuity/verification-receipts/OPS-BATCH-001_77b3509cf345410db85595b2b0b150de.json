@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "task_id": "OPS-BATCH-001",
+  "result": "PASS",
+  "exit_code": 0,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "C:/Users/genki/Downloads/Kneekura-WhiteNyankocats/private/pc-lab/liveops-investigation/stage-policy-audit/verify_original_gate_preservation.py"
+  ],
+  "observed_at": "2026-10-22T21:08:03.864+00:00",
+  "elapsed_ms": 781,
+  "git_head": "a27f55337f91a6e145afcecfc7df10ec81edbf51",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/OPS-BATCH-001_77b3509cf345410db85595b2b0b150de.log",
+  "output_sha256": "92f22ffd55e9f29891e38fca9e5596ba341688140d4198995893e9aadd47fbb8",
+  "receipt_id": "OPS-BATCH-001_77b3509cf345410db85595b2b0b150de"
+}

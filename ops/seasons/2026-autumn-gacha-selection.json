@@ -1,0 +1,164 @@
+{
+  "schema_version": 1,
+  "revision": 9,
+  "start_date": "2026-10-15",
+  "end_date": "2026-11-30",
+  "rotating_set_ids": [
+    986,
+    1068,
+    1044,
+    1021,
+    1060,
+    1084,
+    947,
+    991,
+    979,
+    1015,
+    1004
+  ],
+  "weekly": [
+    {
+      "start": "2026-10-12",
+      "end": "2026-10-19",
+      "set_id": 1085,
+      "title": "週間特選：週間オールスター特選"
+    },
+    {
+      "start": "2026-10-19",
+      "end": "2026-10-26",
+      "set_id": 922,
+      "title": "週間特選：ハロウィンガチャ"
+    },
+    {
+      "start": "2026-10-26",
+      "end": "2026-11-02",
+      "set_id": 922,
+      "title": "週間特選：ハロウィンガチャ"
+    },
+    {
+      "start": "2026-11-02",
+      "end": "2026-11-09",
+      "set_id": 1086,
+      "title": "週間特選：週間オールスター特選"
+    },
+    {
+      "start": "2026-11-09",
+      "end": "2026-11-16",
+      "set_id": 958,
+      "title": "週間特選：魔法少女まどか☆マギカ"
+    },
+    {
+      "start": "2026-11-16",
+      "end": "2026-11-23",
+      "set_id": 1085,
+      "title": "週間特選：週間オールスター特選"
+    },
+    {
+      "start": "2026-11-23",
+      "end": "2026-11-30",
+      "set_id": 1086,
+      "title": "週間特選：週間オールスター特選"
+    }
+  ],
+  "rare_chances": [
+    0,
+    7000,
+    2500,
+    500,
+    0
+  ],
+  "normal": [
+    {
+      "set_id": 0,
+      "gacha_type": 0,
+      "cost": 0,
+      "chances": [
+        10000,
+        0,
+        0,
+        0,
+        0
+      ],
+      "title": "にゃんこガチャ",
+      "permanent": true
+    },
+    {
+      "set_id": 3,
+      "gacha_type": 0,
+      "cost": 0,
+      "chances": [
+        10000,
+        0,
+        0,
+        0,
+        0
+      ],
+      "title": "マタタビ入りにゃんこガチャ",
+      "permanent": true
+    }
+  ],
+  "set_policy": {
+    "986": {
+      "category": "standard",
+      "title": "伝説のネコルガ族"
+    },
+    "1068": {
+      "category": "standard",
+      "title": "超激ダイナマイツ"
+    },
+    "1044": {
+      "category": "standard",
+      "title": "戦国武神バサラーズ"
+    },
+    "1021": {
+      "category": "standard",
+      "title": "電脳学園ギャラクシーギャルズ"
+    },
+    "1060": {
+      "category": "standard",
+      "title": "超破壊大帝ドラゴンエンペラーズ"
+    },
+    "1084": {
+      "category": "standard",
+      "title": "超古代勇者ウルトラソウルズ"
+    },
+    "947": {
+      "category": "standard",
+      "title": "逆襲の英雄ダークヒーローズ"
+    },
+    "991": {
+      "category": "standard",
+      "title": "究極降臨ギガントゼウス"
+    },
+    "979": {
+      "category": "standard",
+      "title": "革命軍隊アイアンウォーズ"
+    },
+    "1015": {
+      "category": "standard",
+      "title": "絶命美少女ギャルズモンスターズ"
+    },
+    "1004": {
+      "category": "standard",
+      "title": "大精霊エレメンタルピクシーズ"
+    },
+    "922": {
+      "category": "seasonal",
+      "title": "ハロウィンガチャ",
+      "start": "2026-10-19",
+      "end": "2026-11-03"
+    },
+    "958": {
+      "category": "collaboration",
+      "title": "魔法少女まどか☆マギカ"
+    },
+    "1085": {
+      "category": "festival",
+      "title": "週間オールスター特選"
+    },
+    "1086": {
+      "category": "festival",
+      "title": "週間オールスター特選"
+    }
+  }
+}

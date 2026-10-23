@@ -1,0 +1,38 @@
+EEE
+======================================================================
+ERROR: test_operations_capture_rejects_non_jst_before_install_or_launch (tests.test_pc_lab.FailedBuildEvidenceTests.test_operations_capture_rejects_non_jst_before_install_or_launch) (zone='GMT')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\genki\Documents\Codex\2026-10-12\615mb-393-2-http-0-97\work\kneekura-pc-lab\tests\test_pc_lab.py", line 28, in test_operations_capture_rejects_non_jst_before_install_or_launch
+    lab._capture_locked(18,install=True)
+  File "C:\Users\genki\Documents\Codex\2026-10-12\615mb-393-2-http-0-97\work\kneekura-pc-lab\tools\pc_lab.py", line 678, in _capture_locked
+    Path(build['directory']) / n for n in JP_15_7_1_SPLITS], timeout=180)
+         ~~~~~^^^^^^^^^^^^^
+KeyError: 'directory'
+
+======================================================================
+ERROR: test_operations_capture_rejects_non_jst_before_install_or_launch (tests.test_pc_lab.FailedBuildEvidenceTests.test_operations_capture_rejects_non_jst_before_install_or_launch) (zone='UTC')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\genki\Documents\Codex\2026-10-12\615mb-393-2-http-0-97\work\kneekura-pc-lab\tests\test_pc_lab.py", line 28, in test_operations_capture_rejects_non_jst_before_install_or_launch
+    lab._capture_locked(18,install=True)
+  File "C:\Users\genki\Documents\Codex\2026-10-12\615mb-393-2-http-0-97\work\kneekura-pc-lab\tools\pc_lab.py", line 678, in _capture_locked
+    Path(build['directory']) / n for n in JP_15_7_1_SPLITS], timeout=180)
+         ~~~~~^^^^^^^^^^^^^
+KeyError: 'directory'
+
+======================================================================
+ERROR: test_operations_capture_rejects_non_jst_before_install_or_launch (tests.test_pc_lab.FailedBuildEvidenceTests.test_operations_capture_rejects_non_jst_before_install_or_launch) (zone='')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\genki\Documents\Codex\2026-10-12\615mb-393-2-http-0-97\work\kneekura-pc-lab\tests\test_pc_lab.py", line 28, in test_operations_capture_rejects_non_jst_before_install_or_launch
+    lab._capture_locked(18,install=True)
+  File "C:\Users\genki\Documents\Codex\2026-10-12\615mb-393-2-http-0-97\work\kneekura-pc-lab\tools\pc_lab.py", line 678, in _capture_locked
+    Path(build['directory']) / n for n in JP_15_7_1_SPLITS], timeout=180)
+         ~~~~~^^^^^^^^^^^^^
+KeyError: 'directory'
+
+----------------------------------------------------------------------
+Ran 1 test in 0.005s
+
+FAILED (errors=3)

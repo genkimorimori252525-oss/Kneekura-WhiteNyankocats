@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "task_id": "OPS-BATCH-001",
+  "result": "PASS",
+  "exit_code": 0,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "-c",
+    "import re,json,hashlib\nfrom pathlib import Path\np=Path('docs/research/2026-10-23-catamin-source-audit.md')\nt=p.read_text(encoding='utf-8');ids=[int(x) for x in re.findall(r'^\\| (140\\d\\d) \\|',t,re.M)]\nassert len(ids)==52 and len(set(ids))==52 and set(ids)==set(range(14000,14052))\nassert 'UNKNOWN' in t and 'JP15.7.1' in t\nroot=Path('C:/Users/genki/Downloads/Kneekura-WhiteNyankocats/private/pc-lab/liveops-investigation/catamin-native-schedule')\nb=json.loads((root/'BEFORE.json').read_text());r=json.loads((root/'READONLY-PREPARATION.json').read_text())\nassert hashlib.sha256((root/'before-SAVE_DATA').read_bytes()).hexdigest()==b['save_sha256']\nassert all(r[k] is True for k in ('original_save_unchanged','app_not_launched','clock_not_changed','pc_only')) and r['phone_touched'] is False\nprint('CATAMIN_RESEARCH_REPORT_ALL_52_IDS_PRESENT UNKNOWN_PRESERVED PC_SAVE_UNCHANGED NO_RUNTIME_ACCEPTANCE_CLAIM')"
+  ],
+  "observed_at": "2026-10-23T08:38:15.575+00:00",
+  "elapsed_ms": 93,
+  "git_head": "098a4fe448c0c3c8ae5649c890f9d1dfb8d01377",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/OPS-BATCH-001_f60de82e6d5f48b9aceb72aa7ddd1e6a.log",
+  "output_sha256": "993bd37a2cc9f877c895d566f887c8d176ff69f5c23fa5fcbe23a3108a9335bf",
+  "receipt_id": "OPS-BATCH-001_f60de82e6d5f48b9aceb72aa7ddd1e6a"
+}

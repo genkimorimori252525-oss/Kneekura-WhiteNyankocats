@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "task_id": "OPS-BATCH-001",
+  "result": "PASS",
+  "exit_code": 0,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "-m",
+    "unittest",
+    "tests.test_pc_balance_assets"
+  ],
+  "observed_at": "2026-10-23T09:42:51.536+00:00",
+  "elapsed_ms": 359,
+  "git_head": "451906337c020bcd25b2a67e23e537c7f9903945",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/OPS-BATCH-001_53c0fa708992426094d3c5c464779f9e.log",
+  "output_sha256": "f9b672c8dc65df24578b5c8311dbec3ca3904323e9a118e83469663b6923240c",
+  "receipt_id": "OPS-BATCH-001_53c0fa708992426094d3c5c464779f9e"
+}

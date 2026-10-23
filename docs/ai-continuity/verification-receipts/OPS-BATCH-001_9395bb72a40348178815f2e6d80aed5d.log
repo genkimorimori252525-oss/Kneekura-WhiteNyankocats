@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "C:\Users\genki\Documents\Codex\2026-10-12\615mb-393-2-http-0-97\work\phone_ops_gacha_update.py", line 34, in <module>
+    assert len(physical) == 1, 'ONE_PHYSICAL_USB_PHONE_REQUIRED'
+           ^^^^^^^^^^^^^^^^^^
+AssertionError: ONE_PHYSICAL_USB_PHONE_REQUIRED

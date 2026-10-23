@@ -1,0 +1,427 @@
+{
+  "schema_version": 1,
+  "channel": "kneekura-main-offline",
+  "revision": 4,
+  "status": "published",
+  "timezone": "Asia/Tokyo",
+  "season": {
+    "id": "kneekura:season:2026-autumn-ops-batch1",
+    "title": "にーくら秋季ローカル運営第1弾",
+    "start": "2026-10-01T00:00:00+09:00",
+    "end": "2026-12-01T00:00:00+09:00"
+  },
+  "policy": {
+    "network": "forbidden",
+    "owner_save": "ORIGINAL_JP1571_SAVE_DATA",
+    "stage_availability_is_clear": false,
+    "login_active_slots": 5,
+    "real_money": false
+  },
+  "catalog": {
+    "gacha": [
+      {
+        "id": "kneekura:gacha:rare-batch1",
+        "title": "レアガチャ（秋季ローカルセレクション）",
+        "source": "kneekura-local",
+        "ready": true,
+        "original": {
+          "set_id": 49,
+          "cost": 150,
+          "chances": [
+            0,
+            7000,
+            2500,
+            500,
+            0
+          ],
+          "guaranteed": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      }
+    ],
+    "stage": [
+      {
+        "id": "kneekura:stage:daily-000",
+        "title": "月曜：ネコボン屋敷",
+        "source": "kneekura-local",
+        "ready": true,
+        "original": {
+          "native_ids": [
+            1000
+          ]
+        }
+      },
+      {
+        "id": "kneekura:stage:metal-006",
+        "title": "メタル系ステージ（S006）",
+        "source": "kneekura-local",
+        "ready": true,
+        "original": {
+          "native_ids": [
+            1006
+          ]
+        }
+      },
+      {
+        "id": "kneekura:stage:weekday-1",
+        "title": "火曜：爆速バトラー",
+        "source": "kneekura-local",
+        "ready": true,
+        "original": {
+          "native_ids": [
+            1001
+          ]
+        }
+      },
+      {
+        "id": "kneekura:stage:weekday-2",
+        "title": "水曜：おかめ道場",
+        "source": "kneekura-local",
+        "ready": true,
+        "original": {
+          "native_ids": [
+            1002
+          ]
+        }
+      },
+      {
+        "id": "kneekura:stage:weekday-3",
+        "title": "木曜：狙撃の名手",
+        "source": "kneekura-local",
+        "ready": true,
+        "original": {
+          "native_ids": [
+            1003
+          ]
+        }
+      },
+      {
+        "id": "kneekura:stage:weekday-4",
+        "title": "金曜：ネコでもできるもん",
+        "source": "kneekura-local",
+        "ready": true,
+        "original": {
+          "native_ids": [
+            1004
+          ]
+        }
+      },
+      {
+        "id": "kneekura:stage:weekday-5",
+        "title": "土日：経験は蜜の味",
+        "source": "kneekura-local",
+        "ready": true,
+        "original": {
+          "native_ids": [
+            1005
+          ]
+        }
+      }
+    ],
+    "event": [
+      {
+        "id": "kneekura:event:collab-002",
+        "title": "スペシャルイベント（C002）",
+        "source": "kneekura-local",
+        "ready": true,
+        "original": {
+          "native_ids": [
+            2002
+          ]
+        }
+      }
+    ],
+    "login": [],
+    "mission": [
+      {
+        "id": "kneekura:mission:weekly-8000",
+        "title": "週間ミッション",
+        "source": "kneekura-local",
+        "ready": true,
+        "original": {
+          "native_ids": [
+            8000,
+            8001,
+            8002,
+            8003,
+            8004,
+            8005,
+            8006,
+            8007,
+            8008,
+            8009,
+            8010,
+            8011
+          ]
+        }
+      },
+      {
+        "id": "kneekura:mission:monthly-17000",
+        "title": "月間ミッション",
+        "source": "kneekura-local",
+        "ready": true,
+        "original": {
+          "native_ids": [
+            17000
+          ]
+        }
+      }
+    ],
+    "modifier": [],
+    "notice": [
+      {
+        "id": "kneekura:notice:ops-batch1-welcome",
+        "title": "にーくらローカル運営開始のお知らせ",
+        "source": "kneekura-local",
+        "ready": true,
+        "body": "にーくらローカル運営バッチ1が開始されました。\nレアガチャ、イベントステージ、ログインボーナスをお楽しみください。",
+        "category": "運営情報",
+        "published_at": "2026-10-14T00:00:00+09:00",
+        "priority": 10,
+        "pinned": true
+      }
+    ]
+  },
+  "schedule": [
+    {
+      "id": "kneekura:schedule:gacha-rare",
+      "kind": "gacha",
+      "slot": "gacha-1",
+      "priority": 1,
+      "content_id": "kneekura:gacha:rare-batch1",
+      "rule": {
+        "mode": "once",
+        "start": "2026-10-14T00:00:00+09:00",
+        "end": "2026-11-15T00:00:00+09:00"
+      }
+    },
+    {
+      "id": "kneekura:schedule:weekday-0",
+      "kind": "stage",
+      "slot": "weekday-stage",
+      "priority": 1,
+      "content_id": "kneekura:stage:daily-000",
+      "rule": {
+        "mode": "weekly",
+        "valid_from": "2026-10-14",
+        "valid_until": "2026-11-15",
+        "from_time": "00:00",
+        "to_time": "00:00",
+        "weekdays": [
+          0
+        ]
+      }
+    },
+    {
+      "id": "kneekura:schedule:stage-metal",
+      "kind": "stage",
+      "slot": "stage-2",
+      "priority": 1,
+      "content_id": "kneekura:stage:metal-006",
+      "rule": {
+        "mode": "once",
+        "start": "2026-10-14T00:00:00+09:00",
+        "end": "2026-11-15T00:00:00+09:00"
+      }
+    },
+    {
+      "id": "kneekura:schedule:event-collab",
+      "kind": "event",
+      "slot": "event-1",
+      "priority": 1,
+      "content_id": "kneekura:event:collab-002",
+      "rule": {
+        "mode": "once",
+        "start": "2026-10-14T00:00:00+09:00",
+        "end": "2026-11-15T00:00:00+09:00"
+      }
+    },
+    {
+      "id": "kneekura:schedule:notice-welcome",
+      "kind": "notice",
+      "slot": "notice-1",
+      "priority": 10,
+      "content_id": "kneekura:notice:ops-batch1-welcome",
+      "rule": {
+        "mode": "once",
+        "start": "2026-10-14T00:00:00+09:00",
+        "end": "2026-11-15T00:00:00+09:00"
+      }
+    },
+    {
+      "id": "kneekura:schedule:weekday-1",
+      "kind": "stage",
+      "slot": "weekday-stage",
+      "priority": 1,
+      "content_id": "kneekura:stage:weekday-1",
+      "rule": {
+        "mode": "weekly",
+        "valid_from": "2026-10-14",
+        "valid_until": "2026-11-15",
+        "from_time": "00:00",
+        "to_time": "00:00",
+        "weekdays": [
+          1
+        ]
+      }
+    },
+    {
+      "id": "kneekura:schedule:weekday-2",
+      "kind": "stage",
+      "slot": "weekday-stage",
+      "priority": 1,
+      "content_id": "kneekura:stage:weekday-2",
+      "rule": {
+        "mode": "weekly",
+        "valid_from": "2026-10-14",
+        "valid_until": "2026-11-15",
+        "from_time": "00:00",
+        "to_time": "00:00",
+        "weekdays": [
+          2
+        ]
+      }
+    },
+    {
+      "id": "kneekura:schedule:weekday-3",
+      "kind": "stage",
+      "slot": "weekday-stage",
+      "priority": 1,
+      "content_id": "kneekura:stage:weekday-3",
+      "rule": {
+        "mode": "weekly",
+        "valid_from": "2026-10-14",
+        "valid_until": "2026-11-15",
+        "from_time": "00:00",
+        "to_time": "00:00",
+        "weekdays": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "kneekura:schedule:weekday-4",
+      "kind": "stage",
+      "slot": "weekday-stage",
+      "priority": 1,
+      "content_id": "kneekura:stage:weekday-4",
+      "rule": {
+        "mode": "weekly",
+        "valid_from": "2026-10-14",
+        "valid_until": "2026-11-15",
+        "from_time": "00:00",
+        "to_time": "00:00",
+        "weekdays": [
+          4
+        ]
+      }
+    },
+    {
+      "id": "kneekura:schedule:weekday-5",
+      "kind": "stage",
+      "slot": "weekday-stage",
+      "priority": 1,
+      "content_id": "kneekura:stage:weekday-5",
+      "rule": {
+        "mode": "weekly",
+        "valid_from": "2026-10-14",
+        "valid_until": "2026-11-15",
+        "from_time": "00:00",
+        "to_time": "00:00",
+        "weekdays": [
+          5,
+          6
+        ]
+      }
+    },
+    {
+      "id": "kneekura:schedule:mission-weekly-0",
+      "kind": "mission",
+      "slot": "mission-weekly",
+      "priority": 1,
+      "content_id": "kneekura:mission:weekly-8000",
+      "rule": {
+        "mode": "once",
+        "start": "2026-10-12T00:00:00+09:00",
+        "end": "2026-10-19T00:00:00+09:00"
+      }
+    },
+    {
+      "id": "kneekura:schedule:mission-weekly-1",
+      "kind": "mission",
+      "slot": "mission-weekly",
+      "priority": 1,
+      "content_id": "kneekura:mission:weekly-8000",
+      "rule": {
+        "mode": "once",
+        "start": "2026-10-19T00:00:00+09:00",
+        "end": "2026-10-26T00:00:00+09:00"
+      }
+    },
+    {
+      "id": "kneekura:schedule:mission-weekly-2",
+      "kind": "mission",
+      "slot": "mission-weekly",
+      "priority": 1,
+      "content_id": "kneekura:mission:weekly-8000",
+      "rule": {
+        "mode": "once",
+        "start": "2026-10-26T00:00:00+09:00",
+        "end": "2026-11-02T00:00:00+09:00"
+      }
+    },
+    {
+      "id": "kneekura:schedule:mission-weekly-3",
+      "kind": "mission",
+      "slot": "mission-weekly",
+      "priority": 1,
+      "content_id": "kneekura:mission:weekly-8000",
+      "rule": {
+        "mode": "once",
+        "start": "2026-11-02T00:00:00+09:00",
+        "end": "2026-11-09T00:00:00+09:00"
+      }
+    },
+    {
+      "id": "kneekura:schedule:mission-weekly-4",
+      "kind": "mission",
+      "slot": "mission-weekly",
+      "priority": 1,
+      "content_id": "kneekura:mission:weekly-8000",
+      "rule": {
+        "mode": "once",
+        "start": "2026-11-09T00:00:00+09:00",
+        "end": "2026-11-16T00:00:00+09:00"
+      }
+    },
+    {
+      "id": "kneekura:schedule:mission-monthly-0",
+      "kind": "mission",
+      "slot": "mission-monthly",
+      "priority": 1,
+      "content_id": "kneekura:mission:monthly-17000",
+      "rule": {
+        "mode": "once",
+        "start": "2026-10-01T00:00:00+09:00",
+        "end": "2026-11-01T00:00:00+09:00"
+      }
+    },
+    {
+      "id": "kneekura:schedule:mission-monthly-1",
+      "kind": "mission",
+      "slot": "mission-monthly",
+      "priority": 1,
+      "content_id": "kneekura:mission:monthly-17000",
+      "rule": {
+        "mode": "once",
+        "start": "2026-11-01T00:00:00+09:00",
+        "end": "2026-12-01T00:00:00+09:00"
+      }
+    }
+  ]
+}

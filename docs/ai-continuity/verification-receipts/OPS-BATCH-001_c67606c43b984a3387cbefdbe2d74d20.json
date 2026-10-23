@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "task_id": "OPS-BATCH-001",
+  "result": "PASS",
+  "exit_code": 0,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "C:/Users/genki/Downloads/Kneekura-WhiteNyankocats/private/pc-lab/liveops-investigation/godzilla-facing/watch_battle.py",
+    "20261020T082803Z-c0206218"
+  ],
+  "observed_at": "2026-10-20T08:43:15.673+00:00",
+  "elapsed_ms": 194485,
+  "git_head": "1cdf3b22aa554c2275788665234c5d84514af6c7",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/OPS-BATCH-001_c67606c43b984a3387cbefdbe2d74d20.log",
+  "output_sha256": "65d3a8fa9b08b714243f8edf2aed92390132048461ffcc7964f306dc74b18c63",
+  "receipt_id": "OPS-BATCH-001_c67606c43b984a3387cbefdbe2d74d20"
+}

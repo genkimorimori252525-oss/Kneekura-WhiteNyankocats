@@ -1,0 +1,16 @@
+Traceback (most recent call last):
+  File "C:\Users\genki\Downloads\Kneekura-WhiteNyankocats\private\pc-lab\liveops-investigation\stage-expansion\stage_pc_case.py", line 34, in <module>
+    if (D/'before-clock.tar').exists():L.adb('shell','-T','tar','-C',root,'-xf','-',binary=True,input=(D/'before-clock.tar').read_bytes())
+                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users/genki/Documents/Codex/2026-10-12/615mb-393-2-http-0-97/work/kneekura-pc-lab\tools\pc_lab.py", line 229, in adb
+    return self.command([self.adb_bin, '-s', SERIAL, *argv], **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users/genki/Documents/Codex/2026-10-12/615mb-393-2-http-0-97/work/kneekura-pc-lab\tools\pc_lab.py", line 225, in command
+    raise RuntimeError(f'PC_LAB_TOOL_FAILED_{Path(str(argv[0])).name}')
+RuntimeError: PC_LAB_TOOL_FAILED_adb.exe
+Traceback (most recent call last):
+  File "C:\Users\genki\Downloads\Kneekura-WhiteNyankocats\private\pc-lab\liveops-investigation\stage-expansion\finish_stage_programme.py", line 12, in <module>
+    subprocess.run([sys.executable,'-X','utf8','-B',str(E/'stage_pc_case.py'),'restore'],check=True)
+  File "C:\actions-runner-durable-workflow\_work\_tool\Python\3.12.10\x64\Lib\subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['C:\\actions-runner-durable-workflow\\_work\\_tool\\Python\\3.12.10\\x64\\python.exe', '-X', 'utf8', '-B', 'C:\\Users\\genki\\Downloads\\Kneekura-WhiteNyankocats\\private\\pc-lab\\liveops-investigation\\stage-expansion\\stage_pc_case.py', 'restore']' returned non-zero exit status 1.

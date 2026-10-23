@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "task_id": "OPS-BATCH-001",
+  "result": "FAIL",
+  "exit_code": 1,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "-m",
+    "unittest",
+    "tests.test_stage_program.StageProgramTests.test_catamin_all_47_maps_are_available_all_day_without_retired_maps",
+    "tests.test_stage_program.StageProgramTests.test_catamin_projection_keeps_separate_daily_windows_on_rebuild"
+  ],
+  "observed_at": "2026-10-23T09:07:36.435+00:00",
+  "elapsed_ms": 2828,
+  "git_head": "b6a39088b91fb02b711cdc9e3b332291f9ab1935",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/OPS-BATCH-001_506c901153934c28bf00ec488e28e003.log",
+  "output_sha256": "77a77c906089c16ceff65c95aed24572386ed63a70cb03e5fed20c113255c4f6",
+  "receipt_id": "OPS-BATCH-001_506c901153934c28bf00ec488e28e003"
+}

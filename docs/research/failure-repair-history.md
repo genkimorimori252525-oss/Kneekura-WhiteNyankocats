@@ -362,3 +362,203 @@ Any native hook remains DEFAULT OFF and research-only. Original address drift
 must block before signing. Source tests and unrelated Android debug APK success
 must NEVER be described as a live original game/first-save/device pass.
 No original owner APK, SAVE, asset, account or signing key is modified.
+
+## 2026-10-12 — PC isolated resource namespace and API35 staging ownership
+
+The PC research APK crashed in `ReceiverInitAlarm` because original
+`MyActivity.localize` calls `getIdentifier` with the isolated Context package,
+while the UTF-16 `ResTable_package.name` remained the publisher namespace.
+The old byte patch changed only a base UTF-8 anchor. Patch only the fixed
+package name in all four resource tables (base/en/ja/xxhdpi), preserve IDs and
+other bytes, and require exact expected table bytes in all three parity gates.
+The split fixture failed before repair; actual Android now resolves the local
+string ID and repeated PC launches have zero Java exceptions.
+
+API35 additionally hid all 393 shell-owned staged files from the app even
+though ADB MD5 succeeded. A target-context probe observed missing393 before
+and missing0/size0/MD5-errors0 after assigning the dedicated guest app UID.
+The PC-only runner validates its dedicated userdebug AVD before root, pins the
+exact installed isolated app UID, changes ownership only in its fixed staging
+subtree, and checks all393 owners plus MD5. Wrong AVD/UID fails before copy.
+Actual importer completed393 and reboot observed35 TSVs. No physical phone,
+publisher app, source archive, SAVE contents or existing key was changed.
+
+These repairs do not prove native scene97, original gameplay or zero egress.
+ShadowHook status12 and the original network-unavailable loading screen
+remain. See `2026-10-12-pc-resource-repair.md` for immutable capture IDs.
+
+
+## 2026-10-12 — PC original GL observer and independent receipt verification
+
+The original-process instrumentation v2 stalled with main in original
+MyActivity class initialization/nativeLoad and the probe in nativeProbe.
+The exit-info-linked ANR trace is private. Exact lock-cycle causality is
+unproven; v4 serializes original class initialization first and completes
+JNI registration echo41 plus all393 target-context MD5 checks. Do not
+register JNI inside original loader constructors or infer NativeBridge
+compatibility from a standalone process alone.
+
+A separate default-OFF PC JNI scene observer registers exact static
+appUpdateDraw()V from the original GL queue after super.onCreate. Keep exact
+BuildID/19-word/VMA/class/package gates and original-draw-first forwarding.
+Read scene/35 aggregate slots only on that GL TID; do not mark the failed
+five LEVEL/SAVE inline hooks installed. Actual PC observed102->101->97 and
+0/35/0/0 aggregate; ShadowHook12 remains, gameplay is unaccepted.
+
+Independent review reproduced false offline verification with edited Java
+crash count and incomplete artifact/barrier metadata. Add a failing synthetic
+regression, then independently rederive native/Java crashes, actual barrier,
+PNG set/count, log-loss and launch evidence. Require exact artifact set and
+mandatory files. Valid actual captures still pass. Include bounded Start proc
+PIDs when selecting current own-process ANR traces, not only polling PIDs.
+Final review found both P2 findings resolved; actual ARM64 execution remains
+the root agent's separate evidence, not the reviewer's claim.
+
+## 2026-10-12 — 本人スマホ移行と初回起動後のローカル契約不足
+
+詳細・候補ID・保証範囲は[本人スマホ受渡し記録](2026-10-12-owner-phone-handoff.md)。この節は今後の運営で再利用する失敗台帳であり、初期PC成功や途中の無例外をスマホ受入へ読み替えない。
+
+| 観測した失敗 | 確認した原因・限界 | 修正・回帰ルール |
+|---|---|---|
+| 現在ユーザーでは研究版が未インストールでも`INSTALL_FAILED_UPDATE_INCOMPATIBLE` | 別Androidユーザーに旧署名の同じpackageが残っていた | 全体dumpsysも検査する回帰テスト。所有者の明示承認後に旧研究packageのみ削除。自動uninstallは実装しない |
+| 大容量stdout TARが不完全、圧縮pullと長いWindowsパスで転送失敗 | 取得失敗をSHA不一致で検出。すべてのOS内部原因までは未同定 | owner-only ACLの短いprivate path、`pull -Z`、個別ASCII base64 stdin、全450ファイルの前後SHAで移行受入 |
+| 空のshared_prefsを公開できない可能性をレビューで検出 | stage内の空rootを作成していなかった | files/shared_prefsを必ず先に作成。TARのroot/link/重複/容量テスト。非空targetの消去はしない |
+| ShadowHook無効化の診断で`.so.off`がnative抽出エラー`res=-2` | 診断用エントリー名がAndroid native library形式から外れた | 有効な`.so`名で比較試験。A/Bだけで監視を原因と断定しない。最終候補は通常名と検証ゲートを復元 |
+| ADBがoffline、`debuggerd -b`はroot要求、TCP LLDBは権限拒否 | USB再接続で復帰。研究版はINTERNETを持たない。接続断の原因は未証明 | ユーザーの再接続後、自己packageのrun-as/JDWP/AF_UNIX LLDBで診断。phone rootや公式SAVEアクセスを前提にしない |
+| scene97/download完了後、CreateAccountTaskが未完了。時刻応答後`auth-password`拒否 | 初回register/tokensしか実装しておらず、既存ローカルアカウントのpassword refreshが未対応 | 原作の3要求フィールドと応答契約を確認。独自ID/token/nonceの厳密照合と署名付き冪等再発行。実Javaで正常/異なるtoken等を検証、実機でrefresh→tokens受理 |
+| refresh修正後のmanaged応答がlocal-io | MAX化したSAVEと旧所持品台帳が不一致。初回以外の差分を一律拒否する設計だった | 認証済みpaid=falseの現在量をFileLock/fsync/atomic replaceで保存。増加・消費による減少・checksum破損保持を回帰検証。SAVE再初期化・自動補充はしない |
+| 短時間採取で初期イベントが見えず、冷起動が止まったように見えた | 収集後に読むstdout PIPEには滞留・欠落の余地があり、実際の端末バッファには初期イベントがあった。全遅延の因果は未証明 | privateファイルへ継続出力。PIDで区間を限定して再確認。30秒の画面遷移中キャプチャと本人の後続操作画面確認を区別 |
+| インストール引数・検証引数の入力誤り | 存在しないsplit名、未対応CLI flagを指定し、変更実行前に拒否された | split名は`JP_15_7_1_SPLITS`を正本とし、CLIは`--help`とAgent terminal validationで確認。架空の成功を報告しない |
+
+**最終確認:** 775テスト、763成功/12skip。実Java3テスト、Agent terminal、2回の追加独立レビューにP1/P2なし。最終同署名更新で自己アプリ453ファイルのSHA保持、公式package path保持、root不使用。所有者がスマホ動作成功を報告し、読み取り専用の自己アプリ画面でも原作パワーアップ画面を確認した。画面・SAVE・秘密鍵・生ログ・端末IDは公開しない。
+
+**次の受入条件:** 初回登録に加えて既存状態の冷起動・password refresh・初期MAX後/消費後の台帳同期を確認する。破損レコードの上書き、署名/nonce検証の省略、起動フラグの強制完了で停止を隠さない。キャラクターの全育成上限・全戦闘補正・SDK/IPC全経路のゼロ通信は別の未完了受入項目として保持する。
+
+## 2026-10-12 — Lv60用SAVE増分が原作読込み後に消え、Lv20で停止
+
+所有者のディオラムスLv20停止報告を、自己研究SAVEの読み取り専用調査で確認した。原作ハード上限60に対して保存加算0、実効20。初期生成候補・移行直前コピー・PC保存ファイルにはディオラムス40/まどか40/ゴジラ30、合計816体の非0増分があり、スマホの原作再保存後には全816体の増分が0だった。コピーの450ファイルSHA一致とparser bytes往復一致を確認。
+
+原作SAVE parser `0x8a669c`はキャッツアイ使用履歴と受取済みユーザーランク報酬から上限を再構成する。max_upgrade_level.baseだけの変更は最終上限の保証にならない。既存getter/upgrade proxyは観測用の元返値保持で、XPのみの育成解放ではない。
+
+**検証の不足:** 生成候補の上限分布と起動成功を、原作UIでのLv60育成確認と混同した。Lv60開放は未完了として記録する。
+
+**修正方針と回帰:** 個別ハード上限を保持した独立ローカルXP育成ポリシーを上限表示・育成判定・購入へ接続する。履歴の偽装・MAX再適用は使わない。20→21、30→31、50→51、59→60、60超え/XP不足拒否、原作XP費用、素材不消費、伝説レア等の例外、冷起動後の保持を検証する。今回の調査ではAPK/SAVEを変更していない。[調査詳細](2026-10-12-xp-only-level60-investigation.md)。
+
+## 2026-10-12 — 初回XP育成更新の実装と検証環境の回帰
+
+| 観測 | 確認した原因 | 修正・回帰 |
+|---|---|---|
+| 原作再構成でLv20停止 | SAVE上限加算だけでは原作の最終上限を変更できない | 個別col50に従うgetter/育成可否の2adapter。原作XP購入・履歴・通常保存は維持。実ARM64の境界/例外/無効状態テスト成功。実購入は本人待ち |
+| 初回候補でruntime source-unavailable | builderをV2/10箇所/320bytesに変更し、runtime witnessがV1/8箇所/448bytesのままだった | 監視のfail closedは維持し、両ABIを一致。ソース整合回帰テストを追加。未接続候補は受渡ししない |
+| PCの検証SAVEで読み込みエラーH04 | 私的fixtureがroot所有・アプリcategoryなしのSELinuxラベルだった。toybox非対応の--referenceを使い、後続mvが中間失敗を隠した | 専用AVD/自己packageを確認し、UIDと親directoryラベルを実測。明示chown/chmod/chcon、&&、公開後メタデータ/アプリUID読取り/SHA一致を検証。PCで原作画面へ復帰。phoneにはfixtureを移さない |
+| ADB短時間tapを原作が取りこぼす | 同一点150msのDOWN保持では原作画面が応答。フレーム間取りこぼし以外の因果は未証明 | 私的PC操作補助で同一点swipe150msと画面遷移待ち。入力成功を画面で確認し、未反映クリックを育成成功に数えない |
+
+全777テスト765成功/12skip、完成候補ARM64/私的原本ゲート14テスト、Agent terminal、独立レビューでP1/P2なし。同署名の初回スマホ更新は451保存ファイルの前後SHA保持を確認。所有者の追加指定で実購入/XP消費/育成後保持の受入は本人へ引継ぎ。詳細は[更新001](../updates/2026-10-12-update-001-xp-level-cap.md)。
+
+## 更新001の本人検証で判明した未達とV3再調査
+
+本人は正常プレイを確認した後、ランク1600のディオラムスLv30停止と、まどか第三進化非表示を報告。育成・進化受入は失敗として記録する。本人は元catseye消費を使う方法と、私的バックアップ後の研究状態初期化を承認。スマホ再導入はPC受入後に行う。
+
+| 観測 | 確認した原因・未証明の範囲 | 修正・予防 |
+|---|---|---|
+| Lv30の旧XP adapterが拒否を解除しない | catseye分岐後のx20はunitではなくunit×256。元getter末尾も実UI inline経路では未呼出し | 元XP経路へ復元。元catseye eligibility/追加可用数のrank/stage条件のみ適応。実分岐命令・レジスタ・原本.text復元の回帰を追加 |
+| まどか等32所有体の素材第三進化が未解放 | 元TF metadataは存在するが可用フラグ0。ディオラムス2との違いは進化済み状態。XP adapterがフラグを破壊した証拠はない | 元TF ID/Lv/XP/素材条件を満たす所有対象だけ初回0→1。選択形態・進化済み状態を付与せず、素材消費は元UIへ残す。実UI因果確認は別受入 |
+| 完成NDKライブラリだけUnicornでaddress0x28読取り失敗 | 最小試験ライブラリと異なり、実ビルドにはAndroid TLS stack canaryがある | harnessでTPIDR_EL0とTLS+0x28を供給。製品のstack保護は外さず、実完成ライブラリも検証 |
+| 大容量PCバックアップTARが途中切断 | `adb exec-out tar`の出力末尾がなく、archive検証で検出。recursive pullも途中終了した。後者の原因は未確定 | 削除前に個別file取得/SHA照合へ切替、完全TAR manifest一致後にのみ自己AVDをclear。部分取得をバックアップ成功にしない |
+| 初期化後の615MB処理失敗 | `pm clear`で外部393stageも消え、通常runはstageを再配置しない。`stage-not-ready`を観測 | 元393size/MD5とguestUIDを再照合して再配置、import完了後の冷起動でタイトル到達確認。旧SAVE注入やnative download条件変更で隠さない |
+
+V3全779テスト767成功/12skip、完成NDK/元ELFの関連21テスト、Agent terminal PASS。初期化PCの元起動・初期profile成功まで確認。原作UIの素材消費・育成・進化・冷起動保持とスマホ再導入は未完了として追跡する。[最新調査](2026-10-12-xp-only-level60-investigation.md)。
+
+## 2026-10-13 — 更新002のPC受入・完全再導入・受渡し検証
+
+前節のPC UI／スマホ未完了は当時の状態。更新002で実消費・境界拒否・まどかの単独フラグA/B・ほむら進化・冷起動保持を検証し、スマホへ承認済みのクリーン再導入を完了した。[検証範囲](../updates/2026-10-13-update-002-catseye-evolution.md)。
+
+| 失敗／観測 | 根拠と限界 | 修復／運営原則 |
+|---|---|---|
+| PC画面の古い座標で別メニューへ入った | introのSKIPとtitleのinboxが同じ位置。撮影後の遅延やchapter selector省略を盲目的な連続tapが扱えなかった | 私的PC自動操作は直前画像で画面を照合し、未知画面で停止。inboxは未受入として残し、育成修正にUI待機問題を混ぜない |
+| スマホprivateファイル名検証でSDK cacheを拒否 | 正当な名前に`+`と`#`がある | app-own範囲・path traversal拒否を維持したまま許容文字を修正。長いlogical名は平坦なhost objectに写し、元名はTARで保つ |
+| スマホbackupの大きいraw catがtimeout | その失敗時はデータ削除前。完全コピーと判定しなかった | app-own base64取得へfallbackし、456件個別SHA／完全TAR一致後にのみ承認済み初期化 |
+| APK receiptの読み取りがCP932で失敗 | 日本語labelを含むUTF-8 JSON。削除前guardで停止 | private helperも`encoding='utf-8'`を指定。検証未完了のまま削除しない |
+| shellのpm clearをOEMが権限拒否 | ordinary ADB UID2000はCLEAR_APP_USER_DATAを許可されない。root・security設定変更はしなかった | appの実UIDとown cwdを照合後、本人承認範囲で自身UIDからOSのpm clearを実行しSuccessを確認。公式appには適用しない |
+| PC recursive／個別pullが途中失敗 | 元エラー応答は汎用例外で失われ、直接原因は未確定。失敗位置付近の個別再取得はSHA一致 | `collect_pc_private_state`は個別pull・最大3retry・私的失敗JSONと全source SHA／TAR／phone SHAを使用。443件完了まで本番公開しない |
+| findが個別sha256sumエラーを成功終了として返す | 独立レビューの合成再現で、一部stdout＋stderrでも不完全manifestを合格にした | 初回manifestのreturncode／stderrをpull前に検証。SHAエラー、破損copy、unsafe path、retry上限を恒久テストに追加 |
+
+全785テスト773成功/12skip、関連21実ライブラリ／原本テスト、Agent terminal、独立再レビューを確認。スマホ起動と初回起動前の初期状態照合までの受入であり、全所有キャラ全UI／全戦闘やinbox機能を合格とした意味ではない。
+
+
+## 2026-10-15 — 運営更新でHGT00、ログイン・開催内容が非表示
+
+| 観測／原因 | 修正と確認範囲 |
+|---|---|
+| 本人のHGT00。既存診断ログでsale/gatya応答後にitemが503、native readinessはunavailable | 読取り専用JNIがPC JNI observer state=2だけに依存していた。スマホの既存完全native hook経路も、元描画帰還・source一致・同一GL TIDを確認して受け付ける。二重hook・SAVE書込みなし |
+| APK6本の署名・hash一致だけでは実運営の回復を証明できなかった | 初回の導入整合性PASSと本人の機能FAILを別々に保持。修正版のARM64関連4件／build／PC通常再取得を確認し、同署名・データ保持で再更新。スマホ表示は本人確認待ち |
+| 停止済みアプリの既存ログがring bufferから消えていた | 今回限定の読取り許可と本人による再現後、自アプリPID・固定イベントだけを取得。AIによるスマホ起動・画面操作・SAVE取得は追加しない |
+
+詳細と候補識別は[運営バッチ履歴](2026-10-14-original-liveops-batch1.md)を参照。今後のreadonly readinessは、一方の診断backendの有無をゲームサービス全体の準備条件にしない。
+
+
+## 2026-10-15 — ガチャ運営の表示・カテゴリ・PC日時
+
+| 観測／原因 | 修正と再発防止 |
+|---|---|
+| 同時3レア／通常行を生成したが実PCでは週特選だけ表示 | AVDのGMTとJST予定の不一致。同一候補を専用AVDのAsia/Tokyoで再起動すると表示。epoch一致だけで開催判定の整合性を判断しない。ops captureにインストール／起動前のJSTゲートを追加 |
+| にゃんこガチャに黄色字幕・季節期限を付けていた | 所有者指定で常設通常N0＋マタタビ入りN3へ変更。空メッセージとシーズン非連動の長期元reader期間。最終PCで2タブ・字幕／期限なし確認 |
+| アイテム専用N3のsource照合を拒否 | 通常ガチャにもキャラ非空条件を課していた。通常は3元テーブルのどれかが非空であることとticket20で照合。レアのrarity検査は維持 |
+| 新候補作成後、旧候補UI helperが6SHA不一致で停止 | 最新buildと導入済みを混同しない正常なゲート。旧候補の結果確定だけ既存PC-BUILDを固定して全6SHAを再照合。誤ラベルsnapshotを最終証拠にしない |
+| スマホ更新preflightでUSB offline | APK更新前に停止。接続復帰待ち。installer Successや本人動作確認へ読み替えない |
+
+上記offline停止後、本人の接続復帰を受けて再実行し、同署名・全6SHA一致・UID/dataDir保持で更新成功。offline失敗と導入整合性の成功、本人のゲーム動作確認待ちを別々に保持する。
+
+GitHubの `1adc14a` ではTest tooling／Agent terminalがFAIL。既存の元backup合成試験が旧throw専用guardを文字列比較し、JVM原作stubには前工程で追加したindividual callback APIが欠けていた。現行のlocal-bootは未知要求へ元handleの503/errorを返すため、例外だけを拒否と認める旧期待値も更新した。503/error・原作super送信0の実行時検査は残し、getTimeのH→D→F順序・200・direct bodyを追加。ゲーム側は変更せず、関連10件をJDK17で実行してPASS。全CIの結果は当該commitのActionsで別管理し、以前のFAILを削除しない。
+
+関連27 tests＋PC timezone回帰1 test、buildとPC表示／元抽選の範囲は[運営履歴](2026-10-14-original-liveops-batch1.md)を参照。最初の試験モジュール名誤記、private fixture違反、evidence runnerの相対path誤記も私的FAILログを保持した。
+
+## 2026-10-20 — 味方シンゴジラの表示方向
+
+- 本人から味方の向きが逆との報告。移植処理はroot横倍率を正に正規化しており、現行 `702_f.mamodel` は `1790`。4アニメーションにはrootを上書きするtrackがないため、モデル側で全動作を反転できる。
+- 第1形態のroot横倍率だけを負に正規化。実物差分は `1790 → -1790` の符号1か所、残る8 payloadは同一。元の敵・第2形態・能力値・SAVEは変更しない。旧private cacheは保存し、新版を `approved-v3` として生成する。
+- 本人指定に従い検証を限定。Agent terminal経由の関連21 tests PASS、6split build `20261019T184640Z-35b3aee8` と更新候補 `phone-20261019T184729Z-525a825b` の検証PASS。実レンダラー画面確認とスマホ更新は未実施。private証拠 `liveops-investigation/godzilla-facing-fix-proof.json`。build時刻はUTC、記録日はJST。
+- お知らせpackは変更せず、この小さな表示修正は本台帳に記録する。運営予定の再生成や追加プレイ検証へ広げない。
+
+本人のUSB接続依頼後、初回は接続端末0台のため導入前に停止。再接続の明示連絡後、上記候補をAndroid `-r` で更新成功。既存署名・全6split SHA・UID/dataDir保持を確認。スマホ起動・画面・ログ・SAVE取得なし。private receiptは当該phone-buildの `PHONE-OPS-UPDATE.json`。本人の向き確認は待機。
+
+### 同日追記：初回候補は本人の描画確認でFAIL
+
+本人から姿勢が崩れ、ムーンウォークのように見えるとの報告。横倍率だけでは関節の回転が反転しないことを、PCの旧版でも再現した。初期角度と全回転trackを反転し、全609フレームの左右対称を確認する回帰へ変更。
+
+中間版のPC実戦ではさらにnative crashを検出。敵550のmodelはconfig1件、元の味方702_f／702_cは2件で、味方nativeの `flags & 1` による2件目取得が範囲外になっていた。主描画原点を残し、元の味方と同じneutral config1を追加する。角度だけ直した中間版の描画成功とnative crashは別証拠として保持する。
+
+最終候補と限定した再検証は[完全反転の原因・検証記録](2026-10-20-godzilla-complete-reflection.md)にまとめる。以後、敵rig移植ではsigned scale・回転・味方固有の座標設定を一緒に確認し、署名やbuildだけで見た目PASSにしない。
+# 2026-10-20 運営予定の選定・暦による不一致
+
+通常の交代プールへコラボ／季節ガチャと曜日・ゲリラステージを混ぜていたため、季節や曜日に合わない開催になった。分類・季節期間・コラボ頻度のguardと、曜日／時間・月日固定ruleへ分離。初回追加testのdatetime fixture不備、原本binderが拒否した特別チケット候補も修正し、導入前に25 tests・compile・PC起動を確認した。[技術記録と更新receipt](2026-10-20-seasonal-liveops.md)を参照。スマホはデータ保持更新成功、動作は本人目視待ち。
+# 2026-10-23 開催不足と原本の仮バナー混入
+
+大狂乱・ちび開眼の未表示はr9の開催データに月例対象が含まれないことが原因。r11で原作開催日とカテゴリ別枠を追加し、元の解放条件は保持した。Catamin family14の開催と原作消費もPCで確認。試作候補4件の仮バナーは実画面で発見して除外・再混入拒否を追加した。関連33 tests、原本照合、PC大狂乱の入口まで確認。PCの試験SAVEと時計は復元、スマホは未更新。
+
+途中のtest fixture FAILとADB stdin復元FAILを含む[詳細と原証拠](2026-10-23-stage-programme.md)、[開催表](../operations/2026-10-23-stage-programme.md)を参照。全攻略・発掘の全進行の合格は主張しない。
+# 2026-10-23 原作開催区分の混在・配布IDの名前空間
+
+月例EX・季節・キャンペーン・進行試練を自由交代へ混ぜた運営設計を、所有者の承認により廃止・区分別開催へ修正。全1096候補／1278マップ定義を台帳化し、未確認を自動解放しない。4000個のお詫びは通常item22と配布server drop200の取り違えをPCで検出・修正し、原作の受取済み記録と再起動後重複なしを確認。時計巻戻し試験のHGT02は試験由来として残し、native保護は変更しない。[原因・修正・全FAILの経緯と検証限界](2026-10-23-native-stage-policy.md)。スマホは接続・更新待ち。
+
+同日、本人の接続連絡後に研究版をデータ保持更新。導入前の現行6本・候補6本・署名、導入後の6本・UID/dataDirを照合して成功。最初のPowerShell→Python複数行引用ミスは端末操作前の `SyntaxError` で停止し、引数の渡し方を直して再実行した。[更新と失敗の詳細](2026-10-23-native-stage-policy.md#2026-10-23-スマホへのデータ保持更新)。ゲーム画面は本人確認待ち。
+
+その後、4000個が配布されないとの本人報告は、「ログインボーナスの後もういっかい開きなおしたらもらえた」と受取成功へ訂正された。本人目視で4000個受取確認済み。開き直す必要があった内部原因は未特定として残し、追加修正・再配布は行わず調査終了。[本人確認と対処手順](2026-10-23-native-stage-policy.md#同日本人による4000個の受取確認)。
+
+### ネコビタン入口の時間帯と調査説明の訂正
+
+本人が17:18に入口を確認した件は、全47対象を毎日0〜8時に限定した現行設定が直接の原因。実署名済みAPKの開催データ・境界2 testsで確認した。ただし旧来の定期表を全原本対象へ一般化した設定であり、全対象の原作日程まで正しいとする根拠は不足している。「原作も0〜8時」との一律説明は訂正し、対象別日程を未確定として記録。[原因・証拠・残る確認事項](2026-10-23-native-stage-policy.md#同日1718にネコビタン入口が出ないとの報告)。開催中のPC試験合格を原作仕様との一致へ読み替えない。
+
+本人指定でLunaが狂乱だけに限らず[全52定義を調査](2026-10-23-catamin-source-audit.md)。旧5件除外後47件の全対象表、出典の時点・日本版と英語版の差・時刻と解放条件の区別を記録した。日本版の対象別開催時刻は資料が一致せず、公開TSVの直接証拠も得られないため未確定。PC事前helperの読取り例外2件と元SAVE SHA不変確認も詳細履歴へ保存。根拠不足のまま全件常設化または一部先行修正を行わない。
+
+### 同日：所有者指定で47件を24時間化、日次境界とPC時差検査を修正
+
+その後、所有者が解放・消費・日次回数を保持した全47件24時間開催を明示指定。r15で0〜8時を0〜翌0時へ変更した。原作JPの時刻UNKNOWNを解決した扱いにせず、ローカル運営方針として記録する。
+
+単純な時間延長ではcompilerが隣接日を結合することをREDで検出。Cataminの元開催occurrenceを保持し、38日を別行にした。さらに実PCの残り時間からGMTへの自動復帰と、JST guardが実metadataの `presign` を見ず `native` を見ていた検査漏れを発見。fixtureを実構造へ直してREDを確認後、guardを1か所修正、専用AVDを手動JSTに固定した。
+
+運営49＋PC module15 tests、compile・6split build・JST起動ログPASS。PC夕方出撃、A1消費、離脱でクリア数不変、当日3クリアfixtureの非表示、翌日3→0と再表示を確認。元PC SAVEはSHA一致復元、時計復帰・停止。スマホ候補作成まで、未導入。[全receipt、helper停止、技術根拠と検証限界](2026-10-23-catamin-all-day.md)。条件／費用／回数を持つ原本とゲーム本体はr14から同一。全47件の実攻略や全条件分岐PASSとはしない。
+
+スマホ導入前に最新CIのFAILを検出。画像変換用Pillowのtop-level importにより、Pillowを導入しない一般CIでもmetadata moduleの読込みが失敗した。原画SHA検証後の変換直前へimportを移し、Pillowなしのmetadata参照・不正原画拒否を子プロセスで確認。関連6 tests PASS、既存APKは不変。[CI原証拠と修正](2026-10-23-catamin-all-day.md#スマホ更新前に検出したciの画像依存問題)。関連テストの成功をCI全体の成功として報告しない。
+
+修正code commit `efa1c33` のTest tooling全839件（833成功/6 skip）、Agent terminal Ubuntu/Windowsの成功後、本人依頼のr15スマホ更新を実施。実署名・旧/候補/導入後6SHA・UID/dataDir保持で成功（receipt `990846c4`）。データ消去・SAVE取得・起動／画面確認なし、本人目視待ち。[更新記録](2026-10-23-catamin-all-day.md#同日本人依頼によるスマホのデータ保持更新)。
