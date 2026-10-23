@@ -131,3 +131,4 @@ Only record verification that was actually performed.
 - その他のhelper／実行順序FAIL `dcb4ab1a`・`a8fcaed9`・`8ee71746`は原log/receiptを保持。Web抽出v1のナビ混入FAILもprivate原JSON＋履歴を保持。成功結果へ塗り替えない。既存Charter承認不足・旧FAIL／UNKNOWNを維持。
 - NOT_RUN: スマホ更新／AIスマホ起動・UI・ログ／SAVE読取り、全ステージ攻略・全報酬。候補 `phone-20261022T213509Z-794bc2d5`、本人の接続後に承認済みデータ保持更新する。
 - PASS（2026-10-23更新時）: 本人の接続連絡後、r14候補 `phone-20261022T213509Z-794bc2d5` を研究版へAndroid `-r` 更新。実機旧6SHAと前回receipt、実機署名と候補6本、導入後6SHA・UID/dataDir保持を確認。private `phone-builds/phone-20261022T213509Z-794bc2d5/PHONE-OPS-UPDATE.json` と `stage-policy-r14-update-preflight/INSTALL-RESULT.json`。スマホのゲーム起動／画面／ログ／SAVE読取りはNOT_RUN、本人目視はPENDING。上行は候補作成時点の履歴として保持。
+- OWNER_CONFIRMED（2026-10-23）: 本人が当チャットで「受け取れた。ログインボーナスの後もういっかい開きなおしたらもらえたよ」と報告。スマホの4000個受取を本人目視確認済みへ更新。初回未配布報告・開き直しの手順・内部原因未特定も[技術履歴](../research/2026-10-23-native-stage-policy.md#同日本人による4000個の受取確認)へ保存。AIのスマホ操作／SAVE読取りやスマホの重複受取試験を実施した証拠ではない。

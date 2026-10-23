@@ -2,10 +2,10 @@
 current_task: "OPS-BATCH-001"
 active_agent: "Codex"
 branch: "codex/pc-local-lab-2026-10-12"
-commit_head: "7865b7a761fc422dd33350efcdb9141878f3c0e9"
+commit_head: "bdb8fc9b8f8cb09759b9ce73e8cfaadc722ab93a"
 status: "IN_PROGRESS"
 evidence_ref: "docs/research/2026-10-23-native-stage-policy.md"
-updated_at: "2026-10-23T05:11:20.052233+00:00"
+updated_at: "2026-10-23T07:56:55.994329+00:00"
 
 ---
 
@@ -13,6 +13,7 @@ updated_at: "2026-10-23T05:11:20.052233+00:00"
 
 ## 2026-10-23：原作開催区分へ修正、4000個一度配布、受渡し準備
 
+- 本人目視：4000個受取成功。初回の未配布報告を「ログインボーナスの後もういっかい開きなおしたらもらえた」と訂正。開き直しの内部原因は未特定、追加調査／修正は終了。他の運営機能の全受入やスマホの重複受取試験まで成功扱いにしない。[本人確認記録](../research/2026-10-23-native-stage-policy.md#同日本人による4000個の受取確認)。
 - 所有者が全件照合・経験値追加・ネコフラワー特殊開催・4000個配布・データ保持更新を承認し、さらに「原作の区分を優先し、自由交代20枠は廃止する」と指定。[承認](AMENDMENTS/2026-10-23-native-stage-policy.md)。旧20件指定より優先。週4・月2、ガチャ構成は維持。
 - revision14：EX月例、フラワー2/22 14:22〜14:24、神判20〜21、狂乱もねこ28、記念日22等を分離。経験値5種に毎日9/15/21時の各1時間をローカル追加。[開催表](../operations/2026-10-23-native-stage-policy.md)。原作解放・消費・回数保持。191 unique maps、136 bindings、最終48 tests PASS `c69c6588`。
 - [全件台帳](../operations/2026-10-23-stage-policy-audit.json)：開催可能1096件、元マップ定義1278件。公開索引988一致／108直接未一致。全条件解明／全攻略は未達。極悪9現行日程・狂乱祭の各日対象はUNKNOWNとして残す。
