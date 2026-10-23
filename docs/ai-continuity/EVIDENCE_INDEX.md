@@ -154,3 +154,6 @@ Only record verification that was actually performed.
 - 2026-10-23 revision15：[所有者指定の47件24時間化とPC受入](../research/2026-10-23-catamin-all-day.md)。運営49 tests `213a8284`、実metadataのJST guard回帰15 tests `7541c4f2`、compile `5e41c491`、build `9972e61d`、JST capture `2170ae9c` PASS。RED `506c9011`/`25087eb1`/`fcbca717`、GMT初回capture `66cc2e98`、helper初回import FAIL `66033870` は保持。
 - PC原作UI：夕方出撃、A9999→9998、離脱のclear count0、当日3クリアfixtureで非表示、翌0時3→0と再表示。private `CONSUMPTION.json`/`limit-observed.json`/`next-day-observed.json`/`FINAL-ACCEPTANCE.json`。元PC SAVE SHA復元・時計復帰・停止 `935500ce`、phone候補作成 `e8056520`、最終6SHA・原本同一性・38日行・候補・復元照合 `45e1e023` PASS。スマホ未導入／未操作、全47件の実攻略はNOT_RUN。原作JP全件の開催時刻UNKNOWNをローカル方針決定で消さない。
 | OPS-BATCH-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_53c0fa708992426094d3c5c464779f9e.json |
+| OPS-BATCH-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_990846c4e71848b1a7530ed98faf99af.json |
+
+- 2026-10-23スマホr15更新：本人のデータ保持更新指示に基づく実command `990846c4` PASS。旧6SHA・実署名・候補6SHA／bundle・導入後6SHA・UID/dataDir保持。原作SAVE・起動・画面／ログ取得なし、本人目視PENDING。[詳細・CI失敗からの修正](../research/2026-10-23-catamin-all-day.md)。code commit `efa1c33` のCIは839件（833成功/6 skip）、Agent terminal Ubuntu/Windows成功。Pillowの読込み時点を修正した関連6 tests `53c0fa70` もPASS。候補APKはPC受入時と同一。

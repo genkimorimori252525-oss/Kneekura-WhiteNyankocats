@@ -560,3 +560,5 @@ GitHubの `1adc14a` ではTest tooling／Agent terminalがFAIL。既存の元bac
 運営49＋PC module15 tests、compile・6split build・JST起動ログPASS。PC夕方出撃、A1消費、離脱でクリア数不変、当日3クリアfixtureの非表示、翌日3→0と再表示を確認。元PC SAVEはSHA一致復元、時計復帰・停止。スマホ候補作成まで、未導入。[全receipt、helper停止、技術根拠と検証限界](2026-10-23-catamin-all-day.md)。条件／費用／回数を持つ原本とゲーム本体はr14から同一。全47件の実攻略や全条件分岐PASSとはしない。
 
 スマホ導入前に最新CIのFAILを検出。画像変換用Pillowのtop-level importにより、Pillowを導入しない一般CIでもmetadata moduleの読込みが失敗した。原画SHA検証後の変換直前へimportを移し、Pillowなしのmetadata参照・不正原画拒否を子プロセスで確認。関連6 tests PASS、既存APKは不変。[CI原証拠と修正](2026-10-23-catamin-all-day.md#スマホ更新前に検出したciの画像依存問題)。関連テストの成功をCI全体の成功として報告しない。
+
+修正code commit `efa1c33` のTest tooling全839件（833成功/6 skip）、Agent terminal Ubuntu/Windowsの成功後、本人依頼のr15スマホ更新を実施。実署名・旧/候補/導入後6SHA・UID/dataDir保持で成功（receipt `990846c4`）。データ消去・SAVE取得・起動／画面確認なし、本人目視待ち。[更新記録](2026-10-23-catamin-all-day.md#同日本人依頼によるスマホのデータ保持更新)。

@@ -2,20 +2,21 @@
 current_task: "OPS-BATCH-001"
 active_agent: "Codex"
 branch: "codex/pc-local-lab-2026-10-12"
-commit_head: "b6a39088b91fb02b711cdc9e3b332291f9ab1935"
+commit_head: "efa1c33d79b5448204d20e57b804834073b23d7c"
 status: "IN_PROGRESS"
 evidence_ref: "docs/research/2026-10-23-catamin-all-day.md"
-updated_at: "2026-10-23T09:37:43.015595+00:00"
+updated_at: "2026-10-23T09:47:12.757855+00:00"
 
 ---
 
 # Current Progress State
 
-## 2026-10-23：ネコビタン47件24時間、PC検証・更新候補作成済み
+## 2026-10-23：ネコビタン47件24時間、スマホのデータ保持更新済み
 
 - 最新直接指定は[全47件の24時間化](AMENDMENTS/2026-10-23-catamin-original-policy.md)。r15で14005〜14051を毎日0〜翌0時へ変更し、compilerで日次の開催行を保持。原作の解放・消費・回数と旧5件除外は維持。24時間化は所有者指定のローカル方針で、原作JP全件の時刻UNKNOWNは保持。
 - [技術記録](../research/2026-10-23-catamin-all-day.md)：関連49＋PC module15 tests、compile・6split build・JST起動ログPASS。専用PC夕方出撃/A1消費、離脱でクリア数不変、当日3クリアfixtureの非表示、翌日3→0・再表示を確認。日次行結合RED、実metadata階層誤りによるJST検査漏れRED、warmup未知画面停止も保存。専用AVDは自動時差OFF・手動JST。
-- PC `20261023T091149Z-7ee8fe90`、候補 `phone-20261023T093506Z-c6a29a1b`。最終実検証 `45e1e023` PASS：候補bundle・47件×38日行、r14 native/DataLocal・他開催/gacha/gift/login保持、導入6SHA、元SAVE SHA復元・時計復帰・停止、候補6SHAと署名。スマホ未導入、操作／ログ／SAVE読取りなし。次は本人の更新依頼に応じたデータ保持更新。受渡し後は本人目視。
+- PC `20261023T091149Z-7ee8fe90`、候補 `phone-20261023T093506Z-c6a29a1b`。最終PC検証 `45e1e023` PASS：候補bundle・47件×38日行、r14 native/DataLocal・他開催/gacha/gift/login保持、導入6SHA、元SAVE SHA復元・時計復帰・停止、候補6SHAと署名。
+- 本人の明示依頼後、CIで画像変換用Pillowの不要なtop-level importを検出・変換直前へ修正。関連6 tests `53c0fa70`、code commit `efa1c33` のCI全839件（833成功/6 skip）・Agent terminal Ubuntu/Windows成功。APKは不変。同候補をスマホへデータ保持更新し、旧6SHA・実署名／候補6SHA・導入後6SHA／UID/dataDir保持を確認。実receipt `990846c4` PASS。スマホ起動・画面／ログ／SAVE取得なし。次は本人の目視結果・運営指示。追加の端末調査を自動実行しない。
 - 期間は従来どおり11/30 0時まで。全47件実攻略・全条件分岐はNOT_RUN。旧FAIL/UNKNOWN・Charter承認receipt不足を保持。下記は各工程時点の履歴で、最新方針・候補は本節を優先する。
 
 ## 2026-10-23：原作開催区分へ修正、4000個一度配布、受渡し準備

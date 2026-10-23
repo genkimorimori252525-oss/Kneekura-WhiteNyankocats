@@ -59,3 +59,15 @@
 本人のデータ保持更新指示を受けた導入前確認で、commit `4519063` の [Test tooling](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/actions/runs/39933465109) と [Agent terminal validation](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/actions/runs/39933465108) がFAILだった。全体試験の `test_pc_balance_assets` 読込みが、`godzilla_portrait` のtop-level Pillow importを経由して `ModuleNotFoundError: No module named 'PIL'` で止まった。PCではPillow導入済みで、前工程の関連64 testsにはこのmoduleが含まれていなかったため検出できていない。
 
 画像処理を行わないmetadata参照／原画SHA拒否でもPillowを要求することが原因。新依存を追加せず、承認原画のSHA検証後、実変換の直前へimportを移動した。Pillowのimportを明示拒否した子プロセスでmetadata読取りと不正原画拒否を確認する回帰を追加。関連6 tests `53c0fa70` PASS。画像変換の出力・APK payloadは変更しないため、PC受入済みの同じ候補を使う。新CIの結果と端末更新結果は後続に記録する。
+
+commit `efa1c33` の [Test tooling](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/actions/runs/39933933077) は839件実行・833成功・6 skip、[Agent terminal validation](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/actions/runs/39933933038) はUbuntu/Windowsとも成功。両workflowの完了を確認してからスマホ更新を開始した。旧CIのFAILは修正済み履歴として保持する。
+
+## 同日：本人依頼によるスマホのデータ保持更新
+
+本人の直接指示：「ADB接続したよ。今のスマホのデータを残したまま更新してくれ。あとの目視確認は俺がやるよ。」
+
+認可済みの物理ARM64端末1台を動的に選び、研究版 `jp.kn.local.battlecats` の旧6APKが前回r14更新receiptと一致することを確認。候補 `phone-20261023T093506Z-c6a29a1b` の6SHA、APK内bundle SHA、インストール済みbaseと候補全6本の実署名を照合した。
+
+Android `install-multiple --no-streaming -r` は `Success`。導入後の6APK SHAが候補と一致し、UID/dataDirは更新前と同一。実command receipt `990846c4` PASS。私的証拠は当該phone-buildの `PHONE-OPS-UPDATE.json` と `catamin-r15-update-preflight/INSTALL-RESULT.json`。
+
+アンインストール・データ消去・初期profile再適用・SAVEの取得／書込みは行わず、Androidの置換更新で現データを保持した。SAVEの実bytes比較を行った証拠ではない。スマホの起動・強制終了・画面・ログ取得やプレイ検証は実施せず、ゲーム動作は本人目視確認待ち。端末の署名不一致を回避する処理や再インストールは行っていない。
