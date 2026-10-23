@@ -71,3 +71,7 @@ commit `efa1c33` の [Test tooling](https://github.com/genkimorimori252525-oss/K
 Android `install-multiple --no-streaming -r` は `Success`。導入後の6APK SHAが候補と一致し、UID/dataDirは更新前と同一。実command receipt `990846c4` PASS。私的証拠は当該phone-buildの `PHONE-OPS-UPDATE.json` と `catamin-r15-update-preflight/INSTALL-RESULT.json`。
 
 アンインストール・データ消去・初期profile再適用・SAVEの取得／書込みは行わず、Androidの置換更新で現データを保持した。SAVEの実bytes比較を行った証拠ではない。スマホの起動・強制終了・画面・ログ取得やプレイ検証は実施せず、ゲーム動作は本人目視確認待ち。端末の署名不一致を回避する処理や再インストールは行っていない。
+
+### 同日：本人の動作成功報告
+
+更新後、所有者からスマホで正常に動作しているとの報告を受領。今回のr15更新は `OWNER_CONFIRMED` として記録する。報告は今回の更新についての動作成功であり、全47件の攻略・全解放条件分岐・全日次上限を本人が個別確認した証拠には拡張しない。追加修正・試験・スマホ操作は行わず、次の運営指示を待つ。

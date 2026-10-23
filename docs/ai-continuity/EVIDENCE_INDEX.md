@@ -157,3 +157,5 @@ Only record verification that was actually performed.
 | OPS-BATCH-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_990846c4e71848b1a7530ed98faf99af.json |
 
 - 2026-10-23スマホr15更新：本人のデータ保持更新指示に基づく実command `990846c4` PASS。旧6SHA・実署名・候補6SHA／bundle・導入後6SHA・UID/dataDir保持。原作SAVE・起動・画面／ログ取得なし、本人目視PENDING。[詳細・CI失敗からの修正](../research/2026-10-23-catamin-all-day.md)。code commit `efa1c33` のCIは839件（833成功/6 skip）、Agent terminal Ubuntu/Windows成功。Pillowの読込み時点を修正した関連6 tests `53c0fa70` もPASS。候補APKはPC受入時と同一。
+
+- OWNER_CONFIRMED（2026-10-23）：r15更新後、本人からスマホの動作成功報告を受領。上記の本人目視PENDINGを今回更新の成功報告へ更新。全47件攻略・全条件分岐までの確認とはしない。[本人確認記録](../research/2026-10-23-catamin-all-day.md#同日本人の動作成功報告)。文書のみ更新し、追加テスト／スマホ操作なし。
