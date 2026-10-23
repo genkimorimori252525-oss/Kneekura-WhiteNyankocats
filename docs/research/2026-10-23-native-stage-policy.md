@@ -39,3 +39,11 @@ PCの未来編3章未クリア状態では、2分開催中でもネコフラワ�
 元のPCファイルはprivate tarから復元し、元SAVEのSHA一致・ホスト時刻への復帰・アプリ停止を検証。実復元receipt `2f6ebef1` PASS。ここまでの時計変更・SAVE取得は専用PC仮想端末のみ。スマホのSAVE・起動・ログ取得なし。
 
 最終r14 build `20261022T213246Z-9570d5f3` はreceipt `c5f29fda` PASS。最終処理でAPK内の実bundleとr14入力の一致、r13とのitem.tsv／gatya.tsv／login／flower行・ゲーム本体／DataLocal一致を確認した。同署名PC導入後6SHA・元SAVE SHA・JST／ホスト時刻・停止を照合し、スマホ候補 `phone-20261022T213509Z-794bc2d5` を作成。receipt `78dac9b8` PASS。helperの初回はbuild metadataの不存在keyを参照してFAIL `8ee71746`、実APK内asset検査へ修正した。判定を緩めた修正ではない。スマホは未接続・未導入として別工程に残す。
+
+## 2026-10-23 スマホへのデータ保持更新
+
+本人の「できた」をUSB接続完了の連絡として受け、ADBで認可済みの実機1台と研究版 `jp.kn.local.battlecats` を確認。導入前に、現行6分割APKのSHA-256が前回の導入receiptと一致し、r14候補6本が `PHONE-BUILD.json` と一致、APK内の運営bundleがrevision14のSHA-256 `f9195e15…bb28b` と一致することを確認した。実機の研究版署名と候補6本の署名も照合した。
+
+署名照合後、Android `install-multiple --no-streaming -r` は `Success`。導入後の6分割APKのSHA-256が候補と一致し、研究版のUIDとdataDirが更新前と同一であることを確認した。private証拠は `phone-builds/phone-20261022T213509Z-794bc2d5/PHONE-OPS-UPDATE.json` と同ディレクトリの `stage-policy-r14-update-preflight/INSTALL-RESULT.json`。研究版のアンインストール・データ消去・SAVE読取り・起動・画面操作・ログ取得は行っていない。ゲーム画面と4000個受取の本人目視はPENDING。
+
+最初の実行は、旧導入スクリプトをメモリ上でr14に適合させる際、PowerShellからPythonへの複数行文字列の引用を誤り `SyntaxError: unterminated string literal` で終了した。Python本体の実行前なのでスマホ操作・ファイル更新は0件。次の実行ではコードを `-c` の単一引数として渡し、同じ事前条件・署名・導入後照合を通した。以後、既存スクリプトのメモリ実行ではコードを追加の引用文字列へ埋め込まない。

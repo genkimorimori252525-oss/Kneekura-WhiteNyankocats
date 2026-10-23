@@ -2,10 +2,10 @@
 current_task: "OPS-BATCH-001"
 active_agent: "Codex"
 branch: "codex/pc-local-lab-2026-10-12"
-commit_head: "a27f55337f91a6e145afcecfc7df10ec81edbf51"
+commit_head: "7865b7a761fc422dd33350efcdb9141878f3c0e9"
 status: "IN_PROGRESS"
 evidence_ref: "docs/research/2026-10-23-native-stage-policy.md"
-updated_at: "2026-10-22T21:37:46.393098+00:00"
+updated_at: "2026-10-23T05:11:20.052233+00:00"
 
 ---
 
@@ -17,7 +17,7 @@ updated_at: "2026-10-22T21:37:46.393098+00:00"
 - revision14：EX月例、フラワー2/22 14:22〜14:24、神判20〜21、狂乱もねこ28、記念日22等を分離。経験値5種に毎日9/15/21時の各1時間をローカル追加。[開催表](../operations/2026-10-23-native-stage-policy.md)。原作解放・消費・回数保持。191 unique maps、136 bindings、最終48 tests PASS `c69c6588`。
 - [全件台帳](../operations/2026-10-23-stage-policy-audit.json)：開催可能1096件、元マップ定義1278件。公開索引988一致／108直接未一致。全条件解明／全攻略は未達。極悪9現行日程・狂乱祭の各日対象はUNKNOWNとして残す。
 - r13 PC実UIでネコカン10000→14000、原作MySale受取済み・再起動後重複なし。フラワー未クリア拒否／クリア済み有効表示／2分後終了拒否まで。開催中の入場・戦闘はNOT_RUN。時刻巻戻りでPCにHGT02を出した経緯も保持し、保護コードは変更しない。原PC SAVEはSHA一致復元、時計復帰、停止。詳細は[技術台帳](../research/2026-10-23-native-stage-policy.md)。
-- 最終PC build `20261022T213246Z-9570d5f3` はr13とのnative/DataLocal・item/gacha/login・flower開催行一致、導入済み6SHA・元SAVE・時計・停止を確認。スマホ候補 `phone-20261022T213509Z-794bc2d5` 作成、最終実command `78dac9b8` PASS。スマホ接続は本人が修正後に行う予定。スマホ未更新、追加操作／SAVE・ログ取得なし。次手順は本人の接続後に承認済みデータ保持更新。旧FAIL／UNKNOWN・Charter承認不足は維持。
+- 最終PC build `20261022T213246Z-9570d5f3` はr13とのnative/DataLocal・item/gacha/login・flower開催行一致、導入済み6SHA・元SAVE・時計・停止を確認。最終実command `78dac9b8` PASS。本人の接続連絡後、スマホ候補 `phone-20261022T213509Z-794bc2d5` を研究版へデータ保持更新。導入前の現行6SHA・署名／候補6SHA、導入後の6SHA・UID/dataDir保持を照合。private `PHONE-OPS-UPDATE.json` と[技術台帳](../research/2026-10-23-native-stage-policy.md#2026-10-23-スマホへのデータ保持更新)に記録。スマホの起動・画面／SAVE・ログ取得なし。次手順は本人の目視結果。旧FAIL／UNKNOWN・Charter承認不足は維持。
 
 ## 2026-10-23：ステージカテゴリ拡充、PC確認・更新候補作成済み
 
