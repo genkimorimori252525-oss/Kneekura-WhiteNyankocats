@@ -1,5 +1,7 @@
 from pathlib import Path
 import math
+import subprocess
+import sys
 import tempfile
 import unittest
 from tools.base_mod.pc_balance_assets import load_pinned_assets
@@ -7,6 +9,35 @@ from tools.base_mod.verify_static_http_bridge import verify_static_http_bridge
 
 
 class PcBalanceAssetTests(unittest.TestCase):
+    def test_metadata_and_source_rejection_do_not_require_image_dependency(self):
+        code='''
+import builtins
+from pathlib import Path
+import tempfile
+original_import=builtins.__import__
+def without_pillow(name,*args,**kwargs):
+    if name=='PIL' or name.startswith('PIL.'):
+        raise ModuleNotFoundError('Pillow deliberately unavailable')
+    return original_import(name,*args,**kwargs)
+builtins.__import__=without_pillow
+from tools.base_mod.pc_balance_assets import PAYLOAD_SHA256
+from tools.base_mod.godzilla_portrait import prepare_portraits
+assert 'uni702_f00.png' in PAYLOAD_SHA256
+with tempfile.TemporaryDirectory() as folder:
+    source=Path(folder)/'unapproved.png'
+    source.write_bytes(b'unapproved')
+    try:
+        prepare_portraits(source,Path(folder)/'missing-packs')
+    except ValueError as error:
+        assert str(error)=='PC_GODZILLA_PORTRAIT_SOURCE_CHANGED'
+    else:
+        raise AssertionError('unapproved source accepted')
+'''
+        result=subprocess.run([sys.executable,'-B','-c',code],
+                              cwd=Path(__file__).resolve().parents[1],
+                              capture_output=True,text=True)
+        self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+
     def test_portrait_import_rejects_unapproved_source_before_pack_access(self):
         from tools.base_mod.godzilla_portrait import prepare_portraits, PORTRAIT_SHA256
         self.assertEqual(set(PORTRAIT_SHA256), {

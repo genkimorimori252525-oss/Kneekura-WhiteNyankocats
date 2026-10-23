@@ -7,8 +7,6 @@ import hashlib
 import io
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageOps
-
 from tools.battlecats_pack import PackReader
 
 SOURCE_SHA256 = '1bf03b97a7bd0327990101dcfdc112850d37cb51960f3f277b1faaea94a2af65'
@@ -28,6 +26,8 @@ def prepare_portraits(source: Path, server: Path) -> dict[str, bytes]:
     raw = source.read_bytes()
     if source.is_symlink() or hashlib.sha256(raw).hexdigest() != SOURCE_SHA256:
         raise ValueError('PC_GODZILLA_PORTRAIT_SOURCE_CHANGED')
+    from PIL import Image, ImageDraw, ImageOps
+
     with Image.open(io.BytesIO(raw)) as source_image:
         if source_image.format != 'PNG' or source_image.size != (575, 402):
             raise ValueError('PC_GODZILLA_PORTRAIT_SOURCE_FORMAT_CHANGED')

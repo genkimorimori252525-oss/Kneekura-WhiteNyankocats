@@ -558,3 +558,5 @@ GitHubの `1adc14a` ではTest tooling／Agent terminalがFAIL。既存の元bac
 単純な時間延長ではcompilerが隣接日を結合することをREDで検出。Cataminの元開催occurrenceを保持し、38日を別行にした。さらに実PCの残り時間からGMTへの自動復帰と、JST guardが実metadataの `presign` を見ず `native` を見ていた検査漏れを発見。fixtureを実構造へ直してREDを確認後、guardを1か所修正、専用AVDを手動JSTに固定した。
 
 運営49＋PC module15 tests、compile・6split build・JST起動ログPASS。PC夕方出撃、A1消費、離脱でクリア数不変、当日3クリアfixtureの非表示、翌日3→0と再表示を確認。元PC SAVEはSHA一致復元、時計復帰・停止。スマホ候補作成まで、未導入。[全receipt、helper停止、技術根拠と検証限界](2026-10-23-catamin-all-day.md)。条件／費用／回数を持つ原本とゲーム本体はr14から同一。全47件の実攻略や全条件分岐PASSとはしない。
+
+スマホ導入前に最新CIのFAILを検出。画像変換用Pillowのtop-level importにより、Pillowを導入しない一般CIでもmetadata moduleの読込みが失敗した。原画SHA検証後の変換直前へimportを移し、Pillowなしのmetadata参照・不正原画拒否を子プロセスで確認。関連6 tests PASS、既存APKは不変。[CI原証拠と修正](2026-10-23-catamin-all-day.md#スマホ更新前に検出したciの画像依存問題)。関連テストの成功をCI全体の成功として報告しない。

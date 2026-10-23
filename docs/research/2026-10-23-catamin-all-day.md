@@ -53,3 +53,9 @@
 - REDの3件、GMTでの初回capture、上記helper停止も原証拠を保持し、最終PASSで上書きしない。raw画像・SAVE・APK・鍵はprivate、公開Gitには実装・予定・台帳・receiptのみを追加する。
 - Git staging後のSHA照合で、新receiptのWindows改行がGitの自動変換対象になっていることを検出。既存 `.gitattributes` の個別例外だけでは新logを保護できないため、receipt log全体へ `-text` を追加し、測定時のbytesのまま再stageする。receipt内のSHAを変換後の値へ書き換えず、全13件をindex内の実bytesで照合する。
 - CCG auditは従来の `CHARTER_UNAPPROVED` と過去handoffの参照commit差異等を検出。旧Charterの機械承認receipt不足を解消したとしない。今回の作業根拠は記録した所有者の直接指示であり、project全体の自己承認は行わない。
+
+## スマホ更新前に検出したCIの画像依存問題
+
+本人のデータ保持更新指示を受けた導入前確認で、commit `4519063` の [Test tooling](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/actions/runs/39933465109) と [Agent terminal validation](https://github.com/genkimorimori252525-oss/Kneekura-WhiteNyankocats/actions/runs/39933465108) がFAILだった。全体試験の `test_pc_balance_assets` 読込みが、`godzilla_portrait` のtop-level Pillow importを経由して `ModuleNotFoundError: No module named 'PIL'` で止まった。PCではPillow導入済みで、前工程の関連64 testsにはこのmoduleが含まれていなかったため検出できていない。
+
+画像処理を行わないmetadata参照／原画SHA拒否でもPillowを要求することが原因。新依存を追加せず、承認原画のSHA検証後、実変換の直前へimportを移動した。Pillowのimportを明示拒否した子プロセスでmetadata読取りと不正原画拒否を確認する回帰を追加。関連6 tests `53c0fa70` PASS。画像変換の出力・APK payloadは変更しないため、PC受入済みの同じ候補を使う。新CIの結果と端末更新結果は後続に記録する。
