@@ -132,3 +132,6 @@ Only record verification that was actually performed.
 - NOT_RUN: スマホ更新／AIスマホ起動・UI・ログ／SAVE読取り、全ステージ攻略・全報酬。候補 `phone-20261022T213509Z-794bc2d5`、本人の接続後に承認済みデータ保持更新する。
 - PASS（2026-10-23更新時）: 本人の接続連絡後、r14候補 `phone-20261022T213509Z-794bc2d5` を研究版へAndroid `-r` 更新。実機旧6SHAと前回receipt、実機署名と候補6本、導入後6SHA・UID/dataDir保持を確認。private `phone-builds/phone-20261022T213509Z-794bc2d5/PHONE-OPS-UPDATE.json` と `stage-policy-r14-update-preflight/INSTALL-RESULT.json`。スマホのゲーム起動／画面／ログ／SAVE読取りはNOT_RUN、本人目視はPENDING。上行は候補作成時点の履歴として保持。
 - OWNER_CONFIRMED（2026-10-23）: 本人が当チャットで「受け取れた。ログインボーナスの後もういっかい開きなおしたらもらえたよ」と報告。スマホの4000個受取を本人目視確認済みへ更新。初回未配布報告・開き直しの手順・内部原因未特定も[技術履歴](../research/2026-10-23-native-stage-policy.md#同日本人による4000個の受取確認)へ保存。AIのスマホ操作／SAVE読取りやスマホの重複受取試験を実施した証拠ではない。
+| OPS-BATCH-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_9365379560eb46cca78a20bb2d4bcc48.json |
+
+- 2026-10-23ネコビタン：`93653795`は現行0〜8時とnative射影の2 tests PASS。r14署名済み候補のbundle SHA・47対象／38日分・17時0件もPCで確認。本人の17:18入口なしと整合。原作全対象の日程との一致はUNKNOWN、過去の入口・消費試験をその証拠へ昇格しない。[調査と説明訂正](../research/2026-10-23-native-stage-policy.md#同日1718にネコビタン入口が出ないとの報告)。スマホ調査・コード変更なし。
