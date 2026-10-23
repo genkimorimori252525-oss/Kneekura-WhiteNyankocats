@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "task_id": "OPS-BATCH-001",
+  "result": "PASS",
+  "exit_code": 0,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "-m",
+    "tools.pc_lab",
+    "--state",
+    "C:\\Users\\genki\\Downloads\\Kneekura-WhiteNyankocats\\private\\pc-lab",
+    "build",
+    "--owner-zip",
+    "C:\\Users\\genki\\Downloads\\にーくらにゃんこ\\nyanko_battlecats_2026-10-06.zip",
+    "--official-aar",
+    "C:\\Users\\genki\\Downloads\\Kneekura-WhiteNyankocats\\private\\official-shadowhook-2.0.1.aar",
+    "--local-boot",
+    "--balance",
+    "--original-ops-bundle",
+    "C:\\Users\\genki\\Downloads\\Kneekura-WhiteNyankocats\\private\\pc-lab\\liveops-investigation\\catamin-native-schedule\\ops-catamin-r15.json"
+  ],
+  "observed_at": "2026-10-23T09:12:16.344+00:00",
+  "elapsed_ms": 27328,
+  "git_head": "b6a39088b91fb02b711cdc9e3b332291f9ab1935",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/OPS-BATCH-001_9972e61d48da45c5ae3f057d3ff398f0.log",
+  "output_sha256": "262334a4bf7303142ab3943ebf0e176c2419ef9b710df65847ad43713308eda6",
+  "receipt_id": "OPS-BATCH-001_9972e61d48da45c5ae3f057d3ff398f0"
+}

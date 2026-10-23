@@ -50,11 +50,33 @@ class StageProgramTests(unittest.TestCase):
         self.assertIn(1137,self.ids('2026-10-23T12:00:00'))
         self.assertIn(1109,self.ids('2026-10-24T12:00:00'))
 
-    def test_catamin_is_its_own_native_family_and_expiry_is_eight(self):
-        before=self.ids('2026-10-23T07:59:59');after=self.ids('2026-10-23T08:00:00')
-        self.assertEqual({n for n in before if n//1000==14},set(range(14005,14052)))
-        self.assertFalse(any(n//1000==14 for n in after))
-        self.assertFalse(any(14000<=n<=14004 for n in before))
+    def test_catamin_all_47_maps_are_available_all_day_without_retired_maps(self):
+        for at in ('2026-10-23T00:00:00','2026-10-23T07:59:59',
+                   '2026-10-23T08:00:00','2026-10-23T17:18:00',
+                   '2026-10-23T23:59:59','2026-10-24T00:00:00'):
+            with self.subTest(at=at):
+                self.assertEqual({n for n in self.ids(at) if n//1000==14},
+                                 set(range(14005,14052)))
+
+    def test_catamin_projection_keeps_separate_daily_windows_on_rebuild(self):
+        from copy import deepcopy
+        pack=deepcopy(self.pack)
+        bindings={r['id']:dict(r['original'],kind=k) for k in ('gacha','stage','event','mission')
+                  for r in pack['catalog'][k]}
+        for entry in pack['schedule']:
+            ids=bindings.get(entry['content_id'],{}).get('native_ids',[])
+            if ids and all(n//1000==14 for n in ids):
+                entry['rule']['to_time']='00:00'
+        def rows(start,days):
+            raw,_=compile_calendar(pack,bindings,start_date=start,days=days)
+            lines=base64.b64decode(validate_bundle(raw)['server_files']['sale.tsv']).decode().splitlines()[1:-1]
+            return [r for line in lines if (r:=line.split('\t'))
+                    and any(14000<=int(n)<15000 for n in r[9:])]
+        full=rows('2026-10-23',2)
+        self.assertEqual([r[:4] for r in full],
+                         [['20261023','0','20261024','0'],['20261024','0','20261025','0']])
+        self.assertTrue(all({int(n) for n in r[9:]}==set(range(14005,14052)) for r in full))
+        self.assertEqual(rows('2026-10-24',1),[full[1]])
 
     def test_current_catfruit_behemoth_weekend_and_enigma_windows(self):
         for day in range(23,30):

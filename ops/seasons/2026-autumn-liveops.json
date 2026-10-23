@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "channel": "kneekura-main-offline",
-  "revision": 14,
+  "revision": 15,
   "status": "published",
   "timezone": "Asia/Tokyo",
   "season": {
@@ -7035,7 +7035,7 @@
           6
         ],
         "from_time": "00:00",
-        "to_time": "08:00"
+        "to_time": "00:00"
       }
     },
     {

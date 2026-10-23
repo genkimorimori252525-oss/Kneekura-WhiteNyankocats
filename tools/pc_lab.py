@@ -670,7 +670,7 @@ class Lab:
             raise ValueError('PC_LAB_CAPTURE_DURATION_10_TO_1800_SECONDS')
         self.identity()
         build = self.verify_build()
-        if ('pc_original_ops_bundle' in build.get('native',{}) and
+        if ('pc_original_ops_bundle' in build.get('presign',{}) and
                 self.adb('shell','getprop','persist.sys.timezone').stdout.strip()!='Asia/Tokyo'):
             raise ValueError('PC_LAB_OPERATIONS_REQUIRE_ASIA_TOKYO')
         if install:

@@ -26,9 +26,14 @@ def compile_calendar(pack, bindings, *, start_date, days, login_rotation=None):
         raise ProtocolError('ORIGINAL_OPS_DYNAMIC_PREREQUISITE_UNSUPPORTED')
     windows=windows_in_range(pack,start_date,days)
     if not windows:raise ProtocolError('ORIGINAL_OPS_NO_WINDOWS')
-    mission_occurrences={entry['id']:list(_rule_intervals(entry['rule'],
+    # Keep the original occurrence identity for missions and Catamin maps.
+    # Adjacent all-day Catamin windows must retain their daily reset boundary.
+    occurrences={entry['id']:list(_rule_intervals(entry['rule'],
         _local_timestamp(pack['season']['start']),_local_timestamp(pack['season']['end'])))
-        for entry in pack['schedule'] if entry['kind']=='mission'}
+        for entry in pack['schedule'] if entry['kind']=='mission' or
+        (entry['kind'] in ('stage','event') and
+         (ids:=bindings.get(entry['content_id'],{}).get('native_ids',[])) and
+         all(14000<=n<15000 for n in ids))}
     points={_local_timestamp(row[key]) for row in windows for key in ('start','end')}
     first,last=min(points),max(points)
     for notice in pack['catalog']['notice']:
@@ -44,10 +49,12 @@ def compile_calendar(pack, bindings, *, start_date, days, login_rotation=None):
                 if kind!='notice' and (not isinstance(binding,dict) or binding.get('kind')!=kind):
                     raise ProtocolError('ORIGINAL_OPS_SOURCE_BINDING_MISSING')
                 occurrence=None
-                if kind=='mission':
-                    matches=[span for span in mission_occurrences[row['schedule_id']]
+                if row['schedule_id'] in occurrences:
+                    matches=[span for span in occurrences[row['schedule_id']]
                              if span[0]<=begin<span[1]]
-                    if len(matches)!=1:raise ProtocolError('ORIGINAL_OPS_MISSION_OCCURRENCE')
+                    if len(matches)!=1:
+                        raise ProtocolError('ORIGINAL_OPS_MISSION_OCCURRENCE' if kind=='mission'
+                                            else 'ORIGINAL_OPS_CATAMIN_OCCURRENCE')
                     occurrence=matches[0]
                 key=(kind,row['slot'],identifier,occurrence)
                 spans=selected.setdefault(key,[])

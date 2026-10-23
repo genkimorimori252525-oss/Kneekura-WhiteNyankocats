@@ -137,3 +137,19 @@ Only record verification that was actually performed.
 - 2026-10-23ネコビタン：`93653795`は現行0〜8時とnative射影の2 tests PASS。r14署名済み候補のbundle SHA・47対象／38日分・17時0件もPCで確認。本人の17:18入口なしと整合。原作全対象の日程との一致はUNKNOWN、過去の入口・消費試験をその証拠へ昇格しない。[調査と説明訂正](../research/2026-10-23-native-stage-policy.md#同日1718にネコビタン入口が出ないとの報告)。スマホ調査・コード変更なし。
 - 2026-10-23ネコビタン全件調査：Lunaの[52定義表・資料差異・公開イベント保存先調査](../research/2026-10-23-catamin-source-audit.md)。全52行の照合は実施、JP15.7.1全47対象の時刻はUNKNOWN、実装修正／新APK受入はNOT_RUN。PC準備のみ：既存r14の6SHA確認・privateバックアップ後、元SAVE SHA一致・未起動を確認。private `liveops-investigation/catamin-native-schedule/READONLY-PREPARATION.json`。読取りhelper2件のFAILは[詳細履歴](../research/2026-10-23-native-stage-policy.md#同日追記所有者指定によりlunaが全対象を調査)へ保持し、成功へ読み替えない。
 | OPS-BATCH-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_f60de82e6d5f48b9aceb72aa7ddd1e6a.json |
+| OPS-BATCH-001 | FAIL | Executed command exit=1 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_506c901153934c28bf00ec488e28e003.json |
+| OPS-BATCH-001 | FAIL | Executed command exit=1 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_25087eb1ee5f4146adcbee426af3fb4e.json |
+| OPS-BATCH-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_213a828434e448bda2a79d980a7174e5.json |
+| OPS-BATCH-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_5e41c49113bd4533a44fda44a70125be.json |
+| OPS-BATCH-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_9972e61d48da45c5ae3f057d3ff398f0.json |
+| OPS-BATCH-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_66cc2e98e76b4647a711427b6afc6471.json |
+| OPS-BATCH-001 | FAIL | Executed command exit=1 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_fcbca717bc6647618c8ba2b2c7114c89.json |
+| OPS-BATCH-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_7541c4f2fefa454bb3c4980898caad7b.json |
+| OPS-BATCH-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_2170ae9cfbb64b68aea954e3c56ca619.json |
+| OPS-BATCH-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_935500ce10524199ba26161d10957d68.json |
+| OPS-BATCH-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_e8056520a6f54470ad735e696a12e7f1.json |
+| OPS-BATCH-001 | FAIL | Executed command exit=1 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_660338709bb04158bbd95941fe8c0b88.json |
+| OPS-BATCH-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_45e1e023fc3c412eb3ab00070d1be110.json |
+
+- 2026-10-23 revision15：[所有者指定の47件24時間化とPC受入](../research/2026-10-23-catamin-all-day.md)。運営49 tests `213a8284`、実metadataのJST guard回帰15 tests `7541c4f2`、compile `5e41c491`、build `9972e61d`、JST capture `2170ae9c` PASS。RED `506c9011`/`25087eb1`/`fcbca717`、GMT初回capture `66cc2e98`、helper初回import FAIL `66033870` は保持。
+- PC原作UI：夕方出撃、A9999→9998、離脱のclear count0、当日3クリアfixtureで非表示、翌0時3→0と再表示。private `CONSUMPTION.json`/`limit-observed.json`/`next-day-observed.json`/`FINAL-ACCEPTANCE.json`。元PC SAVE SHA復元・時計復帰・停止 `935500ce`、phone候補作成 `e8056520`、最終6SHA・原本同一性・38日行・候補・復元照合 `45e1e023` PASS。スマホ未導入／未操作、全47件の実攻略はNOT_RUN。原作JP全件の開催時刻UNKNOWNをローカル方針決定で消さない。

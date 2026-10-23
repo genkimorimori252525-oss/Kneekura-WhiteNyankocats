@@ -22,7 +22,7 @@ class FailedBuildEvidenceTests(unittest.TestCase):
             root=Path(folder);lab=Lab(root/'private/pc-lab',root/'sdk',root/'jdk')
             for zone in ('GMT','UTC',''):
                 with self.subTest(zone=zone), patch.object(lab,'identity'), \
-                        patch.object(lab,'verify_build',return_value={'native':{'pc_original_ops_bundle':{}}}), \
+                        patch.object(lab,'verify_build',return_value={'presign':{'pc_original_ops_bundle':{}}}), \
                         patch.object(lab,'adb',return_value=subprocess.CompletedProcess([],0,zone+'\n','')) as adb:
                     with self.assertRaisesRegex(ValueError,'PC_LAB_OPERATIONS_REQUIRE_ASIA_TOKYO'):
                         lab._capture_locked(18,install=True)
