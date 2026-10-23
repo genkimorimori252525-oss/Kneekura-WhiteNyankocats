@@ -135,3 +135,5 @@ Only record verification that was actually performed.
 | OPS-BATCH-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_9365379560eb46cca78a20bb2d4bcc48.json |
 
 - 2026-10-23ネコビタン：`93653795`は現行0〜8時とnative射影の2 tests PASS。r14署名済み候補のbundle SHA・47対象／38日分・17時0件もPCで確認。本人の17:18入口なしと整合。原作全対象の日程との一致はUNKNOWN、過去の入口・消費試験をその証拠へ昇格しない。[調査と説明訂正](../research/2026-10-23-native-stage-policy.md#同日1718にネコビタン入口が出ないとの報告)。スマホ調査・コード変更なし。
+- 2026-10-23ネコビタン全件調査：Lunaの[52定義表・資料差異・公開イベント保存先調査](../research/2026-10-23-catamin-source-audit.md)。全52行の照合は実施、JP15.7.1全47対象の時刻はUNKNOWN、実装修正／新APK受入はNOT_RUN。PC準備のみ：既存r14の6SHA確認・privateバックアップ後、元SAVE SHA一致・未起動を確認。private `liveops-investigation/catamin-native-schedule/READONLY-PREPARATION.json`。読取りhelper2件のFAILは[詳細履歴](../research/2026-10-23-native-stage-policy.md#同日追記所有者指定によりlunaが全対象を調査)へ保持し、成功へ読み替えない。
+| OPS-BATCH-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/OPS-BATCH-001_f60de82e6d5f48b9aceb72aa7ddd1e6a.json |
