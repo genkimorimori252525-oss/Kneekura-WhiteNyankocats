@@ -159,3 +159,5 @@ Only record verification that was actually performed.
 - 2026-10-23スマホr15更新：本人のデータ保持更新指示に基づく実command `990846c4` PASS。旧6SHA・実署名・候補6SHA／bundle・導入後6SHA・UID/dataDir保持。原作SAVE・起動・画面／ログ取得なし、本人目視PENDING。[詳細・CI失敗からの修正](../research/2026-10-23-catamin-all-day.md)。code commit `efa1c33` のCIは839件（833成功/6 skip）、Agent terminal Ubuntu/Windows成功。Pillowの読込み時点を修正した関連6 tests `53c0fa70` もPASS。候補APKはPC受入時と同一。
 
 - OWNER_CONFIRMED（2026-10-23）：r15更新後、本人からスマホの動作成功報告を受領。上記の本人目視PENDINGを今回更新の成功報告へ更新。全47件攻略・全条件分岐までの確認とはしない。[本人確認記録](../research/2026-10-23-catamin-all-day.md#同日本人の動作成功報告)。文書のみ更新し、追加テスト／スマホ操作なし。
+
+- 2026-11-03 `JP1574-LEGEND-001`：[最新版・レジェンド進行の事前調査](../research/2026-11-03-jp1574-legend-progress.md)。Lunaが公式Google Playの15.7.4表記を確認。既存15.7.1原本のMap_Name内部32＝恐ろし連邦、RN同index6ステージを読取り確認。これは調査結果であり、最新版取得・移植・SAVE反映はNOT_RUN。ADB端末0台、本人が接続は後で行うと回答。文書の差分検査のみ、旧r15試験を反復しない。

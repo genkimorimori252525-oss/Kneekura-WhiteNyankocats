@@ -1,15 +1,21 @@
 ---
-current_task: "OPS-BATCH-001"
+current_task: "JP1574-LEGEND-001"
 active_agent: "Codex"
 branch: "codex/pc-local-lab-2026-10-12"
-commit_head: "bf3b05ccc1b5b9a86fa67542cf9d6cf7b31f1c26"
+commit_head: "8f535c2395422dda76489248e445fd1266b91d34"
 status: "IN_PROGRESS"
-evidence_ref: "docs/research/2026-10-23-catamin-all-day.md"
-updated_at: "2026-10-23T10:08:12.126181+00:00"
+evidence_ref: "docs/research/2026-11-03-jp1574-legend-progress.md"
+updated_at: "2026-11-02T15:56:56.224290+00:00"
 
 ---
 
 # Current Progress State
+
+## 2026-11-03：公式15.7.4取り込み・恐ろし連邦までの進行指定
+
+- 完了証拠：前回r15は[本人確認済み](../research/2026-10-23-catamin-all-day.md)。再ビルド・再試験・再導入しない。
+- 現在一件：`JP1574-LEGEND-001`。所有者が公式最新版の取り込みとレジェンド「恐ろし連邦」までのクリアを指定。Lunaの公式調査は15.7.4、手元原本は15.7.1。最新版原本／現在の研究データ取得前で、コード・APK・SAVE未変更。
+- 次の具体操作：所有者がGoogle Play更新／USB接続を後で行うため提供待ち。接続連絡後、公式APK一式だけ読取り、研究版現データを私的バックアップして版差と進行構造を確認する。公式SAVEには触れない。王冠1・第33章（内部32）までの仮定、未調査・検証／復旧範囲は[再開情報](../research/2026-11-03-jp1574-legend-progress.md)。現在は追加端末操作なし。
 
 ## 2026-10-23：ネコビタン47件24時間、スマホのデータ保持更新済み
 
