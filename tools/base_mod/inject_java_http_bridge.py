@@ -249,6 +249,17 @@ def render_bridge_source(
     return rendered
 
 
+def render_ops_profile(source: str, *, source_profile: str = 'jp1571') -> str:
+    if source_profile == 'jp1571':return source
+    if source_profile != 'jp1574':raise ValueError('unsupported bridge source profile')
+    from tools.liveops.original_ops_bundle import SOURCE_PROFILES
+    for before, after in zip(SOURCE_PROFILES['jp1571'], SOURCE_PROFILES['jp1574']):
+        if source.count(str(before)) != 1:
+            raise ValueError('ORIGINAL_OPS_JAVA_PROFILE_ANCHOR_CHANGED')
+        source = source.replace(str(before), str(after))
+    return source
+
+
 def build_bridge_dex(
     *,
     flavor: str,
@@ -266,6 +277,7 @@ def build_bridge_dex(
     isolate_original_native_files_dir: bool = False,
     virgin_save_trial: bool = False,
     offline_import_installpack: Path | None = None,
+    source_profile: str = 'jp1571',
 ) -> dict:
     package_name = FLAVOR_PACKAGES.get(flavor)
     if package_name is None:
@@ -330,8 +342,10 @@ def build_bridge_dex(
             for name in ('KneekuraOriginalOps', 'KneekuraOriginalLogin', 'KneekuraLoginRotation',
                          'KneekuraOriginalNews'):
                 ops_source = source_path.with_name(name + '.java')
-                ops_source.write_text((root / ('bridge/java/' + name + '.java.in')).read_text(
-                    encoding='utf-8').replace('__KNEEKURA_PACKAGE__', package_name), encoding='utf-8')
+                ops_template = (root / ('bridge/java/' + name + '.java.in')).read_text(encoding='utf-8')
+                if name == 'KneekuraOriginalOps':
+                    ops_template = render_ops_profile(ops_template, source_profile=source_profile)
+                ops_source.write_text(ops_template.replace('__KNEEKURA_PACKAGE__', package_name), encoding='utf-8')
                 ops_sources.append(str(ops_source))
         age_sources = []
         if pc_boot_authority:

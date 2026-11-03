@@ -57,12 +57,14 @@ def prepare(lab):
     tools=lab.sdk/'build-tools/35.0.0'
     destination=root/'signed'
     signed=baseline_resign(unsigned,destination,keystore=store,alias='pc-lab',storepass=password,
+                           source_profile=source.get('source_profile','jp1571'),
                            zipalign=str(tools/'zipalign.exe'),apksigner=str(tools/'apksigner.bat'))
     password=None
     if signed['signer_certificate_sha256']!=source['signing']['signer_certificate_sha256']:
         raise ValueError('PHONE_DEVELOPMENT_SIGNER_CHANGED')
     proof=dict(schema='kneekura-owner-phone-build-v1',directory=str(destination),
                source_build=Path(source['directory']).name,package=PACKAGE,label=LABEL,
+               source_profile=source.get('source_profile','jp1571'),
                debug_app_own_provisioning=True,no_internet_permission=True,
                game_payload_unchanged_except_manifest=True,
                manifest_source_sha256=hashlib.sha256(original_manifest).hexdigest(),

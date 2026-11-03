@@ -71,8 +71,10 @@ def make_stub(pc: int, got: int, shift: int, site: tuple[int,int,int,int]) -> by
     words.extend((0xf94003fe | (30<<10),0x910003ff | (768<<10)))
     if op==1:
         words.append(0x37000057) # tbnz w23,#0, +8; original TBZ's two edges
-        words.append(branch(pc+len(words)*4,0x99c4f0+shift))
-        words.append(branch(pc+len(words)*4,0x99c4e4+shift))
+        displacement=(word>>5)&0x3fff
+        if displacement&0x2000: displacement-=0x4000
+        words.append(branch(pc+len(words)*4,site[1]+4*displacement+shift))
+        words.append(branch(pc+len(words)*4,site[1]+4+shift))
     else:
         words.append(branch(pc+len(words)*4,target+shift))
     data=struct.pack('<'+'I'*len(words),*words)
@@ -86,18 +88,28 @@ def _marker_segment(binary, marker):
     return matches[0]
 
 
-def _shift(binary):
+def _source_profile(native):
+    from tools.base_mod import source_native_jp1574 as jp1574
+    build_id=gnu_build_id(native)
+    if build_id==TARGET_NATIVE_BUILD_ID:
+        return SITES,0x31755c,build_id
+    if build_id==jp1574.BUILD_ID:
+        return jp1574.BALANCE_SITES,jp1574.DRAW_VMA,build_id
+    raise ValueError('PC_BALANCE_ORIGINAL_BUILD_ID_CHANGED')
+
+
+def _shift(binary,draw_vma=0x31755c):
     symbol=binary.get_dynamic_symbol('Java_jp_co_ponos_battlecats_MyActivity_appUpdateDraw')
     if symbol is None: raise ValueError('PC_BALANCE_ORIGINAL_DRAW_MISSING')
-    shift=symbol.value-0x31755c
+    shift=symbol.value-draw_vma
     if shift<0 or shift>0x10000 or shift%4096: raise ValueError('PC_BALANCE_REBASE_UNSAFE')
     return shift
 
 
-def _rx_content(rx,got,shift):
+def _rx_content(rx,got,shift,sites=SITES):
     out=bytearray(struct.pack('<I',0xd4200000)*1024)
     out[:64]=RX_MARKER.ljust(64,b'\0')
-    for i,site in enumerate(SITES):
+    for i,site in enumerate(sites):
         offset=STUB_START+i*STUB_STRIDE
         stub=make_stub(rx+offset,got,shift,site)
         out[offset:offset+len(stub)]=stub
@@ -108,9 +120,10 @@ def verify_and_restore(native: bytes):
     """Validate every adapter byte/relocation, then restore ONLY approved words."""
     lief=_import_lief()
     binary=lief.parse(list(native))
-    if binary is None or gnu_build_id(native)!=TARGET_NATIVE_BUILD_ID:
+    if binary is None:
         raise ValueError('PC_BALANCE_ORIGINAL_BUILD_ID_CHANGED')
-    shift=_shift(binary)
+    sites,draw_vma,build_id=_source_profile(native)
+    shift=_shift(binary,draw_vma)
     rx=_marker_segment(binary,RX_MARKER)
     rw=_marker_segment(binary,RW_MARKER)
     if (rx.type!=lief.ELF.Segment.TYPE.LOAD or int(rx.flags)!=5 or len(rx.content)!=4096
@@ -118,7 +131,7 @@ def verify_and_restore(native: bytes):
         or int(rw.flags)!=6 or len(rw.content)!=4096 or rw.virtual_size!=4096):
         raise ValueError('PC_BALANCE_SEGMENT_PERMISSIONS_CHANGED')
     got=rw.virtual_address+64
-    if bytes(rx.content)!=_rx_content(rx.virtual_address,got,shift):
+    if bytes(rx.content)!=_rx_content(rx.virtual_address,got,shift,sites):
         raise ValueError('PC_BALANCE_ADAPTER_BYTES_CHANGED')
     if bytes(rw.content)!=RW_MARKER.ljust(4096,b'\0'):
         raise ValueError('PC_BALANCE_GOT_INITIAL_BYTES_CHANGED')
@@ -136,7 +149,7 @@ def verify_and_restore(native: bytes):
         or symbol.symbol_version is None or symbol.symbol_version.value not in (0,1)):
         raise ValueError('PC_BALANCE_DISPATCH_IMPORT_CHANGED')
     restored=bytearray(native)
-    for i,(op,vma,word,_) in enumerate(SITES):
+    for i,(op,vma,word,_) in enumerate(sites):
         address=vma+shift
         seg=binary.segment_from_virtual_address(address)
         if seg is None or int(seg.flags)!=5: raise ValueError('PC_BALANCE_SITE_UNMAPPED')
@@ -145,8 +158,8 @@ def verify_and_restore(native: bytes):
         if struct.unpack_from('<I',native,offset)[0]!=expected:
             raise ValueError('PC_BALANCE_SITE_BRANCH_CHANGED')
         struct.pack_into('<I',restored,offset,word)
-    return bytes(restored),dict(schema='pc-native-balance-v3',source_build_id=TARGET_NATIVE_BUILD_ID,
-                              source_sites=[hex(s[1]) for s in SITES],uniform_vma_shift=shift,
+    return bytes(restored),dict(schema='pc-native-balance-v3',source_build_id=build_id,
+                              source_sites=[hex(s[1]) for s in sites],uniform_vma_shift=shift,
                               adapter_sha256=hashlib.sha256(bytes(rx.content)).hexdigest(),
                               xp_only_level_policy=False,original_catseye_level_policy=True,
                               full_original_text_restore_gate_required=True)
@@ -156,6 +169,7 @@ def inject(native: bytes):
     from tools.base_mod.original_scene_native_image_gate import verify_mapped_original_scene_image
     # Full source executable validation before any permitted changes.
     verify_mapped_original_scene_image(native,expected_research_native_package='jp.kn.local.battlecats')
+    sites,draw_vma,_=_source_profile(native)
     lief=_import_lief()
     binary=lief.parse(list(native))
     before_exports=_export_names(binary)
@@ -184,11 +198,11 @@ def inject(native: bytes):
         binary.write(str(path))
         staged=bytearray(path.read_bytes())
         binary=lief.parse(str(path))
-        shift=_shift(binary)
+        shift=_shift(binary,draw_vma)
         rx=_marker_segment(binary,RX_MARKER)
         rw=_marker_segment(binary,RW_MARKER)
-        staged[rx.file_offset:rx.file_offset+4096]=_rx_content(rx.virtual_address,rw.virtual_address+64,shift)
-        for i,(op,vma,word,_) in enumerate(SITES):
+        staged[rx.file_offset:rx.file_offset+4096]=_rx_content(rx.virtual_address,rw.virtual_address+64,shift,sites)
+        for i,(op,vma,word,_) in enumerate(sites):
             address=vma+shift
             seg=binary.segment_from_virtual_address(address)
             offset=seg.file_offset+address-seg.virtual_address

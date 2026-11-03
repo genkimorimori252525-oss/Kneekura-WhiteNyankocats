@@ -161,3 +161,16 @@ Only record verification that was actually performed.
 - OWNER_CONFIRMED（2026-10-23）：r15更新後、本人からスマホの動作成功報告を受領。上記の本人目視PENDINGを今回更新の成功報告へ更新。全47件攻略・全条件分岐までの確認とはしない。[本人確認記録](../research/2026-10-23-catamin-all-day.md#同日本人の動作成功報告)。文書のみ更新し、追加テスト／スマホ操作なし。
 
 - 2026-11-03 `JP1574-LEGEND-001`：[最新版・レジェンド進行の事前調査](../research/2026-11-03-jp1574-legend-progress.md)。Lunaが公式Google Playの15.7.4表記を確認。既存15.7.1原本のMap_Name内部32＝恐ろし連邦、RN同index6ステージを読取り確認。これは調査結果であり、最新版取得・移植・SAVE反映はNOT_RUN。ADB端末0台、本人が接続は後で行うと回答。文書の差分検査のみ、旧r15試験を反復しない。
+| JP1574-LEGEND-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/JP1574-LEGEND-001_29a05137563f48459e4be10b24b77fd4.json |
+| JP1574-LEGEND-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/JP1574-LEGEND-001_7594fc56d4074d68aa745cf08e1061c4.json |
+| JP1574-LEGEND-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/JP1574-LEGEND-001_d23aa1f66ffb4fb99a66b898e88cc550.json |
+| JP1574-LEGEND-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/JP1574-LEGEND-001_6101e11fad99425ebb49fb081b709eb0.json |
+| JP1574-LEGEND-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/JP1574-LEGEND-001_11211f46ea4648f0af34173410292266.json |
+| JP1574-LEGEND-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/JP1574-LEGEND-001_c34f3bdf42584954847093834195e389.json |
+| JP1574-LEGEND-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/JP1574-LEGEND-001_eb1195288f2346bfadba6988696b7f50.json |
+| JP1574-LEGEND-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/JP1574-LEGEND-001_604f946e15a84ca68428bf289abb9091.json |
+| JP1574-LEGEND-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/JP1574-LEGEND-001_a06da38733754bf2a7f142bc28870b84.json |
+| JP1574-LEGEND-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/JP1574-LEGEND-001_29b3194a97c84b68a313fc4b021606d6.json |
+| JP1574-LEGEND-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/JP1574-LEGEND-001_469eeb1333384201b4dec9c191e4a4cd.json |
+| JP1574-LEGEND-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/JP1574-LEGEND-001_11a2eb6e9d4441dda6d1971c947699c7.json |
+| JP1574-LEGEND-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/JP1574-LEGEND-001_b5514d5c79ba4c65b7923479f973c2ad.json |

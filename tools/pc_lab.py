@@ -322,16 +322,25 @@ class Lab:
         return store, dpapi(secret.read_bytes(), decrypt=True).decode()
 
     def build(self, owner_zip: Path, official_aar: Path, *, local_boot: bool = False,
-              balance: bool = False, original_ops_bundle: bytes | None = None) -> dict:
+              balance: bool = False, original_ops_bundle: bytes | None = None,
+              source_profile: str = 'jp1571', asset_owner_zip: Path | None = None) -> dict:
+        if source_profile not in ('jp1571', 'jp1574'):
+            raise ValueError('PC_LAB_SOURCE_PROFILE_UNSUPPORTED')
+        if source_profile == 'jp1574' and balance and asset_owner_zip is None:
+            raise ValueError('PC_LAB_JP1574_REQUIRES_VERIFIED_LEGACY_ASSET_SOURCE')
         if balance and not local_boot:
             raise ValueError('PC_BALANCE_REQUIRES_LOCAL_BOOT')
         if original_ops_bundle is not None:
             if not local_boot:
                 raise ValueError('ORIGINAL_OPS_REQUIRE_LOCAL_BOOT')
-            from tools.liveops.original_ops_bundle import validate_bundle
-            validate_bundle(original_ops_bundle)
+            from tools.liveops.original_ops_bundle import validate_bundle, SOURCE_PROFILES
+            bundle = validate_bundle(original_ops_bundle)
+            if bundle['game_version'] != SOURCE_PROFILES[source_profile][0]:
+                raise ValueError('PC_LAB_OPERATIONS_SOURCE_PROFILE_MISMATCH')
         write_json(self.state / 'inputs.json', {'owner_zip': str(owner_zip.resolve()),
-                                               'official_aar': str(official_aar.resolve())})
+                                               'official_aar': str(official_aar.resolve()),
+                                               'source_profile': source_profile,
+                                               'asset_owner_zip': str(asset_owner_zip.resolve()) if asset_owner_zip else None})
         private = REPO / 'private'
         private.mkdir(exist_ok=True)
         build_id = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ') + '-' + uuid.uuid4().hex[:8]
@@ -340,7 +349,10 @@ class Lab:
         balance_inputs = None
         if balance:
             from tools.base_mod.pc_balance_assets import prepare_assets, load_pinned_assets
-            cached = prepare_assets(owner_zip, self.state.parent / 'original-jp1571-verified-server-cache',
+            if source_profile == 'jp1574':
+                from tools.base_mod.source_export_jp1574 import verify_legacy_asset_equivalence
+                verify_legacy_asset_equivalence(owner_zip, asset_owner_zip)
+            cached = prepare_assets(asset_owner_zip or owner_zip, self.state.parent / 'original-jp1571-verified-server-cache',
                                     self.state / 'balance-cache')
             balance_inputs = scratch / 'approved-balance'
             balance_inputs.mkdir()
@@ -371,6 +383,7 @@ class Lab:
                      '-DKNEEKURA_RESEARCH_PC_JNI_SCENE_OBSERVER=ON',
                      '-DKNEEKURA_RESEARCH_PC_BALANCE=' + ('ON' if balance else 'OFF'),
                      '-DKNEEKURA_RESEARCH_VIRGIN_SAVE_TRIAL=OFF', '-DCMAKE_BUILD_TYPE=Release']
+        arguments.append('-DKNEEKURA_RESEARCH_JP1574=' + ('ON' if source_profile == 'jp1574' else 'OFF'))
         config = self.command(arguments, check=False)
         compiler_log = scratch / 'compiler.log'
         compiler_log.write_text(config.stdout + config.stderr, encoding='utf-8')
@@ -416,7 +429,8 @@ class Lab:
             offline_393_import=True, allow_local_pc=True, pc_jni_scene_observer=True,
             pc_boot_authority=local_boot,
             pc_boot_public_key=self.local_boot_key().public_key().export_key('PEM') if local_boot else None,
-            pc_balance_assets=balance_inputs, pc_original_ops_bundle=original_ops_bundle)
+            pc_balance_assets=balance_inputs, pc_original_ops_bundle=original_ops_bundle,
+            source_profile=source_profile)
         store, password = self.key()
         destination = self.state / 'builds' / build_id
         destination.mkdir(parents=True)
@@ -427,7 +441,7 @@ class Lab:
                                      destination, keystore=store, alias='pc-lab',
                                      storepass=password, zipalign=str(tools / 'zipalign.exe'),
                                      apksigner=str(tools / 'apksigner.bat'),
-                                     source_export_sha256=sha256_file(owner_zip))
+                                     source_export_sha256=sha256_file(owner_zip), source_profile=source_profile)
         finally:
             password = None
             if previous_java is None:
@@ -436,7 +450,7 @@ class Lab:
                 os.environ['JAVA_HOME'] = previous_java
         metadata = dict(schema='kneekura-pc-research-build-v1', directory=str(destination),
                         package=PACKAGE, native=proof, presign=unsigned_proof, signing=signed,
-                        source_commit=commit, created_utc=utc())
+                        source_commit=commit, created_utc=utc(), source_profile=source_profile)
         if any(sha256_file(REPO / name) != digest for name, digest in source_hashes.items()):
             raise RuntimeError('PC_LAB_SOURCE_CHANGED_DURING_BUILD_NO_PUBLICATION')
         shutil.copyfile(source_archive, destination / 'BUILD-SOURCE.zip')
@@ -910,6 +924,8 @@ def main() -> int:
     build.add_argument('--local-boot', action='store_true')
     build.add_argument('--balance', action='store_true')
     build.add_argument('--original-ops-bundle', type=Path)
+    build.add_argument('--source-profile', choices=('jp1571', 'jp1574'), default='jp1571')
+    build.add_argument('--asset-owner-zip', type=Path)
     run = sub.add_parser('run')
     run.add_argument('--seconds', type=int, default=30)
     run.add_argument('--install', action='store_true')
@@ -931,7 +947,8 @@ def main() -> int:
     elif args.command == 'build':
         bundle_bytes = args.original_ops_bundle.read_bytes() if args.original_ops_bundle else None
         result = lab.build(args.owner_zip, args.official_aar, local_boot=args.local_boot,
-                           balance=args.balance, original_ops_bundle=bundle_bytes)
+                           balance=args.balance, original_ops_bundle=bundle_bytes,
+                           source_profile=args.source_profile, asset_owner_zip=args.asset_owner_zip)
         print('PC_BUILD_VERIFIED_SIX_SPLITS ' + Path(result['directory']).name)
     elif args.command == 'run':
         lab.setup()

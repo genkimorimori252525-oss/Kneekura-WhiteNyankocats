@@ -101,7 +101,10 @@ def prepare_unsigned_research(
     pc_boot_public_key: bytes | None = None,
     pc_balance_assets: Path | None = None,
     pc_original_ops_bundle: bytes | None = None,
+    source_profile: str = 'jp1571',
 ) -> tuple[dict, Path]:
+    if source_profile not in ('jp1571', 'jp1574'):
+        raise UnsignedOriginalBuildBlocked('unsupported original source profile')
     if pc_boot_authority and not (allow_local_pc and pc_jni_scene_observer and offline_393_import):
         raise UnsignedOriginalBuildBlocked('Local boot authority is dedicated PC-only and opt-in')
     if pc_boot_authority != (pc_boot_public_key is not None):
@@ -112,8 +115,10 @@ def prepare_unsigned_research(
     if pc_original_ops_bundle is not None:
         if not pc_boot_authority:
             raise UnsignedOriginalBuildBlocked('ORIGINAL_OPS_REQUIRE_LOCAL_BOOT')
-        from tools.liveops.original_ops_bundle import validate_bundle
-        validate_bundle(pc_original_ops_bundle)
+        from tools.liveops.original_ops_bundle import validate_bundle, SOURCE_PROFILES
+        bundle = validate_bundle(pc_original_ops_bundle)
+        if bundle['game_version'] != SOURCE_PROFILES[source_profile][0]:
+            raise UnsignedOriginalBuildBlocked('operations and native source profiles differ')
         ops_sha = hashlib.sha256(pc_original_ops_bundle).hexdigest()
     from tools.base_mod.pc_boot_trust import validate_public_key, replace_local_boot_public_key
     local_key_hash = validate_public_key(pc_boot_public_key) if pc_boot_authority else None
@@ -152,9 +157,10 @@ def prepare_unsigned_research(
         final = scratch / "unsigned-final"
         bridge = scratch / "classes5.dex"
 
-        source_ledger = extract_owned_splits(owner_export, original)
+        source_ledger = extract_owned_splits(owner_export, original, source_profile=source_profile)
         bootstrap_ledger = inject_kneekura_shim(
             original, bootstrapped, passive_shim,
+            source_profile=source_profile,
         )
         native_ledger = include_reviewed_shadowhook_in_private_split_set(
             bootstrapped, paired, official_aar=official_aar,
@@ -171,6 +177,7 @@ def prepare_unsigned_research(
             pc_boot_authority=pc_boot_authority,
             pc_boot_public_key_sha256=local_key_hash,
             pc_original_ops_sha256=ops_sha,
+            source_profile=source_profile,
             javac=javac, d8=d8, android_jar=android_jar, root=repo,
             offline_import_installpack=(
                 original / "split_InstallPack.apk" if offline_393_import else None),
@@ -241,6 +248,7 @@ def prepare_unsigned_research(
             else "PUBLIC_PASSIVE_SHIM_RECEIPT.json"))
         receipt = {
             "schema": RECEIPT_SCHEMA,
+            "source_profile": source_profile,
             "status": "PASS_PRIVATE_UNSIGNED_ORIGINAL_SIX_SPLITS_NOT_INSTALLABLE",
             "original_input_source_verified": bool(source_ledger),
             "original_private_JP_splits": len(JP_15_7_1_SPLITS),

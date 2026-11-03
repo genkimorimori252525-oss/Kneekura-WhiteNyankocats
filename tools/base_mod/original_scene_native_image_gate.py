@@ -140,6 +140,8 @@ def _mapped_opcode(native: bytes, loads: list[dict[str, int]], vma: int) -> int:
 
 def _original_executable_text_sha256(
     native: bytes, loads: list[dict[str, int]], *, vma_shift: int = 0,
+    text_start: int = ORIGINAL_NATIVE_TEXT_START,
+    text_end: int = ORIGINAL_NATIVE_TEXT_END,
 ) -> str:
     """Hash the FULL original JP .text through unambiguous executable PT_LOAD.
 
@@ -149,8 +151,8 @@ def _original_executable_text_sha256(
     mappings or a single byte's drift. No original text is logged, returned
     or persisted; only its SHA256 appears in metadata.
     """
-    start = ORIGINAL_NATIVE_TEXT_START + vma_shift
-    end = ORIGINAL_NATIVE_TEXT_END + vma_shift
+    start = text_start + vma_shift
+    end = text_end + vma_shift
     if start % 4 or end % 4 or start >= end:
         raise OriginalSceneNativeImageError("original .text VMA bounds invalid")
     mapped = [
@@ -337,11 +339,28 @@ def verify_mapped_original_scene_image(
         build_id = gnu_build_id(native)
     except (ValueError, IndexError, struct.error) as exc:
         raise OriginalSceneNativeImageError("invalid original native GNU note") from exc
-    if build_id != ORIGINAL_JP1571_BUILD_ID:
-        raise OriginalSceneNativeImageError("original JP15.7.1 ELF GNU Build ID drift")
+    from tools.base_mod import source_native_jp1574 as jp1574
+    if build_id == ORIGINAL_JP1571_BUILD_ID:
+        version = "JP1571"
+        draw_vma = ORIGINAL_DRAW_VMA
+        text_start, text_end = ORIGINAL_NATIVE_TEXT_START, ORIGINAL_NATIVE_TEXT_END
+        text_sha256 = ORIGINAL_NATIVE_TEXT_SHA256
+        anchors = ORIGINAL_SCENE_ANCHORS
+        hook_vmas = ORIGINAL_UNSYMBOLIZED_HOOK_VMAS
+        pinned_ranges = ORIGINAL_PINNED_MAPPED_RANGES
+    elif build_id == jp1574.BUILD_ID:
+        version = "JP1574"
+        draw_vma = jp1574.DRAW_VMA
+        text_start, text_end = jp1574.TEXT_START, jp1574.TEXT_END
+        text_sha256 = jp1574.TEXT_SHA256
+        anchors = jp1574.SCENE_ANCHORS
+        hook_vmas = jp1574.UNSYMBOLIZED_HOOK_VMAS
+        pinned_ranges = jp1574.PINNED_MAPPED_RANGES
+    else:
+        raise OriginalSceneNativeImageError("original JP ELF GNU Build ID drift")
     loads = _program_headers(native)
     installed_draw_vma = _dynsym_export_vma(native, ORIGINAL_DRAW_SYMBOL)
-    vma_shift = installed_draw_vma - ORIGINAL_DRAW_VMA
+    vma_shift = installed_draw_vma - draw_vma
     if (vma_shift < 0
         or vma_shift > ORIGINAL_MAX_ALLOWED_UNIFORM_VMA_REBASE
         or vma_shift % 0x1000 != 0):
@@ -354,11 +373,11 @@ def verify_mapped_original_scene_image(
             "original JNI draw is no longer a defined function symbol"
         )
     if any(vma + vma_shift in function_symbols
-           for vma in ORIGINAL_UNSYMBOLIZED_HOOK_VMAS):
+           for vma in hook_vmas):
         raise OriginalSceneNativeImageError(
             "original private LEVEL/SAVE hook unexpectedly has ELF symbol"
         )
-    for vma, expected in ORIGINAL_SCENE_ANCHORS.items():
+    for vma, expected in anchors.items():
         relocated_pc = vma + vma_shift
         actual = _mapped_opcode(native, loads, relocated_pc)
         if actual != expected:
@@ -366,15 +385,15 @@ def verify_mapped_original_scene_image(
                 f"original mapped ARM64 instruction drift at 0x{relocated_pc:x}"
             )
     full_text_digest = _original_executable_text_sha256(
-        native, loads, vma_shift=vma_shift
+        native, loads, vma_shift=vma_shift, text_start=text_start, text_end=text_end,
     )
-    if full_text_digest != ORIGINAL_NATIVE_TEXT_SHA256:
+    if full_text_digest != text_sha256:
         raise OriginalSceneNativeImageError(
-            "complete original JP15.7.1 executable .text SHA256 drift"
+            "complete original JP executable .text SHA256 drift"
         )
     verified_nontext = {}
     native_package_changed_bytes = 0
-    for label, (vma, size, original_sha) in ORIGINAL_PINNED_MAPPED_RANGES.items():
+    for label, (vma, size, original_sha) in pinned_ranges.items():
         pinned_source = _pinned_mapped_range_bytes(
             native, loads, vma=vma + vma_shift, size=size, require_exec=True,
         )
@@ -404,11 +423,11 @@ def verify_mapped_original_scene_image(
             actual = sha256(pinned_source).hexdigest()
         if actual != original_sha:
             raise OriginalSceneNativeImageError(
-                "original JP15.7.1 mapped source section SHA256 drift: " + label
+                "original JP mapped source section SHA256 drift: " + label
             )
         verified_nontext[label] = actual
     return {
-        "status": "PINNED_REPACKAGED_JP1571_ORIGINAL_SCENE_VMA_AND_EXPORT_VERIFIED",
+        "status": f"PINNED_REPACKAGED_{version}_ORIGINAL_SCENE_VMA_AND_EXPORT_VERIFIED",
         "mapped_source_native_sha256": sha256(native).hexdigest(),
         "pinned_original_build_id": build_id,
         "original_JNI_draw_export_vma": f"0x{installed_draw_vma:x}",
@@ -420,12 +439,12 @@ def verify_mapped_original_scene_image(
         "research_native_local_package_rename_verified": (
             native_package_changed_bytes == 6
         ),
-        "verified_executable_instruction_anchors": len(ORIGINAL_SCENE_ANCHORS),
+        "verified_executable_instruction_anchors": len(anchors),
         "original_symbol_only_hook_targets": 1,
         "original_symbol_free_function_hook_targets":
-            len(ORIGINAL_UNSYMBOLIZED_HOOK_VMAS),
+            len(hook_vmas),
         "complete_original_text_bytes_verified":
-            ORIGINAL_NATIVE_TEXT_END - ORIGINAL_NATIVE_TEXT_START,
+            text_end - text_start,
         "complete_original_text_sha256": full_text_digest,
         "all_original_executable_text_bytes_unchanged_static": not pc_balance_enabled,
         "pc_native_balance": balance_proof,

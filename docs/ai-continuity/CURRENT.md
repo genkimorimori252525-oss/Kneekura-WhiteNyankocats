@@ -2,10 +2,10 @@
 current_task: "JP1574-LEGEND-001"
 active_agent: "Codex"
 branch: "codex/pc-local-lab-2026-10-12"
-commit_head: "8f535c2395422dda76489248e445fd1266b91d34"
+commit_head: "0b972fc0e16e2851cd0d9d575ec5b307553fca96"
 status: "IN_PROGRESS"
-evidence_ref: "docs/research/2026-11-03-jp1574-legend-progress.md"
-updated_at: "2026-11-02T15:56:56.224290+00:00"
+evidence_ref: "docs/research/2026-11-04-jp1574-native-port.md"
+updated_at: "2026-11-03T15:46:29.163990+00:00"
 
 ---
 
@@ -14,8 +14,10 @@ updated_at: "2026-11-02T15:56:56.224290+00:00"
 ## 2026-11-03：公式15.7.4取り込み・恐ろし連邦までの進行指定
 
 - 完了証拠：前回r15は[本人確認済み](../research/2026-10-23-catamin-all-day.md)。再ビルド・再試験・再導入しない。
-- 現在一件：`JP1574-LEGEND-001`。所有者が公式最新版の取り込みとレジェンド「恐ろし連邦」までのクリアを指定。Lunaの公式調査は15.7.4、手元原本は15.7.1。最新版原本／現在の研究データ取得前で、コード・APK・SAVE未変更。
-- 次の具体操作：所有者がGoogle Play更新／USB接続を後で行うため提供待ち。接続連絡後、公式APK一式だけ読取り、研究版現データを私的バックアップして版差と進行構造を確認する。公式SAVEには触れない。王冠1・第33章（内部32）までの仮定、未調査・検証／復旧範囲は[再開情報](../research/2026-11-03-jp1574-legend-progress.md)。現在は追加端末操作なし。
+- 2026-11-04取得済み：公式15.7.4/1507040の6APK・旧原本と署名一致、研究版停止後の私的全バックアップ／SAVE SHA一致 `29a05137`。公式SAVE／研究SAVE書込みなし。王冠1の231実ステージ候補は9 tests `7594fc56`＋実SAVE全semantic保持／再読込 `6101e11f` PASS、スマホ未反映。
+- 完了証拠追加：旧版既定を保持した新版native/C/Python profile、37 anchors／data roots／12field群と旧新版の全text復元gateを照合。統合52 tests `a06da387`、15.7.4の6split build `20261103T154350Z-174caa2e`（`29b3194a`）PASS。[版対応・個別receipt・ビルド根拠](../research/2026-11-04-jp1574-native-port.md)。
+- 現在一件：`JP1574-LEGEND-001` の専用PC runtime受入。次の具体操作は元PC状態の私的バックアップ→新版6APKと現研究データ／進行候補をPCだけに導入→起動・運営・育成・進行と再起動保持の一括検証。setupは実行中handle `48349`、重複起動しない。
+- USBは所有者へ抜いてよいと返答済み。スマホ更新時に再接続を依頼し、その時点の現SAVEを取り直して今回以降の進行も保持する。旧取得候補をそのまま書き戻さない。公式SAVEは対象外。新APKビルド完了、PC受入／スマホ候補／端末更新は未完了。
 
 ## 2026-10-23：ネコビタン47件24時間、スマホのデータ保持更新済み
 

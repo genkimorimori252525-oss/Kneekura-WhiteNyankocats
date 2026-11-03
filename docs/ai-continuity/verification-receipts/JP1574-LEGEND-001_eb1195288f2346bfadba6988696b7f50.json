@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "task_id": "JP1574-LEGEND-001",
+  "result": "PASS",
+  "exit_code": 0,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "C:/Users/genki/Downloads/Kneekura-WhiteNyankocats/private/pc-lab/version-upgrade/verify_native_jp1574_profile.py"
+  ],
+  "observed_at": "2026-11-03T15:40:46.750+00:00",
+  "elapsed_ms": 437,
+  "git_head": "0b972fc0e16e2851cd0d9d575ec5b307553fca96",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/JP1574-LEGEND-001_eb1195288f2346bfadba6988696b7f50.log",
+  "output_sha256": "c1611e11cb004ee14531b9d7c9478e88db69b8d8f4741e66c19ea23236cb987e",
+  "receipt_id": "JP1574-LEGEND-001_eb1195288f2346bfadba6988696b7f50"
+}

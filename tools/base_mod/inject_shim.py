@@ -130,18 +130,28 @@ def add_needed_dependency(
         }
 
 
-def verify_anchor_native(native_bytes: bytes) -> dict:
+def _source_anchor(source_profile: str) -> tuple[str, str, str]:
+    if source_profile == "jp1571":
+        return TARGET_NATIVE_SHA256, TARGET_NATIVE_BUILD_ID, "jp-15.7.1-arm64"
+    if source_profile == "jp1574":
+        from tools.base_mod.source_native_jp1574 import NATIVE_SHA256, BUILD_ID
+        return NATIVE_SHA256, BUILD_ID, "jp-15.7.4-arm64"
+    raise ValueError("unsupported native source profile: " + source_profile)
+
+
+def verify_anchor_native(native_bytes: bytes, *, source_profile: str = "jp1571") -> dict:
+    expected_sha256, expected_build_id, _ = _source_anchor(source_profile)
     digest = hashlib.sha256(native_bytes).hexdigest()
-    if digest != TARGET_NATIVE_SHA256:
+    if digest != expected_sha256:
         raise ValueError(
             "libnative-lib.so SHA-256 mismatch: "
-            f"expected {TARGET_NATIVE_SHA256}, got {digest}"
+            f"expected {expected_sha256}, got {digest}"
         )
     build_id = gnu_build_id(native_bytes)
-    if build_id != TARGET_NATIVE_BUILD_ID:
+    if build_id != expected_build_id:
         raise ValueError(
             "libnative-lib.so GNU build ID mismatch: "
-            f"expected {TARGET_NATIVE_BUILD_ID}, got {build_id}"
+            f"expected {expected_build_id}, got {build_id}"
         )
     if elf_machine(native_bytes) != EM_AARCH64:
         raise ValueError("target native library is not AArch64")
@@ -167,6 +177,7 @@ def inject_split(
     source_apk: Path,
     target_apk: Path,
     shim_path: Path,
+    *, source_profile: str = "jp1571",
 ) -> dict:
     shim_bytes = shim_path.read_bytes()
     shim_info = verify_shim(shim_bytes)
@@ -180,7 +191,7 @@ def inject_split(
             ) from exc
         if SHIM_ENTRY in archive.namelist():
             raise ValueError("input split already contains libkneekura.so")
-        anchor_info = verify_anchor_native(native_bytes)
+        anchor_info = verify_anchor_native(native_bytes, source_profile=source_profile)
 
     patched_native, mutation = add_needed_dependency(native_bytes)
 
@@ -215,7 +226,7 @@ def inject_split(
 
     return {
         "schema_version": 1,
-        "anchor": "jp-15.7.1-arm64",
+        "anchor": _source_anchor(source_profile)[2],
         "mode": "bootstrap-dt-needed",
         "input_split_sha256": sha256_file(source_apk),
         "output_split_sha256_unsigned": sha256_file(target_apk),
@@ -233,7 +244,9 @@ def patch_split_set(
     split_dir: Path,
     output_dir: Path,
     shim_path: Path,
+    *, source_profile: str = "jp1571",
 ) -> dict:
+    expected_sha256, expected_build_id, _ = _source_anchor(source_profile)
     if not split_dir.is_dir():
         raise FileNotFoundError(split_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -242,7 +255,7 @@ def patch_split_set(
     for source in sorted(split_dir.glob("*.apk")):
         target = output_dir / source.name
         if source.name == "split_config.arm64_v8a.apk":
-            rows.append(inject_split(source, target, shim_path))
+            rows.append(inject_split(source, target, shim_path, source_profile=source_profile))
         else:
             shutil.copy2(source, target)
 
@@ -255,8 +268,8 @@ def patch_split_set(
         "schema_version": 1,
         "mode": "kneekura-bootstrap",
         "shim_soname": SHIM_SONAME,
-        "target_native_sha256": TARGET_NATIVE_SHA256,
-        "target_native_build_id": TARGET_NATIVE_BUILD_ID,
+        "target_native_sha256": expected_sha256,
+        "target_native_build_id": expected_build_id,
         "arm64": rows[0],
     }
     (output_dir / "bootstrap-patch-ledger.json").write_text(
@@ -271,12 +284,14 @@ def main() -> int:
     parser.add_argument("split_dir", type=Path)
     parser.add_argument("--shim", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--source-profile", choices=("jp1571", "jp1574"), default="jp1571")
     args = parser.parse_args()
 
     ledger = patch_split_set(
         args.split_dir.resolve(),
         args.output.resolve(),
         args.shim.resolve(),
+        source_profile=args.source_profile,
     )
     print(json.dumps(ledger, ensure_ascii=False, indent=2, sort_keys=True))
     return 0

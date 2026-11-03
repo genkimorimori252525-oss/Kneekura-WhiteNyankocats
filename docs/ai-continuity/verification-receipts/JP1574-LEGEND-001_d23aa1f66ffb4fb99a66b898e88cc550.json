@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "task_id": "JP1574-LEGEND-001",
+  "result": "PASS",
+  "exit_code": 0,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "C:/Users/genki/Downloads/Kneekura-WhiteNyankocats/private/pc-lab/version-upgrade/map_native_1574.py"
+  ],
+  "observed_at": "2026-11-03T15:28:46.684+00:00",
+  "elapsed_ms": 1656,
+  "git_head": "0b972fc0e16e2851cd0d9d575ec5b307553fca96",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/JP1574-LEGEND-001_d23aa1f66ffb4fb99a66b898e88cc550.log",
+  "output_sha256": "a5e11b8fb0ea7b2264d620bc970ef14b3da94260c2a2eb290759d120bb83a77c",
+  "receipt_id": "JP1574-LEGEND-001_d23aa1f66ffb4fb99a66b898e88cc550"
+}

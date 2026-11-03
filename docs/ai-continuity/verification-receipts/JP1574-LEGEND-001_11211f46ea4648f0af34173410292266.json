@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "task_id": "JP1574-LEGEND-001",
+  "result": "PASS",
+  "exit_code": 0,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "-m",
+    "unittest",
+    "tests.test_native_jp1574_profile",
+    "tests.test_original_scene_native_image_gate",
+    "tests.test_pc_native_balance"
+  ],
+  "observed_at": "2026-11-03T15:39:15.516+00:00",
+  "elapsed_ms": 1452,
+  "git_head": "0b972fc0e16e2851cd0d9d575ec5b307553fca96",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/JP1574-LEGEND-001_11211f46ea4648f0af34173410292266.log",
+  "output_sha256": "b5d09db347a295c7df4c0760c47ff06fd8dc2bbc98a56f96522f36384c0b8b07",
+  "receipt_id": "JP1574-LEGEND-001_11211f46ea4648f0af34173410292266"
+}

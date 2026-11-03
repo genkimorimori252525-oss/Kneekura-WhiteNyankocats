@@ -14,6 +14,11 @@ from tools.localcore.ops_calendar import JST
 
 ASSET_ENTRY = 'assets/kneekura-original-ops-v1.json'
 SOURCE_NATIVE_SHA256 = '333d2974ab2ff881fd70087fd62dea7d12d82addbc55cab2f2a675ad67e3a7e2'
+SOURCE_PROFILES = {
+    'jp1571': (GAME_VERSION, ORIGINAL_OWNER_SAVE, SOURCE_NATIVE_SHA256),
+    'jp1574': (150704, 'ORIGINAL_JP1574_SAVE_DATA',
+               '669438f86b41c10c7a387b96eb1ab5ca82a350bacc89ec06c05f699ec3727590'),
+}
 FILES = frozenset(('sale.tsv', 'gatya.tsv', 'item.tsv'))
 MAX_BUNDLE = 8*1024**2
 
@@ -40,7 +45,7 @@ def _timestamp(date, clock):
         hour=number//100, minute=number%100, tzinfo=JST)
 
 
-def _validate_stream(name, payload):
+def _validate_stream(name, payload, *, game_version=GAME_VERSION):
     if not isinstance(payload, bytes) or len(payload) > 2*1024**2:
         raise ProtocolError('ORIGINAL_OPS_STREAM_TOO_LARGE')
     text = payload.decode('utf-8', errors='strict')
@@ -55,7 +60,7 @@ def _validate_stream(name, payload):
         if len(fields) < 10:
             raise ProtocolError('ORIGINAL_OPS_STREAM_ROW')
         window = EventWindow(_timestamp(fields[0],fields[1]), _timestamp(fields[2],fields[3]))
-        if fields[4:8] != [str(GAME_VERSION),str(GAME_VERSION),'0','0']:
+        if fields[4:8] != [str(game_version),str(game_version),'0','0']:
             raise ProtocolError('ORIGINAL_OPS_UNSUPPORTED_FILTER')
         values = fields[8:]
         if name == 'sale.tsv':
@@ -80,7 +85,9 @@ def _validate_stream(name, payload):
                 raise ProtocolError('ORIGINAL_OPS_ITEM_SHAPE')
             expected = item_row(window, *[_number(v) for v in values[:3]],
                 title=values[3], message=values[4], everyday=values[7]=='1')
-        if row != expected:raise ProtocolError('ORIGINAL_OPS_NONCANONICAL_ROW')
+        expected_fields = expected.split('\t')
+        expected_fields[4:6] = [str(game_version)] * 2
+        if row != '\t'.join(expected_fields):raise ProtocolError('ORIGINAL_OPS_NONCANONICAL_ROW')
     if payload != stream(lines):raise ProtocolError('ORIGINAL_OPS_NONCANONICAL_STREAM')
 
 
@@ -89,8 +96,12 @@ def validate_bundle(data):
         raise ProtocolError('ORIGINAL_OPS_BUNDLE_SIZE')
     bundle = json.loads(data.decode('utf-8'), object_pairs_hook=_unique_object)
     if not isinstance(bundle, dict):raise ProtocolError('ORIGINAL_OPS_BUNDLE_OBJECT')
-    contract = {'schema_version':1, 'game_version':GAME_VERSION,
-                'owner_save':ORIGINAL_OWNER_SAVE, 'source_native_sha256':SOURCE_NATIVE_SHA256}
+    profiles = [profile for profile in SOURCE_PROFILES.values()
+                if type(bundle.get('game_version')) is int and bundle['game_version'] == profile[0]]
+    if len(profiles) != 1:raise ProtocolError('ORIGINAL_OPS_BUNDLE_CONTRACT')
+    game_version, owner_save, native_sha = profiles[0]
+    contract = {'schema_version':1, 'game_version':game_version,
+                'owner_save':owner_save, 'source_native_sha256':native_sha}
     for key, value in contract.items():
         if type(bundle.get(key)) is not type(value) or bundle[key] != value:
             raise ProtocolError('ORIGINAL_OPS_BUNDLE_CONTRACT')
@@ -104,12 +115,33 @@ def validate_bundle(data):
         raise ProtocolError('ORIGINAL_OPS_STREAM_SET')
     for name, encoded in files.items():
         if not isinstance(encoded,str):raise ProtocolError('ORIGINAL_OPS_BASE64')
-        _validate_stream(name, base64.b64decode(encoded, validate=True))
+        _validate_stream(name, base64.b64decode(encoded, validate=True), game_version=game_version)
     if 'login_rotation' in bundle:
         validate_login_rotation(bundle['login_rotation'])
     if 'notices' in bundle:
         validate_notices(bundle['notices'])
     return bundle
+
+
+def retarget_bundle(data, *, source_profile):
+    """Bind the same calendar to an exact source, changing only version filters."""
+    if source_profile not in SOURCE_PROFILES:raise ProtocolError('ORIGINAL_OPS_SOURCE_PROFILE')
+    bundle = validate_bundle(data)
+    version, owner_save, native_sha = SOURCE_PROFILES[source_profile]
+    if bundle['game_version'] == version:return data
+    for name, encoded in bundle['server_files'].items():
+        payload = base64.b64decode(encoded, validate=True)
+        lines = payload.decode('utf-8').splitlines()[1:-1]
+        rows = []
+        for row in lines:
+            fields = row.split('\t')
+            fields[4:6] = [str(version)] * 2
+            rows.append('\t'.join(fields))
+        bundle['server_files'][name] = base64.b64encode(stream(rows)).decode('ascii')
+    bundle.update(game_version=version, owner_save=owner_save, source_native_sha256=native_sha)
+    result = (json.dumps(bundle, ensure_ascii=False, sort_keys=True, separators=(',', ':'))+'\n').encode('utf-8')
+    validate_bundle(result)
+    return result
 
 
 def validate_login_rotation(configuration):

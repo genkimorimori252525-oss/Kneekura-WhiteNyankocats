@@ -1,5 +1,5 @@
 /*
- * Original-JP15.7.1-only local research scene witness.
+ * Original JP15.7.1 / opt-in JP15.7.4 local research scene witness.
  *
  * Explicit opt-in, OFF in every default CMake build. NEVER for the publisher
  * package, any Personal/Practice flavour or an INTERNET-enabled product.
@@ -24,7 +24,7 @@
 #error "Original native research witness may only be compiled for Android"
 #endif
 #ifndef __aarch64__
-#error "Pinned JP15.7.1 scene witness supports only ARM64"
+#error "Pinned original scene witness supports only ARM64"
 #endif
 #define _GNU_SOURCE
 #include <android/log.h>
@@ -77,6 +77,14 @@ __attribute__((used, visibility("default")))
 const char kneekura_scene_research_event_format[] =
     "original-native-scene-v1 id=%u";
 
+struct OriginalCodeWordAnchor {
+    uintptr_t vma;
+    uint32_t instruction;
+};
+
+#ifdef KNEEKURA_RESEARCH_JP1574
+#include "kneekura_original_scene_profile_jp1574.h"
+#else
 /* original installed-owner ELF 8cb3815648eb9642da10bfb039d71bff7a3519bd */
 static const uint8_t kPinnedNativeBuildId[20] = {
     0x8c, 0xb3, 0x81, 0x56, 0x48, 0xeb, 0x96, 0x42, 0xda, 0x10,
@@ -103,7 +111,15 @@ enum {
     ORIGINAL_NATIVE_TEXT_BEGIN = 0x317370,
     ORIGINAL_NATIVE_TEXT_END_EXCLUSIVE = 0xAD751C,
     MAX_SOURCE_VMA_REBASE = 0x10000,
+    ORIGINAL_HTTP_ROOT = 0xB229A8,
+    ORIGINAL_INDIVIDUAL_HTTP_ROOT = 0xB229C0,
+    ORIGINAL_SCENE97_ELIGIBILITY = 0xB20BDC,
+    ORIGINAL_TASK_QUEUE = 0xB21870,
+    ORIGINAL_DOWNLOAD_BATCH_VTABLE = 0xAFE100,
+    ORIGINAL_QUEUE_TASK2_VTABLE = 0xAFE198,
+    ORIGINAL_QUEUE_TASK3_VTABLE = 0xAFE5C8,
 };
+#endif
 typedef void (*OriginalDrawFn)(void *, void *);
 typedef int32_t (*OriginalIndexResultFn)(int32_t);
 typedef int32_t (*OriginalSaveWrapperFn)(void *);
@@ -415,11 +431,7 @@ static int inspect_original_library(struct dl_phdr_info *info,
     return 0;
 }
 
-struct OriginalCodeWordAnchor {
-    uintptr_t vma;
-    uint32_t instruction;
-};
-
+#ifndef KNEEKURA_RESEARCH_JP1574
 static const struct OriginalCodeWordAnchor kSourceWordAnchors[] = {
     {ORIGINAL_JNI_DRAW, 0xD10143FFu},
     {ORIGINAL_APP_CONTEXT_GETTER, 0xB0002040u},
@@ -466,6 +478,7 @@ static const struct OriginalCodeWordAnchor kSourceWordAnchors[] = {
     {0x858390u, 0x940600D5u},
     {0x8583B8u, 0x9405CF25u},
 };
+#endif
 
 static int source_words_match_exact_original(
     uintptr_t base, uintptr_t shift,
@@ -526,9 +539,13 @@ static int select_unique_original_source_vma_shift(
 #ifdef KNEEKURA_RESEARCH_PC_BALANCE
     if (native->balance_executable_load_count != 1u) return 0;
     static const uintptr_t sites[10] = {
+#ifdef KNEEKURA_RESEARCH_JP1574
+        KNEEKURA_JP1574_PC_BALANCE_SITES
+#else
         0x99c4e0u, 0x5e5178u, 0x990f54u, 0x8ee878u,
         0x99cb94u, 0x99ce18u, 0x488b78u, 0x488b30u,
         0x5fa514u, 0x53b980u
+#endif
     };
     for (unsigned i = 0; i < 10u; ++i) {
         uintptr_t pc = native->base + selected + sites[i];
@@ -634,7 +651,7 @@ Java_jp_kn_local_battlecats_MyActivity_kneekuraOriginalHttpRequestState(
     uint64_t size=0u;
     /* Original newResponse (runtime 0x46158c) looks up this map before
      * invoking a callback. Observe registration, never mutate the registry. */
-    uintptr_t root_offset=individual ? 0xB229C0u : 0xB229A8u;
+    uintptr_t root_offset=individual ? ORIGINAL_INDIVIDUAL_HTTP_ROOT : ORIGINAL_HTTP_ROOT;
     if (!pc_read_observation(base+root_offset,&root,sizeof(root))
             || !pc_read_observation(base+root_offset+8u,&size,sizeof(size)) || size>4096u)
         return -1;
@@ -698,7 +715,7 @@ static void observe_pc_scene97_task(const uint8_t *context, uint32_t scene) {
     uintptr_t task = 0u;
     uint8_t done = 0u;
     uintptr_t data_base = gOriginalLoadBias + gOriginalVmaShift;
-    if (!pc_read_observation(data_base + 0xB20BDCu, eligibility, sizeof(eligibility))
+    if (!pc_read_observation(data_base + ORIGINAL_SCENE97_ELIGIBILITY, eligibility, sizeof(eligibility))
             || !pc_read_observation((uintptr_t)context + 0x334658u, &task, sizeof(task))
             || !pc_read_observation((uintptr_t)context + 0x334668u, &done, sizeof(done))) {
         pc_task_unavailable("original-native-scene97-task-unavailable-v1 context-read"); return;
@@ -713,7 +730,7 @@ static void observe_pc_scene97_task(const uint8_t *context, uint32_t scene) {
         }
         memcpy(&vtable, bytes, sizeof(vtable));
         memcpy(&owner, bytes + 8u, sizeof(owner));
-        if (vtable != data_base + 0xAFE100u || owner != (uintptr_t)context) {
+        if (vtable != data_base + ORIGINAL_DOWNLOAD_BATCH_VTABLE || owner != (uintptr_t)context) {
             pc_task_unavailable("original-native-scene97-task-unavailable-v1 task-identity"); return;
         }
         failed = bytes[0x28]; needed = bytes[0x29];
@@ -742,7 +759,7 @@ static void observe_pc_scene97_queue(const uint8_t *context, uint32_t scene) {
     uint64_t queue[5], block = 0u, task = 0u, vtable = 0u;
     uint32_t phase = 0u, waiting = 0u;
     unsigned head = 0u, complete = 0u;
-    if (!pc_read_observation(data_base + 0xB21870u, queue, sizeof(queue))
+    if (!pc_read_observation(data_base + ORIGINAL_TASK_QUEUE, queue, sizeof(queue))
             || !pc_read_observation((uintptr_t)context + 0x3388u, &phase, sizeof(phase))
             || !pc_read_observation((uintptr_t)context + 0x338Cu, &waiting, sizeof(waiting))) {
         pc_task_unavailable("original-native-scene97-queue-unavailable-v1 header-read"); return;
@@ -758,9 +775,9 @@ static void observe_pc_scene97_queue(const uint8_t *context, uint32_t scene) {
                 || !pc_read_observation(task, &vtable, sizeof(vtable))) {
             pc_task_unavailable("original-native-scene97-queue-unavailable-v1 task-read"); return;
         }
-        head = vtable == data_base + 0xAFE100u ? 1u
-             : vtable == data_base + 0xAFE198u ? 2u
-             : vtable == data_base + 0xAFE5C8u ? 3u : 4u;
+        head = vtable == data_base + ORIGINAL_DOWNLOAD_BATCH_VTABLE ? 1u
+             : vtable == data_base + ORIGINAL_QUEUE_TASK2_VTABLE ? 2u
+             : vtable == data_base + ORIGINAL_QUEUE_TASK3_VTABLE ? 3u : 4u;
         if (head == 2u || head == 3u) {
             uint8_t flag = 0u;
             if (!pc_read_observation(task + 0x10u, &flag, sizeof(flag)) || flag > 1u) return;
