@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "task_id": "JP1574-LEGEND-001",
+  "result": "PASS",
+  "exit_code": 0,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "C:/Users/genki/Downloads/Kneekura-WhiteNyankocats/private/pc-lab/version-upgrade/update_phone_jp1574.py",
+    "prepare"
+  ],
+  "observed_at": "2026-11-03T17:45:40.086+00:00",
+  "elapsed_ms": 93375,
+  "git_head": "ea0e285acbbd5fb5b98b3d10f6951a6062f706d5",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/JP1574-LEGEND-001_01786da2257e4a16811bde70fecdda45.log",
+  "output_sha256": "37a67145f4c97851e4cb66223a64078ec57cb0156bb9580eb622f2486b58e671",
+  "receipt_id": "JP1574-LEGEND-001_01786da2257e4a16811bde70fecdda45"
+}

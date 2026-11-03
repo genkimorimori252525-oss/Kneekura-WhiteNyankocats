@@ -190,3 +190,5 @@ Only record verification that was actually performed.
 | JP1574-LEGEND-001 | FAIL | Executed command exit=1 | docs/ai-continuity/verification-receipts/JP1574-LEGEND-001_e4f723db1a7a4652a24963bb5a63b3a7.json |
 | JP1574-LEGEND-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/JP1574-LEGEND-001_e7bcd7efd6394eca9f0aea6a40ebf864.json |
 | JP1574-LEGEND-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/JP1574-LEGEND-001_c976df0b760842b79066dd6ab67e25c2.json |
+| JP1574-LEGEND-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/JP1574-LEGEND-001_01786da2257e4a16811bde70fecdda45.json |
+| JP1574-LEGEND-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/JP1574-LEGEND-001_0f3447a0d1f149a5849842d3ef3f9aa0.json |

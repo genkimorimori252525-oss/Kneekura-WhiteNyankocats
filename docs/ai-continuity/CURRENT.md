@@ -2,10 +2,10 @@
 current_task: "JP1574-LEGEND-001"
 active_agent: "Codex"
 branch: "codex/pc-local-lab-2026-10-12"
-commit_head: "b20616c3e843bd14bc0524fd99431f96046bd670"
-status: "IN_PROGRESS"
+commit_head: "ea0e285acbbd5fb5b98b3d10f6951a6062f706d5"
+status: "OWNER_VISUAL_PENDING"
 evidence_ref: "docs/research/2026-11-04-jp1574-native-port.md"
-updated_at: "2026-11-03T17:27:28.325117+00:00"
+updated_at: "2026-11-03T17:51:47.066996+00:00"
 
 ---
 
@@ -18,8 +18,8 @@ updated_at: "2026-11-03T17:27:28.325117+00:00"
 - 完了証拠追加：旧版既定を保持した新版native/C/Python profile、37 anchors／data roots／12field群と旧新版の全text復元gateを照合。統合52 tests `a06da387`、15.7.4の6split build `20261103T154350Z-174caa2e`（`29b3194a`）PASS。[版対応・個別receipt・ビルド根拠](../research/2026-11-04-jp1574-native-port.md)。
 - PC runtime：setup `469eeb13`、全バックアップ／6split導入／進行候補 `11a2eb6e`、初回capture `b5514d5c` 完了。native起動・運営ステージ・恐ろし連邦の王冠1 CLEAR、王冠2と次章は未クリア表示を確認（私的pc-runtime／resume-ui証拠）。実engine保存version150704対応のhost guardを追加、11 tests `cc60eb07` と実SAVE idempotence `63e3ef72` PASS。コードCI b20616cの2系統成功。
 - PC受入完了：操作しやすいネコアイスのPC限定fixtureで闇2個→上限60 `b18d18cf`、XP育成→60／超過拒否 `bc8b7822`、再起動保持 `f8944bc9` PASS。レア3／通常2枠も目視。原PC全551ファイルSHA一致復元・時計同期・停止 `e7bcd7ef`。私的原証拠／失敗／UNKNOWNは詳細記録へ。
-- 現在一件：スマホ候補 `phone-20261103T170131Z-78601523`、同署名／15.7.4／6SHA最終gate `c976df0b` PASS。次は本人の再接続後、最新研究SAVEの全バックアップ→同bytesから進行差分再生成→既存署名でデータ保持更新。スマホの起動・画面検証は本人担当。
-- USBは所有者へ抜いてよいと返答済み。スマホ更新時に再接続を依頼し、その時点の現SAVEを取り直して今回以降の進行も保持する。旧取得候補をそのまま書き戻さない。公式SAVEは対象外。PC受入とスマホ候補は完了、端末更新は未完了。
+- スマホ更新完了：本人の「更新してくれ」により、候補 `phone-20261103T170131Z-78601523` を既存署名で導入。更新直前に現579ファイル全私的バックアップ、最新SAVEから進行候補を再生成 `01786da2`。導入後6SHA・UID/dataDir・SAVEと指定差分以外の全579ファイル集合/SHA一致 `0f3447a0` PASS。初期化／PC fixture転送／公式SAVEアクセスなし。
+- 現在一件：`OWNER_VISUAL_PENDING`。アプリ停止状態で所有者の目視結果を待つ。AIはスマホ起動・画面／ログ・SAVE取得を追加実行しない。新不具合または本人の新指示がある場合だけ対象を限定して再開する。code ea0e285のTest tooling・Agent terminal Ubuntu/Windows成功。旧FAIL／UNKNOWN／Charter承認receipt不足は解決扱いにしない。
 
 ## 2026-10-23：ネコビタン47件24時間、スマホのデータ保持更新済み
 

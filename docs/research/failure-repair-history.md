@@ -569,3 +569,6 @@ GitHubの `1adc14a` ではTest tooling／Agent terminalがFAIL。既存の元bac
 15.7.4でnative本体のコード／data rootが移設され、旧patchの無条件再利用は不可。旧版既定を保ち、版固有BuildID・37anchors・全text復元gateと明示profileへ分離して対応した。原作engineが書くSAVE内部版150704は旧150700と異なり、host進行editorに実証済み2版だけの受入を追加した。PC原作UIで恐ろし連邦王冠1、闇2個による上限60、XP育成、上限超過拒否、再起動保持を確認。スマホ更新は未実施。
 
 warmupの購入不可dialog未対応、二段階確認前の検査、parser API名誤り、AVDの転送tar残留による空き容量不足を検出。ゲーム本体を変更せずhelper／転送方法を修正し、旧FAILとsnapshotを保持した。PC全551ファイルはSHA一致復元・時計同期・停止。[技術根拠・receipt・未確定と復旧手順](2026-11-04-jp1574-native-port.md)。スマホ反映前には必ずその時点のSAVEを取得し直し、試験fixture／古いsnapshotを送らない。
+
+
+同日、本人の明示更新依頼後に15.7.4候補をスマホへデータ保持導入（`0f3447a0`）。更新直前の新規579ファイルバックアップと最新SAVEから進行候補を再生成（`01786da2`）し、導入6SHA・UID/dataDir・指定SAVE差分以外の全ファイルSHAを照合した。PC試験fixture／古い候補は転送せず、公式SAVE不使用、スマホ起動／画面／ログ取得なし。本人の目視結果待ち。[更新手順・原証拠・stdoutラベル誤りの意味](2026-11-04-jp1574-native-port.md#同日本人依頼によるスマホ更新完了)。
