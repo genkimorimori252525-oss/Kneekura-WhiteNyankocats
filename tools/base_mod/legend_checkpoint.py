@@ -93,7 +93,7 @@ def verify_checkpoint(before, after, stage_counts):
 def build_checkpoint(source: bytes, owner_export: Path, core):
     """Build separate bytes without writing to the source or an attached device."""
     _verify_jp_hash(source)
-    if int.from_bytes(source[:4], 'little') != 150700:
+    if int.from_bytes(source[:4], 'little') not in (150700, 150704):
         raise ValueError('LEGEND_CHECKPOINT_GAME_VERSION_CHANGED')
     save = core.SaveFile(core.Data(source), load=False)
     save.load()

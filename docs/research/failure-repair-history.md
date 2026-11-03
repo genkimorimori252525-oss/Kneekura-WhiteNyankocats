@@ -562,3 +562,10 @@ GitHubの `1adc14a` ではTest tooling／Agent terminalがFAIL。既存の元bac
 スマホ導入前に最新CIのFAILを検出。画像変換用Pillowのtop-level importにより、Pillowを導入しない一般CIでもmetadata moduleの読込みが失敗した。原画SHA検証後の変換直前へimportを移し、Pillowなしのmetadata参照・不正原画拒否を子プロセスで確認。関連6 tests PASS、既存APKは不変。[CI原証拠と修正](2026-10-23-catamin-all-day.md#スマホ更新前に検出したciの画像依存問題)。関連テストの成功をCI全体の成功として報告しない。
 
 修正code commit `efa1c33` のTest tooling全839件（833成功/6 skip）、Agent terminal Ubuntu/Windowsの成功後、本人依頼のr15スマホ更新を実施。実署名・旧/候補/導入後6SHA・UID/dataDir保持で成功（receipt `990846c4`）。データ消去・SAVE取得・起動／画面確認なし、本人目視待ち。[更新記録](2026-10-23-catamin-all-day.md#同日本人依頼によるスマホのデータ保持更新)。
+
+
+# 2026-11-04 15.7.4版差・SAVE内部版・PC受入helper
+
+15.7.4でnative本体のコード／data rootが移設され、旧patchの無条件再利用は不可。旧版既定を保ち、版固有BuildID・37anchors・全text復元gateと明示profileへ分離して対応した。原作engineが書くSAVE内部版150704は旧150700と異なり、host進行editorに実証済み2版だけの受入を追加した。PC原作UIで恐ろし連邦王冠1、闇2個による上限60、XP育成、上限超過拒否、再起動保持を確認。スマホ更新は未実施。
+
+warmupの購入不可dialog未対応、二段階確認前の検査、parser API名誤り、AVDの転送tar残留による空き容量不足を検出。ゲーム本体を変更せずhelper／転送方法を修正し、旧FAILとsnapshotを保持した。PC全551ファイルはSHA一致復元・時計同期・停止。[技術根拠・receipt・未確定と復旧手順](2026-11-04-jp1574-native-port.md)。スマホ反映前には必ずその時点のSAVEを取得し直し、試験fixture／古いsnapshotを送らない。

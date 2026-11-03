@@ -2,11 +2,13 @@
 import copy
 import csv
 import io
+from pathlib import Path
 from types import SimpleNamespace as N
 import unittest
+from unittest.mock import Mock, patch
 
 from tools.base_mod.legend_checkpoint import (
-    apply_checkpoint, derive_stage_counts, verify_checkpoint,
+    apply_checkpoint, build_checkpoint, derive_stage_counts, verify_checkpoint,
 )
 
 
@@ -49,6 +51,27 @@ def source_rows():
 
 
 class LegendCheckpointTests(unittest.TestCase):
+    def test_proven_source_versions_reach_parser_after_checksum_gate(self):
+        for version in (150700, 150704):
+            source = version.to_bytes(4, 'little')
+            core = N(Data=lambda data: data, SaveFile=Mock(side_effect=RuntimeError('PARSER_REACHED')))
+            with self.subTest(version=version), patch(
+                    'tools.base_mod.legend_checkpoint._verify_jp_hash') as checksum:
+                with self.assertRaisesRegex(RuntimeError, '^PARSER_REACHED$'):
+                    build_checkpoint(source, Path('unused-export.zip'), core)
+                checksum.assert_called_once_with(source)
+                core.SaveFile.assert_called_once_with(source, load=False)
+
+    def test_unproven_source_versions_are_rejected_before_parser(self):
+        for version in (0, 150699, 150701, 150703, 150705, 150800):
+            core = N(Data=Mock(), SaveFile=Mock())
+            with self.subTest(version=version), patch(
+                    'tools.base_mod.legend_checkpoint._verify_jp_hash'):
+                with self.assertRaisesRegex(ValueError, '^LEGEND_CHECKPOINT_GAME_VERSION_CHANGED$'):
+                    build_checkpoint(version.to_bytes(4, 'little'), Path('unused-export.zip'), core)
+                core.Data.assert_not_called()
+                core.SaveFile.assert_not_called()
+
     def test_stage_counts_come_from_sentinel_not_twelve_save_slots(self):
         names, stages = source_rows()
         counts = derive_stage_counts(payload(names), payload(stages))

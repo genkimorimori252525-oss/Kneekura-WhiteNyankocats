@@ -1,0 +1,1 @@
+{"source_preserved": true, "byte_idempotent": true, "unapproved_fields_unchanged": true, "output_roundtrip_identical": true, "source_sha256": "33b80a70cc13bcd81e75238e5a2216f6999e45c1243bb657e9bca12954b63269", "output_sha256": "33b80a70cc13bcd81e75238e5a2216f6999e45c1243bb657e9bca12954b63269", "host_only_change": true, "apk_rebuild_required": false}

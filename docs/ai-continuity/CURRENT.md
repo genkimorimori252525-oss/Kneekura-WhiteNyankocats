@@ -2,10 +2,10 @@
 current_task: "JP1574-LEGEND-001"
 active_agent: "Codex"
 branch: "codex/pc-local-lab-2026-10-12"
-commit_head: "0b972fc0e16e2851cd0d9d575ec5b307553fca96"
+commit_head: "b20616c3e843bd14bc0524fd99431f96046bd670"
 status: "IN_PROGRESS"
 evidence_ref: "docs/research/2026-11-04-jp1574-native-port.md"
-updated_at: "2026-11-03T15:46:29.163990+00:00"
+updated_at: "2026-11-03T17:27:28.325117+00:00"
 
 ---
 
@@ -16,8 +16,10 @@ updated_at: "2026-11-03T15:46:29.163990+00:00"
 - 完了証拠：前回r15は[本人確認済み](../research/2026-10-23-catamin-all-day.md)。再ビルド・再試験・再導入しない。
 - 2026-11-04取得済み：公式15.7.4/1507040の6APK・旧原本と署名一致、研究版停止後の私的全バックアップ／SAVE SHA一致 `29a05137`。公式SAVE／研究SAVE書込みなし。王冠1の231実ステージ候補は9 tests `7594fc56`＋実SAVE全semantic保持／再読込 `6101e11f` PASS、スマホ未反映。
 - 完了証拠追加：旧版既定を保持した新版native/C/Python profile、37 anchors／data roots／12field群と旧新版の全text復元gateを照合。統合52 tests `a06da387`、15.7.4の6split build `20261103T154350Z-174caa2e`（`29b3194a`）PASS。[版対応・個別receipt・ビルド根拠](../research/2026-11-04-jp1574-native-port.md)。
-- 現在一件：`JP1574-LEGEND-001` の専用PC runtime受入。次の具体操作は元PC状態の私的バックアップ→新版6APKと現研究データ／進行候補をPCだけに導入→起動・運営・育成・進行と再起動保持の一括検証。setupは実行中handle `48349`、重複起動しない。
-- USBは所有者へ抜いてよいと返答済み。スマホ更新時に再接続を依頼し、その時点の現SAVEを取り直して今回以降の進行も保持する。旧取得候補をそのまま書き戻さない。公式SAVEは対象外。新APKビルド完了、PC受入／スマホ候補／端末更新は未完了。
+- PC runtime：setup `469eeb13`、全バックアップ／6split導入／進行候補 `11a2eb6e`、初回capture `b5514d5c` 完了。native起動・運営ステージ・恐ろし連邦の王冠1 CLEAR、王冠2と次章は未クリア表示を確認（私的pc-runtime／resume-ui証拠）。実engine保存version150704対応のhost guardを追加、11 tests `cc60eb07` と実SAVE idempotence `63e3ef72` PASS。コードCI b20616cの2系統成功。
+- PC受入完了：操作しやすいネコアイスのPC限定fixtureで闇2個→上限60 `b18d18cf`、XP育成→60／超過拒否 `bc8b7822`、再起動保持 `f8944bc9` PASS。レア3／通常2枠も目視。原PC全551ファイルSHA一致復元・時計同期・停止 `e7bcd7ef`。私的原証拠／失敗／UNKNOWNは詳細記録へ。
+- 現在一件：スマホ候補 `phone-20261103T170131Z-78601523`、同署名／15.7.4／6SHA最終gate `c976df0b` PASS。次は本人の再接続後、最新研究SAVEの全バックアップ→同bytesから進行差分再生成→既存署名でデータ保持更新。スマホの起動・画面検証は本人担当。
+- USBは所有者へ抜いてよいと返答済み。スマホ更新時に再接続を依頼し、その時点の現SAVEを取り直して今回以降の進行も保持する。旧取得候補をそのまま書き戻さない。公式SAVEは対象外。PC受入とスマホ候補は完了、端末更新は未完了。
 
 ## 2026-10-23：ネコビタン47件24時間、スマホのデータ保持更新済み
 

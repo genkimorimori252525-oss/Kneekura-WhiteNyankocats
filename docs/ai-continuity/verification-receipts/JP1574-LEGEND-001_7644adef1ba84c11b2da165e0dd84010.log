@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "C:\Users\genki\Downloads\Kneekura-WhiteNyankocats\private\pc-lab\version-upgrade\verify_level_runtime.py", line 25, in <module>
+    assert (unit.upgrade.base,unit.catseyes_used,unit.max_upgrade_level.base)==(expected_level,30,40),'CATSEYE_LEVEL_CAP_RUNTIME_CHANGED'
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: CATSEYE_LEVEL_CAP_RUNTIME_CHANGED
