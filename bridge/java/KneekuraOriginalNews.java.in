@@ -1,0 +1,70 @@
+package __KNEEKURA_PACKAGE__;
+
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
+import android.webkit.WebResourceError;
+import java.io.ByteArrayInputStream;
+import java.lang.reflect.Field;
+import java.net.URI;
+import java.util.Collections;
+import java.util.Map;
+
+/** Original base-i page and cn1/JNI callbacks; owned local article content. */
+final class KneekuraOriginalNews extends WebViewClient {
+    private final WebViewClient original;
+    private final KneekuraOriginalOps operations;
+    private KneekuraOriginalNews(WebViewClient original, KneekuraOriginalOps operations) {
+        this.original=original;this.operations=operations;
+    }
+    static boolean isPage(String url) {
+        try {
+            URI uri=new URI(url);
+            return "https".equals(uri.getScheme())
+                && "nyanko-announcement.ponosgames.com".equalsIgnoreCase(uri.getHost())
+                && "/v1/notices".equals(uri.getRawPath())
+                && uri.getRawUserInfo()==null && uri.getRawFragment()==null
+                && (uri.getPort()==-1 || uri.getPort()==443);
+        } catch(Exception ignored){return false;}
+    }
+    static void install(jp.co.ponos.battlecats.MyActivity activity, int handle,
+            KneekuraOriginalOps operations) throws ReflectiveOperationException {
+        Field field=jp.co.ponos.battlecats.MyActivity.class.getDeclaredField("gViewMap");
+        field.setAccessible(true);
+        WebView view=(WebView)((Map<?,?>)field.get(activity)).get(handle);
+        if(view==null)throw new IllegalStateException("ORIGINAL_NEWS_VIEW_UNAVAILABLE");
+        WebViewClient client=view.getWebViewClient();
+        if(client instanceof KneekuraOriginalNews)return;
+        if(client instanceof KneekuraPcAgeWebView)client=((KneekuraPcAgeWebView)client).originalClient();
+        if(client==null || !"cn1".equals(client.getClass().getName()))
+            throw new IllegalStateException("ORIGINAL_NEWS_CLIENT_MISMATCH");
+        view.setWebViewClient(new KneekuraOriginalNews(client,operations));
+    }
+    private WebResourceResponse response(String url,String method) {
+        boolean accepted=isPage(url) && "GET".equals(method);
+        byte[] body=accepted ? operations.noticeHtml() : new byte[0];
+        android.util.Log.i("KNEEKURA_STATIC_HTTP",accepted
+                ? "original-local-ops-news-v1 served" : "original-local-ops-news-v1 denied");
+        return new WebResourceResponse(accepted ? "text/html":"text/plain","UTF-8",
+            accepted ? 200:403,accepted ? "OK":"Forbidden",
+            Collections.singletonMap("Cache-Control","no-store"),new ByteArrayInputStream(body));
+    }
+    @Override public WebResourceResponse shouldInterceptRequest(WebView view,WebResourceRequest request) {
+        return response(request.getUrl().toString(),request.getMethod());
+    }
+    @Override public WebResourceResponse shouldInterceptRequest(WebView view,String url) {
+        return response(url,"GET");
+    }
+    @Override public boolean shouldOverrideUrlLoading(WebView view,String url) {
+        if(url!=null && url.startsWith("ponos-api://"))return original.shouldOverrideUrlLoading(view,url);
+        return !isPage(url);
+    }
+    @Override public boolean shouldOverrideUrlLoading(WebView view,WebResourceRequest request) {
+        return shouldOverrideUrlLoading(view,request.getUrl().toString());
+    }
+    @Override public void onPageFinished(WebView view,String url){original.onPageFinished(view,url);}
+    @Override public void onReceivedError(WebView view,WebResourceRequest request,WebResourceError error) {
+        original.onReceivedError(view,request,error);
+    }
+}

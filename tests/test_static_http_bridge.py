@@ -133,7 +133,12 @@ class StaticHttpBridgeTests(unittest.TestCase):
         self.assertIn("requestMap.put(Integer.valueOf(requestId), request)", source)
         self.assertIn("view.queueEvent(new Runnable()", source)
         self.assertIn("MyActivity.newResponse(", source)
-        self.assertIn('requestUrl,\n                            "{}",\n                            null,\n                            true', source)
+        default = render_bridge_source(source, flavor='local-research', enabled=False)
+        for value in ('String responseUrl = requestUrl;', 'int responseStatus = 0;',
+                      'String responseHeaders = "{}";', 'ByteBuffer responseBody = null;',
+                      'boolean responseError = true;'):
+            self.assertIn(value, default)
+        self.assertNotIn('KneekuraPcBootAuthority.payload(', default)
 
     def test_original_game_private_root_flag_defaults_off_in_all_flavors(self) -> None:
         original = (ROOT / "bridge/java/MyActivity.java.in").read_text(encoding="utf-8")

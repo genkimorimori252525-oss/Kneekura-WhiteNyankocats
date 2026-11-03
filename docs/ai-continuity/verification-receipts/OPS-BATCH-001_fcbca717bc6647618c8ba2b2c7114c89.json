@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "task_id": "OPS-BATCH-001",
+  "result": "FAIL",
+  "exit_code": 1,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "-m",
+    "unittest",
+    "tests.test_pc_lab.FailedBuildEvidenceTests.test_operations_capture_rejects_non_jst_before_install_or_launch"
+  ],
+  "observed_at": "2026-10-23T09:21:18.186+00:00",
+  "elapsed_ms": 328,
+  "git_head": "b6a39088b91fb02b711cdc9e3b332291f9ab1935",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/OPS-BATCH-001_fcbca717bc6647618c8ba2b2c7114c89.log",
+  "output_sha256": "91ef2816ee617bd401358fde4cb61b2b4dfa9ad4d2747c80c815455353931c5e",
+  "receipt_id": "OPS-BATCH-001_fcbca717bc6647618c8ba2b2c7114c89"
+}

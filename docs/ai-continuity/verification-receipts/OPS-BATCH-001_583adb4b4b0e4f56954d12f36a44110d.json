@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "task_id": "OPS-BATCH-001",
+  "result": "PASS",
+  "exit_code": 0,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "C:/Users/genki/Downloads/Kneekura-WhiteNyankocats/private/pc-lab/liveops-investigation/stage-expansion/finish_stage_programme.py"
+  ],
+  "observed_at": "2026-10-22T20:13:51.454+00:00",
+  "elapsed_ms": 30608,
+  "git_head": "7ca4c764cffd1f0d425e89784e6cbf6031b266d6",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/OPS-BATCH-001_583adb4b4b0e4f56954d12f36a44110d.log",
+  "output_sha256": "4e9e8b8a73a78646c3f3ecab79b70763bf8012798ab539115115d84b51b5ce7f",
+  "receipt_id": "OPS-BATCH-001_583adb4b4b0e4f56954d12f36a44110d"
+}

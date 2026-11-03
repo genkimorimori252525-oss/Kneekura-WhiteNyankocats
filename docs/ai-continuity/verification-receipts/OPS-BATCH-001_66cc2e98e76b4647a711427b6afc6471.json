@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "task_id": "OPS-BATCH-001",
+  "result": "PASS",
+  "exit_code": 0,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "-m",
+    "tools.pc_lab",
+    "--state",
+    "C:\\Users\\genki\\Downloads\\Kneekura-WhiteNyankocats\\private\\pc-lab",
+    "run",
+    "--seconds",
+    "10"
+  ],
+  "observed_at": "2026-10-23T09:13:41.337+00:00",
+  "elapsed_ms": 19250,
+  "git_head": "b6a39088b91fb02b711cdc9e3b332291f9ab1935",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/OPS-BATCH-001_66cc2e98e76b4647a711427b6afc6471.log",
+  "output_sha256": "60c2276457d1131f1069ebf3d0b606bcfcb725912d53ff3c04ae00d54d1b9811",
+  "receipt_id": "OPS-BATCH-001_66cc2e98e76b4647a711427b6afc6471"
+}

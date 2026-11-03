@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "task_id": "JP1574-LEGEND-001",
+  "result": "PASS",
+  "exit_code": 0,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "-m",
+    "unittest",
+    "tests.test_original_native_scene_witness",
+    "tests.test_original_native_virgin_save_trial",
+    "tests.test_original_scene97_resolver_observer",
+    "tests.test_pc_scene_observer",
+    "tests.test_pc_scene97_task_state",
+    "tests.test_native_shim_source"
+  ],
+  "observed_at": "2026-11-03T15:41:01.064+00:00",
+  "elapsed_ms": 672,
+  "git_head": "0b972fc0e16e2851cd0d9d575ec5b307553fca96",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/JP1574-LEGEND-001_604f946e15a84ca68428bf289abb9091.log",
+  "output_sha256": "bc267bac8e2008571986ff46864bb270fcb59f4f335f708ff7828a467db58ab3",
+  "receipt_id": "JP1574-LEGEND-001_604f946e15a84ca68428bf289abb9091"
+}

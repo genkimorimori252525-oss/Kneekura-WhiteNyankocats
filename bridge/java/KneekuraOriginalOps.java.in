@@ -1,0 +1,278 @@
+package __KNEEKURA_PACKAGE__;
+
+import android.content.Context;
+import org.json.JSONObject;
+import org.json.JSONArray;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import android.util.AtomicFile;
+import java.nio.charset.StandardCharsets;
+import java.net.URI;
+import java.nio.ByteBuffer;
+import java.security.MessageDigest;
+import java.text.SimpleDateFormat;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.TimeZone;
+
+/** A signed-APK-owned data source for the ORIGINAL event readers. No transport. */
+final class KneekuraOriginalOps {
+    static final String ASSET = "kneekura-original-ops-v1.json";
+    static final class Response {
+        final byte[] body;
+        final String headers;
+        final int status;
+        final boolean error;
+        Response(byte[] body) {
+            this(body, 200, false);
+        }
+        Response(byte[] body, int status, boolean error) {
+            this(body, status, error, "text/plain; charset=utf-8");
+        }
+        Response(byte[] body, int status, boolean error, String contentType) {
+            this.body = body;
+            this.status = status;
+            this.error = error;
+            SimpleDateFormat utc = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss 'GMT'", Locale.US);
+            utc.setTimeZone(TimeZone.getTimeZone("GMT"));
+            // Original JNI newResponse expects JSON string-valued headers.
+            headers = "{\"Content-Type\":" + JSONObject.quote(contentType) + ",\"Date\":"
+                    + JSONObject.quote(utc.format(new java.util.Date()))
+                    + ",\"Cache-Control\":\"no-store\",\"X-Kneekura-Authority\":\"local\"}";
+        }
+    }
+    private final HashMap<String, byte[]> streams = new HashMap<String, byte[]>();
+    private final long start;
+    private final long end;
+    private final KneekuraOriginalLogin login;
+    private final boolean loginUnavailable;
+    private final JSONArray notices;
+    private final File cacheRoot;
+    private final String bundleSha;
+    private long cachePeriod = Long.MIN_VALUE;
+
+    KneekuraOriginalOps(Context context, String expectedSha) throws Exception {
+        byte[] data;
+        try (InputStream input = context.getAssets().open(ASSET)) {
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            byte[] buffer = new byte[8192];
+            int count;
+            while ((count = input.read(buffer)) != -1) {
+                if (output.size() + count > 8 * 1024 * 1024)
+                    throw new IllegalArgumentException("ORIGINAL_OPS_BUNDLE_SIZE");
+                output.write(buffer, 0, count);
+            }
+            data = output.toByteArray();
+        }
+        StringBuilder digest = new StringBuilder();
+        for (byte b : MessageDigest.getInstance("SHA-256").digest(data))
+            digest.append(String.format(Locale.US, "%02x", b & 255));
+        if (!expectedSha.equals(digest.toString()))
+            throw new IllegalArgumentException("ORIGINAL_OPS_BUNDLE_SHA");
+        JSONObject bundle = new JSONObject(new String(data, "UTF-8"));
+        if (bundle.getInt("schema_version") != 1
+                || bundle.getInt("game_version") != 150701
+                || !"ORIGINAL_JP1571_SAVE_DATA".equals(bundle.getString("owner_save"))
+                || !"333d2974ab2ff881fd70087fd62dea7d12d82addbc55cab2f2a675ad67e3a7e2".equals(
+                    bundle.getString("source_native_sha256"))
+                || bundle.getLong("revision") < 1)
+            throw new IllegalArgumentException("ORIGINAL_OPS_BUNDLE_CONTRACT");
+        start = bundle.getLong("start_epoch_ms");
+        end = bundle.getLong("end_epoch_ms");
+        if (start >= end) throw new IllegalArgumentException("ORIGINAL_OPS_BUNDLE_WINDOW");
+        JSONObject files = bundle.getJSONObject("server_files");
+        if (files.length() != 3) throw new IllegalArgumentException("ORIGINAL_OPS_STREAM_SET");
+        for (String name : new String[] {"sale.tsv", "gatya.tsv", "item.tsv"}) {
+            byte[] payload = Base64.getDecoder().decode(files.getString(name));
+            String text = new String(payload, "UTF-8");
+            if (payload.length > 2 * 1024 * 1024 || !text.startsWith("[start]\n")
+                    || !text.endsWith("[end]\n") || text.indexOf('\0') >= 0)
+                throw new IllegalArgumentException("ORIGINAL_OPS_STREAM_CONTRACT");
+            streams.put(name, payload);
+        }
+        KneekuraOriginalLogin loadedLogin = null;
+        boolean loginFailed = false;
+        if (bundle.has("login_rotation")) {
+            try {
+                loadedLogin = new KneekuraOriginalLogin(context, bundle.getJSONObject("login_rotation"));
+            } catch (Exception | LinkageError failure) {
+                loginFailed = true;
+            }
+        }
+        login = loadedLogin;
+        loginUnavailable = loginFailed;
+        notices = bundle.has("notices") ? bundle.getJSONArray("notices") : new JSONArray();
+        cacheRoot = context.getFilesDir().getCanonicalFile();
+        bundleSha = expectedSha;
+    }
+    boolean available() {
+        long now = System.currentTimeMillis();
+        return start <= now && now < end && streams.size() == 3 && prepareCache(now);
+    }
+    private synchronized boolean prepareCache(long now) {
+        // Union of JST two-hour stage and three-hour gacha boundaries.
+        // Odd non-multiples of three (01,05,07,...) retain the prior marker.
+        long period = Math.floorDiv(now + 9 * 3600000L, 3600000L);
+        int hour = (int)Math.floorMod(period, 24L);
+        if (hour % 2 != 0 && hour % 3 != 0) period--;
+        if (cachePeriod == period) return true;
+        try {
+            File marker = new File(cacheRoot, "kneekura-ops-cache-v1.record");
+            for (File path : new File[] {marker, new File(marker + ".bak")})
+                if (!path.getCanonicalFile().equals(path.getAbsoluteFile()))
+                    throw new IOException("OPS_CACHE_MARKER_LINK");
+            AtomicFile state = new AtomicFile(marker);
+            String expected = "md5-event-cache-2h3h-v1\n" + bundleSha + "\n" + period + "\n";
+            if (marker.exists() || new File(marker + ".bak").exists()) {
+                try (InputStream input = state.openRead()) {
+                    ByteArrayOutputStream output = new ByteArrayOutputStream();
+                    byte[] buffer = new byte[128]; int count;
+                    while ((count = input.read(buffer)) != -1) {
+                        if (output.size() + count > 256) throw new IOException("OPS_CACHE_MARKER_SIZE");
+                        output.write(buffer, 0, count);
+                    }
+                    if (expected.equals(new String(output.toByteArray(), StandardCharsets.UTF_8))) {
+                        cachePeriod = period; return true;
+                    }
+                }
+            }
+            // Original updater 0x31b1c0 uses MD5("event_N") + ".dat" and
+            // refetches when a cache is absent. Never modify SAVE or native flags.
+            File archive = null;
+            for (int i = 0; i < 3; i++) {
+                StringBuilder name = new StringBuilder();
+                for (byte value : MessageDigest.getInstance("MD5").digest(
+                        ("event_" + i).getBytes(StandardCharsets.UTF_8)))
+                    name.append(String.format(Locale.US, "%02x", value & 255));
+                File cache = new File(cacheRoot, name.toString() + ".dat");
+                if (!cache.getCanonicalFile().equals(cache.getAbsoluteFile()))
+                    throw new IOException("OPS_CACHE_SOURCE_LINK");
+                if (!cache.exists()) continue;
+                if (!cache.isFile()) throw new IOException("OPS_CACHE_SOURCE_TYPE");
+                if (archive == null) {
+                    File parent = new File(cacheRoot, "kneekura-ops-cache-archive-v1");
+                    if (!parent.getCanonicalFile().equals(parent.getAbsoluteFile()))
+                        throw new IOException("OPS_CACHE_ARCHIVE_LINK");
+                    archive = new File(parent, java.util.UUID.randomUUID().toString());
+                    if (!archive.mkdirs()) throw new IOException("OPS_CACHE_ARCHIVE_CREATE");
+                }
+                File target = new File(archive, cache.getName());
+                if (target.exists() || !cache.renameTo(target)) throw new IOException("OPS_CACHE_ARCHIVE_MOVE");
+            }
+            FileOutputStream output = null;
+            try {
+                output = state.startWrite(); output.write(expected.getBytes(StandardCharsets.UTF_8));
+                state.finishWrite(output);
+            } catch (IOException failure) {
+                if (output != null) state.failWrite(output); throw failure;
+            }
+            cachePeriod = period;
+            android.util.Log.i("KNEEKURA_STATIC_HTTP", "original-local-ops-cache-v1 refreshed");
+            return true;
+        } catch (IOException | java.security.NoSuchAlgorithmException failure) {
+            android.util.Log.i("KNEEKURA_STATIC_HTTP", "original-local-ops-cache-v1 unavailable");
+            return false;
+        }
+    }
+    private static String escape(String text) {
+        return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                .replace("\"", "&quot;").replace("'", "&#39;");
+    }
+    byte[] noticeHtml() {
+        long now = System.currentTimeMillis();
+        StringBuilder html = new StringBuilder("<!doctype html><html lang=\"ja\"><meta charset=\"utf-8\">"
+                + "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
+                + "<style>body{margin:0;background:#fff7df;color:#27221b;font:16px/1.7 sans-serif}"
+                + "main{max-width:760px;margin:auto;padding:20px}h1{font-size:22px;margin:0 0 16px}"
+                + "article{background:white;border:1px solid #dec49b;border-radius:8px;padding:16px;margin:12px 0}"
+                + "h2{font-size:18px;margin:0 0 8px}p{white-space:pre-wrap;margin:0}</style>"
+                + "<main><h1>にーくら運営のお知らせ</h1>");
+        int visible = 0;
+        try {
+            for (int i = 0; i < notices.length(); i++) {
+                JSONObject item = notices.getJSONObject(i);
+                if (item.getLong("start_epoch_ms") <= now && now < item.getLong("end_epoch_ms")) {
+                    html.append("<article><h2>").append(escape(item.getString("title")))
+                        .append("</h2><p>").append(escape(item.getString("body"))).append("</p></article>");
+                    visible++;
+                }
+            }
+        } catch (Exception unavailable) {
+            html.append("<p>お知らせを読み込めませんでした。</p>");
+            visible++;
+        }
+        if (visible == 0) html.append("<p>現在のお知らせはありません。</p>");
+        html.append("</main></html>");
+        return html.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+    }
+    Response response(String method, String url, float timeout, HashMap headers,
+            ByteBuffer body, String[] strings, boolean flag1, boolean flag2) {
+        try {
+            URI uri = new URI(url);
+            if (!"https".equals(uri.getScheme())
+                    || !"nyanko-events.ponosgames.com".equalsIgnoreCase(uri.getHost())
+                    || uri.getUserInfo() != null || uri.getFragment() != null
+                    || uri.getPort() != -1 && uri.getPort() != 443) {
+                return null;
+            }
+            String path = uri.getRawPath();
+            boolean control = "/control/event_update/battlecats/control.json".equals(path)
+                    || "/control/placement/battlecats/control.json".equals(path);
+            boolean adControl = "/control/ad/battlecats/adcontrol.json".equals(path);
+            String role = null;
+            for (String name : streams.keySet())
+                if (("/battlecats_production/" + name).equals(path)) role = name;
+            boolean optionalPlacement = "/control/placement/battlecats/event.json".equals(path);
+            if (role == null && !control && !adControl && !optionalPlacement) return null;
+            // Classify before inspecting any request metadata. Log fixed roles
+            // only; no opaque query, URL, headers, message or player information.
+            if (!available() || !"GET".equals(method) || !Float.isFinite(timeout)
+                    || timeout <= 0 || timeout > 120 || flag2
+                    || headers != null && !headers.isEmpty()
+                    || body != null && body.remaining() != 0
+                    || strings != null && strings.length != 0 || optionalPlacement) {
+                android.util.Log.i("KNEEKURA_STATIC_HTTP", "original-local-ops-v1 unavailable");
+                return new Response(new byte[0], 503, true);
+            }
+            if (adControl) {
+                // Original update phase 4 requires an ad_control array before
+                // publishing event data/time. The local operator offers no ads.
+                android.util.Log.i("KNEEKURA_STATIC_HTTP", "original-local-ops-v1 ad-control");
+                return new Response("{\"ad_control\":[]}".getBytes(
+                    java.nio.charset.StandardCharsets.UTF_8),200,false,"application/json; charset=utf-8");
+            }
+            if ("/control/event_update/battlecats/control.json".equals(path)
+                    || "/control/placement/battlecats/control.json".equals(path)) {
+                // JP15.7.1 control parser reads a positive int32 timestamp.
+                // It identifies this installed schedule, not a publisher reply.
+                String json = "{\"timestamp\":" + start / 1000L + "}";
+                android.util.Log.i("KNEEKURA_STATIC_HTTP", "original-local-ops-v1 control");
+                return new Response(json.getBytes(java.nio.charset.StandardCharsets.UTF_8), 200, false, "application/json; charset=utf-8");
+            }
+            for (String name : streams.keySet()) {
+                if (("/battlecats_production/" + name).equals(path)) {
+                    byte[] payload = streams.get(name);
+                    if ("item.tsv".equals(name)) {
+                        if (loginUnavailable || login == null) {
+                            return new Response(new byte[0], 503, true);
+                        }
+                        try {
+                            payload = login.appendRows(payload, System.currentTimeMillis());
+                        } catch (Exception | LinkageError unavailable) {
+                            // Deliver an actual local failure through original callback;
+                            // do not throw from the JNI request or invent a reward receipt.
+                            return new Response(new byte[0], 503, true);
+                        }
+                    }
+                    android.util.Log.i("KNEEKURA_STATIC_HTTP", "original-local-ops-v1 " + name);
+                    return new Response(payload);
+                }
+            }
+        } catch (Exception ignored) { return null; }
+        return null;
+    }
+}

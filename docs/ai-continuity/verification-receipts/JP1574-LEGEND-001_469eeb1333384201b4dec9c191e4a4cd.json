@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "task_id": "JP1574-LEGEND-001",
+  "result": "PASS",
+  "exit_code": 0,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "-m",
+    "tools.pc_lab",
+    "--state",
+    "C:/Users/genki/Downloads/Kneekura-WhiteNyankocats/private/pc-lab",
+    "setup"
+  ],
+  "observed_at": "2026-11-03T15:46:01.011+00:00",
+  "elapsed_ms": 26077,
+  "git_head": "0b972fc0e16e2851cd0d9d575ec5b307553fca96",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/JP1574-LEGEND-001_469eeb1333384201b4dec9c191e4a4cd.log",
+  "output_sha256": "0363568bc28ca5da17787eb519ebe5caa1537e6ab6077f38ff27de036efacca7",
+  "receipt_id": "JP1574-LEGEND-001_469eeb1333384201b4dec9c191e4a4cd"
+}

@@ -1,0 +1,24 @@
+F
+======================================================================
+FAIL: test_catamin_projection_keeps_separate_daily_windows_on_rebuild (tests.test_stage_program.StageProgramTests.test_catamin_projection_keeps_separate_daily_windows_on_rebuild)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\genki\Documents\Codex\2026-10-12\615mb-393-2-http-0-97\work\kneekura-pc-lab\tests\test_stage_program.py", line 76, in test_catamin_projection_keeps_separate_daily_windows_on_rebuild
+    self.assertEqual([r[:4] for r in full],
+AssertionError: Lists differ: [['20261023', '0', '20261025', '0']] != [['20261023', '0', '20261024', '0'], ['20261024', '0', '20261025', '0']]
+
+First differing element 0:
+['20261023', '0', '20261025', '0']
+['20261023', '0', '20261024', '0']
+
+Second list contains 1 additional elements.
+First extra element 1:
+['20261024', '0', '20261025', '0']
+
+- [['20261023', '0', '20261025', '0']]
++ [['20261023', '0', '20261024', '0'], ['20261024', '0', '20261025', '0']]
+
+----------------------------------------------------------------------
+Ran 1 test in 2.389s
+
+FAILED (failures=1)

@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "task_id": "OPS-BATCH-001",
+  "result": "PASS",
+  "exit_code": 0,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "C:/Users/genki/Downloads/Kneekura-WhiteNyankocats/private/pc-lab/liveops-investigation/stage-policy-audit/verify_gift.py"
+  ],
+  "observed_at": "2026-10-22T21:05:39.890+00:00",
+  "elapsed_ms": 1858,
+  "git_head": "a27f55337f91a6e145afcecfc7df10ec81edbf51",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/OPS-BATCH-001_550bab4a4fd0423c9a6f104eadf78777.log",
+  "output_sha256": "0214735c7e53672beba4ee0156e8e83e670e6583171d53ed15fcdd402e07792f",
+  "receipt_id": "OPS-BATCH-001_550bab4a4fd0423c9a6f104eadf78777"
+}

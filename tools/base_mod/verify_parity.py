@@ -78,6 +78,18 @@ def _split_diff(original: Path, modified: Path) -> dict:
     return {"added": added, "removed": removed, "changed": changed}
 
 
+def _verify_resource_package(original: Path, modified: Path, name: str,
+                             package_name: str) -> None:
+    from tools.base_mod.package_flavor import RESOURCE_SPLITS, patch_resource_package
+
+    if name in RESOURCE_SPLITS:
+        with zipfile.ZipFile(original) as source, zipfile.ZipFile(modified) as final:
+            expected = patch_resource_package(source.read("resources.arsc"), package_name,
+                                              base=name == "base.apk")
+            if final.read("resources.arsc") != expected:
+                raise ValueError(f"{name}: resource package delta is not exact")
+
+
 def _verify_allowed_diff(name: str, diff: dict) -> None:
     if diff["removed"]:
         raise ValueError(f"{name}: unexpected removed entries: {diff['removed']}")
@@ -113,9 +125,13 @@ def _verify_allowed_diff(name: str, diff: dict) -> None:
             )
         return
 
-    if set(diff["changed"]) != {"AndroidManifest.xml"} or diff["added"]:
+    from tools.base_mod.package_flavor import RESOURCE_SPLITS
+    expected = {"AndroidManifest.xml"}
+    if name in RESOURCE_SPLITS:
+        expected.add("resources.arsc")
+    if set(diff["changed"]) != expected or diff["added"]:
         raise ValueError(
-            f"{name}: only AndroidManifest.xml may change; diff={diff}"
+            f"{name}: package-only change surface drifted; diff={diff}"
         )
 
 
@@ -167,6 +183,7 @@ def verify_split_set(
             raise FileNotFoundError(f"missing split for parity audit: {name}")
         diff = _split_diff(original, modified)
         _verify_allowed_diff(name, diff)
+        _verify_resource_package(original, modified, name, package_name)
         reports.append({"name": name, **diff})
 
     with zipfile.ZipFile(modified_dir / "base.apk", "r") as base:

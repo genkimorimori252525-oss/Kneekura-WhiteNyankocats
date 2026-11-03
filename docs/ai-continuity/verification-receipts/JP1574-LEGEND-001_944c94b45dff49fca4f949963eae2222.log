@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "C:\Users\genki\Downloads\Kneekura-WhiteNyankocats\private\pc-lab\version-upgrade\verify_level_runtime.py", line 31, in <module>
+    if i!=42:assert x.to_dict()==y.to_dict(),'OTHER_UNIT_CHANGED'
+                    ^^^^^^^^^
+AttributeError: 'Cat' object has no attribute 'to_dict'

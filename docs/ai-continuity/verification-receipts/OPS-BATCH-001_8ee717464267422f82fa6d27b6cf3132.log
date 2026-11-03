@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "C:\Users\genki\Downloads\Kneekura-WhiteNyankocats\private\pc-lab\liveops-investigation\stage-policy-audit\finalize_r14.py", line 9, in <module>
+    L.identity();b=L.verify_build();B=Path(b['directory']);assert b['native']['pc_original_ops_bundle']
+                                                                  ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+KeyError: 'pc_original_ops_bundle'

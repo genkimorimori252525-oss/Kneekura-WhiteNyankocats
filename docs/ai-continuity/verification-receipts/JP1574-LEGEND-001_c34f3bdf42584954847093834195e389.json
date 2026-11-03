@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "task_id": "JP1574-LEGEND-001",
+  "result": "PASS",
+  "exit_code": 0,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "C:/Users/genki/Downloads/Kneekura-WhiteNyankocats/private/pc-lab/version-upgrade/jp1574-20261103T152049Z-0d6bfc8b/python-native-smoke-e90ede1a5a534e4a9223702d7dd4900a/smoke.py"
+  ],
+  "observed_at": "2026-11-03T15:39:52.440+00:00",
+  "elapsed_ms": 2219,
+  "git_head": "0b972fc0e16e2851cd0d9d575ec5b307553fca96",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/JP1574-LEGEND-001_c34f3bdf42584954847093834195e389.log",
+  "output_sha256": "4e82879101d5012b72f7f2385250867d45e5752c1c39e9eaeaf68eb901371567",
+  "receipt_id": "JP1574-LEGEND-001_c34f3bdf42584954847093834195e389"
+}

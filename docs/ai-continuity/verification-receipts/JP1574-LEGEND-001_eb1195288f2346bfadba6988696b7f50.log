@@ -1,0 +1,2 @@
+{"schema": "jp1574-native-profile-static-audit-v1", "task": "JP1574-LEGEND-001", "result": "PASS", "profile_sha256": "0dc507bdb44f6002abeffc4c3f70875cf2e04cbff89f62bc85d9a660385a3e9a", "source_sha256": "669438f86b41c10c7a387b96eb1ab5ca82a350bacc89ec06c05f699ec3727590", "source_word_anchors": 37, "device_execution": false}
+data_roots=7 exact_field_access_groups=12 pc_relative_constants=3 GOT_relocations=2

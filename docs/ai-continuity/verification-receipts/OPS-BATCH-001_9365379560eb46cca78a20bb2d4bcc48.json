@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "task_id": "OPS-BATCH-001",
+  "result": "PASS",
+  "exit_code": 0,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "-m",
+    "unittest",
+    "tests.test_stage_program.StageProgramTests.test_catamin_is_its_own_native_family_and_expiry_is_eight",
+    "tests.test_stage_program.StageProgramTests.test_native_sale_projection_keeps_distinct_catamin_and_monthly_maps"
+  ],
+  "observed_at": "2026-10-23T08:18:43.362+00:00",
+  "elapsed_ms": 1609,
+  "git_head": "73e17cb21e6cbeeedf1b0c67835193344290f99a",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/OPS-BATCH-001_9365379560eb46cca78a20bb2d4bcc48.log",
+  "output_sha256": "6244e93851f40556166f9ad227f997709a9d55fc2568f7d211e1f04ad50a6043",
+  "receipt_id": "OPS-BATCH-001_9365379560eb46cca78a20bb2d4bcc48"
+}

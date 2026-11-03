@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "task_id": "JP1574-LEGEND-001",
+  "result": "PASS",
+  "exit_code": 0,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "-c",
+    "from pathlib import Path\nimport hashlib,json,re\nfrom tools.base_mod.pc_initial_profile import load_reference\nfrom tools.base_mod.legend_checkpoint import build_checkpoint\ns=Path('C:/Users/genki/Downloads/Kneekura-WhiteNyankocats/private/pc-lab')\nd=Path(json.loads((s/'version-upgrade/latest-acquisition.json').read_text(encoding='utf-8'))['directory'])\np=d/'research-before-SAVE_DATA'\nsource=p.read_bytes()\ncore=load_reference(s/'source-references/bcsfe-pinned/src',s/'source-references/parser-dependencies',s/'source-references/parser-state')\nsave=core.SaveFile(core.Data(source),load=False)\nsave.load()\nidentity_match=bool(re.fullmatch(r'kneekura-local-[0-9a-f]{32}',save.inquiry_code))\nassert identity_match,'research identity mismatch'\nresult,report=build_checkpoint(source,Path('C:/Users/genki/Downloads/にーくらにゃんこ/nyanko_battlecats_2026-10-06.zip'),core)\nassert p.read_bytes()==source,'source changed'\nassert len(result)==len(source),'unexpected source size change'\noutput=d/'research-legend-map32-SAVE_DATA'\nreceipt=d/'research-legend-map32-receipt.json'\nassert not output.exists() and not receipt.exists(),'candidate already exists'\nwith output.open('xb') as f:f.write(result)\nwith receipt.open('x',encoding='utf-8') as f:json.dump(report,f,ensure_ascii=False,indent=2)\nprint(json.dumps(dict(identity_pattern_matched=identity_match,source_unchanged=True,output_sha256=report['output_sha256'],source_sha256=report['source_sha256'],real_stage_count=report['real_stage_count'],stage_counts=report['stage_counts'],unapproved_fields_unchanged=report['unapproved_fields_unchanged'],output_roundtrip_identical=report['output_roundtrip_identical'],reward_claim_runtime_consistency=report['reward_claim_runtime_consistency']),ensure_ascii=False))"
+  ],
+  "observed_at": "2026-11-03T15:28:56.215+00:00",
+  "elapsed_ms": 4452,
+  "git_head": "0b972fc0e16e2851cd0d9d575ec5b307553fca96",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/JP1574-LEGEND-001_6101e11fad99425ebb49fb081b709eb0.log",
+  "output_sha256": "c9b300356b11dcb5e2685abf77c3abbac404c7a8de188e3458bc3ae42f7a190c",
+  "receipt_id": "JP1574-LEGEND-001_6101e11fad99425ebb49fb081b709eb0"
+}

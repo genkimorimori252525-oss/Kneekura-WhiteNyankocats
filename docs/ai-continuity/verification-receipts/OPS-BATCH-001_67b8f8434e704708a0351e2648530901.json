@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "task_id": "OPS-BATCH-001",
+  "result": "PASS",
+  "exit_code": 0,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "C:/Users/genki/Downloads/Kneekura-WhiteNyankocats/private/pc-lab/liveops-investigation/godzilla-facing/compare_rig.py"
+  ],
+  "observed_at": "2026-10-20T08:30:23.311+00:00",
+  "elapsed_ms": 11827,
+  "git_head": "1cdf3b22aa554c2275788665234c5d84514af6c7",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/OPS-BATCH-001_67b8f8434e704708a0351e2648530901.log",
+  "output_sha256": "707f51aa2b521bff4b41a9e27a36286da79b4198b7a10892c083022136ac3b80",
+  "receipt_id": "OPS-BATCH-001_67b8f8434e704708a0351e2648530901"
+}

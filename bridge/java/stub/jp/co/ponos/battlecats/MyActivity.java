@@ -12,6 +12,9 @@ import java.util.HashMap;
  * flavor-specific subclass that is injected as an additional DEX.
  */
 public class MyActivity extends Activity {
+    public void setWebViewUrl(int handle, String url, String[] cookies) {
+        throw new AssertionError("compile-only stub");
+    }
     public int newHttpRequest(
             String method,
             String requestUrl,
@@ -30,6 +33,10 @@ public class MyActivity extends Activity {
         throw new AssertionError("compile-only stub");
     }
 
+    public int newAlert(String message, String[] buttons) {
+        throw new AssertionError("compile-only stub");
+    }
+
     public static native void newResponse(
             int requestId,
             int status,
@@ -37,4 +44,8 @@ public class MyActivity extends Activity {
             String responseHeaders,
             ByteBuffer body,
             boolean flag);
+    public static native void onResponseCodeHeaders(int requestId, int status,
+            String requestUrl, String responseHeaders);
+    public static native void onResponseData(int requestId, ByteBuffer body);
+    public static native void onResponseFinish(int requestId, boolean error);
 }

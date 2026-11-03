@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "C:\Users\genki\Downloads\Kneekura-WhiteNyankocats\private\pc-lab\liveops-investigation\stage-policy-audit\verify_original_gate_preservation.py", line 4, in <module>
+    from tools.battlecats_source import BattleCatsExport
+ModuleNotFoundError: No module named 'tools'
