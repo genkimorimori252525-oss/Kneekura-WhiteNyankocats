@@ -1,15 +1,22 @@
 ---
-current_task: "JP1574-LEGEND-001"
+current_task: "LOGIN-LEGEND-COMP-001"
 active_agent: "Codex"
 branch: "codex/pc-local-lab-2026-10-12"
-commit_head: "ea0e285acbbd5fb5b98b3d10f6951a6062f706d5"
+commit_head: "36b4200f8f9775c8f707bacac76cad59b565d7a2"
 status: "OWNER_VISUAL_PENDING"
-evidence_ref: "docs/research/2026-11-04-jp1574-native-port.md"
-updated_at: "2026-11-03T17:51:47.066996+00:00"
+evidence_ref: "docs/research/2026-11-10-login-legend-repair.md"
+updated_at: "2026-11-09T16:09:27.921145+00:00"
 
 ---
 
 # Current Progress State
+
+## 2026-11-10：ログイン修正・レジェンド報酬・お詫び
+
+- 本人報告：15.7.4更新後から毎日ログインボーナスが出ず、クリア済み報酬キャラがない。ログイン生成行が旧filter150701のままだったため、新版profile150704を反映。前回はクリアのみ付与して報酬キャラは除外したことが直接原因。対象ステージがクリア済みのウルルン・コニャンダム・ミーニャを補填し、XPは本人選択の原作上限99,999,999・NP9999、ネコカン40000は原作の一度限り配布。11/30 0時まで受取可能。
+- PCでログイン／ネコカン+40000の実UI、3体・NP・XP、再起動保持／重複配布なし、元PC全ファイル復元を確認（`b5c9db74` / `408b6e8c`）。新版6split build成功。
+- スマホ更新完了：本人の再接続・更新依頼で、最新599ファイルをバックアップ→最新SAVEから3体とNP・XPの補填候補を作成→既存署名で更新。6SHA・UID/dataDir、指定SAVE以外のファイル全件SHA一致（`6eb7c798` / `6bed25f5`）。公式SAVE・スマホ画面／ログ取得なし。`OWNER_VISUAL_PENDING`：本人の目視結果を待つ。
+- 詳細・受取期間・PC導入失敗と修正は[調査記録](../research/2026-11-10-login-legend-repair.md)。過去のFAIL/UNKNOWN・Charter承認receipt不足は解決扱いにしない。
 
 ## 2026-11-03：公式15.7.4取り込み・恐ろし連邦までの進行指定
 

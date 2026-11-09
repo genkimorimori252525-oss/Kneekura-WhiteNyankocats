@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "task_id": "LOGIN-LEGEND-COMP-001",
+  "result": "PASS",
+  "exit_code": 0,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "-c",
+    "from pathlib import Path\nimport json,hashlib\nfrom tools.base_mod.repack import sha256_file\ns=Path('C:/Users/genki/Downloads/Kneekura-WhiteNyankocats/private/pc-lab');o=s/'version-upgrade/login-comp-pc-20261110';b=json.loads((s/'latest-build.json').read_text());q=json.loads((s/'latest-phone-build.json').read_text());old=json.loads((s/'phone-builds/phone-20261103T170131Z-78601523/PHONE-BUILD.json').read_text())\nassert q['source_build']==Path(b['directory']).name and q['source_profile']=='jp1574'\nassert q['signing']['signer_certificate_sha256']==old['signing']['signer_certificate_sha256']\nassert all(sha256_file(Path(q['directory'])/x['name'])==x['output_sha256'] for x in q['signing']['splits'])\nassert json.loads((o/'RESTORED.json').read_text())['all_hashes_match']\ngate=dict(pc_build=Path(b['directory']).name,phone_candidate=Path(q['directory']).parent.name,six_splits_sha_verified=True,same_old_signer=True,pc_runtime_login_and_gift=True,pc_reward_repair_and_restart=True,original_pc_data_restored=True)\nwith (o/'FINAL-PC-CANDIDATE.json').open('x',encoding='utf-8') as f:json.dump(gate,f,indent=2)\np=s/'version-upgrade/update_phone_jp1574.py';src=p.read_text(encoding='utf-8')\nreplacements={\n'from tools.base_mod.legend_checkpoint import build_checkpoint':'from tools.base_mod.legend_reward_repair import build_repair',\n\"gate=json.loads((D/'pc-runtime/FINAL-PC-CANDIDATE.json').read_text())\":\"gate=json.loads((S/'version-upgrade/login-comp-pc-20261110/FINAL-PC-CANDIDATE.json').read_text())\",\n'20261103T154350Z-174caa2e':gate['pc_build'],\n'phone-20261103T170131Z-78601523':gate['phone_candidate'],\n\"'phone-jp1574-'\":\"'phone-login-repair-'\",\n'build_checkpoint(source,':'build_repair(source,',\n'latest-phone-upgrade.json':'latest-phone-login-repair.json',\n\"current_save_checkpoint_semantic_guard_passed=True,legend_crown=1,legend_real_stages=231,later_clears_levels_and_inventory_preserved=True\":\"current_save_repair_semantic_guard_passed=True,prior_progress_and_other_levels_preserved=True,repair_xp_np_and_cleared_stage_reward_units=True\",\n'PHONE_JP1574_UPDATE_SUCCESS SIX_SPLITS_UID_ALL_PRIVATE_FILES_PRESERVED_EXCEPT_APPROVED_LEGEND_CROWN1 SAVE_SHA_MATCH APP_STOPPED OWNER_VISUAL_PENDING':'PHONE_LOGIN_REPAIR_UPDATE_SUCCESS SIX_SPLITS_UID_OTHER_PRIVATE_FILES_PRESERVED APPROVED_SAVE_REPAIR_ONLY APP_STOPPED OWNER_VISUAL_PENDING',\n'new_progress_preserved=':'source_changed_since_first_acquisition=',\n}\nfor before,after in replacements.items():\n if before not in src:raise ValueError('EXPECTED_WRAPPER_ANCHOR_MISSING '+before)\n src=src.replace(before,after)\ncompile(src,'update_phone_login_repair.py','exec')\nwith (s/'version-upgrade/update_phone_login_repair.py').open('x',encoding='utf-8') as f:f.write(src)\nprint('PHONE_CANDIDATE_SIX_SHA_SAME_SIGNER_AND_PREPARED_UPDATE_WRAPPER',gate['phone_candidate'])"
+  ],
+  "observed_at": "2026-11-09T15:59:13.715+00:00",
+  "elapsed_ms": 329,
+  "git_head": "36b4200f8f9775c8f707bacac76cad59b565d7a2",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/LOGIN-LEGEND-COMP-001_9b1f4597e5d742d789cdec2bfd48b93c.log",
+  "output_sha256": "07d6ba7c1b85b0661d3216e79cf6a047e246b14138af4ea34af70d7a89a6ecef",
+  "receipt_id": "LOGIN-LEGEND-COMP-001_9b1f4597e5d742d789cdec2bfd48b93c"
+}

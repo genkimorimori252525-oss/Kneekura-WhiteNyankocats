@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "task_id": "LOGIN-LEGEND-COMP-001",
+  "result": "FAIL",
+  "exit_code": 1,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "C:/Users/genki/Downloads/Kneekura-WhiteNyankocats/private/pc-lab/version-upgrade/prepare_pc_login_comp.py"
+  ],
+  "observed_at": "2026-11-09T15:32:32.730+00:00",
+  "elapsed_ms": 20390,
+  "git_head": "36b4200f8f9775c8f707bacac76cad59b565d7a2",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/LOGIN-LEGEND-COMP-001_70d43f8de8d9446184b0a1719f954717.log",
+  "output_sha256": "ea1e9fcd39f62b2cadb7c575777bd4d090556cd4e2863cc08e76b9c3539c8999",
+  "receipt_id": "LOGIN-LEGEND-COMP-001_70d43f8de8d9446184b0a1719f954717"
+}

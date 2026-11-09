@@ -260,6 +260,17 @@ def render_ops_profile(source: str, *, source_profile: str = 'jp1571') -> str:
     return source
 
 
+def render_login_profile(source: str, *, source_profile: str = 'jp1571') -> str:
+    from tools.liveops.original_ops_bundle import SOURCE_PROFILES
+    if source_profile not in SOURCE_PROFILES:
+        raise ValueError('unsupported bridge source profile')
+    anchor = r'\t0\t150701\t150701\t0\t0\t'
+    if source.count(anchor) != 1:
+        raise ValueError('ORIGINAL_LOGIN_JAVA_VERSION_ANCHOR_CHANGED')
+    version = SOURCE_PROFILES[source_profile][0]
+    return source.replace(anchor, rf'\t0\t{version}\t{version}\t0\t0\t')
+
+
 def build_bridge_dex(
     *,
     flavor: str,
@@ -345,6 +356,8 @@ def build_bridge_dex(
                 ops_template = (root / ('bridge/java/' + name + '.java.in')).read_text(encoding='utf-8')
                 if name == 'KneekuraOriginalOps':
                     ops_template = render_ops_profile(ops_template, source_profile=source_profile)
+                elif name == 'KneekuraOriginalLogin':
+                    ops_template = render_login_profile(ops_template, source_profile=source_profile)
                 ops_source.write_text(ops_template.replace('__KNEEKURA_PACKAGE__', package_name), encoding='utf-8')
                 ops_sources.append(str(ops_source))
         age_sources = []

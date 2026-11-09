@@ -1,7 +1,7 @@
 """Batch wiring gates: original callbacks, local scope, immutable bundle trust."""
 from pathlib import Path
 import unittest
-from tools.base_mod.inject_java_http_bridge import render_bridge_source
+from tools.base_mod.inject_java_http_bridge import render_bridge_source, render_login_profile
 
 ROOT=Path(__file__).resolve().parents[1]
 
@@ -16,6 +16,17 @@ class OriginalOpsBridgeTests(unittest.TestCase):
         source=render_bridge_source(self.template,**self.options)
         self.assertNotIn('KneekuraOriginalOps',source)
         self.assertIn('return false;',source[source.index('public boolean isNetworkAvailable'):])
+
+    def test_login_rows_follow_the_source_profile_and_refuse_unknown_layouts(self):
+        template=(ROOT/'bridge/java/KneekuraOriginalLogin.java.in').read_text(encoding='utf-8')
+        for profile, version in (('jp1571', '150701'), ('jp1574', '150704')):
+            rendered=render_login_profile(template, source_profile=profile)
+            self.assertIn(r'\t0\t'+version+r'\t'+version+r'\t0\t0\t', rendered)
+            if profile == 'jp1574': self.assertNotIn('150701', rendered)
+        with self.assertRaises(ValueError):
+            render_login_profile(template, source_profile='unknown')
+        with self.assertRaises(ValueError):
+            render_login_profile(template.replace('150701','150702'), source_profile='jp1574')
 
     def test_local_operations_use_original_request_registry_and_gl_callback(self):
         source=render_bridge_source(self.template,pc_original_ops_sha256='a'*64,**self.options)

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "task_id": "LOGIN-LEGEND-COMP-001",
+  "result": "PASS",
+  "exit_code": 0,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "-c",
+    "from pathlib import Path\nimport json\nfrom tools.base_mod.pc_initial_profile import load_reference\nfrom tools.base_mod.legend_reward_repair import build_repair\ns=Path('C:/Users/genki/Downloads/Kneekura-WhiteNyankocats/private/pc-lab');d=Path(json.loads((s/'version-upgrade/latest-phone-upgrade.json').read_text())['directory']);raw=(d/'research-checkpoint-SAVE_DATA').read_bytes()\nc=load_reference(s/'source-references/bcsfe-pinned/src',s/'source-references/parser-dependencies',s/'source-references/parser-state');export=Path('C:/Users/genki/Downloads/にーくらにゃんこ/nyanko_battlecats_2026-10-06.zip')\nv=c.SaveFile(c.Data(raw),load=False);v.load();v.event_stages.chapters[0].chapters[17].chapters[0].stages[5].clear_amount=0\nsource=v.to_data().get_bytes();out,report=build_repair(source,export,c);w=c.SaveFile(c.Data(out),load=False);w.load()\nassert report['rewarded_cats']==[172,268] and w.cats.cats[130].unlocked==v.cats.cats[130].unlocked and w.unit_drops[39]==v.unit_drops[39]\nassert w.cats.cats[172].unlocked and w.cats.cats[268].unlocked\nprint('UNCLEARED_BOSS_NOT_GRANTED_OTHER_CLEARED_REWARDS_GRANTED')"
+  ],
+  "observed_at": "2026-11-09T15:31:38.793+00:00",
+  "elapsed_ms": 2859,
+  "git_head": "36b4200f8f9775c8f707bacac76cad59b565d7a2",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/LOGIN-LEGEND-COMP-001_a73740c204064a04b59a2b423019831e.log",
+  "output_sha256": "46d9cd2de1e37542ca2c3fcfc1b9defc4e9bc3012547eea4c36d470d272288d3",
+  "receipt_id": "LOGIN-LEGEND-COMP-001_a73740c204064a04b59a2b423019831e"
+}

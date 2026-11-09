@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "task_id": "LOGIN-LEGEND-COMP-001",
+  "result": "PASS",
+  "exit_code": 0,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "-m",
+    "tools.pc_lab",
+    "--state",
+    "C:/Users/genki/Downloads/Kneekura-WhiteNyankocats/private/pc-lab",
+    "run",
+    "--seconds",
+    "10"
+  ],
+  "observed_at": "2026-11-09T15:35:39.726+00:00",
+  "elapsed_ms": 29406,
+  "git_head": "36b4200f8f9775c8f707bacac76cad59b565d7a2",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/LOGIN-LEGEND-COMP-001_c1f3e1b88bde4acd88c9b273b4135af6.log",
+  "output_sha256": "7b88c35ab8137b92b07fadbedbdeb048e5330a781f4c076c18470c88f123a330",
+  "receipt_id": "LOGIN-LEGEND-COMP-001_c1f3e1b88bde4acd88c9b273b4135af6"
+}
