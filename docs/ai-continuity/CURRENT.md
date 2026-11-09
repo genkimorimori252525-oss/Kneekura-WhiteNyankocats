@@ -1,15 +1,20 @@
 ---
-current_task: "LOGIN-LEGEND-COMP-001"
+current_task: "GIFT-40000-REPAIR-001"
 active_agent: "Codex"
 branch: "codex/pc-local-lab-2026-10-12"
-commit_head: "36b4200f8f9775c8f707bacac76cad59b565d7a2"
+commit_head: "4d5dfb9ee611691673442340ac26ff1aa85a3004"
 status: "OWNER_VISUAL_PENDING"
 evidence_ref: "docs/research/2026-11-10-login-legend-repair.md"
-updated_at: "2026-11-09T16:09:27.921145+00:00"
+updated_at: "2026-11-09T16:17:11.701226+00:00"
 
 ---
 
 # Current Progress State
+
+## 2026-11-10：お詫び画面が出ないため直接反映
+
+- 本人は画面が出ないと報告。最新SAVEで20261110が未受取と確認、原SAVEのSHA一致バックアップ後、ネコカン40000と原作受取済み記録のみを原子的に反映。関連SAVEの全semantic差分、再読取、二重適用拒否 `c50b7340` と実機の反映後SHA `ac27dd73` PASS。APK再インストールなし、スマホの起動／画面検証は本人担当。`OWNER_VISUAL_PENDING`。
+- 全ファイルの転送が途中停止したため部分tarを保管し、SAVE単体をSHA照合して退避。全ファイル完全バックアップは未取得。画面が出ない内部原因はUNKNOWN。[詳細](../research/2026-11-10-login-legend-repair.md#同日お詫び画面が出ないとの本人報告)。
 
 ## 2026-11-10：ログイン修正・レジェンド報酬・お詫び
 

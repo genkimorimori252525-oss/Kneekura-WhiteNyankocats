@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "task_id": "GIFT-40000-REPAIR-001",
+  "result": "PASS",
+  "exit_code": 0,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "-c",
+    "from pathlib import Path\nimport json\nfrom tools.base_mod.pc_initial_profile import load_reference\nfrom tools.base_mod.gift_40000_repair import build_gift_repair\ns=Path('C:/Users/genki/Downloads/Kneekura-WhiteNyankocats/private/pc-lab');d=Path(json.loads((s/'version-upgrade/latest-gift-repair.json').read_text())['directory']);source=(d/'before-SAVE_DATA').read_bytes();c=load_reference(s/'source-references/bcsfe-pinned/src',s/'source-references/parser-dependencies',s/'source-references/parser-state')\nresult,report=build_gift_repair(source,c)\ntry:build_gift_repair(result,c);raise AssertionError('SECOND_GIFT_NOT_REFUSED')\nexcept ValueError as exc:assert str(exc)=='GIFT_REPAIR_ALREADY_RECORDED'\nassert (d/'before-SAVE_DATA').read_bytes()==source\nwith (d/'gift-repaired-SAVE_DATA').open('xb') as f:f.write(result)\nwith (d/'REPAIR.json').open('x',encoding='utf-8') as f:json.dump(report,f,indent=2)\nprint('GIFT_EXACT_40000_NATIVE_RECEIPT_OTHER_FIELDS_UNCHANGED_ROUNDTRIP_DUPLICATE_REJECTED')"
+  ],
+  "observed_at": "2026-11-09T16:16:08.467+00:00",
+  "elapsed_ms": 1468,
+  "git_head": "4d5dfb9ee611691673442340ac26ff1aa85a3004",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/GIFT-40000-REPAIR-001_c50b7340906d46fa942f7830a0f5d5e9.log",
+  "output_sha256": "6e7db0bbf00c94183717c0310c881792adfc570e22b58baca1d94446f9087de0",
+  "receipt_id": "GIFT-40000-REPAIR-001_c50b7340906d46fa942f7830a0f5d5e9"
+}

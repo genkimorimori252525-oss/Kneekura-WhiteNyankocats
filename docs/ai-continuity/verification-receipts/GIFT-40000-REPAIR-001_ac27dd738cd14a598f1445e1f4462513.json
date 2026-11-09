@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "task_id": "GIFT-40000-REPAIR-001",
+  "result": "PASS",
+  "exit_code": 0,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "-c",
+    "from pathlib import Path\nimport base64,json,hashlib,re\nfrom tools.pc_lab import Lab,PACKAGE,parse_installed_paths\ns=Path('C:/Users/genki/Downloads/Kneekura-WhiteNyankocats/private/pc-lab');l=Lab(s,Path('C:/Users/genki/AppData/Local/Android/Sdk'),Path('C:/Program Files/Java/jdk-17'));pointer=s/'version-upgrade/latest-gift-repair.json';state=json.loads(pointer.read_text());assert state['phase']=='SAVE_BACKED_UP';d=Path(state['directory']);backup=json.loads((d/'BACKUP.json').read_text());report=json.loads((d/'REPAIR.json').read_text());source=(d/'before-SAVE_DATA').read_bytes();new=(d/'gift-repaired-SAVE_DATA').read_bytes();assert hashlib.sha256(source).hexdigest()==backup['save_sha256']==report['source_sha256'];assert hashlib.sha256(new).hexdigest()==report['output_sha256']\nwith l.app_operation_lock():\n rows=l.command([l.adb_bin,'devices']).stdout.splitlines()[1:];phones=[x.split()[0] for x in rows if len(x.split())==2 and x.split()[1]=='device' and not x.startswith('emulator-') and re.fullmatch(r'[A-Za-z0-9_-]{4,80}',x.split()[0])];assert len(phones)==1;ser=phones[0];assert hashlib.sha256(ser.encode()).hexdigest()==backup['device_sha256']\n def a(*args,**kw):return l.command([l.adb_bin,'-s',ser,*args],**kw)\n assert a('shell','id','-u').stdout.strip()=='2000' and not a('shell','pidof',PACKAGE,check=False).stdout.strip()\n paths=parse_installed_paths(a('shell','pm','path',PACKAGE).stdout.splitlines());actual={Path(x).name:a('shell','sha256sum',x).stdout.split()[0] for x in paths};assert actual==backup['source_apks']\n assert a('shell','run-as',PACKAGE,'sha256sum','files/SAVE_DATA').stdout.split()[0]==report['source_sha256']\n pending='files/SAVE_DATA.gift-40000-pending';assert a('shell','run-as',PACKAGE,'test','-e',pending,check=False).returncode!=0\n pointer.write_text(json.dumps(dict(directory=str(d),phase='APPLYING'))+'\\n')\n a('shell','-T',f\"run-as {PACKAGE} sh -c 'umask 077; base64 -d > {pending}'\",binary=True,input=base64.b64encode(new)+b'\\n')\n assert a('shell','run-as',PACKAGE,'sha256sum',pending).stdout.split()[0]==report['output_sha256']\n a('shell','run-as',PACKAGE,'mv',pending,'files/SAVE_DATA')\n assert a('shell','run-as',PACKAGE,'sha256sum','files/SAVE_DATA').stdout.split()[0]==report['output_sha256'];assert not a('shell','pidof',PACKAGE,check=False).stdout.strip()\n paths2=parse_installed_paths(a('shell','pm','path',PACKAGE).stdout.splitlines());assert {Path(x).name:a('shell','sha256sum',x).stdout.split()[0] for x in paths2}==actual\n (d/'APPLIED.json').write_text(json.dumps(dict(amount=40000,save_sha256=report['output_sha256'],source_backup_sha256=report['source_sha256'],native_claim_marked=True,other_save_fields_unchanged=True,apk_splits_unchanged=True,official_save_accessed=False,phone_gameplay_performed=False),indent=2)+'\\n')\n pointer.write_text(json.dumps(dict(directory=str(d),phase='APPLIED_OWNER_VISUAL_PENDING'))+'\\n')\n print('PHONE_GIFT_SAVE_UPDATED_EXACT_40000_NATIVE_RECEIPT_SET_SOURCE_BACKUP_VERIFIED_SIX_APKS_UNCHANGED')"
+  ],
+  "observed_at": "2026-11-09T16:16:41.633+00:00",
+  "elapsed_ms": 3905,
+  "git_head": "4d5dfb9ee611691673442340ac26ff1aa85a3004",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/GIFT-40000-REPAIR-001_ac27dd738cd14a598f1445e1f4462513.log",
+  "output_sha256": "aa562ae38af5a3a8225ec844a77e49cc83a1878e9f704fe13468e118ffbc5cee",
+  "receipt_id": "GIFT-40000-REPAIR-001_ac27dd738cd14a598f1445e1f4462513"
+}

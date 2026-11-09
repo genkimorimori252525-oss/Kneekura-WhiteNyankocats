@@ -209,3 +209,7 @@ Only record verification that was actually performed.
 | LOGIN-LEGEND-COMP-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/LOGIN-LEGEND-COMP-001_9b1f4597e5d742d789cdec2bfd48b93c.json |
 | LOGIN-LEGEND-COMP-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/LOGIN-LEGEND-COMP-001_6eb7c79825d348e4b4efe2061af50348.json |
 | LOGIN-LEGEND-COMP-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/LOGIN-LEGEND-COMP-001_6bed25f5cd6646d0967a5caf022b5613.json |
+| GIFT-40000-REPAIR-001 | FAIL | Executed command exit=1 | docs/ai-continuity/verification-receipts/GIFT-40000-REPAIR-001_b859c2fadddf4132b01dbb66b237fb31.json |
+| GIFT-40000-REPAIR-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/GIFT-40000-REPAIR-001_b70d425b2dc84bdd881e968552955939.json |
+| GIFT-40000-REPAIR-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/GIFT-40000-REPAIR-001_c50b7340906d46fa942f7830a0f5d5e9.json |
+| GIFT-40000-REPAIR-001 | PASS | Executed command exit=0 | docs/ai-continuity/verification-receipts/GIFT-40000-REPAIR-001_ac27dd738cd14a598f1445e1f4462513.json |
