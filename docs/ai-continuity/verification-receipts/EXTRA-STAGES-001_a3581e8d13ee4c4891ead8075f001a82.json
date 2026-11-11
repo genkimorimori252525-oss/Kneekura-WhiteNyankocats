@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "task_id": "EXTRA-STAGES-001",
+  "result": "PASS",
+  "exit_code": 0,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "-c",
+    "from pathlib import Path\nimport json\nfrom tools.pc_lab import Lab,PACKAGE,parse_installed_paths,verify_installed_hashes\ns=Path('C:/Users/genki/Downloads/Kneekura-WhiteNyankocats/private/pc-lab');l=Lab(s,Path('C:/Users/genki/AppData/Local/Android/Sdk'),Path('C:/Program Files/Java/jdk-17'))\nwith l.app_operation_lock():\n l.identity();b=l.verify_build();assert b['source_profile']=='jp1574';l.adb('shell','am','force-stop',PACKAGE)\n path='/data/user/0/'+PACKAGE+'/files/SAVE_DATA';h=l.adb('shell','sha256sum',path).stdout.split()[0]\n r=l.adb('install-multiple','--no-streaming','-r',*[Path(b['directory'])/x['name'] for x in b['signing']['splits']],timeout=300,check=False);assert r.returncode==0 and r.stdout.strip().splitlines()[-1]=='Success',r.stderr[-400:]\n actual={Path(x).name:l.adb('shell','sha256sum',x).stdout.split()[0] for x in parse_installed_paths(l.adb('shell','pm','path',PACKAGE).stdout.splitlines())};verify_installed_hashes({x['name']:x['output_sha256'] for x in b['signing']['splits']},actual);assert l.adb('shell','sha256sum',path).stdout.split()[0]==h\n (s/'version-upgrade/extra-stages-pc-20261111/INSTALLED.json').write_text(json.dumps(dict(build=Path(b['directory']).name,source_save_sha256=h,six_verified=True,phone_touched=False))+'\\n')\nprint('SAME_DAY_PC_UPDATE_SIX_SPLITS_VERIFIED_SAVE_BYTES_RETAINED')"
+  ],
+  "observed_at": "2026-11-11T08:08:02.790+00:00",
+  "elapsed_ms": 9202,
+  "git_head": "afa006544519fde6c85bc0b990b122c3ca917f59",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/EXTRA-STAGES-001_a3581e8d13ee4c4891ead8075f001a82.log",
+  "output_sha256": "22094260349e5527294d60a7656e75f7204a02ced51473a71b9b0e551439b328",
+  "receipt_id": "EXTRA-STAGES-001_a3581e8d13ee4c4891ead8075f001a82"
+}

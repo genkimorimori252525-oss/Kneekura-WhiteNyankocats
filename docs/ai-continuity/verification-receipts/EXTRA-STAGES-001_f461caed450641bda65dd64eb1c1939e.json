@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "task_id": "EXTRA-STAGES-001",
+  "result": "PASS",
+  "exit_code": 0,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "-c",
+    "from pathlib import Path\nfrom datetime import datetime,timedelta\nimport json,base64,hashlib\nfrom tools.battlecats_source import BattleCatsExport\nfrom tools.base_mod.build_offline_max_save import EXPORT_SHA256\nfrom tools.liveops.extra_stage_rotation import extend_bundle,POOLS,COLLABORATIONS,collaboration_stages\nfrom tools.liveops.original_ops_bundle import validate_bundle,_timestamp\nfrom tools.localcore.ops_calendar import JST\ns=Path('C:/Users/genki/Downloads/Kneekura-WhiteNyankocats/private/pc-lab');d=s/'version-upgrade/jp1574-20261103T152049Z-0d6bfc8b';source=(d/'ops-jp1574-r16-login-compensation.json').read_bytes();audit=json.loads(Path('docs/operations/2026-10-23-stage-policy-audit.json').read_text(encoding='utf-8'));records={x['native_id']:x for x in audit['maps']}\nowner=Path('C:/Users/genki/Downloads/にーくらにゃんこ/nyanko_battlecats_2026-10-06.zip');ids={i for _,pool in POOLS.values() for i in pool}\nfor group in COLLABORATIONS:ids.update(collaboration_stages(audit,group))\nwith BattleCatsExport(owner,region='jp',expected_sha256=EXPORT_SHA256) as e:\n pack=e.pack('DataLocal')\n for i in ids:\n  row=records[i];data,_=pack.read(row['metadata_asset']);assert hashlib.sha256(data).hexdigest()==row['metadata_sha256']\nstart=datetime(2026,11,11,tzinfo=JST);end=datetime(2026,11,30,tzinfo=JST);new,intervals=extend_bundle(source,audit,start,end);before=validate_bundle(source);after=validate_bundle(new)\nassert len(intervals)==456 and all(len(x['ids'])<=10 and len(x['ids'])==len(set(x['ids'])) and not set(x['ids']).intersection(x['collaboration_ids']) for x in intervals)\nassert all(after[k]==before[k] for k in before if k not in ('server_files','revision','notices'))\nassert all(after['server_files'][n]==before['server_files'][n] for n in ('item.tsv','gatya.tsv'))\nold=base64.b64decode(before['server_files']['sale.tsv']).decode().splitlines()[1:-1];out=base64.b64decode(after['server_files']['sale.tsv']).decode().splitlines()[1:-1];assert out[:len(old)]==old\nfor point in intervals:\n moment=datetime.fromisoformat(point['start']);active=set()\n for line in old:\n  f=line.split('\\t');\n  if _timestamp(f[0],f[1])<=moment<_timestamp(f[2],f[3]):active.update(map(int,f[9:]))\n assert not active.intersection(point['ids']+point['collaboration_ids'])\n assert point['collaboration_ids']==collaboration_stages(audit,point['collaboration'])\nweeks={}\nfor x in intervals:\n dt=datetime.fromisoformat(x['start']);monday=(dt.date()-timedelta(days=dt.weekday())).isoformat();value=(x['collaboration'],tuple(x['collaboration_ids']))\n assert monday not in weeks or weeks[monday]==value;weeks[monday]=value\nassert len(weeks)==3 and all(a[0]!=b[0] for a,b in zip(weeks.values(),list(weeks.values())[1:]))\nassert len(after['notices'])==len(before['notices'])+19 and after['notices'][19:]==before['notices']\np=d/'ops-jp1574-r20-extra-stages.json'\nwith p.open('xb') as f:f.write(new)\nwith (d/'extra-stages-r20-calendar.json').open('x',encoding='utf-8') as f:json.dump(intervals,f,ensure_ascii=False,indent=2)\nprint('SOURCE_MAPS_SHA_VERIFIED count=',len(ids),'hours=456 separate_weekly_collabs=3 max_hourly_extra=10 existing_streams_preserved=True bundle_sha=',hashlib.sha256(new).hexdigest())\nfor week,(category,maps) in weeks.items():print('WEEK',week,category,'MAPS',len(maps))"
+  ],
+  "observed_at": "2026-11-11T08:06:30.899+00:00",
+  "elapsed_ms": 6875,
+  "git_head": "afa006544519fde6c85bc0b990b122c3ca917f59",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/EXTRA-STAGES-001_f461caed450641bda65dd64eb1c1939e.log",
+  "output_sha256": "837507eb187d38c8b7ba973e94803ee79a4cf858a5d7a48eba2c7e0793fd19f0",
+  "receipt_id": "EXTRA-STAGES-001_f461caed450641bda65dd64eb1c1939e"
+}

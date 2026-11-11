@@ -1,15 +1,21 @@
 ---
-current_task: "GIFT-40000-REPAIR-001"
+current_task: "EXTRA-STAGES-001"
 active_agent: "Codex"
 branch: "codex/pc-local-lab-2026-10-12"
-commit_head: "4d5dfb9ee611691673442340ac26ff1aa85a3004"
-status: "OWNER_VISUAL_PENDING"
-evidence_ref: "docs/research/2026-11-10-login-legend-repair.md"
-updated_at: "2026-11-09T16:17:11.701226+00:00"
+commit_head: "afa006544519fde6c85bc0b990b122c3ca917f59"
+status: "PHONE_UPDATE_PENDING"
+evidence_ref: "docs/research/2026-11-11-extra-stage-rotation.md"
+updated_at: "2026-11-11T08:14:39.214535+00:00"
 
 ---
 
 # Current Progress State
+
+## 2026-11-11：追加イベントと週替わりコラボ
+
+- 本人指定で毎時最大10件、コラボ全現行マップは週替わり別枠。原作の解放・報酬は保持。予定・旧方針との差は[運営予定](../operations/2026-11-11-extra-stage-schedule.md)／[変更指示](AMENDMENTS/2026-11-11-extra-stages.md)。
+- r20の456時間生成・旧開催維持・時間境界テスト・６分割build PASS。PC旧版から同日更新し、コラボ５件・追加開催・日別お知らせの表示を確認。PC原データ551ファイル復元SHA一致。詳細とFAIL/UNKNOWNは[記録](../research/2026-11-11-extra-stage-rotation.md)。
+- 現在一件：スマホ候補 `phone-20261111T081315Z-79dde32a` は作成済み、未導入。本人の更新依頼・接続後、署名とデータ保持を確認して導入し、スマホ画面は本人が確認。全攻略・全自動時刻跨ぎ画面更新は未検証。配信期間11/30 0時まで。旧FAIL・UNKNOWN・Charter承認receipt不足を保持。
 
 ## 2026-11-10：お詫び画面が出ないため直接反映
 

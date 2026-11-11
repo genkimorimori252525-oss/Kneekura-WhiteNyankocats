@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "task_id": "EXTRA-STAGES-001",
+  "result": "PASS",
+  "exit_code": 0,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "-m",
+    "tools.pc_lab",
+    "--state",
+    "C:/Users/genki/Downloads/Kneekura-WhiteNyankocats/private/pc-lab",
+    "run",
+    "--seconds",
+    "10"
+  ],
+  "observed_at": "2026-11-11T08:08:25.530+00:00",
+  "elapsed_ms": 22514,
+  "git_head": "afa006544519fde6c85bc0b990b122c3ca917f59",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/EXTRA-STAGES-001_117c3147598d45d9b19744773288c844.log",
+  "output_sha256": "cbf41ae16a39408834a79b029bee17cafcbdfbef97b3a40cbeddef66f1c429f6",
+  "receipt_id": "EXTRA-STAGES-001_117c3147598d45d9b19744773288c844"
+}

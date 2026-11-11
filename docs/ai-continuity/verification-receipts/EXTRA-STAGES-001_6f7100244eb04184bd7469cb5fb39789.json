@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "task_id": "EXTRA-STAGES-001",
+  "result": "PASS",
+  "exit_code": 0,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "-m",
+    "unittest",
+    "tests.test_extra_stage_rotation",
+    "tests.test_original_ops_bundle",
+    "tests.test_original_ops_calendar",
+    "tests.test_original_ops_bridge"
+  ],
+  "observed_at": "2026-11-11T08:05:16.403+00:00",
+  "elapsed_ms": 875,
+  "git_head": "afa006544519fde6c85bc0b990b122c3ca917f59",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/EXTRA-STAGES-001_6f7100244eb04184bd7469cb5fb39789.log",
+  "output_sha256": "ae5d4b0c29283d8fcc29654a56e61f5fa14155e76e873a77745b67164b48a5a1",
+  "receipt_id": "EXTRA-STAGES-001_6f7100244eb04184bd7469cb5fb39789"
+}
