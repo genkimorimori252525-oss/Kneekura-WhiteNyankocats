@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "task_id": "EXTRA-STAGES-001",
+  "result": "PASS",
+  "exit_code": 0,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "-c",
+    "from pathlib import Path\nimport json\nfrom tools.pc_lab import Lab\ns=Path('C:/Users/genki/Downloads/Kneekura-WhiteNyankocats/private/pc-lab');l=Lab(s,Path('C:/Users/genki/AppData/Local/Android/Sdk'),Path('C:/Program Files/Java/jdk-17'));b=json.loads((s/'builds/20261109T152947Z-b4396b91/PC-BUILD.json').read_text());l.verify_build=lambda:b\nr=l.capture(10,install=False);assert r['status']=='COMPLETE_BOUNDED_CAPTURE' and r['launch_ok'];print('PC_EXISTING_SAME_DAY_R16_STARTED_CAPTURE_COMPLETE')"
+  ],
+  "observed_at": "2026-11-11T08:02:42.172+00:00",
+  "elapsed_ms": 26343,
+  "git_head": "afa006544519fde6c85bc0b990b122c3ca917f59",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/EXTRA-STAGES-001_6fdec3389fbb4de1ad6c21641666c149.log",
+  "output_sha256": "9e25f7a1d21c208b0ad3b28a34fc86bb1d0a7c874b41337490ddaa2737e77cf7",
+  "receipt_id": "EXTRA-STAGES-001_6fdec3389fbb4de1ad6c21641666c149"
+}

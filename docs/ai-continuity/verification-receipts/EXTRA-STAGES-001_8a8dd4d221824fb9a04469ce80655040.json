@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "task_id": "EXTRA-STAGES-001",
+  "result": "PASS",
+  "exit_code": 0,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "C:/Users/genki/Downloads/Kneekura-WhiteNyankocats/private/pc-lab/version-upgrade/extra-stages-pc-20261111/restore_pc.py"
+  ],
+  "observed_at": "2026-11-11T08:13:08.167+00:00",
+  "elapsed_ms": 17671,
+  "git_head": "afa006544519fde6c85bc0b990b122c3ca917f59",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/EXTRA-STAGES-001_8a8dd4d221824fb9a04469ce80655040.log",
+  "output_sha256": "9d05c775649b97e56cc9acb150e1bc1f0ab4ff3966becff14101d1e4a4c5b3af",
+  "receipt_id": "EXTRA-STAGES-001_8a8dd4d221824fb9a04469ce80655040"
+}

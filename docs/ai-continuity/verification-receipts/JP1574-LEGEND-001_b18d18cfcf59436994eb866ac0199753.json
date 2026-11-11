@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "task_id": "JP1574-LEGEND-001",
+  "result": "PASS",
+  "exit_code": 0,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "C:/Users/genki/Downloads/Kneekura-WhiteNyankocats/private/pc-lab/version-upgrade/verify_level_runtime.py",
+    "eye",
+    "--snapshot",
+    "C:/Users/genki/Downloads/Kneekura-WhiteNyankocats/private/pc-lab/version-upgrade/jp1574-20261103T152049Z-0d6bfc8b/pc-runtime/after-ice-eye-confirmed-SAVE_DATA"
+  ],
+  "observed_at": "2026-11-03T16:53:37.583+00:00",
+  "elapsed_ms": 5280,
+  "git_head": "b20616c3e843bd14bc0524fd99431f96046bd670",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/JP1574-LEGEND-001_b18d18cfcf59436994eb866ac0199753.log",
+  "output_sha256": "180c4a6d4fb01cd4ef84fa7f1b30f183f56eb9f5bd06c50d5b515717b789a508",
+  "receipt_id": "JP1574-LEGEND-001_b18d18cfcf59436994eb866ac0199753"
+}

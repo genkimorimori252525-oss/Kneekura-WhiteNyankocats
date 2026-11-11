@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "task_id": "LOGIN-LEGEND-COMP-001",
+  "result": "PASS",
+  "exit_code": 0,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "C:/Users/genki/Downloads/Kneekura-WhiteNyankocats/private/pc-lab/version-upgrade/update_phone_login_repair.py",
+    "prepare"
+  ],
+  "observed_at": "2026-11-09T16:00:53.861+00:00",
+  "elapsed_ms": 63375,
+  "git_head": "36b4200f8f9775c8f707bacac76cad59b565d7a2",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/LOGIN-LEGEND-COMP-001_6eb7c79825d348e4b4efe2061af50348.log",
+  "output_sha256": "65bef8d1f5f8872b20c5c2e7fef760e9c9fda2f8d839af6c6c896dfa9f4060fd",
+  "receipt_id": "LOGIN-LEGEND-COMP-001_6eb7c79825d348e4b4efe2061af50348"
+}

@@ -1,0 +1,9 @@
+Traceback (most recent call last):
+  File "C:\Users\genki\Downloads\Kneekura-WhiteNyankocats\private\pc-lab\version-upgrade\prepare_pc_login_comp.py", line 30, in <module>
+    L.adb('install-multiple','--no-streaming','-r',*[Path(b['directory'])/x['name'] for x in b['signing']['splits']],timeout=300)
+  File "C:\Users\genki\Documents\Codex\2026-10-12\615mb-393-2-http-0-97\work\kneekura-pc-lab\tools\pc_lab.py", line 229, in adb
+    return self.command([self.adb_bin, '-s', SERIAL, *argv], **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\genki\Documents\Codex\2026-10-12\615mb-393-2-http-0-97\work\kneekura-pc-lab\tools\pc_lab.py", line 225, in command
+    raise RuntimeError(f'PC_LAB_TOOL_FAILED_{Path(str(argv[0])).name}')
+RuntimeError: PC_LAB_TOOL_FAILED_adb.exe

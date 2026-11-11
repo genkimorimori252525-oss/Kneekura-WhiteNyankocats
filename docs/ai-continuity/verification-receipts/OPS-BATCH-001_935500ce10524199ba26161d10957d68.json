@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "task_id": "OPS-BATCH-001",
+  "result": "PASS",
+  "exit_code": 0,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "C:/Users/genki/Downloads/Kneekura-WhiteNyankocats/private/pc-lab/liveops-investigation/catamin-native-schedule/pc_cases.py",
+    "restore"
+  ],
+  "observed_at": "2026-10-23T09:34:42.990+00:00",
+  "elapsed_ms": 13000,
+  "git_head": "b6a39088b91fb02b711cdc9e3b332291f9ab1935",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/OPS-BATCH-001_935500ce10524199ba26161d10957d68.log",
+  "output_sha256": "23822953cdd2726e24419fb989514b350877ad5b77a30a85d8415cda07419aad",
+  "receipt_id": "OPS-BATCH-001_935500ce10524199ba26161d10957d68"
+}

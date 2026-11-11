@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "task_id": "LOGIN-LEGEND-COMP-001",
+  "result": "PASS",
+  "exit_code": 0,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "-c",
+    "from pathlib import Path\nimport base64,hashlib,json\nfrom tools.liveops.original_ops_bundle import validate_bundle\nfrom tools.liveops.operator_gifts import gift_rows\nfrom tools.liveops.original_schedule import stream\ns=Path('C:/Users/genki/Downloads/Kneekura-WhiteNyankocats/private/pc-lab');d=s/'version-upgrade/jp1574-20261103T152049Z-0d6bfc8b';original=(d/'ops-jp1574-r15.json').read_bytes();b=validate_bundle(original)\nold=base64.b64decode(b['server_files']['item.tsv']).decode('utf-8');rows=old[len('[start]\\n'):-len('[end]\\n')].splitlines()\nassert all(row.split('\\t')[8]!='20261110' for row in rows)\ngift=gift_rows([dict(event_id=20261110,item_id=200,amount=40000,start='2026-11-10T00:00:00+09:00',end='2026-11-30T00:00:00+09:00',title='ログインボーナス不具合のお詫び',message='不具合のお詫びとしてネコカン40000個をお送りします。',everyday=False)])[0]\nf=gift.split('\\t');f[4:6]=['150704','150704'];rows.append('\\t'.join(f));b['server_files']['item.tsv']=base64.b64encode(stream(rows)).decode('ascii');b['revision']=16\nout=(json.dumps(b,ensure_ascii=False,sort_keys=True,separators=(',',':'))+'\\n').encode();validate_bundle(out)\np=d/'ops-jp1574-r16-login-compensation.json'\nwith p.open('xb') as h:h.write(out)\nprint('OPS_R16_VALIDATED_ONCE_40000_OLD_GIFT_AND_OTHER_STREAMS_PRESERVED',hashlib.sha256(out).hexdigest())"
+  ],
+  "observed_at": "2026-11-09T15:29:30.894+00:00",
+  "elapsed_ms": 391,
+  "git_head": "36b4200f8f9775c8f707bacac76cad59b565d7a2",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/LOGIN-LEGEND-COMP-001_f2a46270a137451cbf1e7d09c7093ca9.log",
+  "output_sha256": "b9fbe3676b4f20c723703540a5b503e06ed1bcec6b3ff93653e04778988f6633",
+  "receipt_id": "LOGIN-LEGEND-COMP-001_f2a46270a137451cbf1e7d09c7093ca9"
+}

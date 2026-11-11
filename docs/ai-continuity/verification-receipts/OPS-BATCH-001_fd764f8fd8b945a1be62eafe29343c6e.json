@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "task_id": "OPS-BATCH-001",
+  "result": "PASS",
+  "exit_code": 0,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "C:/Users/genki/Downloads/Kneekura-WhiteNyankocats/private/pc-lab/liveops-investigation/stage-expansion/catamin_proof.py"
+  ],
+  "observed_at": "2026-10-22T19:52:56.125+00:00",
+  "elapsed_ms": 2594,
+  "git_head": "7ca4c764cffd1f0d425e89784e6cbf6031b266d6",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/OPS-BATCH-001_fd764f8fd8b945a1be62eafe29343c6e.log",
+  "output_sha256": "0d80667c58148e37f36aac4496e2f9d16e5b6d1255c2a43b2cc0c27bf8d87443",
+  "receipt_id": "OPS-BATCH-001_fd764f8fd8b945a1be62eafe29343c6e"
+}

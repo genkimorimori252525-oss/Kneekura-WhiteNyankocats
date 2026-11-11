@@ -202,9 +202,12 @@ def baseline_resign(
     zipalign: str | None = None,
     apksigner: str | None = None,
     source_export_sha256: str | None = None,
+    source_profile: str = 'jp1571',
 ) -> dict:
     """Re-align and re-sign an otherwise unchanged exact split set."""
 
+    if source_profile not in ('jp1571', 'jp1574'):
+        raise ValueError('unsupported signing source profile')
     split_dir = split_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
     sources = _required_splits(split_dir)
@@ -307,7 +310,7 @@ def baseline_resign(
 
     ledger = {
         "schema_version": 1,
-        "anchor": "jp-15.7.1",
+        "anchor": {'jp1571': 'jp-15.7.1', 'jp1574': 'jp-15.7.4'}[source_profile],
         "mode": "baseline-resign",
         "source_export_sha256": source_export_sha256,
         "required_splits": list(JP_15_7_1_SPLITS),

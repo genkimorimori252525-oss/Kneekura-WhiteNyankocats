@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "task_id": "LOGIN-LEGEND-COMP-001",
+  "result": "PASS",
+  "exit_code": 0,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "-c",
+    "from pathlib import Path\nimport json,time\nfrom tools.pc_lab import Lab,PACKAGE,parse_installed_paths,verify_installed_hashes\nfrom tools.base_mod.repack import sha256_file\ns=Path('C:/Users/genki/Downloads/Kneekura-WhiteNyankocats/private/pc-lab');l=Lab(s,Path('C:/Users/genki/AppData/Local/Android/Sdk'),Path('C:/Program Files/Java/jdk-17'));l.identity()\nremote='/data/local/tmp/kneekura-catamin-restore-337c381373094b4a8e80688240ad19e9.tar';local=s/'liveops-investigation/catamin-native-schedule/before.tar';h=json.loads((local.parent/'BEFORE.json').read_text())['tar_sha256']\nassert sha256_file(local)==h==l.adb('shell','sha256sum',remote).stdout.split()[0]\nl.adb('shell','rm',remote)\nb=l.verify_build();res=l.adb('install-multiple','--no-streaming','-r',*[Path(b['directory'])/x['name'] for x in b['signing']['splits']],timeout=300,check=False)\nassert res.returncode==0 and res.stdout.strip().splitlines()[-1]=='Success','PC_RETRY_INSTALL_FAILED '+res.stderr[-300:]\nactual={Path(x).name:l.adb('shell','sha256sum',x).stdout.split()[0] for x in parse_installed_paths(l.adb('shell','pm','path',PACKAGE).stdout.splitlines())};verify_installed_hashes({x['name']:x['output_sha256'] for x in b['signing']['splits']},actual)\nl.adb('shell','cmd','time_zone_detector','set_auto_detection_enabled','false');l.adb('shell','cmd','time_zone_detector','suggest_manual_time_zone','--zone_id','Asia/Tokyo');l.adb('shell','date','-s','@'+str(int(time.time())))\nassert l.adb('shell','getprop','persist.sys.timezone').stdout.strip()=='Asia/Tokyo'\no=s/'version-upgrade/login-comp-pc-20261110';(o/'PREPARED.json').write_text(json.dumps(dict(build=Path(b['directory']).name,original_saved_separately=True,phone_touched=False))+'\\n')\nprint('DUPLICATE_PC_TRANSFER_REMOVED_LOCAL_ARCHIVE_HASH_IDENTICAL_NEW_SIX_SPLITS_INSTALLED_JST_READY')"
+  ],
+  "observed_at": "2026-11-09T15:34:52.307+00:00",
+  "elapsed_ms": 13297,
+  "git_head": "36b4200f8f9775c8f707bacac76cad59b565d7a2",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/LOGIN-LEGEND-COMP-001_b2f0f48d4fc04e6f876b0f8ede9c2934.log",
+  "output_sha256": "0806d20f6b1d03b719dbbffc5b694590aed86d873821bbe1894de20fc7c9de18",
+  "receipt_id": "LOGIN-LEGEND-COMP-001_b2f0f48d4fc04e6f876b0f8ede9c2934"
+}

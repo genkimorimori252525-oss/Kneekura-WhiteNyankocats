@@ -1,0 +1,13 @@
+...F.............................
+======================================================================
+FAIL: test_current_catfruit_behemoth_weekend_and_enigma_windows (tests.test_stage_program.StageProgramTests.test_current_catfruit_behemoth_weekend_and_enigma_windows)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\genki\Documents\Codex\2026-10-12\615mb-393-2-http-0-97\work\kneekura-pc-lab\tests\test_stage_program.py", line 61, in test_current_catfruit_behemoth_weekend_and_enigma_windows
+    self.assertIn(1422,self.ids(f'2026-10-{day}T15:00:00'))
+AssertionError: 1422 not found in {1320, 1321, 1038, 1170, 7001, 24026, 7002}
+
+----------------------------------------------------------------------
+Ran 33 tests in 16.536s
+
+FAILED (failures=1)

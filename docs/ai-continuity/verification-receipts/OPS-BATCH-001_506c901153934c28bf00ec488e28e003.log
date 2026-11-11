@@ -1,0 +1,189 @@
+FFFF
+======================================================================
+FAIL: test_catamin_all_47_maps_are_available_all_day_without_retired_maps (tests.test_stage_program.StageProgramTests.test_catamin_all_47_maps_are_available_all_day_without_retired_maps) (at='2026-10-23T08:00:00')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\genki\Documents\Codex\2026-10-12\615mb-393-2-http-0-97\work\kneekura-pc-lab\tests\test_stage_program.py", line 58, in test_catamin_all_47_maps_are_available_all_day_without_retired_maps
+    self.assertEqual({n for n in self.ids(at) if n//1000==14},
+AssertionError: Items in the second set but not the first:
+14005
+14006
+14007
+14008
+14009
+14010
+14011
+14012
+14013
+14014
+14015
+14016
+14017
+14018
+14019
+14020
+14021
+14022
+14023
+14024
+14025
+14026
+14027
+14028
+14029
+14030
+14031
+14032
+14033
+14034
+14035
+14036
+14037
+14038
+14039
+14040
+14041
+14042
+14043
+14044
+14045
+14046
+14047
+14048
+14049
+14050
+14051
+
+======================================================================
+FAIL: test_catamin_all_47_maps_are_available_all_day_without_retired_maps (tests.test_stage_program.StageProgramTests.test_catamin_all_47_maps_are_available_all_day_without_retired_maps) (at='2026-10-23T17:18:00')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\genki\Documents\Codex\2026-10-12\615mb-393-2-http-0-97\work\kneekura-pc-lab\tests\test_stage_program.py", line 58, in test_catamin_all_47_maps_are_available_all_day_without_retired_maps
+    self.assertEqual({n for n in self.ids(at) if n//1000==14},
+AssertionError: Items in the second set but not the first:
+14005
+14006
+14007
+14008
+14009
+14010
+14011
+14012
+14013
+14014
+14015
+14016
+14017
+14018
+14019
+14020
+14021
+14022
+14023
+14024
+14025
+14026
+14027
+14028
+14029
+14030
+14031
+14032
+14033
+14034
+14035
+14036
+14037
+14038
+14039
+14040
+14041
+14042
+14043
+14044
+14045
+14046
+14047
+14048
+14049
+14050
+14051
+
+======================================================================
+FAIL: test_catamin_all_47_maps_are_available_all_day_without_retired_maps (tests.test_stage_program.StageProgramTests.test_catamin_all_47_maps_are_available_all_day_without_retired_maps) (at='2026-10-23T23:59:59')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\genki\Documents\Codex\2026-10-12\615mb-393-2-http-0-97\work\kneekura-pc-lab\tests\test_stage_program.py", line 58, in test_catamin_all_47_maps_are_available_all_day_without_retired_maps
+    self.assertEqual({n for n in self.ids(at) if n//1000==14},
+AssertionError: Items in the second set but not the first:
+14005
+14006
+14007
+14008
+14009
+14010
+14011
+14012
+14013
+14014
+14015
+14016
+14017
+14018
+14019
+14020
+14021
+14022
+14023
+14024
+14025
+14026
+14027
+14028
+14029
+14030
+14031
+14032
+14033
+14034
+14035
+14036
+14037
+14038
+14039
+14040
+14041
+14042
+14043
+14044
+14045
+14046
+14047
+14048
+14049
+14050
+14051
+
+======================================================================
+FAIL: test_catamin_projection_keeps_separate_daily_windows_on_rebuild (tests.test_stage_program.StageProgramTests.test_catamin_projection_keeps_separate_daily_windows_on_rebuild)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\genki\Documents\Codex\2026-10-12\615mb-393-2-http-0-97\work\kneekura-pc-lab\tests\test_stage_program.py", line 70, in test_catamin_projection_keeps_separate_daily_windows_on_rebuild
+    self.assertEqual([r[:4] for r in full],
+AssertionError: Lists differ: [['20261023', '0', '20261023', '800'], ['20261024', '0', '20261024', '800']] != [['20261023', '0', '20261024', '0'], ['20261024', '0', '20261025', '0']]
+
+First differing element 0:
+['20261023', '0', '20261023', '800']
+['20261023', '0', '20261024', '0']
+
+- [['20261023', '0', '20261023', '800'], ['20261024', '0', '20261024', '800']]
+?                            ^    --                               ^    --
+
++ [['20261023', '0', '20261024', '0'], ['20261024', '0', '20261025', '0']]
+?                            ^                                   ^
+
+
+----------------------------------------------------------------------
+Ran 2 tests in 2.568s
+
+FAILED (failures=4)

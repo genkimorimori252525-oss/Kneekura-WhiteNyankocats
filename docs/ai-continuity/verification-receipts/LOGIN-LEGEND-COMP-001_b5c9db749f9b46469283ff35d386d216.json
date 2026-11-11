@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "task_id": "LOGIN-LEGEND-COMP-001",
+  "result": "PASS",
+  "exit_code": 0,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "-c",
+    "from pathlib import Path\nimport hashlib\nfrom tools.pc_lab import Lab,PACKAGE\nfrom tools.base_mod.pc_initial_profile import load_reference\ns=Path('C:/Users/genki/Downloads/Kneekura-WhiteNyankocats/private/pc-lab');o=s/'version-upgrade/login-comp-pc-20261110';l=Lab(s,Path('C:/Users/genki/AppData/Local/Android/Sdk'),Path('C:/Program Files/Java/jdk-17'))\nwith l.app_operation_lock():\n l.identity();root='/data/user/0/'+PACKAGE+'/files/SAVE_DATA';h=l.adb('shell','sha256sum',root).stdout.split()[0];raw=l.adb('exec-out','cat',root,binary=True).stdout;assert hashlib.sha256(raw).hexdigest()==h==l.adb('shell','sha256sum',root).stdout.split()[0]\nwith (o/'after-restart-SAVE_DATA').open('xb') as f:f.write(raw)\nc=load_reference(s/'source-references/bcsfe-pinned/src',s/'source-references/parser-dependencies',s/'source-references/parser-state')\ndef parse(r):\n v=c.SaveFile(c.Data(r),load=False);v.load();return v\nfirst=parse((o/'after-first-SAVE_DATA').read_bytes());after=parse(raw)\nassert first.catfood==after.catfood and after.xp==99999999 and after.np>=9999\nassert all(after.cats.cats[i].unlocked and after.unit_drops[j] for i,j in ((130,39),(172,59),(268,88)))\nprint('PC_RESTART_NO_DUPLICATE_CATFOOD_GIFT_XP_NP_THREE_REWARD_UNITS_RETAINED')"
+  ],
+  "observed_at": "2026-11-09T15:58:02.725+00:00",
+  "elapsed_ms": 1812,
+  "git_head": "36b4200f8f9775c8f707bacac76cad59b565d7a2",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/LOGIN-LEGEND-COMP-001_b5c9db749f9b46469283ff35d386d216.log",
+  "output_sha256": "2a5d31045815911b7d44ca8917967d3cc4c5af9e9692444edb83869a31b2b94c",
+  "receipt_id": "LOGIN-LEGEND-COMP-001_b5c9db749f9b46469283ff35d386d216"
+}

@@ -6,6 +6,7 @@ import struct
 import tempfile
 import unittest
 import zlib
+import zipfile
 
 from tools.base_mod.binary_axml import (
     patch_boolean_attribute,
@@ -16,7 +17,10 @@ from tools.base_mod.dex_strings import patch_exact_dex_string
 from tools.base_mod.package_flavor import (
     FLAVOR_PACKAGES,
     ORIGINAL_PACKAGE,
+    patch_split_set,
+    patch_resource_package,
 )
+from tools.base_mod.verify_parity import _verify_resource_package
 
 
 def _len8(value: int) -> bytes:
@@ -80,6 +84,95 @@ def _fake_dex(value: str) -> bytes:
 
 
 class PackageFlavorTests(unittest.TestCase):
+    def test_resource_parser_rejects_drift_and_static_audit_rejects_other_changes(self):
+        package = FLAVOR_PACKAGES["local-research"]
+        header = bytearray(288)
+        struct.pack_into("<HHII", header, 0, 0x0200, 288, 288, 0x7f)
+        encoded = ORIGINAL_PACKAGE.encode("utf-16le")
+        header[12:12 + len(encoded)] = encoded
+        original = struct.pack("<HHII", 2, 12, 300, 1) + header
+        patched = patch_resource_package(original, package, base=False)
+        invalids = [original[:-1], original[:12], bytes(300)]
+        drift = bytearray(original)
+        drift[24] = ord("x")
+        invalids.append(bytes(drift))
+        drift = bytearray(original)
+        struct.pack_into("<I", drift, 16, 1000)
+        invalids.append(bytes(drift))
+        invalids.append(struct.pack("<HHII", 2, 12, 588, 1) + header + header)
+        for invalid in invalids:
+            with self.subTest(size=len(invalid)), self.assertRaises(ValueError):
+                patch_resource_package(invalid, package, base=False)
+        with tempfile.TemporaryDirectory() as tmp:
+            src, dst = Path(tmp) / "source.apk", Path(tmp) / "final.apk"
+            with zipfile.ZipFile(src, "w") as z:
+                z.writestr("resources.arsc", original)
+            for actual, passes in ((patched, True), (original, False),
+                                   (patched[:-1] + b"x", False)):
+                with zipfile.ZipFile(dst, "w") as z:
+                    z.writestr("resources.arsc", actual)
+                if passes:
+                    _verify_resource_package(src, dst, "split_config.ja.apk", package)
+                else:
+                    with self.assertRaisesRegex(ValueError, "delta is not exact"):
+                        _verify_resource_package(src, dst, "split_config.ja.apk", package)
+
+    def test_all_resource_packages_match_isolated_manifest_without_other_changes(self):
+        """Android resolves getIdentifier against ResTable_package.name, not UTF-8."""
+        package = FLAVOR_PACKAGES["local-research"]
+        resource_splits = ("base.apk", "split_config.en.apk",
+                           "split_config.ja.apk", "split_config.xxhdpi.apk")
+        header = bytearray(288)
+        struct.pack_into("<HHII", header, 0, 0x0200, 288, 288, 0x7f)
+        name = ORIGINAL_PACKAGE.encode("utf-16le")
+        header[12:12 + len(name)] = name
+        # Unrelated string-pool bytes containing the same UTF-16 text must stay.
+        tail = b"unrelated:" + name
+        tail += b"\0" * ((-len(tail)) % 4)
+        pool = struct.pack("<HHI", 1, 8, 8 + len(tail)) + tail
+        table = struct.pack("<HHII", 2, 12, 12 + len(header) + len(pool), 1)
+        resources = table + header + pool
+        base_tail = ORIGINAL_PACKAGE.encode() + b"\0"
+        base_tail += b"\0" * ((-len(base_tail)) % 4)
+        base_pool = struct.pack("<HHI", 1, 8, 8 + len(base_tail)) + base_tail
+        base_resources = bytearray(resources + base_pool)
+        struct.pack_into("<I", base_resources, 4, len(base_resources))
+        suffixes = ("", ".DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION",
+                    ".IronsourceLifecycleProvider", ".applovininitprovider",
+                    ".androidx-startup", ".AudienceNetworkContentProvider",
+                    ".mobileadsinitprovider", ".firebaseinitprovider",
+                    ".adjust-lifecycle-provider", ".MyActivity")
+        with tempfile.TemporaryDirectory() as tmp:
+            src, dst = Path(tmp) / "source", Path(tmp) / "output"
+            src.mkdir()
+            for split in (*resource_splits, "split_config.arm64_v8a.apk",
+                          "split_InstallPack.apk"):
+                with zipfile.ZipFile(src / split, "w") as z:
+                    z.writestr("AndroidManifest.xml", _fake_axml(
+                        [ORIGINAL_PACKAGE + s for s in suffixes]))
+                    z.writestr("assets/unchanged.bin", b"original asset")
+                    if split in resource_splits:
+                        z.writestr("resources.arsc", base_resources if split == "base.apk"
+                                   else resources)
+                    if split == "base.apk":
+                        z.writestr("classes.dex", _fake_dex(ORIGINAL_PACKAGE))
+                        z.writestr("classes2.dex", _fake_dex(
+                            ORIGINAL_PACKAGE + ".NotificationChannel."))
+                    if split == "split_config.arm64_v8a.apk":
+                        z.writestr("lib/arm64-v8a/libkneekura.so", b"inert")
+                        z.writestr("lib/arm64-v8a/libnative-lib.so", ORIGINAL_PACKAGE.encode())
+            patch_split_set(src, dst, flavor="local-research")
+            for split in resource_splits:
+                with zipfile.ZipFile(dst / split) as z:
+                    actual = z.read("resources.arsc")
+                    self.assertEqual(actual[24:280].decode("utf-16le").split("\0")[0], package)
+                    expected = bytearray(base_resources if split == "base.apk" else resources)
+                    expected[24:24 + len(name)] = package.encode("utf-16le")
+                    if split == "base.apk":
+                        expected = expected.replace(ORIGINAL_PACKAGE.encode(), package.encode())
+                    self.assertEqual(actual, bytes(expected))
+                    self.assertEqual(z.read("assets/unchanged.bin"), b"original asset")
+
     def test_approved_packages_preserve_original_length(self) -> None:
         for package in FLAVOR_PACKAGES.values():
             self.assertEqual(len(package), len(ORIGINAL_PACKAGE))

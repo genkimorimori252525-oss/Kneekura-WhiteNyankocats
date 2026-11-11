@@ -1,0 +1,135 @@
+package __KNEEKURA_PACKAGE__;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Collections;
+import java.util.Comparator;
+
+/** Assignment ledger only. The ORIGINAL runtime owns reward grants/stamps. */
+final class KneekuraLoginRotation {
+    static final long NEVER = -1;
+    static final class Slot {
+        int template, eventKey, days, observedCount;
+        long eligibleDay, offeredDay = NEVER;
+        Slot(int template, int key, int days, long eligibleDay) {
+            this.template=template; this.eventKey=key; this.days=days; this.eligibleDay=eligibleDay;
+        }
+        Slot copy() {
+            Slot result=new Slot(template,eventKey,days,eligibleDay);
+            result.observedCount=observedCount; result.offeredDay=offeredDay; return result;
+        }
+    }
+    static final class State {
+        long highDay=NEVER;
+        int sequence, cycle, cursor;
+        final ArrayList<Slot> active=new ArrayList<Slot>();
+        final ArrayList<Slot> history=new ArrayList<Slot>();
+        State copy() {
+            State result=new State(); result.highDay=highDay; result.sequence=sequence;
+            result.cycle=cycle; result.cursor=cursor;
+            for(Slot slot:active) result.active.add(slot.copy());
+            for(Slot slot:history) result.history.add(slot.copy());
+            return result;
+        }
+    }
+    private final HashMap<Integer,Integer> days;
+    private final int[][] bags;
+    KneekuraLoginRotation(HashMap<Integer,Integer> days, int[][] bags) {
+        if(days.size()<5 || bags.length<1) throw new IllegalArgumentException("LOGIN_POOL");
+        for(int[] bag:bags) {
+            HashSet<Integer> unique=new HashSet<Integer>();
+            for(int id:bag) if(!days.containsKey(id) || !unique.add(id))
+                throw new IllegalArgumentException("LOGIN_BAG");
+            if(unique.size()!=days.size()) throw new IllegalArgumentException("LOGIN_BAG");
+        }
+        this.days=days; this.bags=bags;
+    }
+    int[] queryKeys(State state) {
+        if(state==null) return new int[0];
+        ArrayList<Slot> issued=issued(state);
+        int[] keys=new int[issued.size()];
+        for(int i=0;i<keys.length;i++) keys[i]=issued.get(i).eventKey;
+        return keys;
+    }
+    private ArrayList<Slot> issued(State state) {
+        if(state.active.size()!=5 || state.sequence<5 || state.sequence>4096
+                || state.highDay<NEVER || state.cycle<0 || state.cursor<0
+                || state.cursor>days.size()
+                || state.active.size()+state.history.size()!=state.sequence)
+            throw new IllegalStateException("LOGIN_STATE_RANGE");
+        ArrayList<Slot> result=new ArrayList<Slot>(state.active);
+        result.addAll(state.history);
+        Collections.sort(result,new Comparator<Slot>() {
+            @Override public int compare(Slot a,Slot b) {return Integer.compare(a.eventKey,b.eventKey);}
+        });
+        HashSet<Integer> activeTemplates=new HashSet<Integer>();
+        for(Slot slot:state.active) if(!activeTemplates.add(slot.template))
+            throw new IllegalStateException("LOGIN_ACTIVE_DUPLICATE");
+        for(int i=0;i<result.size();i++) {
+            Slot slot=result.get(i);
+            if(slot.eventKey!=700001+i || !days.containsKey(slot.template)
+                    || days.get(slot.template)!=slot.days || slot.observedCount<0
+                    || slot.observedCount>slot.days || slot.eligibleDay<0
+                    || slot.offeredDay<NEVER || slot.offeredDay>state.highDay)
+                throw new IllegalStateException("LOGIN_ASSIGNMENT_INVALID");
+        }
+        return result;
+    }
+    private void refill(State state, long day) {
+        HashSet<Integer> active=new HashSet<Integer>();
+        for(Slot slot:state.active) active.add(slot.template);
+        while(state.active.size()<5) {
+            int[] bag=bags[state.cycle%bags.length];
+            if(state.cursor==bag.length) {
+                if(state.cycle==Integer.MAX_VALUE)throw new IllegalStateException("LOGIN_CYCLE_EXHAUSTED");
+                state.cycle++;state.cursor=0;continue;
+            }
+            int id=bag[state.cursor++];
+            if(active.contains(id)) continue;
+            if(state.sequence>=4096) throw new IllegalStateException("LOGIN_EVENT_KEYS_EXHAUSTED");
+            state.active.add(new Slot(id,700000+(++state.sequence),days.get(id),day));active.add(id);
+        }
+    }
+    State initial(long day) {
+        if(day<0) throw new IllegalArgumentException("LOGIN_DAY");
+        State result=new State();refill(result,day);return result;
+    }
+    State prepare(State prior, long day, int[] originalCounts) {
+        if(prior==null || prior.active.size()!=5 || originalCounts==null || day<0)
+            throw new IllegalArgumentException("LOGIN_SNAPSHOT");
+        State next=prior.copy();
+        ArrayList<Slot> all=issued(next);
+        if(originalCounts.length!=all.size())
+            throw new IllegalArgumentException("LOGIN_SNAPSHOT_COUNTS");
+        for(int i=0;i<all.size();i++) {
+            Slot slot=all.get(i); int count=originalCounts[i];
+            if(count<0 || count>slot.days || (count>0 && slot.offeredDay==NEVER))
+                throw new IllegalStateException("LOGIN_ORIGINAL_COUNT_OR_ASSIGNMENT_INVALID");
+            // A cold SAVE may precede a previously observed in-memory receipt.
+            // The original count is authoritative, including legitimate rollback.
+            slot.observedCount=count;
+        }
+        next.active.clear();next.history.clear();
+        HashSet<Integer> templates=new HashSet<Integer>();
+        for(Slot slot:all) {
+            // Keep every issued key. Restore the earliest unfinished assignments
+            // after SAVE rollback, and retain any displaced descendants for reuse.
+            boolean pending=slot.observedCount<slot.days || day<=slot.offeredDay;
+            if(pending && next.active.size()<5 && templates.add(slot.template))
+                next.active.add(slot);
+            else next.history.add(slot);
+        }
+        refill(next,day);
+        if(day>=next.highDay) {
+            for(Slot slot:next.active) if(slot.observedCount<slot.days && day>=slot.eligibleDay)
+                slot.offeredDay=day;
+            next.highDay=day;
+        }
+        return next;
+    }
+    boolean offered(State state, Slot slot, long day) {
+        return day==state.highDay && slot.offeredDay==day
+                && slot.observedCount<slot.days && day>=slot.eligibleDay;
+    }
+}

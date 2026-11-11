@@ -1,0 +1,19 @@
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\genki\Documents\Codex\2026-10-12\615mb-393-2-http-0-97\work\kneekura-pc-lab\tools\pc_lab.py", line 981, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "C:\Users\genki\Documents\Codex\2026-10-12\615mb-393-2-http-0-97\work\kneekura-pc-lab\tools\pc_lab.py", line 945, in main
+    lab.setup()
+  File "C:\Users\genki\Documents\Codex\2026-10-12\615mb-393-2-http-0-97\work\kneekura-pc-lab\tools\pc_lab.py", line 293, in setup
+    self.identity()
+  File "C:\Users\genki\Documents\Codex\2026-10-12\615mb-393-2-http-0-97\work\kneekura-pc-lab\tools\pc_lab.py", line 234, in identity
+    if self.adb('shell', 'getprop', 'sys.boot_completed').stdout.strip() != '1':
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\genki\Documents\Codex\2026-10-12\615mb-393-2-http-0-97\work\kneekura-pc-lab\tools\pc_lab.py", line 229, in adb
+    return self.command([self.adb_bin, '-s', SERIAL, *argv], **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\genki\Documents\Codex\2026-10-12\615mb-393-2-http-0-97\work\kneekura-pc-lab\tools\pc_lab.py", line 225, in command
+    raise RuntimeError(f'PC_LAB_TOOL_FAILED_{Path(str(argv[0])).name}')
+RuntimeError: PC_LAB_TOOL_FAILED_adb.exe

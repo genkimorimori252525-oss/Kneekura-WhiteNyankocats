@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "task_id": "LOGIN-LEGEND-COMP-001",
+  "result": "PASS",
+  "exit_code": 0,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "-c",
+    "from pathlib import Path\nimport json\nfrom tools.base_mod.pc_initial_profile import load_reference\nfrom tools.base_mod.legend_reward_repair import build_repair\ns=Path('C:/Users/genki/Downloads/Kneekura-WhiteNyankocats/private/pc-lab');d=Path(json.loads((s/'version-upgrade/latest-phone-upgrade.json').read_text())['directory']);raw=(d/'research-checkpoint-SAVE_DATA').read_bytes()\nc=load_reference(s/'source-references/bcsfe-pinned/src',s/'source-references/parser-dependencies',s/'source-references/parser-state');export=Path('C:/Users/genki/Downloads/にーくらにゃんこ/nyanko_battlecats_2026-10-06.zip')\nout,report=build_repair(raw,export,c);again,_=build_repair(out,export,c)\nassert report['rewarded_cats']==[130,172,268] and again==out and (d/'research-checkpoint-SAVE_DATA').read_bytes()==raw\np=d/'legend-reward-repair-pc-only-SAVE_DATA'\nwith p.open('xb') as f:f.write(out)\nprint('PC_ONLY_REAL_SOURCE_THREE_REWARDS_XP_NP_IDEMPOTENT_ROUNDTRIP_OTHER_FIELDS_SAME')"
+  ],
+  "observed_at": "2026-11-09T15:28:43.159+00:00",
+  "elapsed_ms": 5234,
+  "git_head": "36b4200f8f9775c8f707bacac76cad59b565d7a2",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/LOGIN-LEGEND-COMP-001_32e326882f30497e91400f49257fede1.log",
+  "output_sha256": "afca5ce9fa14d9718fbd85427a68f3f97904ecf4a9ede4a02469e7a60e216408",
+  "receipt_id": "LOGIN-LEGEND-COMP-001_32e326882f30497e91400f49257fede1"
+}

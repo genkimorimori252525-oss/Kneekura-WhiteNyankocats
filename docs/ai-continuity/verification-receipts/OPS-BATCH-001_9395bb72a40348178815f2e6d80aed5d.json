@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "task_id": "OPS-BATCH-001",
+  "result": "FAIL",
+  "exit_code": 1,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "C:/Users/genki/Documents/Codex/2026-10-12/615mb-393-2-http-0-97/work/phone_ops_gacha_update.py"
+  ],
+  "observed_at": "2026-10-14T18:30:39.459+00:00",
+  "elapsed_ms": 422,
+  "git_head": "7dc44032569a4affa1d6bf5f744368fd306833f5",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/OPS-BATCH-001_9395bb72a40348178815f2e6d80aed5d.log",
+  "output_sha256": "7ad47bd3d39fbcaf920e2d3d5c9e7441d1d81614afe45a12f02630478bbfba6b",
+  "receipt_id": "OPS-BATCH-001_9395bb72a40348178815f2e6d80aed5d"
+}

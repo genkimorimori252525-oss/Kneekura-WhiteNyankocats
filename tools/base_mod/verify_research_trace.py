@@ -10,10 +10,12 @@ import zipfile
 from tools.base_mod.package_flavor import (
     FLAVOR_PACKAGES,
     LAUNCHER_CLASS,
+    RESOURCE_SPLITS,
 )
 from tools.base_mod.verify_parity import (
     _lief_binary,
     _split_diff,
+    _verify_resource_package,
 )
 from tools.base_mod.inject_shim import (
     NATIVE_ENTRY,
@@ -90,11 +92,15 @@ def verify_research_trace_set(
                     f"research arm64 added surface drifted: {diff['added']}"
                 )
         else:
-            if set(diff["changed"]) != {"AndroidManifest.xml"} or diff["added"]:
+            expected = {"AndroidManifest.xml"}
+            if name in RESOURCE_SPLITS:
+                expected.add("resources.arsc")
+            if set(diff["changed"]) != expected or diff["added"]:
                 raise ValueError(
-                    f"{name}: only package manifest may differ in research build"
+                    f"{name}: package-only research surface drifted"
                 )
 
+        _verify_resource_package(original, modified, name, package_name)
         reports.append({"name": name, **diff})
 
     with zipfile.ZipFile(modified_dir / "base.apk", "r") as base:

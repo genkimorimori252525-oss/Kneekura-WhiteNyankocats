@@ -50,12 +50,19 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def extract_owned_splits(export_zip: Path, output_dir: Path) -> dict:
+def extract_owned_splits(export_zip: Path, output_dir: Path, *, source_profile: str = 'jp1571') -> dict:
+    if source_profile == 'jp1571':
+        expected_export, expected_splits = EXPECTED_EXPORT_SHA256, EXPECTED_SPLITS
+    elif source_profile == 'jp1574':
+        from tools.base_mod.source_export_jp1574 import EXPORT_SHA256, SPLITS
+        expected_export, expected_splits = EXPORT_SHA256, SPLITS
+    else:
+        raise ValueError('unsupported owned source profile')
     actual_export = sha256_file(export_zip)
-    if actual_export != EXPECTED_EXPORT_SHA256:
+    if actual_export != expected_export:
         raise ValueError(
             "export SHA-256 mismatch: "
-            f"expected {EXPECTED_EXPORT_SHA256}, got {actual_export}"
+            f"expected {expected_export}, got {actual_export}"
         )
 
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -68,7 +75,7 @@ def extract_owned_splits(export_zip: Path, output_dir: Path) -> dict:
                 continue
             by_basename.setdefault(Path(info.filename).name, []).append(info)
 
-        for name, expected in EXPECTED_SPLITS.items():
+        for name, expected in expected_splits.items():
             matches = by_basename.get(name, [])
             if len(matches) != 1:
                 raise ValueError(
@@ -103,6 +110,7 @@ def extract_owned_splits(export_zip: Path, output_dir: Path) -> dict:
 
     ledger = {
         "schema_version": 1,
+        "source_profile": source_profile,
         "source_export_sha256": actual_export,
         "splits": rows,
     }

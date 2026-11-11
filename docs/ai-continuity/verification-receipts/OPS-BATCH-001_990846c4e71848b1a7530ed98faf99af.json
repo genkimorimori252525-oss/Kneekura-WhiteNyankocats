@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "task_id": "OPS-BATCH-001",
+  "result": "PASS",
+  "exit_code": 0,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "C:/Users/genki/Downloads/Kneekura-WhiteNyankocats/private/pc-lab/liveops-investigation/catamin-native-schedule/phone_update_r15.py"
+  ],
+  "observed_at": "2026-10-23T09:46:10.643+00:00",
+  "elapsed_ms": 19344,
+  "git_head": "efa1c33d79b5448204d20e57b804834073b23d7c",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/OPS-BATCH-001_990846c4e71848b1a7530ed98faf99af.log",
+  "output_sha256": "ba9a25c86dbbcc8389dc166a2e250c8397dc2a1dab860f190bed225163f97578",
+  "receipt_id": "OPS-BATCH-001_990846c4e71848b1a7530ed98faf99af"
+}

@@ -171,7 +171,8 @@ def _synthetic_app_launch_result_fixture() -> bytearray:
 def _synthetic_scene97_download_task_fixture() -> bytearray:
     """Tiny pinned opcode/RTTI+RELATIVE relocation fixture, not owner ELF."""
     size = max(
-        0x73CAB4, 0x1DB616 + len(ORIGINAL_DOWNLOAD_BATCH_RTTI),
+        max(ORIGINAL_SCENE97_DOWNLOAD_BATCH_ANCHORS) + 4,
+        0x1DB616 + len(ORIGINAL_DOWNLOAD_BATCH_RTTI),
         ORIGINAL_RELA_DYN_OFFSET
         + ORIGINAL_RELA_DYN_COUNT * ORIGINAL_RELA_DYN_ENTRY_SIZE,
     )
@@ -991,6 +992,8 @@ class ExactOriginalNativeLevelUpTraceTests(unittest.TestCase):
         self.assertIn("0x73ca68 BEQ -> 0x73cb40", result["native_index_loop"])
         self.assertIn("0x320be0", result["per_index_source_lookup"])
         self.assertIn("context+0x2fb8+idx*4", result["per_index_native_storage"])
+        self.assertTrue(result["negative_eligibility_overwrites_slot_with_zero"])
+        self.assertFalse(result["all_zero_slots_alone_prove_download_completion"])
 
     def test_original_download_batch_task_drift_fails_closed(self):
         intact = _synthetic_scene97_download_task_fixture()

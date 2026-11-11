@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "task_id": "GIFT-40000-REPAIR-001",
+  "result": "FAIL",
+  "exit_code": 1,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "-c",
+    "from pathlib import Path\nimport sys,json,hashlib,subprocess,re,tarfile,uuid\nfrom datetime import datetime,timezone\nfrom tools.pc_lab import Lab,PACKAGE,parse_installed_paths\nfrom tools.phone_handoff import validated_tar_manifest\nfrom tools.base_mod.repack import sha256_file\nfrom tools.base_mod.pc_initial_profile import load_reference\ns=Path('C:/Users/genki/Downloads/Kneekura-WhiteNyankocats/private/pc-lab');l=Lab(s,Path('C:/Users/genki/AppData/Local/Android/Sdk'),Path('C:/Program Files/Java/jdk-17'))\nwith l.app_operation_lock():\n rows=l.command([l.adb_bin,'devices']).stdout.splitlines()[1:];phones=[x.split()[0] for x in rows if len(x.split())==2 and x.split()[1]=='device' and not x.startswith('emulator-') and re.fullmatch(r'[A-Za-z0-9_-]{4,80}',x.split()[0])];assert len(phones)==1\n ser=phones[0]\n def a(*args,**kw):return l.command([l.adb_bin,'-s',ser,*args],**kw)\n assert a('shell','id','-u').stdout.strip()=='2000' and a('shell','getprop','ro.kernel.qemu').stdout.strip()!='1'\n expected=json.loads((s/'latest-phone-ops-update.json').read_text())['installed_splits_sha256'];paths=parse_installed_paths(a('shell','pm','path',PACKAGE).stdout.splitlines());actual={Path(x).name:a('shell','sha256sum',x).stdout.split()[0] for x in paths};assert actual==expected\n a('shell','am','force-stop',PACKAGE);assert not a('shell','pidof',PACKAGE,check=False).stdout.strip();h=a('shell','run-as',PACKAGE,'sha256sum','files/SAVE_DATA').stdout.split()[0]\n d=s/'version-upgrade'/('gift-repair-'+datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')+'-'+uuid.uuid4().hex[:8]);d.mkdir();backup=d/'phone-before.tar'\n with backup.open('xb') as f:proc=subprocess.run([str(l.adb_bin),'-s',ser,'exec-out','run-as',PACKAGE,'tar','-cf','-','files','shared_prefs'],stdout=f,stderr=subprocess.PIPE,env=l.env,timeout=240,creationflags=subprocess.CREATE_NO_WINDOW)\n assert proc.returncode==0 and not proc.stderr.strip();m=validated_tar_manifest(backup);assert m['files/SAVE_DATA']==h==a('shell','run-as',PACKAGE,'sha256sum','files/SAVE_DATA').stdout.split()[0]\n with tarfile.open(backup,'r:') as t:raw=t.extractfile('files/SAVE_DATA').read()\n assert hashlib.sha256(raw).hexdigest()==h\n with (d/'before-SAVE_DATA').open('xb') as f:f.write(raw)\n c=load_reference(s/'source-references/bcsfe-pinned/src',s/'source-references/parser-dependencies',s/'source-references/parser-state');v=c.SaveFile(c.Data(raw),load=False);v.load();assert v.to_data().get_bytes()==raw\n rec=dict(directory=str(d),save_sha256=h,backup_sha256=sha256_file(backup),device_sha256=hashlib.sha256(ser.encode()).hexdigest(),gift_claim_value=v.mysale.dict_1.get(20261110),gift_claim_flag=v.mysale.dict_2.get(20261110),source_apks=actual,files=len(m),official_save_accessed=False)\n (d/'BACKUP.json').write_text(json.dumps(rec,indent=2)+'\\n');(s/'version-upgrade/latest-gift-repair.json').write_text(json.dumps({'directory':str(d),'phase':'BACKED_UP'})+'\\n')\n print('PHONE_BACKUP_VERIFIED gift_claim_value=',rec['gift_claim_value'],'gift_claim_flag=',rec['gift_claim_flag'],'files=',len(m))"
+  ],
+  "observed_at": "2026-11-09T16:14:53.352+00:00",
+  "elapsed_ms": 145733,
+  "git_head": "4d5dfb9ee611691673442340ac26ff1aa85a3004",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/GIFT-40000-REPAIR-001_b859c2fadddf4132b01dbb66b237fb31.log",
+  "output_sha256": "3b6c16d182fd8cdcef789237493b4b5b57061c7c8673f8ddeee2c5ed6007a6fb",
+  "receipt_id": "GIFT-40000-REPAIR-001_b859c2fadddf4132b01dbb66b237fb31"
+}

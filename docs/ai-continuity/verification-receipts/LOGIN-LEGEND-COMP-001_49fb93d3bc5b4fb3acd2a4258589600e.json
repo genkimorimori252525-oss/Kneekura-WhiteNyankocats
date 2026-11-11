@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "task_id": "LOGIN-LEGEND-COMP-001",
+  "result": "PASS",
+  "exit_code": 0,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "-m",
+    "unittest",
+    "tests.test_original_ops_bridge",
+    "tests.test_original_login_runtime",
+    "tests.test_original_ops_bundle"
+  ],
+  "observed_at": "2026-11-09T15:25:29.696+00:00",
+  "elapsed_ms": 1891,
+  "git_head": "36b4200f8f9775c8f707bacac76cad59b565d7a2",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/LOGIN-LEGEND-COMP-001_49fb93d3bc5b4fb3acd2a4258589600e.log",
+  "output_sha256": "34220fabda9ea05b023fe2bea173ac33dff6c40bcafcb05c779150e3039cb066",
+  "receipt_id": "LOGIN-LEGEND-COMP-001_49fb93d3bc5b4fb3acd2a4258589600e"
+}

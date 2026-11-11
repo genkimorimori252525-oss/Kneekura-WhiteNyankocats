@@ -1,0 +1,29 @@
+...................................s....s
+----------------------------------------------------------------------
+Ran 39 tests in 1.136s
+
+OK (skipped=2)
+{
+  "candidate_original_JNI_draw_VMA": null,
+  "candidate_uniform_source_VMA_rebase_bytes": null,
+  "candidate_verified_nontext_source_sections": [],
+  "candidate_verified_original_instruction_anchors": 0,
+  "changed_native_candidate_sha256": null,
+  "original_APK_or_SAVE_written": false,
+  "original_Android_runtime_played": false,
+  "original_executable_text_bytes": 8126892,
+  "original_executable_text_sha256": "11d836dd1ec645562e0a7d1bb19814dcf640b8cd317e6da94d0ee33ac6da9220",
+  "original_game_Lv60_and_offline_SAVE_verified": false,
+  "original_instruction_anchor_count": 19,
+  "original_library_LIEF_rewrite_executed": false,
+  "original_native_build_id": "8cb3815648eb9642da10bfb039d71bff7a3519bd",
+  "original_native_sha256": "a1d579564741a067921304d15ca95f67ce57ae83ccc0910d84049314161b64d8",
+  "original_restricted_account_or_PONOS_endpoint_contacted": false,
+  "original_text_preserved_after_LIEF_rewrite": false,
+  "ready_to_sign_or_install": false,
+  "schema": "kneekura-original-level-native-lief-probe-v1",
+  "source_export_sha256": "bb727290990715fffbb325c74cde81f54258203fafc41c2fe7bb5fdafc8484c1",
+  "source_original_JNI_draw_VMA": "0x31755c",
+  "status": "PASS_ORIGINAL_JP1571_NATIVE_SOURCE_BASELINE_ONLY"
+}
+BLOCKED_UNSAFE_OR_MISMATCHED_OWNER_SOURCE_OR_METADATA_OUTPUT

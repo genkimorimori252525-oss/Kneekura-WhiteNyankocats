@@ -1,0 +1,3 @@
+AGENT_TERMINAL_VERDICT=PASS
+[PASS] ci-gacha-callback-regressions exit=0
+report=C:\Users\genki\Downloads\Kneekura-WhiteNyankocats\private\pc-lab\liveops-investigation\gacha-ci-regressions-fixed.json

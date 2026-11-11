@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "task_id": "LOGIN-LEGEND-COMP-001",
+  "result": "PASS",
+  "exit_code": 0,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "-c",
+    "from pathlib import Path\nimport json,time\nfrom tools.pc_lab import Lab,PACKAGE\nfrom tools.phone_handoff import validated_tar_manifest\ns=Path('C:/Users/genki/Downloads/Kneekura-WhiteNyankocats/private/pc-lab');o=s/'version-upgrade/login-comp-pc-20261110';plan=json.loads((o/'SWAP-PLAN.json').read_text());root='/data/user/0/'+PACKAGE\nassert plan['original'].startswith(root+'/.login-comp-original-') and plan['test'].startswith(root+'/.jp1574-test-')\nl=Lab(s,Path('C:/Users/genki/AppData/Local/Android/Sdk'),Path('C:/Program Files/Java/jdk-17'))\nwith l.app_operation_lock():\n l.identity();assert l.adb('shell','id','-u').stdout.strip()=='0';l.adb('shell','am','force-stop',PACKAGE)\n for name in ('files','shared_prefs'):\n  assert l.adb('shell','test','-d',plan['original']+'/'+name,check=False).returncode==0\n  assert l.adb('shell','test','-e',plan['test']+'/'+name,check=False).returncode!=0\n for name in ('files','shared_prefs'):l.adb('shell','mv',root+'/'+name,plan['test']+'/'+name)\n for name in ('files','shared_prefs'):l.adb('shell','mv',plan['original']+'/'+name,root+'/'+name)\n manifest=validated_tar_manifest(s/'version-upgrade/jp1574-20261103T152049Z-0d6bfc8b/pc-runtime/pc-before.tar')\n lines=l.adb('shell',f\"cd {root} && find files shared_prefs -type f -exec sha256sum '{{}}' \\\\;\",timeout=180).stdout.splitlines()\n assert {line.split(None,1)[1]:line.split(None,1)[0] for line in lines}==manifest\n l.adb('shell','date','-s','@'+str(int(time.time())));assert abs(int(l.adb('shell','date','+%s').stdout)-time.time())<5\n assert not l.adb('shell','pidof',PACKAGE,check=False).stdout.strip()\n(o/'RESTORED.json').write_text(json.dumps(dict(files=len(manifest),all_hashes_match=True,pc_app_stopped=True,clock_synced=True,test_state_retained=True,phone_touched=False))+'\\n')\nprint('PC_ALL_ORIGINAL_FILES_SHA_MATCH_APP_STOPPED_TEST_STATE_RETAINED')"
+  ],
+  "observed_at": "2026-11-09T15:58:34.286+00:00",
+  "elapsed_ms": 7952,
+  "git_head": "36b4200f8f9775c8f707bacac76cad59b565d7a2",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/LOGIN-LEGEND-COMP-001_408b6e8c3b6045839a71e2186e97da63.log",
+  "output_sha256": "dd4875bedd91ce7a0026a63f7bb58eb1a8709beeb84b7dc3417a2445692a5df0",
+  "receipt_id": "LOGIN-LEGEND-COMP-001_408b6e8c3b6045839a71e2186e97da63"
+}

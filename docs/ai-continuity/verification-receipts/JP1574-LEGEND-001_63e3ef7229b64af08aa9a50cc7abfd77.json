@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "task_id": "JP1574-LEGEND-001",
+  "result": "PASS",
+  "exit_code": 0,
+  "command": [
+    "py",
+    "-3.12",
+    "-X",
+    "utf8",
+    "-B",
+    "-c",
+    "from pathlib import Path\nimport hashlib,json\nfrom tools.base_mod.pc_initial_profile import load_reference\nfrom tools.base_mod.legend_checkpoint import build_checkpoint\ns=Path('C:/Users/genki/Downloads/Kneekura-WhiteNyankocats/private/pc-lab')\nd=Path(json.loads((s/'version-upgrade/latest-acquisition.json').read_text(encoding='utf-8'))['directory'])\nsource_path=d/'pc-runtime/after-legend-list-SAVE_DATA'\nsource=source_path.read_bytes()\ncore=load_reference(s/'source-references/bcsfe-pinned/src',s/'source-references/parser-dependencies',s/'source-references/parser-state')\nresult,report=build_checkpoint(source,Path('C:/Users/genki/Downloads/にーくらにゃんこ/nyanko_battlecats_2026-10-06.zip'),core)\nassert result==source,'runtime checkpoint not byte-idempotent'\nassert source_path.read_bytes()==source,'runtime source changed'\noutput=d/'pc-runtime/legend-checkpoint-idempotent-SAVE_DATA'\nreceipt=d/'pc-runtime/legend-checkpoint-idempotent-receipt.json'\nassert not output.exists() and not receipt.exists(),'private output already exists'\nwith output.open('xb') as f:f.write(result)\nreport.update(source_preserved=True,byte_idempotent=True,host_only_change=True,apk_rebuild_required=False)\nwith receipt.open('x',encoding='utf-8') as f:json.dump(report,f,ensure_ascii=False,indent=2)\nprint(json.dumps(dict(source_preserved=True,byte_idempotent=True,unapproved_fields_unchanged=report['unapproved_fields_unchanged'],output_roundtrip_identical=report['output_roundtrip_identical'],source_sha256=report['source_sha256'],output_sha256=report['output_sha256'],host_only_change=True,apk_rebuild_required=False)))"
+  ],
+  "observed_at": "2026-11-03T16:26:20.138+00:00",
+  "elapsed_ms": 4656,
+  "git_head": "b20616c3e843bd14bc0524fd99431f96046bd670",
+  "git_dirty": true,
+  "output_path": "docs/ai-continuity/verification-receipts/JP1574-LEGEND-001_63e3ef7229b64af08aa9a50cc7abfd77.log",
+  "output_sha256": "2ea3f930a14964bcc0547df83d755c9f1a61453ac8d85100380b2a36e132847b",
+  "receipt_id": "JP1574-LEGEND-001_63e3ef7229b64af08aa9a50cc7abfd77"
+}
