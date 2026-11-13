@@ -78,7 +78,7 @@ PAYLOAD_SHA256 = {
     'unit100.csv':'a3a24a3264266c1263220306eb1704546a3363d0f8f0f2f36574ffa61d893ced',
     'unit135.csv':'d3da7192c65545756e08634f8f92454c4590f540a4122cd2ef33b55ddce93452',
     'unit178.csv':'6800960fc83f75e1769b4ea56f91a7dbd675664e60109b61239f94eafe18cbbd',
-    'unit289.csv':'82c626df441001a021f614215e7ff5b73f4ba2e983932af152a656fe5ebe1f5c',
+    'unit289.csv':'44ecc83118d93cb50d9116950403241e8d98460a43414ad8f421e49780a46c2e',
     'unit290.csv':'bf8997cc38c85820e6a7cf8ce99c30d80cf156b7e15f25612daaa9ce3a6ff240',
     'unit703.csv':'9fc373f2177dfe0017dc3c20d98c50603325aa7a740aee9d271c7f772af36e56',
     **PORTRAIT_SHA256,
@@ -165,7 +165,7 @@ def prepare_assets(owner_export: Path, server_source: Path, parent: Path):
     from tools.base_mod.fetch_godzilla_server_assets import complete_owner_private_godzilla_pipeline
     parent.mkdir(parents=True,exist_ok=True)
     if parent.is_symlink(): raise ValueError('PC_BALANCE_PRIVATE_CACHE_LINK_REFUSED')
-    output=parent/'approved-v13'
+    output=parent/'approved-v14'
     if output.exists():
         load_pinned_assets(output)
         return output

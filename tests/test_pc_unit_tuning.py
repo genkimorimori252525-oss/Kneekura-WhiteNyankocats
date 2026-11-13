@@ -73,7 +73,7 @@ class UnitTuningTests(unittest.TestCase):
             out = T.build_candidate('unit289.csv', original, legacy_candidate=legacy)
         lines = [l.split(b',') for l in out.splitlines()]
         final = lines[2]
-        self.assertEqual((final[35], final[36], final[94]), (b'100', b'3', b'1'))
+        self.assertEqual((final[35], final[36], final[94]), (b'100', b'5', b'1'))
         self.assertEqual(final[3], b'1647')
         for early in lines[:2]:
             for column in (0, 3, 22, 30, 35, 36, 52, 78, 79, 94):

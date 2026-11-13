@@ -60,8 +60,8 @@ TOUGH_ALL_BUT_ZOMBIE = {INSANE_TOUGH_COLUMN: 1, **{c: 1 for c in NON_ZOMBIE_TARG
 EDITS: dict[str, dict[int, dict[int, int]]] = {
     'unit178.csv': {3: {**TOUGH_ALL_BUT_ZOMBIE, 6: DIOLAMUS_FORM4_COST, 7: DIOLAMUS_FORM4_COOLDOWN}},
     'unit135.csv': {2: {**TOUGH_ALL_BUT_ZOMBIE, 6: GAMEREON_FORM3_COST, 7: GAMEREON_FORM3_COOLDOWN}},
-    # Madoka (No.289): small wave Lv3 on the third form, applied after the legacy approved row.
-    'unit289.csv': {2: {35: 100, 36: 3, 94: 1}},
+    # Madoka (No.289): small wave Lv5 on the third form, applied after the legacy approved row.
+    'unit289.csv': {2: {35: 100, 36: 5, 94: 1}},
     # Homura (No.290): smaller dead zone (anchor 205 -> 100, far end 655 kept), certain freeze.
     'unit290.csv': {2: {25: 100, 44: 100, 45: 555}},
 }
