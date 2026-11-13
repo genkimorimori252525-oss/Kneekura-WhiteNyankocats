@@ -105,20 +105,22 @@ class UnitTuningTests(unittest.TestCase):
         self.assertEqual(before[0], after[0])
         jamiera = after[2].rstrip(b'\r\n').split(b',')  # form 3: only the explosion is added
         self.assertEqual((jamiera[0], jamiera[2], jamiera[3], jamiera[35]), (b'4400', b'11', b'1184', b'15'))
-        self.assertEqual((jamiera[113], jamiera[114], jamiera[115]), (b'50', b'1800', b'0'))
+        self.assertEqual((jamiera[113], jamiera[114], jamiera[115]), (b'50', b'600', b'0'))
         for column in (55, 57, 66, 110):
             self.assertEqual(jamiera[column], b'-1', column)
+        self.assertEqual(jamiera[63], b'1')  # attack-1 ability flag, needed for wave/explosion
         fields = after[1].rstrip(b'\r\n').split(b',')
         self.assertEqual(len(fields), 116)
         self.assertNotIn(b'', fields)
         self.assertEqual((fields[0], fields[2], fields[3]), (b'17600', b'9', b'1776'))
         self.assertEqual((fields[35], fields[36]), (b'20', b'10'))
-        self.assertEqual((fields[113], fields[114], fields[115]), (b'50', b'1800', b'0'))
+        self.assertEqual((fields[113], fields[114], fields[115]), (b'50', b'600', b'0'))
         self.assertEqual(fields[13], b'47')
         # Widened columns keep modern-row defaults: no summon, unlimited attacks, normal spawn.
         for column in (55, 57, 66, 110):
             self.assertEqual(fields[column], b'-1', column)
-        for column in (53, 54, 56, 58, 67, 109):
+        self.assertEqual(fields[63], b'1')
+        for column in (53, 54, 56, 58, 64, 65, 67, 109):
             self.assertEqual(fields[column], b'0', column)
 
     def test_fail_closed_on_changed_source_or_value(self):

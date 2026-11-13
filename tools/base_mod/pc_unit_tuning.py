@@ -29,10 +29,11 @@ INSANE_TOUGH_COLUMN = 80
 NON_ZOMBIE_TARGET_COLUMNS = (10, 16, 17, 18, 19, 20, 21, 54, 76, 78, 96)
 # Columns bound to one form's animation or attack sequence; never copied between forms.
 ANIMATION_BOUND_COLUMNS = frozenset({4, 13, *range(59, 70)})
-# Columns whose value in every modern row is -1 (attack count, death time, spawn animation,
-# summon target). Widening a short legacy row with 0 here would mean "summon unit 0" and
+# Columns whose modern-row value is not 0: -1 for attack count, death time, spawn animation and
+# summon target; 1 for the attack-1 ability flag (col 63, 425 of 437 modern rows), without which
+# wave/explosion never fire. Widening a short legacy row with 0 here would mean "summon unit 0" and
 # "never acts", so padded columns take the same defaults as modern rows.
-PAD_DEFAULTS = {55: b'-1', 57: b'-1', 66: b'-1', 110: b'-1'}
+PAD_DEFAULTS = {55: b'-1', 57: b'-1', 63: b'1', 66: b'-1', 110: b'-1'}
 
 # Price: original 6,600 (EoC2 basis, CSV x1.5) + 1,000 = 7,600 -> CSV 5067 (x1.5 truncated = 7600).
 # Cooldown and knockback/slow chances stay original (owner dropped the double-summon plan).
@@ -45,12 +46,12 @@ GAMEREON_FORM3_COOLDOWN = 5200
 
 # Crazed Colossus line (unit100): form 2 takes the form-3 (Mega-Crazed Jamiera) performance,
 # then HP = form-3 HP x4 (damage-taken 1/4 equivalent), attack x1.5, speed 9, wave 20%,
-# plus a separate 50% explosion (anchor/span taken from an existing 50% explosion unit).
+# plus a separate 50% explosion placed at the unit's own reach (anchor 600 raw = 150 = standing range).
 CRAZED_FORM2_HP = 4400 * 4
 CRAZED_FORM2_ATTACK = 1184 * 3 // 2
 CRAZED_FORM2_SPEED = 9
 CRAZED_FORM2_WAVE_CHANCE = 20
-CRAZED_FORM2_EXPLOSION = {113: 50, 114: 1800, 115: 0}
+CRAZED_FORM2_EXPLOSION = {113: 50, 114: 600, 115: 0}
 CRAZED_FORM2_NAME = '狂乱のネコ親分'
 
 TOUGH_ALL_BUT_ZOMBIE = {INSANE_TOUGH_COLUMN: 1, **{c: 1 for c in NON_ZOMBIE_TARGET_COLUMNS}}
