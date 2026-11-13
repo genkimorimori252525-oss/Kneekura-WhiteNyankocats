@@ -12,9 +12,8 @@ from tools.battlecats_pack import PackReader
 from tools.base_mod.build_update_101_unsigned import validate_form_delta, SOURCE_UNIT_SHA, TARGET
 from tools.base_mod.godzilla_portrait import PORTRAIT_SHA256 as GODZILLA_PORTRAIT_SHA256, prepare_portraits
 from tools.base_mod import pc_unit_tuning as tuning
-from tools.base_mod import diolamus_portrait
 
-PORTRAIT_SHA256 = {**GODZILLA_PORTRAIT_SHA256, **diolamus_portrait.PORTRAIT_SHA256}
+PORTRAIT_SHA256 = dict(GODZILLA_PORTRAIT_SHA256)
 # Every unit CSV whose original bytes are pinned (legacy Madoka/Godzilla + tuned units).
 UNIT_SHA = {**SOURCE_UNIT_SHA, **tuning.ORIGINAL_SHA256}
 
@@ -73,7 +72,7 @@ PAYLOAD_SHA256 = {
     '702_f01.maanim':'dd295f3f53d086352e57b1293e42651912598addd9e0d377a71cf7819454ffed',
     '702_f02.maanim':'2bca2d1c9fd9dc88e64e39771514686dcc20141871201dfdb413e91c91e5e0d8',
     '702_f03.maanim':'b5afe2797db1b1547f0e3fbc3bc00ec79faf1d20963f6de823ed887bafa411f6',
-    'unit135.csv':'13410b1bfb83c315d278aebda399c9c7bc95a16e301814be4b430884929640b1',
+    'unit135.csv':'2ed1bc6489ff9542d6e8e1244a69191631b5c320f6f33933cfe63ab474db7bf7',
     'unit178.csv':'7e40f5ca6b93a008e539fd9c204dbda8102a5a59d9f83c128fafb91196d0a4f5',
     'unit289.csv':'44ecc83118d93cb50d9116950403241e8d98460a43414ad8f421e49780a46c2e',
     'unit290.csv':'bf8997cc38c85820e6a7cf8ce99c30d80cf156b7e15f25612daaa9ce3a6ff240',
@@ -162,7 +161,7 @@ def prepare_assets(owner_export: Path, server_source: Path, parent: Path):
     from tools.base_mod.fetch_godzilla_server_assets import complete_owner_private_godzilla_pipeline
     parent.mkdir(parents=True,exist_ok=True)
     if parent.is_symlink(): raise ValueError('PC_BALANCE_PRIVATE_CACHE_LINK_REFUSED')
-    output=parent/'approved-v8'
+    output=parent/'approved-v9'
     if output.exists():
         load_pinned_assets(output)
         return output
@@ -178,8 +177,6 @@ def prepare_assets(owner_export: Path, server_source: Path, parent: Path):
             if name=='702_f.mamodel': payload=ensure_godzilla_ally_anchors(payload)
             (staged/name).write_bytes(payload)
         for name,payload in prepare_portraits(parent/'godzilla-portrait'/'owner-source.png',server_source).items():
-            (staged/name).write_bytes(payload)
-        for name,payload in diolamus_portrait.prepare_portraits(parent/'diolamus-portrait'/'owner-source.png',server_source).items():
             (staged/name).write_bytes(payload)
         with BattleCatsExport(owner_export,region='jp',expected_sha256=EXPORT_SHA256) as export:
             data=export.pack('DataLocal')

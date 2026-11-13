@@ -49,7 +49,7 @@ class UnitTuningTests(unittest.TestCase):
             self.assertEqual(fields[column], b'1')
 
     def test_gamereon_pads_old_70_column_rows_and_keeps_crlf_and_comment(self):
-        rows = [row(columns=70, c0=770), row(columns=70, c0=11600), row(columns=70, c0=14500, c29=1)]
+        rows = [row(columns=70, c0=770), row(columns=70, c0=11600), row(columns=70, c0=14500, c6=3250, c29=1)]
         rows[0][-1] = b'0 // legacy comment'
         original = csv(rows, b'\r\n')
         with patched('unit135.csv', original):
@@ -60,6 +60,7 @@ class UnitTuningTests(unittest.TestCase):
         fields = after[2].rstrip(b'\r\n').split(b',')
         self.assertEqual(len(fields), 97)
         self.assertEqual((fields[80], fields[96], fields[22], fields[29]), (b'1', b'1', b'0', b'1'))
+        self.assertEqual(fields[6], b'3917')
 
     def test_madoka_layers_on_legacy_row_and_copies_without_animation_columns(self):
         rows = [row(c0=2550, c4=100, c13=44, c67=0, c23=1) for _ in range(2)]

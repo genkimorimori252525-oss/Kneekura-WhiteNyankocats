@@ -32,13 +32,15 @@ ANIMATION_BOUND_COLUMNS = frozenset({4, 13, *range(59, 70)})
 # Price: original 6,600 (EoC2 basis, CSV x1.5) + 1,000 = 7,600 -> CSV 5067 (x1.5 truncated = 7600).
 # Cooldown and knockback/slow chances stay original (owner dropped the double-summon plan).
 DIOLAMUS_FORM4_COST = 5067
+# Gamereon form 3: original 4,875 (EoC2 basis) + 1,000 = 5,875 -> CSV 3917 (x1.5 truncated = 5875).
+GAMEREON_FORM3_COST = 3917
 
 TOUGH_ALL_BUT_ZOMBIE = {INSANE_TOUGH_COLUMN: 1, **{c: 1 for c in NON_ZOMBIE_TARGET_COLUMNS}}
 
 # file -> row -> {column: value}
 EDITS: dict[str, dict[int, dict[int, int]]] = {
     'unit178.csv': {3: {**TOUGH_ALL_BUT_ZOMBIE, 6: DIOLAMUS_FORM4_COST}},
-    'unit135.csv': {2: dict(TOUGH_ALL_BUT_ZOMBIE)},
+    'unit135.csv': {2: {**TOUGH_ALL_BUT_ZOMBIE, 6: GAMEREON_FORM3_COST}},
     # Madoka (No.289): small wave Lv5 on the third form, applied after the legacy approved row.
     'unit289.csv': {2: {35: 100, 36: 5, 94: 1}},
     # Homura (No.290): smaller dead zone (anchor 205 -> 100, far end 655 kept), certain freeze.
@@ -47,7 +49,7 @@ EDITS: dict[str, dict[int, dict[int, int]]] = {
 # Pre-edit values that must hold before an edit is applied (fail closed).
 EXPECTED_BEFORE: dict[str, dict[int, dict[int, int]]] = {
     'unit178.csv': {3: {6: 4400, 7: 2480, 22: 0, 24: 100, 27: 100, 80: 0}},
-    'unit135.csv': {2: {0: 14500, 22: 0, 29: 1}},
+    'unit135.csv': {2: {0: 14500, 6: 3250, 22: 0, 29: 1}},
     'unit289.csv': {2: {35: 0, 36: 0, 94: 0}},
     'unit290.csv': {2: {25: 50, 44: 205, 45: 450}},
 }
