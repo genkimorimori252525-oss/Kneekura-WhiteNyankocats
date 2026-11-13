@@ -102,7 +102,12 @@ class UnitTuningTests(unittest.TestCase):
         with patched('unit100.csv', original):
             out = T.build_candidate('unit100.csv', original)
         before, after = original.splitlines(keepends=True), out.splitlines(keepends=True)
-        self.assertEqual((before[0], before[2]), (after[0], after[2]))
+        self.assertEqual(before[0], after[0])
+        jamiera = after[2].rstrip(b'\r\n').split(b',')  # form 3: only the explosion is added
+        self.assertEqual((jamiera[0], jamiera[2], jamiera[3], jamiera[35]), (b'4400', b'11', b'1184', b'15'))
+        self.assertEqual((jamiera[113], jamiera[114], jamiera[115]), (b'50', b'1800', b'0'))
+        for column in (55, 57, 66, 110):
+            self.assertEqual(jamiera[column], b'-1', column)
         fields = after[1].rstrip(b'\r\n').split(b',')
         self.assertEqual(len(fields), 116)
         self.assertNotIn(b'', fields)

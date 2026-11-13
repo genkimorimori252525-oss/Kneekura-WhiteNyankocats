@@ -81,7 +81,9 @@ COPY_FINAL_TO_EARLIER: dict[str, tuple[int, tuple[int, ...]]] = {
 # Edits applied after the copy above.
 POST_COPY_EDITS: dict[str, dict[int, dict[int, int]]] = {
     'unit100.csv': {1: {0: CRAZED_FORM2_HP, 2: CRAZED_FORM2_SPEED, 3: CRAZED_FORM2_ATTACK,
-                        35: CRAZED_FORM2_WAVE_CHANCE, **CRAZED_FORM2_EXPLOSION}},
+                        35: CRAZED_FORM2_WAVE_CHANCE, **CRAZED_FORM2_EXPLOSION},
+                    # Mega-Crazed Jamiera (form 3) gets the same separate 50% explosion.
+                    2: dict(CRAZED_FORM2_EXPLOSION)},
 }
 TUNED = frozenset(ORIGINAL_SHA256)
 # Rows of each file that differ from the original after tuning (for the verifier).
@@ -90,7 +92,7 @@ CHANGED_ROWS = {
     'unit135.csv': frozenset({2}),
     'unit289.csv': frozenset({0, 1, 2}),
     'unit290.csv': frozenset({0, 1, 2}),
-    'unit100.csv': frozenset({1}),
+    'unit100.csv': frozenset({1, 2}),
 }
 
 
