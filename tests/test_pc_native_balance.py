@@ -188,7 +188,7 @@ class Arm64ExecutionTests(unittest.TestCase):
         self.assertEqual(self.dispatch(5,{20:702,19:1,22:92})[22],92)
         for chapter in (0,1,2):
             self.uc.mem_write(self.ctx+0x38fad8,struct.pack('<i',chapter))
-            for unit,form,cost in ((288,2,454900),(702,0,979900),(702,1,66000)):
+            for unit,form,cost in ((288,0,454900),(288,1,454900),(288,2,454900),(702,0,979900),(702,1,66000)):
                 expected=cost+100 if chapter==1 and (unit,form)!=(702,1) else cost
                 self.assertEqual(self.dispatch(6,{0:self.ctx,19:unit,22:form,25:cost})[25],expected)
         for delta in (90,204,254):
@@ -198,6 +198,12 @@ class Arm64ExecutionTests(unittest.TestCase):
             self.assertEqual(self.dispatch(7,{19:702,20:540,8:delta,29:0x2222})[20],540)
             self.dispatch(8,{1:702,2:0,29:0x3333})
             self.assertEqual(self.dispatch(7,{19:702,20:15254,8:delta,29:0x3333})[20]-delta,15000)
+        # Madoka's earlier forms share the approved base cooldown (2026-11-14 tuning).
+        for form in (0,1):
+            self.dispatch(8,{1:288,2:form,29:0x4444})
+            self.assertEqual(self.dispatch(7,{19:288,20:4904,8:90,29:0x4444})[20]-90,4650)
+        self.dispatch(8,{1:288,2:3,29:0x5555})
+        self.assertEqual(self.dispatch(7,{19:288,20:4904,8:90,29:0x5555})[20],4904)
         # Original talent reduction remains; missing/wrong query never changes a unit.
         self.dispatch(8,{1:288,2:2,29:0x1111})
         self.assertEqual(self.dispatch(7,{19:288,20:4884,8:90,29:0x1111})[20]-90,4630)

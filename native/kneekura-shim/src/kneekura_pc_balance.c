@@ -130,7 +130,7 @@ static void recharge_dispatch(uint64_t *r, uint32_t operation) {
         } else atomic_fetch_add_explicit(&counters[11], 1u, memory_order_relaxed);
     } else if (match) {
         if (r[19] == match->unit) {
-            if (match->unit == 288u && match->form == 2u)
+            if (match->unit == 288u && match->form <= 2u)
                 r[20] = (uint32_t)((int32_t)r[20] + 4650 - 4904 + (int32_t)r[8]);
             else if (match->unit == 702u && match->form == 0u)
                 r[20] = (uint32_t)((int32_t)r[20] + 15000 - 15254 + (int32_t)r[8]);
@@ -193,7 +193,7 @@ void kneekura_pc_balance_dispatch(uint64_t *r, uint32_t operation) {
     } else if (operation == 6u) {
         /* EoC2 chapter factor truncates CSV integer cost by one yen.
          * Add that yen before original stage/combo adjustments; keep talents. */
-        if ((r[19] == 288u && r[22] == 2u) || (r[19] == 702u && r[22] == 0u)) {
+        if ((r[19] == 288u && r[22] <= 2u) || (r[19] == 702u && r[22] == 0u)) {
             const int32_t chapter = *(const int32_t *)((uintptr_t)r[0] + 0x38fad8u);
             if (chapter == 1) r[25] += 100u;
         }
