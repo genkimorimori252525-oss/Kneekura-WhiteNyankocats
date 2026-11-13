@@ -41,7 +41,7 @@ class UnitTuningTests(unittest.TestCase):
         self.assertEqual(before[:3], after[:3])
         fields = after[3].split(b',')
         self.assertEqual(fields[6], b'5067')
-        self.assertEqual(fields[7], b'2480')  # cooldown unchanged
+        self.assertEqual(fields[7], b'4960')  # cooldown doubled
         self.assertEqual((fields[24], fields[27]), (b'100', b'100'))  # disruption unchanged
         self.assertEqual(fields[80], b'1')
         self.assertEqual(fields[22], b'0')
@@ -49,7 +49,7 @@ class UnitTuningTests(unittest.TestCase):
             self.assertEqual(fields[column], b'1')
 
     def test_gamereon_pads_old_70_column_rows_and_keeps_crlf_and_comment(self):
-        rows = [row(columns=70, c0=770), row(columns=70, c0=11600), row(columns=70, c0=14500, c6=3250, c29=1)]
+        rows = [row(columns=70, c0=770), row(columns=70, c0=11600), row(columns=70, c0=14500, c6=3250, c7=2600, c29=1)]
         rows[0][-1] = b'0 // legacy comment'
         original = csv(rows, b'\r\n')
         with patched('unit135.csv', original):
@@ -60,7 +60,7 @@ class UnitTuningTests(unittest.TestCase):
         fields = after[2].rstrip(b'\r\n').split(b',')
         self.assertEqual(len(fields), 97)
         self.assertEqual((fields[80], fields[96], fields[22], fields[29]), (b'1', b'1', b'0', b'1'))
-        self.assertEqual(fields[6], b'3917')
+        self.assertEqual((fields[6], fields[7]), (b'3917', b'5200'))
 
     def test_madoka_layers_on_legacy_row_and_copies_without_animation_columns(self):
         rows = [row(c0=2550, c4=100, c13=44, c67=0, c23=1) for _ in range(2)]
@@ -73,7 +73,7 @@ class UnitTuningTests(unittest.TestCase):
             out = T.build_candidate('unit289.csv', original, legacy_candidate=legacy)
         lines = [l.split(b',') for l in out.splitlines()]
         final = lines[2]
-        self.assertEqual((final[35], final[36], final[94]), (b'100', b'5', b'1'))
+        self.assertEqual((final[35], final[36], final[94]), (b'100', b'3', b'1'))
         self.assertEqual(final[3], b'1647')
         for early in lines[:2]:
             for column in (0, 3, 22, 30, 35, 36, 52, 78, 79, 94):
@@ -92,6 +92,24 @@ class UnitTuningTests(unittest.TestCase):
             self.assertEqual(int(line[44]) + int(line[45]), 655)  # far end of the original reach
         self.assertEqual(lines[0][3], b'2470')
         self.assertEqual(lines[0][4], b'85')  # own attack cycle kept
+
+    def test_crazed_form2_takes_form3_performance_with_requested_changes(self):
+        legacy = [row(columns=53, c0=3600, c2=11, c3=1184, c13=47, c35=10, c36=10) for _ in range(2)]
+        legacy.append(row(columns=53, c0=4400, c2=11, c3=1184, c13=47, c35=15, c36=10))
+        for r in legacy:
+            r[52] = b''  # legacy rows end in an empty field
+        original = csv(legacy, b'\r\n')
+        with patched('unit100.csv', original):
+            out = T.build_candidate('unit100.csv', original)
+        before, after = original.splitlines(keepends=True), out.splitlines(keepends=True)
+        self.assertEqual((before[0], before[2]), (after[0], after[2]))
+        fields = after[1].rstrip(b'\r\n').split(b',')
+        self.assertEqual(len(fields), 116)
+        self.assertNotIn(b'', fields)
+        self.assertEqual((fields[0], fields[2], fields[3]), (b'17600', b'9', b'1776'))
+        self.assertEqual((fields[35], fields[36]), (b'20', b'10'))
+        self.assertEqual((fields[113], fields[114], fields[115]), (b'50', b'1800', b'0'))
+        self.assertEqual(fields[13], b'47')
 
     def test_fail_closed_on_changed_source_or_value(self):
         original = csv([row(columns=110, c6=4400, c7=2480, c24=100, c27=100)] * 4)

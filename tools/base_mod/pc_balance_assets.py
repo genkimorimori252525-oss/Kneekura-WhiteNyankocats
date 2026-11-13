@@ -12,10 +12,12 @@ from tools.battlecats_pack import PackReader
 from tools.base_mod.build_update_101_unsigned import validate_form_delta, SOURCE_UNIT_SHA, TARGET
 from tools.base_mod.godzilla_portrait import PORTRAIT_SHA256 as GODZILLA_PORTRAIT_SHA256, prepare_portraits
 from tools.base_mod import pc_unit_tuning as tuning
+from tools.base_mod import unit_name_overlay as names
 
 PORTRAIT_SHA256 = dict(GODZILLA_PORTRAIT_SHA256)
 # Every unit CSV whose original bytes are pinned (legacy Madoka/Godzilla + tuned units).
 UNIT_SHA = {**SOURCE_UNIT_SHA, **tuning.ORIGINAL_SHA256}
+TEXT_SHA = dict(names.ORIGINAL_SHA256)  # resLocal text files overlaid by name
 
 
 def _legacy_row_candidate(name, original):
@@ -72,9 +74,11 @@ PAYLOAD_SHA256 = {
     '702_f01.maanim':'dd295f3f53d086352e57b1293e42651912598addd9e0d377a71cf7819454ffed',
     '702_f02.maanim':'2bca2d1c9fd9dc88e64e39771514686dcc20141871201dfdb413e91c91e5e0d8',
     '702_f03.maanim':'b5afe2797db1b1547f0e3fbc3bc00ec79faf1d20963f6de823ed887bafa411f6',
-    'unit135.csv':'2ed1bc6489ff9542d6e8e1244a69191631b5c320f6f33933cfe63ab474db7bf7',
-    'unit178.csv':'7e40f5ca6b93a008e539fd9c204dbda8102a5a59d9f83c128fafb91196d0a4f5',
-    'unit289.csv':'44ecc83118d93cb50d9116950403241e8d98460a43414ad8f421e49780a46c2e',
+    'Unit_Explanation100_ja.csv':'8c4bac491a9e13d69a0fcc15374277c2bbfc56f79026bba896cd99018aa70c79',
+    'unit100.csv':'f23bddeb2b6853e965a14df7d268bd00e73744c8e79b489c90cd303fde37d81e',
+    'unit135.csv':'d3da7192c65545756e08634f8f92454c4590f540a4122cd2ef33b55ddce93452',
+    'unit178.csv':'6800960fc83f75e1769b4ea56f91a7dbd675664e60109b61239f94eafe18cbbd',
+    'unit289.csv':'82c626df441001a021f614215e7ff5b73f4ba2e983932af152a656fe5ebe1f5c',
     'unit290.csv':'bf8997cc38c85820e6a7cf8ce99c30d80cf156b7e15f25612daaa9ce3a6ff240',
     'unit703.csv':'9fc373f2177dfe0017dc3c20d98c50603325aa7a740aee9d271c7f772af36e56',
     **PORTRAIT_SHA256,
@@ -161,7 +165,7 @@ def prepare_assets(owner_export: Path, server_source: Path, parent: Path):
     from tools.base_mod.fetch_godzilla_server_assets import complete_owner_private_godzilla_pipeline
     parent.mkdir(parents=True,exist_ok=True)
     if parent.is_symlink(): raise ValueError('PC_BALANCE_PRIVATE_CACHE_LINK_REFUSED')
-    output=parent/'approved-v9'
+    output=parent/'approved-v10'
     if output.exists():
         load_pinned_assets(output)
         return output
@@ -172,7 +176,7 @@ def prepare_assets(owner_export: Path, server_source: Path, parent: Path):
             private_root=work)
         staged=work/'approved'
         staged.mkdir()
-        for name in PAYLOAD_SHA256.keys()-UNIT_SHA.keys()-PORTRAIT_SHA256.keys():
+        for name in PAYLOAD_SHA256.keys()-UNIT_SHA.keys()-TEXT_SHA.keys()-PORTRAIT_SHA256.keys():
             payload=reflect_godzilla_rotations(name,(work/'ally'/name).read_bytes())
             if name=='702_f.mamodel': payload=ensure_godzilla_ally_anchors(payload)
             (staged/name).write_bytes(payload)
@@ -198,6 +202,10 @@ def prepare_assets(owner_export: Path, server_source: Path, parent: Path):
                 candidate=tuned_candidate(name,original)
                 validate_pc_form_delta(original,candidate,file_name=name,original_sha=UNIT_SHA[name])
                 (staged/name).write_bytes(candidate)
+            text=export.pack('resLocal')
+            for name in sorted(TEXT_SHA):
+                original,_=text.read(name)
+                (staged/name).write_bytes(names.build_candidate(name,original))
         load_pinned_assets(staged)
         if output.exists(): raise ValueError('PC_BALANCE_CACHE_APPEARED_NO_OVERWRITE')
         staged.rename(output)
@@ -224,6 +232,10 @@ def verify_overlay(original_apk: Path, candidate_apk: Path):
                 raise ValueError('PC_BALANCE_PAYLOAD_SHA_CHANGED')
             if name in UNIT_SHA:
                 validate_pc_form_delta(data.read(name)[0],value,file_name=name,original_sha=UNIT_SHA[name])
+        res=PackReader('resLocal',before.read('assets/resLocal.list'),before.read('assets/resLocal.pack'),region='jp')
+        for name in TEXT_SHA:
+            if candidate.read(name)[0]!=names.build_candidate(name,res.read(name)[0]):
+                raise ValueError('PC_UNIT_NAME_OVERLAY_MISMATCH')
         for entry in ('assets/DataLocal.list','assets/DataLocal.pack'):
             if before.read(entry)!=after.read(entry): raise ValueError('PC_BALANCE_DATALOCAL_CHANGED')
     return dict(schema='pc-pinned-balance-overlay-v1',payload_sha256=PAYLOAD_SHA256,

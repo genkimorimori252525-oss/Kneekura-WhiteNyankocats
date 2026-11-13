@@ -16,6 +16,7 @@ import hashlib
 
 # Pinned originals (identical in the owner's JP15.7.1 export and the JP15.7.4 InstallPack).
 ORIGINAL_SHA256 = {
+    'unit100.csv': 'ac4fcb3c468cabeb3e3aa355c70ff4a0ea490b6e623ec852737905471d841562',
     'unit135.csv': '70c8b86ac785e6861d5447f9af2f3e7a18193e85f548389ab168eeb9cc472c5a',
     'unit178.csv': '53bd36547683c432cd1881fa710300b8cf67b4493ae903649dfdebfc63b85c46',
     'unit289.csv': 'e48bc212537fe7949c74527f0a8212874e8595fd9414f6d9bc2b7a1e3aee1a82',
@@ -34,22 +35,36 @@ ANIMATION_BOUND_COLUMNS = frozenset({4, 13, *range(59, 70)})
 DIOLAMUS_FORM4_COST = 5067
 # Gamereon form 3: original 4,875 (EoC2 basis) + 1,000 = 5,875 -> CSV 3917 (x1.5 truncated = 5875).
 GAMEREON_FORM3_COST = 3917
+# Cooldown doubled (CSV value x2): Diolamus form 4 2480 -> 4960, Gamereon form 3 2600 -> 5200.
+DIOLAMUS_FORM4_COOLDOWN = 4960
+GAMEREON_FORM3_COOLDOWN = 5200
+
+# Crazed Colossus line (unit100): form 2 takes the form-3 (Mega-Crazed Jamiera) performance,
+# then HP = form-3 HP x4 (damage-taken 1/4 equivalent), attack x1.5, speed 9, wave 20%,
+# plus a separate 50% explosion (anchor/span taken from an existing 50% explosion unit).
+CRAZED_FORM2_HP = 4400 * 4
+CRAZED_FORM2_ATTACK = 1184 * 3 // 2
+CRAZED_FORM2_SPEED = 9
+CRAZED_FORM2_WAVE_CHANCE = 20
+CRAZED_FORM2_EXPLOSION = {113: 50, 114: 1800, 115: 0}
+CRAZED_FORM2_NAME = '狂乱のネコ親分'
 
 TOUGH_ALL_BUT_ZOMBIE = {INSANE_TOUGH_COLUMN: 1, **{c: 1 for c in NON_ZOMBIE_TARGET_COLUMNS}}
 
 # file -> row -> {column: value}
 EDITS: dict[str, dict[int, dict[int, int]]] = {
-    'unit178.csv': {3: {**TOUGH_ALL_BUT_ZOMBIE, 6: DIOLAMUS_FORM4_COST}},
-    'unit135.csv': {2: {**TOUGH_ALL_BUT_ZOMBIE, 6: GAMEREON_FORM3_COST}},
-    # Madoka (No.289): small wave Lv5 on the third form, applied after the legacy approved row.
-    'unit289.csv': {2: {35: 100, 36: 5, 94: 1}},
+    'unit178.csv': {3: {**TOUGH_ALL_BUT_ZOMBIE, 6: DIOLAMUS_FORM4_COST, 7: DIOLAMUS_FORM4_COOLDOWN}},
+    'unit135.csv': {2: {**TOUGH_ALL_BUT_ZOMBIE, 6: GAMEREON_FORM3_COST, 7: GAMEREON_FORM3_COOLDOWN}},
+    # Madoka (No.289): small wave Lv3 on the third form, applied after the legacy approved row.
+    'unit289.csv': {2: {35: 100, 36: 3, 94: 1}},
     # Homura (No.290): smaller dead zone (anchor 205 -> 100, far end 655 kept), certain freeze.
     'unit290.csv': {2: {25: 100, 44: 100, 45: 555}},
 }
 # Pre-edit values that must hold before an edit is applied (fail closed).
 EXPECTED_BEFORE: dict[str, dict[int, dict[int, int]]] = {
     'unit178.csv': {3: {6: 4400, 7: 2480, 22: 0, 24: 100, 27: 100, 80: 0}},
-    'unit135.csv': {2: {0: 14500, 6: 3250, 22: 0, 29: 1}},
+    'unit135.csv': {2: {0: 14500, 6: 3250, 7: 2600, 22: 0, 29: 1}},
+    'unit100.csv': {1: {0: 3600, 2: 11, 35: 10, 36: 10}, 2: {0: 4400, 35: 15, 36: 10}},
     'unit289.csv': {2: {35: 0, 36: 0, 94: 0}},
     'unit290.csv': {2: {25: 50, 44: 205, 45: 450}},
 }
@@ -57,6 +72,12 @@ EXPECTED_BEFORE: dict[str, dict[int, dict[int, int]]] = {
 COPY_FINAL_TO_EARLIER: dict[str, tuple[int, tuple[int, ...]]] = {
     'unit289.csv': (2, (0, 1)),
     'unit290.csv': (2, (0, 1)),
+    'unit100.csv': (2, (1,)),
+}
+# Edits applied after the copy above.
+POST_COPY_EDITS: dict[str, dict[int, dict[int, int]]] = {
+    'unit100.csv': {1: {0: CRAZED_FORM2_HP, 2: CRAZED_FORM2_SPEED, 3: CRAZED_FORM2_ATTACK,
+                        35: CRAZED_FORM2_WAVE_CHANCE, **CRAZED_FORM2_EXPLOSION}},
 }
 TUNED = frozenset(ORIGINAL_SHA256)
 # Rows of each file that differ from the original after tuning (for the verifier).
@@ -65,6 +86,7 @@ CHANGED_ROWS = {
     'unit135.csv': frozenset({2}),
     'unit289.csv': frozenset({0, 1, 2}),
     'unit290.csv': frozenset({0, 1, 2}),
+    'unit100.csv': frozenset({1}),
 }
 
 
@@ -74,8 +96,11 @@ def _split(row: bytes) -> tuple[list[bytes], bytes]:
 
 
 def _set(fields: list[bytes], column: int, value: int) -> None:
-    while len(fields) <= column:
-        fields.append(b'0')
+    if len(fields) <= column:
+        # Short legacy rows may end in an empty field; make it explicit before widening.
+        fields[:] = [b'0' if f == b'' else f for f in fields]
+        while len(fields) <= column:
+            fields.append(b'0')
     fields[column] = str(value).encode('ascii')
 
 
@@ -99,7 +124,7 @@ def build_candidate(name: str, original: bytes, *, legacy_candidate: bytes | Non
         for column, value in expectations.items():
             if _get(fields, column) != value:
                 raise ValueError(f'PC_UNIT_TUNING_UNEXPECTED_SOURCE_VALUE:{name}:{index}:{column}')
-    for index, edits in EDITS[name].items():
+    for index, edits in EDITS.get(name, {}).items():
         fields, ending = _split(rows[index])
         for column, value in edits.items():
             _set(fields, column, value)
@@ -115,4 +140,9 @@ def build_candidate(name: str, original: bytes, *, legacy_candidate: bytes | Non
                         fields.append(b'0')
                     fields[column] = value
             rows[index] = b','.join(fields) + ending
+    for index, edits in POST_COPY_EDITS.get(name, {}).items():
+        fields, ending = _split(rows[index])
+        for column, value in edits.items():
+            _set(fields, column, value)
+        rows[index] = b','.join(fields) + ending
     return b''.join(rows)
