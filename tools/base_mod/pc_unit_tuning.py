@@ -29,6 +29,10 @@ INSANE_TOUGH_COLUMN = 80
 NON_ZOMBIE_TARGET_COLUMNS = (10, 16, 17, 18, 19, 20, 21, 54, 76, 78, 96)
 # Columns bound to one form's animation or attack sequence; never copied between forms.
 ANIMATION_BOUND_COLUMNS = frozenset({4, 13, *range(59, 70)})
+# Columns whose value in every modern row is -1 (attack count, death time, spawn animation,
+# summon target). Widening a short legacy row with 0 here would mean "summon unit 0" and
+# "never acts", so padded columns take the same defaults as modern rows.
+PAD_DEFAULTS = {55: b'-1', 57: b'-1', 66: b'-1', 110: b'-1'}
 
 # Price: original 6,600 (EoC2 basis, CSV x1.5) + 1,000 = 7,600 -> CSV 5067 (x1.5 truncated = 7600).
 # Cooldown and knockback/slow chances stay original (owner dropped the double-summon plan).
@@ -100,7 +104,7 @@ def _set(fields: list[bytes], column: int, value: int) -> None:
         # Short legacy rows may end in an empty field; make it explicit before widening.
         fields[:] = [b'0' if f == b'' else f for f in fields]
         while len(fields) <= column:
-            fields.append(b'0')
+            fields.append(PAD_DEFAULTS.get(len(fields), b'0'))
     fields[column] = str(value).encode('ascii')
 
 
@@ -137,7 +141,7 @@ def build_candidate(name: str, original: bytes, *, legacy_candidate: bytes | Non
             for column, value in enumerate(source):
                 if column not in ANIMATION_BOUND_COLUMNS:
                     while len(fields) <= column:
-                        fields.append(b'0')
+                        fields.append(PAD_DEFAULTS.get(len(fields), b'0'))
                     fields[column] = value
             rows[index] = b','.join(fields) + ending
     for index, edits in POST_COPY_EDITS.get(name, {}).items():

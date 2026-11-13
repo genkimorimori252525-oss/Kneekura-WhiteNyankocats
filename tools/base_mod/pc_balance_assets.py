@@ -75,7 +75,7 @@ PAYLOAD_SHA256 = {
     '702_f02.maanim':'2bca2d1c9fd9dc88e64e39771514686dcc20141871201dfdb413e91c91e5e0d8',
     '702_f03.maanim':'b5afe2797db1b1547f0e3fbc3bc00ec79faf1d20963f6de823ed887bafa411f6',
     'Unit_Explanation100_ja.csv':'8c4bac491a9e13d69a0fcc15374277c2bbfc56f79026bba896cd99018aa70c79',
-    'unit100.csv':'f23bddeb2b6853e965a14df7d268bd00e73744c8e79b489c90cd303fde37d81e',
+    'unit100.csv':'12b21d38ea03ec66f62a155d9f7fa4a7e28e8134b12548ea8ffd3a57ad5650bd',
     'unit135.csv':'d3da7192c65545756e08634f8f92454c4590f540a4122cd2ef33b55ddce93452',
     'unit178.csv':'6800960fc83f75e1769b4ea56f91a7dbd675664e60109b61239f94eafe18cbbd',
     'unit289.csv':'82c626df441001a021f614215e7ff5b73f4ba2e983932af152a656fe5ebe1f5c',
@@ -165,7 +165,7 @@ def prepare_assets(owner_export: Path, server_source: Path, parent: Path):
     from tools.base_mod.fetch_godzilla_server_assets import complete_owner_private_godzilla_pipeline
     parent.mkdir(parents=True,exist_ok=True)
     if parent.is_symlink(): raise ValueError('PC_BALANCE_PRIVATE_CACHE_LINK_REFUSED')
-    output=parent/'approved-v10'
+    output=parent/'approved-v11'
     if output.exists():
         load_pinned_assets(output)
         return output

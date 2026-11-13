@@ -110,6 +110,11 @@ class UnitTuningTests(unittest.TestCase):
         self.assertEqual((fields[35], fields[36]), (b'20', b'10'))
         self.assertEqual((fields[113], fields[114], fields[115]), (b'50', b'1800', b'0'))
         self.assertEqual(fields[13], b'47')
+        # Widened columns keep modern-row defaults: no summon, unlimited attacks, normal spawn.
+        for column in (55, 57, 66, 110):
+            self.assertEqual(fields[column], b'-1', column)
+        for column in (53, 54, 56, 58, 67, 109):
+            self.assertEqual(fields[column], b'0', column)
 
     def test_fail_closed_on_changed_source_or_value(self):
         original = csv([row(columns=110, c6=4400, c7=2480, c24=100, c27=100)] * 4)
